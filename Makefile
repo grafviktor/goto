@@ -1,0 +1,44 @@
+LD_FLAGS = -ldflags="-X main.buildVersion=v0.1.0 -X main.buildDate=$(shell date +%Y-%m-%d) -X main.buildCommit=$(shell git rev-parse --short=8 HEAD)"
+
+## help: print this help message
+help:
+	@echo 'Usage:'
+	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' |  sed -e 's/^/ /'
+
+## lint: run linter
+.PHONY: lint
+lint:
+	@echo 'Running linter'
+	@golangci-lint run
+
+## audit: tidy dependencies and format, vet and test all code
+.PHONY: audit
+audit:
+	@echo 'Tidying and verifying module dependencies...'
+	go mod tidy
+	go mod verify
+	@echo 'Formatting code...'
+	gofumpt -l -w ./..
+	goimports -w -local github.com/grafviktor/goto .
+	@echo 'Vetting code...'
+	go vet ./...
+	staticcheck ./...
+	@echo 'Linting code...'
+	golangci-lint run
+	@$(MAKE) test
+
+## test: run unit tests
+.PHONY: test
+test:
+	@echo 'Running unit tests'
+	go test -race -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
+
+## build: create binary with debugging symbols in /build folder
+.PHONY: build
+build:
+	@-rm -r ./build/*
+	@echo 'Creating debug build'
+	GOOS=darwin  GOARCH=amd64 go build $(LD_FLAGS) -o ./build/goto-mac64     ./cmd/goto/*.go
+	GOOS=linux   GOARCH=amd64 go build $(LD_FLAGS) -o ./build/goto-lin64     ./cmd/goto/*.go
+	GOOS=windows GOARCH=amd64 go build $(LD_FLAGS) -o ./build/goto-win64.exe ./cmd/goto/*.go
+
