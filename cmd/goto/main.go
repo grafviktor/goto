@@ -11,15 +11,26 @@ import (
 	"github.com/grafviktor/goto/internal/logger"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui"
+	"github.com/grafviktor/goto/internal/version"
 )
 
-func WithLogger(ctx context.Context, logger *logger.Logger) context.Context {
-	return context.WithValue(ctx, "log", logger)
-}
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
 
 func main() {
+	lg := logger.Logger{}
+	// Set application version and build details
+	version.Set(buildVersion, buildDate, buildCommit)
+	lg.Log("Starting application")
+	lg.Log("Version %s", version.BuildVersion())
+	lg.Log("Build date %s", version.BuildDate())
+	lg.Log("Commit %s", version.BuildCommit())
+
 	ctx := context.Background()
-	ctxWithLogger := logger.ToContext(ctx, &logger.Logger{})
+	ctxWithLogger := logger.ToContext(ctx, &lg)
 	conf := config.Application{
 		AppName: "goto",
 		Context: ctxWithLogger,
@@ -30,20 +41,6 @@ func main() {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
-
-	logger := logger.Logger{}
-
-	// var logFile *os.File
-	// if len(os.Getenv("DEBUG")) > 0 || true { // TODO: remove force debug flag
-	// 	logFile, err = tea.LogToFile("debug.log", "debug")
-	// 	if err != nil {
-	// 		fmt.Println("fatal:", err)
-	// 		os.Exit(1)
-	// 	}
-	// }
-
-	// log.Println("Starting application")
-	logger.Log("Starting application")
 
 	uiComponent := ui.NewMainModel(ctx, conf, st)
 	p := tea.NewProgram(uiComponent, tea.WithAltScreen())
