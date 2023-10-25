@@ -9,7 +9,6 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/connector/ssh"
 	"github.com/grafviktor/goto/internal/storage"
 	. "github.com/grafviktor/goto/internal/ui/message" //nolint dot-imports
@@ -33,7 +32,7 @@ type listModel struct {
 	keyMap     *keyMap
 }
 
-func New(_ context.Context, config config.Application, storage storage.HostStorage) listModel {
+func New(_ context.Context, storage storage.HostStorage) listModel {
 	delegate := list.NewDefaultDelegate()
 	delegateKeys := newDelegateKeyMap()
 	listItems := []list.Item{}

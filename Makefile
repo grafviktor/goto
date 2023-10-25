@@ -33,6 +33,13 @@ test:
 	@echo 'Running unit tests'
 	go test -race -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
 
+## run: delete logs and run debug
+.PHONY: run
+run:
+	@echo 'Running debug build'
+	@-rm debug.log 2>/dev/null
+	go run cmd/goto/*
+
 ## build: create binary with debugging symbols in /build folder
 .PHONY: build
 build:

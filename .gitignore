@@ -28,3 +28,10 @@ unit.txt
 # IDE garbage
 .idea
 .vscode
+
+# Application temporary files and configs
+goto
+
+# Temporary notes
+INSTALL.MD
+TODO.md

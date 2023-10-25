@@ -21,33 +21,39 @@ var (
 )
 
 func main() {
-	lg := logger.Logger{}
 	// Set application version and build details
 	version.Set(buildVersion, buildDate, buildCommit)
-	lg.Log("Starting application")
-	lg.Log("Version %s", version.BuildVersion())
-	lg.Log("Build date %s", version.BuildDate())
-	lg.Log("Commit %s", version.BuildCommit())
 
-	ctx := context.Background()
-	ctxWithLogger := logger.ToContext(ctx, &lg)
-	conf := config.Application{
-		AppName: "goto",
-		Context: ctxWithLogger,
+	lg, err := logger.New()
+	if err != nil {
+		log.Fatalf("Can't create log file %v", err)
 	}
 
-	st, err := storage.GetStorage(ctx, conf)
+	lg.Debug("Starting application")
+	lg.Debug("Version %s", version.BuildVersion())
+	lg.Debug("Build date %s", version.BuildDate())
+	lg.Debug("Commit %s", version.BuildCommit())
+
+	ctx := context.Background()
+	appConfig := config.New(ctx, &lg)
+
+	st, err := storage.GetStorage(ctx, appConfig)
 	if err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
 
-	uiComponent := ui.NewMainModel(ctx, conf, st)
+	uiComponent := ui.NewMainModel(ctx, st)
 	p := tea.NewProgram(uiComponent, tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {
 		log.Println("Error running program:", err)
 
 		os.Exit(1)
+	}
+
+	err = appConfig.Save()
+	if err != nil {
+		log.Fatalf("Can't save application config before closing %v", err)
 	}
 }

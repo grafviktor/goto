@@ -11,7 +11,6 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/model"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
@@ -29,7 +28,7 @@ type MsgSave struct{}
 
 const ItemID string = "itemID"
 
-func New(ctx context.Context, _ config.Application, storage storage.HostStorage, width int, height int) editModel {
+func New(ctx context.Context, storage storage.HostStorage, width int, height int) editModel {
 	// if we can't cast host id to int, that means we're adding a new host. Ignoring the error
 	hostID, _ := ctx.Value(ItemID).(int)
 	host, err := storage.Get(hostID)

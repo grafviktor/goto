@@ -4,7 +4,6 @@ import (
 	"context"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/edithost"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
@@ -17,11 +16,10 @@ const (
 	viewEditItem
 )
 
-func NewMainModel(ctx context.Context, config config.Application, storage storage.HostStorage) mainModel {
+func NewMainModel(ctx context.Context, storage storage.HostStorage) mainModel {
 	m := mainModel{
-		modelHostList: hostlist.New(ctx, config, storage),
+		modelHostList: hostlist.New(ctx, storage),
 		appContext:    ctx,
-		appConfig:     config,
 		hostStorage:   storage,
 	}
 
@@ -30,7 +28,6 @@ func NewMainModel(ctx context.Context, config config.Application, storage storag
 
 type mainModel struct {
 	appContext    context.Context
-	appConfig     config.Application
 	hostStorage   storage.HostStorage
 	state         sessionState
 	modelHostList tea.Model
@@ -51,46 +48,58 @@ func (m mainModel) Init() tea.Cmd {
 }
 
 func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	var cmds []tea.Cmd
+
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		return m.handleKeyEvent(keyMsg)
+	}
+
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		if msg.Type == tea.KeyCtrlC {
-			return m, tea.Quit
-		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
 	case hostlist.MsgEditItem:
 		m.state = viewEditItem
 		ctx := context.WithValue(m.appContext, edithost.ItemID, msg.HostID)
-		m.modelEditHost = edithost.New(ctx, m.appConfig, m.hostStorage, m.width, m.height)
+		m.modelEditHost = edithost.New(ctx, m.hostStorage, m.width, m.height)
 	case hostlist.MsgNewItem:
 		m.state = viewEditItem
-		m.modelEditHost = edithost.New(m.appContext, m.appConfig, m.hostStorage, m.width, m.height)
-	case hostlist.MsgRepoUpdated:
-		// HACK: хотя компонент hostList неактивен, мы отправляем ему сообщение вручную
-		// наверное сообщения лучше передавать через каналы
-		newHostList, _ := m.modelHostList.Update(msg)
-		m.modelHostList = newHostList
+		m.modelEditHost = edithost.New(m.appContext, m.hostStorage, m.width, m.height)
 	case edithost.MsgClose:
 		m.state = viewHostList
 	}
 
-	var cmd tea.Cmd
-	var cmds []tea.Cmd
-	switch m.state {
-	case viewHostList:
-		newHostList, newCmd := m.modelHostList.Update(msg)
-		m.modelHostList = newHostList
-		cmd = newCmd
-	case viewEditItem:
-		newEditHost, newCmd := m.modelEditHost.Update(msg)
-		m.modelEditHost = newEditHost
-		cmd = newCmd
+	m.modelHostList, cmd = m.modelHostList.Update(msg)
+	cmds = append(cmds, cmd)
+
+	if m.state == viewEditItem {
+		// edit host receives messages only if it's active. We re-create this component every time we go to edit mode
+		m.modelEditHost, cmd = m.modelEditHost.Update(msg)
+		cmds = append(cmds, cmd)
 	}
 
 	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
+}
+
+func (m mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.Type == tea.KeyCtrlC {
+		// TODO: Save State
+		return m, tea.Quit
+	}
+
+	var cmd tea.Cmd
+	switch m.state { // Only active component receives key messages
+	case viewHostList:
+		m.modelHostList, cmd = m.modelHostList.Update(msg)
+		return m, cmd
+	case viewEditItem:
+		m.modelEditHost, cmd = m.modelEditHost.Update(msg)
+	}
+
+	return m, cmd
 }
 
 func (m mainModel) View() string {

@@ -14,6 +14,6 @@ type HostStorage interface {
 	Delete(id int) error
 }
 
-func GetStorage(ctx context.Context, config config.Application) (HostStorage, error) {
-	return NewYAML(config)
+func GetStorage(ctx context.Context, appConfig config.Application) (HostStorage, error) {
+	return NewYAML(ctx, appConfig.AppName, appConfig.Logger)
 }

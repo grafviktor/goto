@@ -1,14 +1,14 @@
 package storage
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path"
 
-	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
-	"github.com/grafviktor/goto/internal/logger"
 	"github.com/grafviktor/goto/internal/model"
+	"github.com/grafviktor/goto/internal/utils"
 	"github.com/samber/lo"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v2"
@@ -17,35 +17,26 @@ import (
 var _ HostStorage = &yamlStorage{}
 
 const hostsFile = "hosts.yaml"
-const ID_EMPTY = 0
+const idEmpty = 0
 
-func NewYAML(config config.Application) (*yamlStorage, error) {
-	appConfigDir, err := getAppConfigDir(config)
+type Logger interface {
+	Debug(format string, args ...any)
+}
+
+func NewYAML(ctx context.Context, appName string, logger Logger) (*yamlStorage, error) {
+	appFolder, err := utils.GetAppDir(logger, appName)
 	if err != nil {
-		return nil, err
-	}
-	ctxLogger, _ := logger.FromContext(config.Context)
-
-	_, err = os.Stat(appConfigDir)
-
-	if os.IsNotExist(err) {
-		ctxLogger.Log("App config folder does not exist. Creating %s\n", appConfigDir)
-		err = os.MkdirAll(appConfigDir, 0o700)
-		if err != nil {
-			return nil, err
-		}
-	} else if err != nil {
-		ctxLogger.Log("Failed to open or create App config folder %s\n", appConfigDir)
+		logger.Debug("Error %s", err.Error())
 		return nil, err
 	}
 
-	fsDataPath := path.Join(appConfigDir, hostsFile)
-	ctxLogger.Log("Reading hosts file list %s\n", fsDataPath)
+	logger.Debug("Config folder %s", appFolder)
+	fsDataPath := path.Join(appFolder, hostsFile)
 
 	return &yamlStorage{
 		innerStorage: make(map[int]yamlHostWrapper),
 		fsDataPath:   fsDataPath,
-		logger:       ctxLogger,
+		logger:       logger,
 	}, nil
 }
 
@@ -53,7 +44,7 @@ type yamlStorage struct {
 	innerStorage map[int]yamlHostWrapper
 	nextID       int
 	fsDataPath   string
-	logger       *logger.Logger
+	logger       Logger
 }
 
 type yamlHostWrapper struct {
@@ -85,7 +76,7 @@ func (s *yamlStorage) flushToDisk() error {
 }
 
 func (s *yamlStorage) Save(host model.Host) error {
-	if host.ID == ID_EMPTY {
+	if host.ID == idEmpty {
 		s.nextID++
 		host.ID = s.nextID
 	}
@@ -104,6 +95,7 @@ func (s *yamlStorage) Delete(id int) error {
 func (s *yamlStorage) GetAll() ([]model.Host, error) {
 	// re-create innerStorage before reading file data
 	s.innerStorage = make(map[int]yamlHostWrapper)
+	s.logger.Debug("Read hosts file list %s\n", s.fsDataPath)
 	fileData, err := os.ReadFile(s.fsDataPath)
 	if err != nil {
 		var pathErr *os.PathError
@@ -120,7 +112,7 @@ func (s *yamlStorage) GetAll() ([]model.Host, error) {
 		return nil, err
 	}
 
-	s.nextID = ID_EMPTY
+	s.nextID = idEmpty
 	for _, wrapped := range yamlHosts {
 		s.nextID++
 		wrapped.Host.ID = s.nextID
