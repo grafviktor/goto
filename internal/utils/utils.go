@@ -21,9 +21,9 @@ func createAppDir(logger Logger, appConfigDir string) error {
 
 func GetAppDir(logger Logger, appName string) (string, error) {
 	// FIXME: -------- DEBUG ------------- /
-	userConfigDir, err := os.Getwd()
+	// userConfigDir, err := os.Getwd()
 	// -------- RELEASE ----------- /
-	// userConfigDir, err := os.UserConfigDir()
+	userConfigDir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}

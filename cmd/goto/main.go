@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/logger"
+	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui"
 	"github.com/grafviktor/goto/internal/version"
@@ -24,7 +25,7 @@ func main() {
 	// Set application version and build details
 	version.Set(buildVersion, buildDate, buildCommit)
 
-	lg, err := logger.New()
+	lg, err := logger.New("goto")
 	if err != nil {
 		log.Fatalf("Can't create log file %v", err)
 	}
@@ -37,23 +38,26 @@ func main() {
 	ctx := context.Background()
 	appConfig := config.New(ctx, &lg)
 
-	st, err := storage.GetStorage(ctx, appConfig)
+	hostStorage, err := storage.Get(ctx, appConfig)
 	if err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
 
-	uiComponent := ui.NewMainModel(ctx, st)
+	appState := state.Get(appConfig.AppHome, &lg)
+	uiComponent := ui.NewMainModel(ctx, hostStorage, appState)
 	p := tea.NewProgram(uiComponent, tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {
 		log.Println("Error running program:", err)
-
 		os.Exit(1)
 	}
 
-	err = appConfig.Save()
+	lg.Debug("Save application state")
+	err = appState.Persist()
 	if err != nil {
-		log.Fatalf("Can't save application config before closing %v", err)
+		lg.Debug("Can't save application state before closing %v", err)
 	}
+
+	lg.Debug("Close the application")
 }

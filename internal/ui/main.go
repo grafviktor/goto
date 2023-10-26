@@ -4,6 +4,7 @@ import (
 	"context"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/edithost"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
@@ -16,11 +17,12 @@ const (
 	viewEditItem
 )
 
-func NewMainModel(ctx context.Context, storage storage.HostStorage) mainModel {
+func NewMainModel(ctx context.Context, storage storage.HostStorage, appState *state.ApplicationState) mainModel {
 	m := mainModel{
-		modelHostList: hostlist.New(ctx, storage),
+		modelHostList: hostlist.New(ctx, storage, appState.Selected),
 		appContext:    ctx,
 		hostStorage:   storage,
+		appState:      appState,
 	}
 
 	return m
@@ -34,6 +36,7 @@ type mainModel struct {
 	modelEditHost tea.Model
 	width         int
 	height        int
+	appState      *state.ApplicationState
 }
 
 func (m mainModel) Init() tea.Cmd {
@@ -66,6 +69,8 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case hostlist.MsgNewItem:
 		m.state = viewEditItem
 		m.modelEditHost = edithost.New(m.appContext, m.hostStorage, m.width, m.height)
+	case hostlist.MsgSelectItem:
+		m.appState.Selected = msg.Index
 	case edithost.MsgClose:
 		m.state = viewHostList
 	}
@@ -94,7 +99,6 @@ func (m mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch m.state { // Only active component receives key messages
 	case viewHostList:
 		m.modelHostList, cmd = m.modelHostList.Update(msg)
-		return m, cmd
 	case viewEditItem:
 		m.modelEditHost, cmd = m.modelEditHost.Update(msg)
 	}

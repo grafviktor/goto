@@ -19,6 +19,7 @@ var docStyle = lipgloss.NewStyle().Margin(1, 2)
 type (
 	MsgEditItem     struct{ HostID int }
 	MsgCopyItem     struct{ HostID int }
+	MsgSelectItem   struct{ Index int }
 	MsgNewItem      struct{}
 	msgInitComplete struct{}
 	msgErrorOccured struct{ err error }
@@ -30,9 +31,10 @@ type listModel struct {
 	innerModel list.Model
 	repo       storage.HostStorage
 	keyMap     *keyMap
+	selected   int
 }
 
-func New(_ context.Context, storage storage.HostStorage) listModel {
+func New(_ context.Context, storage storage.HostStorage, selected int) listModel {
 	delegate := list.NewDefaultDelegate()
 	delegateKeys := newDelegateKeyMap()
 	listItems := []list.Item{}
@@ -40,6 +42,7 @@ func New(_ context.Context, storage storage.HostStorage) listModel {
 		innerModel: list.New(listItems, delegate, 0, 0),
 		keyMap:     delegateKeys,
 		repo:       storage,
+		selected:   selected,
 	}
 
 	m.innerModel.KeyMap.CursorUp.Unbind()
@@ -96,7 +99,11 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case msgInitComplete:
 		return m.refreshRepo(msg)
 	case msgFocusChanged:
-		return m.listTitleUpdate(msg)
+		m, cmd := m.listTitleUpdate(msg)
+		cmds = append(cmds, cmd)
+		m, cmd = m.onFocusChanged(msg)
+		cmds = append(cmds, cmd)
+		return m, tea.Batch(cmds...)
 	}
 
 	// If we could not find our own update handler, we pass message to the original model
@@ -133,6 +140,7 @@ func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
 	}
 
 	m.innerModel.SetItems(items)
+	m.innerModel.Select(m.selected)
 
 	return m, TeaCmd(msgFocusChanged{})
 }
@@ -205,4 +213,10 @@ func (m listModel) listTitleUpdate(msg tea.Msg) (listModel, tea.Cmd) {
 
 		return m, nil
 	}
+}
+
+func (m listModel) onFocusChanged(msg tea.Msg) (listModel, tea.Cmd) {
+	m.selected = m.innerModel.Index()
+
+	return m, TeaCmd(MsgSelectItem{Index: m.selected})
 }

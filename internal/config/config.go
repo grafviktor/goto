@@ -68,7 +68,6 @@ func (app *Application) load() error {
 		return err
 	}
 
-	app.Logger.Debug("Successfully read configuration from %s\n", app.configPath)
 	app.AppConfig = appConfigModel
 
 	return nil

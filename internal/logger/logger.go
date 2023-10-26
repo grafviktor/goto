@@ -5,16 +5,25 @@ import (
 	"errors"
 	"log"
 	"os"
+	"path"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/grafviktor/goto/internal/utils"
 )
 
-func New() (Logger, error) {
+func New(appName string) (Logger, error) {
 	var l Logger
 	var err error
 
 	if len(os.Getenv("DEBUG")) > 0 || true { // TODO: remove force debug flag
-		l.logFile, err = tea.LogToFile("debug.log", "debug")
+		var appPath string
+		appPath, err = utils.GetAppDir(&l, appName)
+		if err != nil {
+			return Logger{}, nil
+		}
+
+		logFilePath := path.Join(appPath, "debug.log")
+		l.logFile, err = tea.LogToFile(logFilePath, "debug")
 	}
 
 	if err != nil {
