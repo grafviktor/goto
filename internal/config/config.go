@@ -28,10 +28,10 @@ func New(ctx context.Context, logger Logger) Application {
 	}
 
 	config := Application{
-		Context: ctx,
-		Logger:  logger,
-		AppHome: appHome,
-		AppName: appName,
+		Context:    ctx,
+		Logger:     logger,
+		HomeFolder: appHome,
+		AppName:    appName,
 	}
 
 	err = config.load()
@@ -43,20 +43,20 @@ func New(ctx context.Context, logger Logger) Application {
 }
 
 type Application struct {
-	AppHome    string
+	HomeFolder string
 	AppName    string
 	Context    context.Context
 	Logger     Logger
-	configPath string
+	configFile string
 	model.AppConfig
 }
 
 func (app *Application) load() error {
 	var appConfigModel model.AppConfig
-	app.configPath = path.Join(app.AppHome, configFile)
+	app.configFile = path.Join(app.HomeFolder, configFile)
 
-	app.Logger.Debug("Read application configuration from %s\n", app.configPath)
-	fileData, err := os.ReadFile(app.configPath)
+	app.Logger.Debug("Read application configuration from %s\n", app.configFile)
+	fileData, err := os.ReadFile(app.configFile)
 	if err != nil {
 		app.Logger.Debug("Can't read application configuration %v\n", err)
 		return err
@@ -79,7 +79,7 @@ func (app *Application) Save() error {
 		return err
 	}
 
-	err = os.WriteFile(app.configPath, result, 0o600)
+	err = os.WriteFile(app.configFile, result, 0o600)
 	if err != nil {
 		return err
 	}

@@ -1,7 +1,5 @@
 package model
 
-import "fmt"
-
 func NewHost(id int, title, description, address, loginName, privateKeyPath, remotePort string) Host {
 	return Host{
 		ID:             id,
@@ -26,7 +24,7 @@ type Host struct {
 
 func (h Host) Clone() Host {
 	newHost := Host{
-		Title:          fmt.Sprintf("Copy of %s", h.Title),
+		Title:          h.Title,
 		Description:    h.Description,
 		Address:        h.Address,
 		LoginName:      h.LoginName,

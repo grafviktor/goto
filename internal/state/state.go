@@ -22,6 +22,8 @@ type ApplicationState struct {
 	Selected         int `yaml:"selected"`
 	appStateFilePath string
 	logger           logger
+	Width            int `yaml:"-"`
+	Height           int `yaml:"-"`
 }
 
 func Get(appHomePath string, lg logger) *ApplicationState {

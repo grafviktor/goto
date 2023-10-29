@@ -73,8 +73,8 @@ func newDelegateKeyMap() *keyMap {
 			key.WithHelp("c", "clone"),
 		),
 		remove: key.NewBinding(
-			key.WithKeys("x"),
-			key.WithHelp("x", "delete"),
+			key.WithKeys("d"),
+			key.WithHelp("d", "delete"),
 		),
 	}
 }

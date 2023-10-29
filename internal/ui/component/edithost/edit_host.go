@@ -12,10 +12,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/grafviktor/goto/internal/model"
+	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
 	"github.com/grafviktor/goto/internal/ui/message"
 	. "github.com/grafviktor/goto/internal/ui/message"
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 type Size struct {
@@ -28,7 +30,8 @@ type MsgSave struct{}
 
 const ItemID string = "itemID"
 
-func New(ctx context.Context, storage storage.HostStorage, width int, height int) editModel {
+// func New(ctx context.Context, storage storage.HostStorage, width int, height int) editModel {
+func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState) editModel {
 	// if we can't cast host id to int, that means we're adding a new host. Ignoring the error
 	hostID, _ := ctx.Value(ItemID).(int)
 	host, err := storage.Get(hostID)
@@ -42,10 +45,11 @@ func New(ctx context.Context, storage storage.HostStorage, width int, height int
 		host:        host,
 		help:        help.New(),
 		keyMap:      keys,
-		size: Size{
-			width,
-			height,
-		},
+		appState:    state,
+		// size: Size{
+		// 	width,
+		// 	height,
+		// },
 	}
 
 	var t LabeledInput
@@ -70,14 +74,17 @@ func New(ctx context.Context, storage storage.HostStorage, width int, height int
 		case 3:
 			t.Label = "Login"
 			t.CharLimit = 128
+			t.Placeholder = fmt.Sprintf("default: %s", utils.GetCurrentOSUser())
 			t.SetValue(host.LoginName)
 		case 4:
 			t.Label = "Port"
 			t.CharLimit = 5
+			t.Placeholder = "default: 22"
 			t.SetValue(host.RemotePort)
 		case 5:
 			t.Label = "Identity file path"
 			t.CharLimit = 512
+			t.Placeholder = "default: not set"
 			t.SetValue(host.PrivateKeyPath)
 		}
 
@@ -96,7 +103,8 @@ type editModel struct {
 	viewport    viewport.Model
 	help        help.Model
 	ready       bool
-	size        Size
+	appState    *state.ApplicationState
+	// size        Size
 }
 
 func (m editModel) Init() tea.Cmd {
@@ -178,7 +186,8 @@ func (m editModel) updateViewPort(msg tea.Msg) editModel {
 
 	if !m.ready {
 		m.ready = true
-		m.viewport = viewport.New(m.size.Width, m.size.Height-headerHeight-helpMenuHeight)
+		// m.viewport = viewport.New(m.size.Width, m.size.Height-headerHeight-helpMenuHeight)
+		m.viewport = viewport.New(m.appState.Width, m.appState.Height-headerHeight-helpMenuHeight)
 	} else if resizeMsg, ok := msg.(tea.WindowSizeMsg); ok {
 		m.viewport.Width = resizeMsg.Width
 		m.viewport.Height = resizeMsg.Height - headerHeight - helpMenuHeight

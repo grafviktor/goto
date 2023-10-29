@@ -2,6 +2,7 @@ package utils
 
 import (
 	"os"
+	"os/user"
 	"path"
 )
 
@@ -41,4 +42,13 @@ func GetAppDir(logger Logger, appName string) (string, error) {
 	}
 
 	return appConfigDir, nil
+}
+
+func GetCurrentOSUser() string {
+	user, err := user.Current()
+	if err != nil {
+		return "n/a"
+	}
+
+	return user.Username
 }

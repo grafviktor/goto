@@ -10,8 +10,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/grafviktor/goto/internal/connector/ssh"
+	"github.com/grafviktor/goto/internal/model"
+	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	. "github.com/grafviktor/goto/internal/ui/message" //nolint dot-imports
+	"golang.org/x/exp/slices"
 )
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
@@ -31,10 +34,10 @@ type listModel struct {
 	innerModel list.Model
 	repo       storage.HostStorage
 	keyMap     *keyMap
-	selected   int
+	appState   *state.ApplicationState
 }
 
-func New(_ context.Context, storage storage.HostStorage, selected int) listModel {
+func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState) listModel {
 	delegate := list.NewDefaultDelegate()
 	delegateKeys := newDelegateKeyMap()
 	listItems := []list.Item{}
@@ -42,7 +45,7 @@ func New(_ context.Context, storage storage.HostStorage, selected int) listModel
 		innerModel: list.New(listItems, delegate, 0, 0),
 		keyMap:     delegateKeys,
 		repo:       storage,
-		selected:   selected,
+		appState:   appState,
 	}
 
 	m.innerModel.KeyMap.CursorUp.Unbind()
@@ -135,12 +138,26 @@ func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
 		return m, TeaCmd(msgErrorOccured{err})
 	}
 
+	slices.SortFunc(hosts, func(a, b model.Host) int {
+		if a.Title < b.Title {
+			return -1
+		}
+		return 1
+	})
+
+	// Wrap hosts into List items
 	for _, h := range hosts {
 		items = append(items, ListItemHost{Host: h})
 	}
 
 	m.innerModel.SetItems(items)
-	m.innerModel.Select(m.selected)
+
+	// we restore selected item from application configuration check if index
+	// of the previously selected item is not greater than the length
+	// of the items collection (avoiding index our of range error)
+	if len(items) >= m.appState.Selected {
+		m.innerModel.Select(m.appState.Selected)
+	}
 
 	return m, TeaCmd(msgFocusChanged{})
 }
@@ -148,8 +165,7 @@ func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
 func (m listModel) editItem(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
-		errText := "could not cast list.SelectedItem() to component.ListItem"
-
+		errText := "You must select an item"
 		return m, TeaCmd(msgErrorOccured{err: errors.New(errText)})
 	}
 
@@ -160,13 +176,26 @@ func (m listModel) editItem(_ tea.Msg) (listModel, tea.Cmd) {
 func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
-		errText := "could not cast list.SelectedItem() to component.ListItem"
-
+		errText := "You must select an item"
 		return m, TeaCmd(msgErrorOccured{err: errors.New(errText)})
 	}
 
-	host := item.Unwrap().Clone()
-	if err := m.repo.Save(host); err != nil {
+	originalHost := item.Unwrap()
+	clonedHost := originalHost.Clone()
+	for i := 1; ok; i++ {
+		clonedHostTitle := fmt.Sprintf("%s %d", originalHost.Title, i)
+		listItems := m.innerModel.Items()
+		idx := slices.IndexFunc(listItems, func(li list.Item) bool {
+			return li.(ListItemHost).Title() == clonedHostTitle
+		})
+
+		if idx < 0 {
+			clonedHost.Title = clonedHostTitle
+			break
+		}
+	}
+
+	if err := m.repo.Save(clonedHost); err != nil {
 		return m, TeaCmd(msgErrorOccured{err})
 	}
 
@@ -200,7 +229,7 @@ func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
 func (m listModel) listTitleUpdate(msg tea.Msg) (listModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case msgErrorOccured:
-		m.innerModel.Title = fmt.Sprintf("error: %s", msg.err.Error())
+		m.innerModel.Title = fmt.Sprintf("%s", msg.err.Error())
 
 		return m, nil
 	default:
@@ -216,7 +245,5 @@ func (m listModel) listTitleUpdate(msg tea.Msg) (listModel, tea.Cmd) {
 }
 
 func (m listModel) onFocusChanged(msg tea.Msg) (listModel, tea.Cmd) {
-	m.selected = m.innerModel.Index()
-
-	return m, TeaCmd(MsgSelectItem{Index: m.selected})
+	return m, TeaCmd(MsgSelectItem{Index: m.innerModel.Index()})
 }

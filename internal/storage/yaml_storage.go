@@ -125,13 +125,6 @@ func (s *yamlStorage) GetAll() ([]model.Host, error) {
 		return value.Host
 	})
 
-	slices.SortFunc(hosts, func(a, b model.Host) int {
-		if a.ID < b.ID {
-			return -1
-		}
-		return 1
-	})
-
 	return hosts, nil
 }
 

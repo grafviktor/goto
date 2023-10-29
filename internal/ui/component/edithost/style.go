@@ -4,13 +4,11 @@ import "github.com/charmbracelet/lipgloss"
 
 var (
 	docStyle     = lipgloss.NewStyle().Margin(1, 2)
-	blurredStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	focusedStyle = lipgloss.NewStyle().
 			BorderForeground(lipgloss.AdaptiveColor{Light: "#F793FF", Dark: "#AD58B4"}).
 			Foreground(lipgloss.AdaptiveColor{Light: "#EE6FF8", Dark: "#EE6FF8"})
 	cursorStyle = focusedStyle.Copy()
 	noStyle     = lipgloss.NewStyle()
-	helpStyle   = blurredStyle.Copy()
 
 	titleStyle = lipgloss.NewStyle().
 			Background(lipgloss.Color("62")).
