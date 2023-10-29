@@ -30,8 +30,8 @@ unit.txt
 .vscode
 
 # Application temporary files and configs
-goto
+/goto
 
 # Temporary notes
-INSTALL.MD
-TODO.md
+*.md
+!README.md

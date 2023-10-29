@@ -44,7 +44,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	appState := state.Get(appConfig.AppHome, &lg)
+	appState := state.Get(appConfig.HomeFolder, &lg)
 	uiComponent := ui.NewMainModel(ctx, hostStorage, appState)
 	p := tea.NewProgram(uiComponent, tea.WithAltScreen())
 
