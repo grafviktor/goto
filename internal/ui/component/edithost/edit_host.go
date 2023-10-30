@@ -46,10 +46,6 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		help:        help.New(),
 		keyMap:      keys,
 		appState:    state,
-		// size: Size{
-		// 	width,
-		// 	height,
-		// },
 	}
 
 	var t LabeledInput

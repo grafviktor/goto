@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 
@@ -40,7 +39,7 @@ func main() {
 
 	hostStorage, err := storage.Get(ctx, appConfig)
 	if err != nil {
-		fmt.Println("Error running program:", err)
+		lg.Debug("Error running program: %v", err)
 		os.Exit(1)
 	}
 
@@ -49,7 +48,7 @@ func main() {
 	p := tea.NewProgram(uiComponent, tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {
-		log.Println("Error running program:", err)
+		lg.Debug("Error running program: %v", err)
 		os.Exit(1)
 	}
 
