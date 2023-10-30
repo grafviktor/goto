@@ -45,7 +45,7 @@ run:
 build:
 	@-rm -r ./build/*
 	@echo 'Creating debug build'
-	GOOS=darwin  GOARCH=amd64 go build $(LD_FLAGS) -o ./build/goto-mac64     ./cmd/goto/*.go
-	GOOS=linux   GOARCH=amd64 go build $(LD_FLAGS) -o ./build/goto-lin64     ./cmd/goto/*.go
-	GOOS=windows GOARCH=amd64 go build $(LD_FLAGS) -o ./build/goto-win64.exe ./cmd/goto/*.go
+	GOOS=darwin  GOARCH=amd64 go build $(LD_FLAGS) -o ./build/gg-mac     ./cmd/goto/*.go
+	GOOS=linux   GOARCH=amd64 go build $(LD_FLAGS) -o ./build/gg-lin     ./cmd/goto/*.go
+	GOOS=windows GOARCH=amd64 go build $(LD_FLAGS) -o ./build/gg-win.exe ./cmd/goto/*.go
 
