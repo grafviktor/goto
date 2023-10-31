@@ -52,7 +52,7 @@ Usually you don't need to edit this file manually, but sometimes it's much conve
 * Terminal resizing in Windows OS is not yet supported, as `cmd.exe` does not fire window resize events.
 * You cannot disable generating `debug.log` file.
 * User input validators do not exist.
-* Maybe some other things as the utility doesn't even rich a stable version.
+* Maybe some other things as the utility hasn't even reached a stable version.
 
 ## License ##
 
