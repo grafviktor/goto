@@ -35,3 +35,6 @@ unit.txt
 # Temporary notes
 *.md
 !README.md
+
+# Tape files
+*.tape

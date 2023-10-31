@@ -2,14 +2,26 @@
 
 This utility helps to maintain a list of ssh servers. Unlike PuTTY id doesn't incorporate any connection logic, but relying on `ssh` utility which should be installed on your system.
 
-![Small demo where we open ssh session using goto](demo.gif)
-
 ## Installation ##
 
 * Download the zip file from the releases section;
 * Choose a binary file which matches your platform;
 * Place the binary into your user's binary path;
 * Optionally: rename `gg-$platform` into `gg`.
+
+## Functional preview ##
+
+### Edit and connect to a remote box ###
+
+![Small demo where we open ssh session using goto](demo/edit_and_connect.gif)
+
+### Duplicate an existing record ###
+
+![Small demo where duplicate an existing record in goto database](demo/duplicate_existing_record.gif)
+
+### Find a requried host easily among all your records ###
+
+![Small demo where we open ssh session using goto](demo/search_through_database.gif)
 
 ## File storage structure ##
 
@@ -41,3 +53,7 @@ Usually you don't need to edit this file manually, but sometimes it's much conve
 * You cannot disable generating `debug.log` file.
 * User input validators do not exist.
 * Maybe some other things as the utility doesn't even rich a stable version.
+
+## License ##
+
+[MIT](LICENSE)
