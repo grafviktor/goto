@@ -47,6 +47,12 @@ Usually you don't need to edit this file manually, but sometimes it's much conve
     identity_file_path: /home/user/.ssh/id_rsa_microsoft
 ```
 
+## Changelog ##
+
+**v0.1.1**
+
+Fix a focusing issue when saving an existing item using a different title.
+
 ## Known bugs ##
 
 * Terminal resizing in Windows OS is not yet supported, as `cmd.exe` does not fire window resize events;
