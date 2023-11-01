@@ -22,7 +22,7 @@ var docStyle = lipgloss.NewStyle().Margin(1, 2)
 type (
 	MsgEditItem     struct{ HostID int }
 	MsgCopyItem     struct{ HostID int }
-	MsgSelectItem   struct{ ID int }
+	MsgSelectItem   struct{ HostID int }
 	MsgNewItem      struct{}
 	msgInitComplete struct{}
 	msgErrorOccured struct{ err error }
@@ -71,6 +71,9 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// dispatch msgFocusChanged message to update list title
+		cmds = append(cmds, TeaCmd(msgFocusChanged{}))
+
 		if m.innerModel.FilterState() == list.Filtering {
 			// if filter is enabled, we should not handle any keyboard messages
 			break
@@ -88,9 +91,6 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keyMap.clone):
 			return m.copyItem(msg)
 		}
-
-		// dispatch msgFocusChanged message to update list title
-		cmds = append(cmds, TeaCmd(msgFocusChanged{}))
 	case tea.WindowSizeMsg:
 		// triggers immediately after app start because we render this component by default
 		h, v := docStyle.GetFrameSize()
@@ -150,10 +150,10 @@ func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
 		items = append(items, ListItemHost{Host: h})
 	}
 
-	m.innerModel.SetItems(items)
+	setItemsCmd := m.innerModel.SetItems(items)
 
 	// we restore selected item from application configuration
-	for uiIndex, listItem := range m.innerModel.Items() {
+	for uiIndex, listItem := range m.innerModel.VisibleItems() {
 		if hostItem, ok := listItem.(ListItemHost); ok {
 			if m.appState.Selected == hostItem.ID {
 				m.innerModel.Select(uiIndex)
@@ -162,7 +162,7 @@ func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
 		}
 	}
 
-	return m, TeaCmd(msgFocusChanged{})
+	return m, tea.Batch(setItemsCmd, TeaCmd(msgFocusChanged{}))
 }
 
 func (m listModel) editItem(_ tea.Msg) (listModel, tea.Cmd) {
@@ -208,7 +208,7 @@ func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
-		errText := "could not cast list.SelectedItem() to component.ListItem"
+		errText := "You must select an item"
 
 		return m, TeaCmd(msgErrorOccured{err: errors.New(errText)})
 	}
@@ -249,7 +249,7 @@ func (m listModel) listTitleUpdate(msg tea.Msg) (listModel, tea.Cmd) {
 
 func (m listModel) onFocusChanged(msg tea.Msg) (listModel, tea.Cmd) {
 	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
-		return m, TeaCmd(MsgSelectItem{ID: hostItem.ID})
+		return m, TeaCmd(MsgSelectItem{HostID: hostItem.ID})
 	}
 
 	return m, nil

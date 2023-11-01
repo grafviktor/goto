@@ -69,7 +69,7 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = viewEditItem
 		m.modelEditHost = edithost.New(m.appContext, m.hostStorage, m.appState)
 	case hostlist.MsgSelectItem:
-		m.appState.Selected = msg.ID
+		m.appState.Selected = msg.HostID
 	case edithost.MsgClose:
 		m.state = viewHostList
 	}
