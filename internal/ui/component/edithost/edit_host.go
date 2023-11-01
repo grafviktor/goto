@@ -100,7 +100,6 @@ type editModel struct {
 	help        help.Model
 	ready       bool
 	appState    *state.ApplicationState
-	// size        Size
 }
 
 func (m editModel) Init() tea.Cmd {
@@ -145,7 +144,7 @@ func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
+func (m editModel) save(msg tea.Msg) (editModel, tea.Cmd) {
 	for i := range m.inputs {
 		switch i {
 		case 0:
@@ -164,9 +163,10 @@ func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
 	}
 
 	_ = m.hostStorage.Save(m.host)
-	// BUG: Когда мы отправляем hostlist.MsgRepoUpdated{}, компонент List неактивен и
-	// следовательно не получает сообщения, смотри main
-	return m, tea.Batch(TeaCmd(MsgClose{}), TeaCmd(hostlist.MsgRepoUpdated{}))
+	return m, tea.Batch(
+		TeaCmd(MsgClose{}),
+		TeaCmd(hostlist.MsgRepoUpdated{}),
+	)
 }
 
 func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) (editModel, tea.Cmd) {

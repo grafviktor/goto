@@ -22,7 +22,7 @@ var docStyle = lipgloss.NewStyle().Margin(1, 2)
 type (
 	MsgEditItem     struct{ HostID int }
 	MsgCopyItem     struct{ HostID int }
-	MsgSelectItem   struct{ Index int }
+	MsgSelectItem   struct{ ID int }
 	MsgNewItem      struct{}
 	msgInitComplete struct{}
 	msgErrorOccured struct{ err error }
@@ -152,11 +152,14 @@ func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
 
 	m.innerModel.SetItems(items)
 
-	// we restore selected item from application configuration check if index
-	// of the previously selected item is not greater than the length
-	// of the items collection (avoiding index our of range error)
-	if len(items) >= m.appState.Selected {
-		m.innerModel.Select(m.appState.Selected)
+	// we restore selected item from application configuration
+	for uiIndex, listItem := range m.innerModel.Items() {
+		if hostItem, ok := listItem.(ListItemHost); ok {
+			if m.appState.Selected == hostItem.ID {
+				m.innerModel.Select(uiIndex)
+				break
+			}
+		}
 	}
 
 	return m, TeaCmd(msgFocusChanged{})
@@ -245,5 +248,9 @@ func (m listModel) listTitleUpdate(msg tea.Msg) (listModel, tea.Cmd) {
 }
 
 func (m listModel) onFocusChanged(msg tea.Msg) (listModel, tea.Cmd) {
-	return m, TeaCmd(MsgSelectItem{Index: m.innerModel.Index()})
+	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
+		return m, TeaCmd(MsgSelectItem{ID: hostItem.ID})
+	}
+
+	return m, nil
 }

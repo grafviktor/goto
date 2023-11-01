@@ -3,8 +3,7 @@ package message
 import tea "github.com/charmbracelet/bubbletea"
 
 type (
-	GlobalInitComplete struct{}
-	GlobalCreate       struct{}
+	InitComplete struct{}
 )
 
 // A helper function which returns create tea.Cmd from tea.Msg object
