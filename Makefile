@@ -1,4 +1,5 @@
-LD_FLAGS = -ldflags="-X main.buildVersion=v0.1.0 -X main.buildDate=$(shell date +%Y-%m-%d) -X main.buildCommit=$(shell git rev-parse --short=8 HEAD)"
+BUILD_VERSION=v0.1.1
+LD_FLAGS = -ldflags="-X main.buildVersion=$(BUILD_VERSION) -X main.buildDate=$(shell date +%Y-%m-%d) -X main.buildCommit=$(shell git rev-parse --short=8 HEAD)"
 
 ## help: print this help message
 help:
@@ -48,4 +49,7 @@ build:
 	GOOS=darwin  GOARCH=amd64 go build $(LD_FLAGS) -o ./build/gg-mac     ./cmd/goto/*.go
 	GOOS=linux   GOARCH=amd64 go build $(LD_FLAGS) -o ./build/gg-lin     ./cmd/goto/*.go
 	GOOS=windows GOARCH=amd64 go build $(LD_FLAGS) -o ./build/gg-win.exe ./cmd/goto/*.go
-
+	@mkdir ./build/goto-$(BUILD_VERSION)/
+	@cp ./build/gg* ./build/goto-$(BUILD_VERSION)
+	@cd ./build && zip -r goto-$(BUILD_VERSION).zip goto-$(BUILD_VERSION)
+	@rm -r ./build/goto-$(BUILD_VERSION)

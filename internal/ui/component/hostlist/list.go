@@ -124,7 +124,7 @@ func (m listModel) View() string {
 func (m listModel) removeItem(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
-		return m, TeaCmd(msgErrorOccured{err: errors.New("could not cast list.SelectedItem() to component.ListItem")})
+		return m, TeaCmd(msgErrorOccured{err: errors.New("You must select an item")})
 	}
 	m.repo.Delete(item.ID)
 
