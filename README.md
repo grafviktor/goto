@@ -47,11 +47,12 @@ Usually you don't need to edit this file manually, but sometimes it's much conve
     identity_file_path: /home/user/.ssh/id_rsa_microsoft
 ```
 
-## Bugs ##
+## Bugs and issues ##
 
-* Terminal resizing in Windows OS is not yet supported, as `cmd.exe` does not fire window resize events.
-* You cannot disable generating `debug.log` file.
-* User input validators do not exist.
+* Terminal resizing in Windows OS is not yet supported, as `cmd.exe` does not fire window resize events;
+* You cannot disable generating `debug.log` file;
+* User input validators do not exist;
+* There is no confirmation dialog when you delete an existing item from the database;
 * Maybe some other things as the utility hasn't even reached a stable version.
 
 ## License ##
