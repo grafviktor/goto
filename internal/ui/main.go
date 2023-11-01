@@ -69,7 +69,7 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = viewEditItem
 		m.modelEditHost = edithost.New(m.appContext, m.hostStorage, m.appState)
 	case hostlist.MsgSelectItem:
-		m.appState.Selected = msg.Index
+		m.appState.Selected = msg.ID
 	case edithost.MsgClose:
 		m.state = viewHostList
 	}
@@ -90,7 +90,6 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if msg.Type == tea.KeyCtrlC {
-		// TODO: Save State
 		return m, tea.Quit
 	}
 
