@@ -49,9 +49,13 @@ Usually you don't need to edit this file manually, but sometimes it's much conve
 
 ## Changelog ##
 
+**v0.1.2**
+
+Resolve a problem with dissapearing host list when filter is enabled and a user is modifying the collection. [See issue 3](https://github.com/grafviktor/goto/issues/3).
+
 **v0.1.1**
 
-Fix a focusing issue when saving an existing item using a different title.
+Fix a focusing issue when saving an existing item using a different title. [See issue 1](https://github.com/grafviktor/goto/issues/1).
 
 ## Known bugs ##
 
