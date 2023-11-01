@@ -113,8 +113,9 @@ func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case msgInitComplete:
 		return m.refreshRepo(msg)
 	case msgFocusChanged:
-		m := m.listTitleUpdate(msg)
-		m, cmd := m.onFocusChanged(msg)
+		m = m.listTitleUpdate(msg)
+		var cmd tea.Cmd
+		m, cmd = m.onFocusChanged(msg)
 		cmds = append(cmds, cmd)
 		return m, tea.Batch(cmds...)
 	}
@@ -278,7 +279,7 @@ func (m ListModel) listTitleUpdate(msg tea.Msg) ListModel {
 	}
 }
 
-func (m ListModel) onFocusChanged(msg tea.Msg) (ListModel, tea.Cmd) {
+func (m ListModel) onFocusChanged(_ tea.Msg) (ListModel, tea.Cmd) {
 	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
 		return m, message.TeaCmd(MsgSelectItem{HostID: hostItem.ID})
 	}
