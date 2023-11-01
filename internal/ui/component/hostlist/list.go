@@ -9,15 +9,19 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"golang.org/x/exp/slices"
+
 	"github.com/grafviktor/goto/internal/connector/ssh"
 	"github.com/grafviktor/goto/internal/model"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
-	. "github.com/grafviktor/goto/internal/ui/message" //nolint dot-imports
-	"golang.org/x/exp/slices"
+	"github.com/grafviktor/goto/internal/ui/message"
 )
 
-var docStyle = lipgloss.NewStyle().Margin(1, 2)
+var (
+	docStyle               = lipgloss.NewStyle().Margin(1, 2)
+	itemNotSelectedMessage = "you must select an item"
+)
 
 type (
 	MsgEditItem     struct{ HostID int }
@@ -63,7 +67,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 }
 
 func (m listModel) Init() tea.Cmd {
-	return tea.Batch(TeaCmd(msgInitComplete{}))
+	return tea.Batch(message.TeaCmd(msgInitComplete{}))
 }
 
 func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -72,7 +76,7 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		// dispatch msgFocusChanged message to update list title
-		cmds = append(cmds, TeaCmd(msgFocusChanged{}))
+		cmds = append(cmds, message.TeaCmd(msgFocusChanged{}))
 
 		if m.innerModel.FilterState() == list.Filtering {
 			// if filter is enabled, we should not handle any keyboard messages
@@ -87,7 +91,7 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keyMap.edit):
 			return m.editItem(msg)
 		case key.Matches(msg, m.keyMap.append):
-			return m, TeaCmd(MsgEditItem{})
+			return m, message.TeaCmd(MsgEditItem{})
 		case key.Matches(msg, m.keyMap.clone):
 			return m.copyItem(msg)
 		}
@@ -96,15 +100,14 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		h, v := docStyle.GetFrameSize()
 		m.innerModel.SetSize(msg.Width-h, msg.Height-v)
 	case msgErrorOccured:
-		return m.listTitleUpdate(msg)
+		return m.listTitleUpdate(msg), nil
 	case MsgRepoUpdated:
 		return m.refreshRepo(msg)
 	case msgInitComplete:
 		return m.refreshRepo(msg)
 	case msgFocusChanged:
-		m, cmd := m.listTitleUpdate(msg)
-		cmds = append(cmds, cmd)
-		m, cmd = m.onFocusChanged(msg)
+		m := m.listTitleUpdate(msg)
+		m, cmd := m.onFocusChanged(msg)
 		cmds = append(cmds, cmd)
 		return m, tea.Batch(cmds...)
 	}
@@ -124,18 +127,25 @@ func (m listModel) View() string {
 func (m listModel) removeItem(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
-		return m, TeaCmd(msgErrorOccured{err: errors.New("You must select an item")})
+		return m, message.TeaCmd(msgErrorOccured{err: errors.New("you must select an item")})
 	}
-	m.repo.Delete(item.ID)
 
-	return m, tea.Batch(TeaCmd(MsgRepoUpdated{}), TeaCmd(msgFocusChanged{}))
+	err := m.repo.Delete(item.ID)
+	if err != nil {
+		return m, message.TeaCmd(msgErrorOccured{err})
+	}
+
+	return m, tea.Batch(
+		message.TeaCmd(MsgRepoUpdated{}),
+		message.TeaCmd(msgFocusChanged{}),
+	)
 }
 
 func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
 	items := []list.Item{}
 	hosts, err := m.repo.GetAll()
 	if err != nil {
-		return m, TeaCmd(msgErrorOccured{err})
+		return m, message.TeaCmd(msgErrorOccured{err})
 	}
 
 	slices.SortFunc(hosts, func(a, b model.Host) int {
@@ -162,25 +172,23 @@ func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
 		}
 	}
 
-	return m, tea.Batch(setItemsCmd, TeaCmd(msgFocusChanged{}))
+	return m, tea.Batch(setItemsCmd, message.TeaCmd(msgFocusChanged{}))
 }
 
 func (m listModel) editItem(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
-		errText := "You must select an item"
-		return m, TeaCmd(msgErrorOccured{err: errors.New(errText)})
+		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
 	}
 
 	host := *item.Unwrap()
-	return m, TeaCmd(MsgEditItem{HostID: host.ID})
+	return m, message.TeaCmd(MsgEditItem{HostID: host.ID})
 }
 
 func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
-		errText := "You must select an item"
-		return m, TeaCmd(msgErrorOccured{err: errors.New(errText)})
+		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
 	}
 
 	originalHost := item.Unwrap()
@@ -199,24 +207,25 @@ func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 	}
 
 	if err := m.repo.Save(clonedHost); err != nil {
-		return m, TeaCmd(msgErrorOccured{err})
+		return m, message.TeaCmd(msgErrorOccured{err})
 	}
 
-	return m, tea.Batch(TeaCmd(MsgRepoUpdated{}), TeaCmd(msgFocusChanged{}))
+	return m, tea.Batch(
+		message.TeaCmd(MsgRepoUpdated{}),
+		message.TeaCmd(msgFocusChanged{}),
+	)
 }
 
 func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
-		errText := "You must select an item"
-
-		return m, TeaCmd(msgErrorOccured{err: errors.New(errText)})
+		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
 	}
 
 	host := *item.Unwrap()
 	err := m.repo.Save(host)
 	if err != nil {
-		return m, TeaCmd(msgErrorOccured{err})
+		return m, message.TeaCmd(msgErrorOccured{err})
 	}
 
 	connectSSHCmd := ssh.Connect(host)
@@ -229,27 +238,27 @@ func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
 	})
 }
 
-func (m listModel) listTitleUpdate(msg tea.Msg) (listModel, tea.Cmd) {
+func (m listModel) listTitleUpdate(msg tea.Msg) listModel {
 	switch msg := msg.(type) {
 	case msgErrorOccured:
-		m.innerModel.Title = fmt.Sprintf("%s", msg.err.Error())
+		m.innerModel.Title = msg.err.Error()
 
-		return m, nil
+		return m
 	default:
 		item, ok := m.innerModel.SelectedItem().(ListItemHost)
 		if !ok {
-			return m, nil
+			return m
 		}
 
 		m.innerModel.Title = fmt.Sprintf("goto: %s", item.Unwrap().Address)
 
-		return m, nil
+		return m
 	}
 }
 
 func (m listModel) onFocusChanged(msg tea.Msg) (listModel, tea.Cmd) {
 	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
-		return m, TeaCmd(MsgSelectItem{HostID: hostItem.ID})
+		return m, message.TeaCmd(MsgSelectItem{HostID: hostItem.ID})
 	}
 
 	return m, nil

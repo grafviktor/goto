@@ -11,12 +11,12 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/grafviktor/goto/internal/model"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
 	"github.com/grafviktor/goto/internal/ui/message"
-	. "github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
 )
 
@@ -25,10 +25,12 @@ type Size struct {
 	Height int
 }
 
-type MsgClose struct{}
-type MsgSave struct{}
+type (
+	MsgClose struct{}
+	MsgSave  struct{}
+)
 
-const ItemID string = "itemID"
+var ItemID = struct{}{}
 
 // func New(ctx context.Context, storage storage.HostStorage, width int, height int) editModel {
 func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState) editModel {
@@ -164,8 +166,8 @@ func (m editModel) save(msg tea.Msg) (editModel, tea.Cmd) {
 
 	_ = m.hostStorage.Save(m.host)
 	return m, tea.Batch(
-		TeaCmd(MsgClose{}),
-		TeaCmd(hostlist.MsgRepoUpdated{}),
+		message.TeaCmd(MsgClose{}),
+		message.TeaCmd(hostlist.MsgRepoUpdated{}),
 	)
 }
 

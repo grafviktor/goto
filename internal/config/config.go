@@ -5,13 +5,16 @@ import (
 	"os"
 	"path"
 
+	"gopkg.in/yaml.v2"
+
 	"github.com/grafviktor/goto/internal/model"
 	"github.com/grafviktor/goto/internal/utils"
-	"gopkg.in/yaml.v2"
 )
 
-var appName = "goto"
-var configFile = "config.yaml"
+var (
+	appName    = "goto"
+	configFile = "config.yaml"
+)
 
 type Logger interface {
 	Debug(format string, args ...any)

@@ -8,6 +8,7 @@ import (
 	"path"
 
 	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/grafviktor/goto/internal/utils"
 )
 
@@ -45,14 +46,14 @@ func (l *Logger) Close() {
 	l.logFile.Close()
 }
 
-type ctxKey struct{}
+var ctxKey = struct{}{}
 
 func ToContext(ctx context.Context, logger *Logger) context.Context {
-	return context.WithValue(ctx, ctxKey{}, logger)
+	return context.WithValue(ctx, ctxKey, logger)
 }
 
 func FromContext(ctx context.Context) (*Logger, error) {
-	if logger, ok := ctx.Value(ctxKey{}).(*Logger); ok {
+	if logger, ok := ctx.Value(ctxKey).(*Logger); ok {
 		return logger, nil
 	}
 

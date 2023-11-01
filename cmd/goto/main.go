@@ -6,6 +6,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/logger"
 	"github.com/grafviktor/goto/internal/state"
