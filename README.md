@@ -47,7 +47,7 @@ Usually you don't need to edit this file manually, but sometimes it's much conve
     identity_file_path: /home/user/.ssh/id_rsa_microsoft
 ```
 
-## Bugs and issues ##
+## Known bugs ##
 
 * Terminal resizing in Windows OS is not yet supported, as `cmd.exe` does not fire window resize events;
 * You cannot disable generating `debug.log` file;
