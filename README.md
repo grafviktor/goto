@@ -4,10 +4,10 @@ This utility helps to maintain a list of ssh servers. Unlike PuTTY id doesn't in
 
 ## Installation ##
 
-* Download the zip file from the releases section;
+* Download the latest version from the [Releases](releases) section;
 * Choose a binary file which matches your platform;
 * Place the binary into your user's binary path;
-* Optionally: rename `gg-$platform` into `gg`.
+* Optionally: rename `gg-${YOUR_PLATFORM_NAME}` to `gg`.
 
 ## Functional preview ##
 
@@ -27,11 +27,11 @@ This utility helps to maintain a list of ssh servers. Unlike PuTTY id doesn't in
 
 Currently you can only store your hosts in a yaml file, which is called `hosts.yaml`. The file is located in your user config folder which exact path depends on a running platform:
 
-* On Linux, it's in `$XDG_CONFIG_HOME/goto` or `$HOME/.config/goto`;
-* On Mac, it's in `$HOME/Library/Application Support/goto`;
-* On Windows, it's in `%AppData%\goto`.
+* on Linux, it's in `$XDG_CONFIG_HOME/goto` or `$HOME/.config/goto`;
+* on Mac, it's in `$HOME/Library/Application Support/goto`;
+* on Windows, it's in `%AppData%\goto`.
 
-Usually you don't need to edit this file manually, but sometimes it's much convenient to edit it into your favorite text editor, than using `goto` utility. The file structure is very simple and self-explanatory:
+Usually you don't need to edit this file manually, but sometimes it's much more convenient to edit it into your favorite text editor, than using `goto` utility. The file structure is very simple and self-explanatory:
 
 ```yaml
 - host:
@@ -59,11 +59,11 @@ Usually you don't need to edit this file manually, but sometimes it's much conve
 
 **v0.1.2**
 
-Resolve a problem with dissapearing host list when filter is enabled and a user is modifying the collection. [See issue 3](https://github.com/grafviktor/goto/issues/3).
+Resolve a problem with dissapearing host list when filter is enabled and a user is modifying the collection [[issue 3](https://github.com/grafviktor/goto/issues/3)].
 
 **v0.1.1**
 
-Fix a focusing issue when saving an existing item using a different title. [See issue 1](https://github.com/grafviktor/goto/issues/1).
+Fix a focusing issue when saving an existing item using a different title [[issue 1](https://github.com/grafviktor/goto/issues/1)].
 
 ## License ##
 
