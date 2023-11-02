@@ -19,6 +19,10 @@ import (
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
+type logger interface {
+	Debug(format string, args ...any)
+}
+
 type (
 	MsgEditItem     struct{ HostID int }
 	MsgCopyItem     struct{ HostID int }
@@ -35,9 +39,10 @@ type listModel struct {
 	repo       storage.HostStorage
 	keyMap     *keyMap
 	appState   *state.ApplicationState
+	logger     logger
 }
 
-func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState) listModel {
+func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log logger) listModel {
 	delegate := list.NewDefaultDelegate()
 	delegateKeys := newDelegateKeyMap()
 	listItems := []list.Item{}
@@ -46,6 +51,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 		keyMap:     delegateKeys,
 		repo:       storage,
 		appState:   appState,
+		logger:     log,
 	}
 
 	m.innerModel.KeyMap.CursorUp.Unbind()
@@ -95,6 +101,7 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// triggers immediately after app start because we render this component by default
 		h, v := docStyle.GetFrameSize()
 		m.innerModel.SetSize(msg.Width-h, msg.Height-v)
+		m.logger.Debug("New frame size: %d %d", m.innerModel.Width(), m.innerModel.Height())
 	case msgErrorOccured:
 		return m.listTitleUpdate(msg)
 	case MsgRepoUpdated:

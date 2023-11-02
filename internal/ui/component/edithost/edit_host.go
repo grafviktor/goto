@@ -30,8 +30,12 @@ type MsgSave struct{}
 
 const ItemID string = "itemID"
 
+type logger interface {
+	Debug(format string, args ...any)
+}
+
 // func New(ctx context.Context, storage storage.HostStorage, width int, height int) editModel {
-func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState) editModel {
+func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState, log logger) editModel {
 	// if we can't cast host id to int, that means we're adding a new host. Ignoring the error
 	hostID, _ := ctx.Value(ItemID).(int)
 	host, err := storage.Get(hostID)
@@ -46,6 +50,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		help:        help.New(),
 		keyMap:      keys,
 		appState:    state,
+		logger:      log,
 	}
 
 	var t LabeledInput
@@ -100,6 +105,7 @@ type editModel struct {
 	help        help.Model
 	ready       bool
 	appState    *state.ApplicationState
+	logger      logger
 }
 
 func (m editModel) Init() tea.Cmd {
@@ -107,6 +113,11 @@ func (m editModel) Init() tea.Cmd {
 }
 
 func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// this message never comes through on windows. Sending it from init_win.go
+	if msg, ok := msg.(tea.WindowSizeMsg); ok {
+		m.logger.Debug("Resizing edit host viewport: %d %d", msg.Width, msg.Height)
+	}
+
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
@@ -117,7 +128,7 @@ func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// create or Update viewport
 	m = m.updateViewPort(msg)
 
-	switch msg := msg.(type) { //nolint:gocritic // we should use "switch" to receive message type
+	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.keyMap.Save):
@@ -182,11 +193,11 @@ func (m editModel) updateViewPort(msg tea.Msg) editModel {
 
 	if !m.ready {
 		m.ready = true
-		// m.viewport = viewport.New(m.size.Width, m.size.Height-headerHeight-helpMenuHeight)
 		m.viewport = viewport.New(m.appState.Width, m.appState.Height-headerHeight-helpMenuHeight)
 	} else if resizeMsg, ok := msg.(tea.WindowSizeMsg); ok {
 		m.viewport.Width = resizeMsg.Width
 		m.viewport.Height = resizeMsg.Height - headerHeight - helpMenuHeight
+		m.logger.Debug("Resizing edit host viewport: %d %d", m.viewport.Width, m.viewport.Height)
 	}
 
 	return m

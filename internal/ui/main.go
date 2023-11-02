@@ -17,12 +17,17 @@ const (
 	viewEditItem
 )
 
-func NewMainModel(ctx context.Context, storage storage.HostStorage, appState *state.ApplicationState) mainModel {
+type logger interface {
+	Debug(format string, args ...any)
+}
+
+func NewMainModel(ctx context.Context, storage storage.HostStorage, appState *state.ApplicationState, log logger) mainModel {
 	m := mainModel{
-		modelHostList: hostlist.New(ctx, storage, appState),
+		modelHostList: hostlist.New(ctx, storage, appState, log),
 		appContext:    ctx,
 		hostStorage:   storage,
 		appState:      appState,
+		logger:        log,
 	}
 
 	return m
@@ -36,6 +41,7 @@ type mainModel struct {
 	modelEditHost tea.Model
 	// TODO: Move mainModel to "State" object or vice versa
 	appState *state.ApplicationState
+	logger   logger
 }
 
 func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -48,15 +54,16 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
+		m.logger.Debug("Terminal window new size: %d %d", msg.Width, msg.Height)
 		m.appState.Width = msg.Width
 		m.appState.Height = msg.Height
 	case hostlist.MsgEditItem:
 		m.state = viewEditItem
 		ctx := context.WithValue(m.appContext, edithost.ItemID, msg.HostID)
-		m.modelEditHost = edithost.New(ctx, m.hostStorage, m.appState)
+		m.modelEditHost = edithost.New(ctx, m.hostStorage, m.appState, m.logger)
 	case hostlist.MsgNewItem:
 		m.state = viewEditItem
-		m.modelEditHost = edithost.New(m.appContext, m.hostStorage, m.appState)
+		m.modelEditHost = edithost.New(m.appContext, m.hostStorage, m.appState, m.logger)
 	case hostlist.MsgSelectItem:
 		m.appState.Selected = msg.HostID
 	case edithost.MsgClose:
