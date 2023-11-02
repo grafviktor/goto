@@ -38,17 +38,6 @@ type mainModel struct {
 	appState *state.ApplicationState
 }
 
-func (m mainModel) Init() tea.Cmd {
-	switch m.state {
-	case viewEditItem:
-		return m.modelEditHost.Init()
-	case viewHostList:
-		return m.modelHostList.Init()
-	}
-
-	return nil
-}
-
 func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
