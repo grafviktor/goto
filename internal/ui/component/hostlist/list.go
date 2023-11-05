@@ -34,24 +34,26 @@ type (
 	msgFocusChanged struct{}
 )
 
-type listModel struct {
+type ListModel struct {
 	innerModel list.Model
 	repo       storage.HostStorage
 	keyMap     *keyMap
 	appState   *state.ApplicationState
 	logger     logger
+	Created    string
 }
 
-func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log logger) listModel {
+func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log logger) ListModel {
 	delegate := list.NewDefaultDelegate()
 	delegateKeys := newDelegateKeyMap()
 	listItems := []list.Item{}
-	m := listModel{
+	m := ListModel{
 		innerModel: list.New(listItems, delegate, 0, 0),
 		keyMap:     delegateKeys,
 		repo:       storage,
 		appState:   appState,
 		logger:     log,
+		Created:    "A",
 	}
 
 	m.innerModel.KeyMap.CursorUp.Unbind()
@@ -68,11 +70,11 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	return m
 }
 
-func (m listModel) Init() tea.Cmd {
+func (m ListModel) Init() tea.Cmd {
 	return tea.Batch(TeaCmd(msgInitComplete{}))
 }
 
-func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -116,6 +118,10 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmds...)
 	}
 
+	if len(m.innerModel.Items()) == 0 {
+		fmt.Println(0)
+	}
+
 	// If we could not find our own update handler, we pass message to the original model
 	// otherwise we would have to implement all key hanlders and other stuff by ourselves
 	var innerModelCmd tea.Cmd
@@ -124,11 +130,11 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m listModel) View() string {
+func (m ListModel) View() string {
 	return docStyle.Render(m.innerModel.View())
 }
 
-func (m listModel) removeItem(_ tea.Msg) (listModel, tea.Cmd) {
+func (m ListModel) removeItem(_ tea.Msg) (ListModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		return m, TeaCmd(msgErrorOccured{err: errors.New("You must select an item")})
@@ -138,7 +144,7 @@ func (m listModel) removeItem(_ tea.Msg) (listModel, tea.Cmd) {
 	return m, tea.Batch(TeaCmd(MsgRepoUpdated{}), TeaCmd(msgFocusChanged{}))
 }
 
-func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
+func (m ListModel) refreshRepo(_ tea.Msg) (ListModel, tea.Cmd) {
 	items := []list.Item{}
 	hosts, err := m.repo.GetAll()
 	if err != nil {
@@ -172,7 +178,7 @@ func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
 	return m, tea.Batch(setItemsCmd, TeaCmd(msgFocusChanged{}))
 }
 
-func (m listModel) editItem(_ tea.Msg) (listModel, tea.Cmd) {
+func (m ListModel) editItem(_ tea.Msg) (ListModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		errText := "You must select an item"
@@ -183,7 +189,7 @@ func (m listModel) editItem(_ tea.Msg) (listModel, tea.Cmd) {
 	return m, TeaCmd(MsgEditItem{HostID: host.ID})
 }
 
-func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
+func (m ListModel) copyItem(_ tea.Msg) (ListModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		errText := "You must select an item"
@@ -212,7 +218,7 @@ func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 	return m, tea.Batch(TeaCmd(MsgRepoUpdated{}), TeaCmd(msgFocusChanged{}))
 }
 
-func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
+func (m ListModel) executeCmd(_ tea.Msg) (ListModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		errText := "You must select an item"
@@ -236,7 +242,7 @@ func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
 	})
 }
 
-func (m listModel) listTitleUpdate(msg tea.Msg) (listModel, tea.Cmd) {
+func (m ListModel) listTitleUpdate(msg tea.Msg) (ListModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case msgErrorOccured:
 		m.innerModel.Title = fmt.Sprintf("%s", msg.err.Error())
@@ -254,7 +260,7 @@ func (m listModel) listTitleUpdate(msg tea.Msg) (listModel, tea.Cmd) {
 	}
 }
 
-func (m listModel) onFocusChanged(msg tea.Msg) (listModel, tea.Cmd) {
+func (m ListModel) onFocusChanged(msg tea.Msg) (ListModel, tea.Cmd) {
 	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
 		return m, TeaCmd(MsgSelectItem{HostID: hostItem.ID})
 	}

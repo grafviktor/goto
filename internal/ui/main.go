@@ -14,20 +14,22 @@ import (
 	"golang.org/x/term"
 )
 
-type sessionState int
+// type sessionState int
 
-const (
-	viewHostList sessionState = iota
-	viewEditItem
-)
+// const (
+// 	viewHostList sessionState = iota
+// 	viewEditItem
+// )
 
 type logger interface {
 	Debug(format string, args ...any)
 }
 
 func NewMainModel(ctx context.Context, storage storage.HostStorage, appState *state.ApplicationState, log logger) mainModel {
+	hostList := hostlist.New(ctx, storage, appState, log)
+
 	m := mainModel{
-		modelHostList: hostlist.New(ctx, storage, appState, log),
+		modelHostList: hostList,
 		appContext:    ctx,
 		hostStorage:   storage,
 		appState:      appState,
@@ -38,12 +40,12 @@ func NewMainModel(ctx context.Context, storage storage.HostStorage, appState *st
 }
 
 type mainModel struct {
-	appContext      context.Context
-	hostStorage     storage.HostStorage
-	state           sessionState
-	activeComponent tea.Model
+	appContext  context.Context
+	hostStorage storage.HostStorage
+	// state           sessionState
+	activeComponent *tea.Model
 	modelHostList   tea.Model
-	modelEditHost   tea.Model
+	// modelEditHost   tea.Model
 	// TODO: Move mainModel to "State" object or vice versa
 	appState *state.ApplicationState
 	logger   logger
@@ -75,26 +77,32 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateViewPort(msg.Width, msg.Height)
 	case hostlist.MsgEditItem:
 		// cmds = append(cmds, func() tea.Msg { return msg })
-		m.state = viewEditItem
+		// m.state = viewEditItem
 		ctx := context.WithValue(m.appContext, edithost.ItemID, msg.HostID)
-		m.modelEditHost = edithost.New(ctx, m.hostStorage, m.appState, m.logger)
+		var editHost tea.Model = edithost.New(ctx, m.hostStorage, m.appState, m.logger)
+		m.activeComponent = &editHost
 	case hostlist.MsgNewItem:
-		m.state = viewEditItem
-		m.modelEditHost = edithost.New(m.appContext, m.hostStorage, m.appState, m.logger)
+		// m.state = viewEditItem
+		var editHost tea.Model = edithost.New(m.appContext, m.hostStorage, m.appState, m.logger)
+		m.activeComponent = &editHost
 	case hostlist.MsgSelectItem:
 		m.appState.Selected = msg.HostID
 	case edithost.MsgClose:
-		m.state = viewHostList
+		m.activeComponent = &m.modelHostList
 	}
 
-	m.modelHostList, cmd = m.modelHostList.Update(msg)
+	activeComponent, cmd := (*m.activeComponent).Update(msg)
+	m.activeComponent = &activeComponent
+	cmds = append(cmds, cmd)
+
+	/*m.modelHostList, cmd = m.modelHostList.Update(msg)
 	cmds = append(cmds, cmd)
 
 	if m.state == viewEditItem {
 		// edit host receives messages only if it's active. We re-create this component every time we go to edit mode
 		m.modelEditHost, cmd = m.modelEditHost.Update(msg)
 		cmds = append(cmds, cmd)
-	}
+	}*/
 
 	return m, tea.Batch(cmds...)
 }
@@ -104,27 +112,30 @@ func (m *mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	var cmd tea.Cmd
-	switch m.state { // Only active component receives key messages
-	case viewHostList:
-		m.modelHostList, cmd = m.modelHostList.Update(msg)
-	case viewEditItem:
-		m.modelEditHost, cmd = m.modelEditHost.Update(msg)
-	}
+	// var cmd tea.Cmd
+	activeComponent, cmd := (*m.activeComponent).Update(msg)
+	m.activeComponent = &activeComponent
+
+	// switch m.state { // Only active component receives key messages
+	// case viewHostList:
+	// 	m.modelHostList, cmd = m.modelHostList.Update(msg)
+	// case viewEditItem:
+	// 	m.modelEditHost, cmd = m.modelEditHost.Update(msg)
+	// }
 
 	return m, cmd
 }
 
 func (m *mainModel) View() string {
-	var content string
-	switch m.state {
-	case viewEditItem:
-		content = m.modelEditHost.View()
-	case viewHostList:
-		content = m.modelHostList.View()
-	}
+	// var content string
+	// switch m.state {
+	// case viewEditItem:
+	// 	content = m.modelEditHost.View()
+	// case viewHostList:
+	// 	content = m.modelHostList.View()
+	// }
 
-	m.viewport.SetContent(content)
+	m.viewport.SetContent((*m.activeComponent).View())
 
 	return m.viewport.View()
 }
