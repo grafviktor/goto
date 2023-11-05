@@ -2,12 +2,16 @@ package ui
 
 import (
 	"context"
+	"os"
 
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/edithost"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
+	"github.com/grafviktor/goto/internal/ui/message"
+	"golang.org/x/term"
 )
 
 type sessionState int
@@ -34,17 +38,20 @@ func NewMainModel(ctx context.Context, storage storage.HostStorage, appState *st
 }
 
 type mainModel struct {
-	appContext    context.Context
-	hostStorage   storage.HostStorage
-	state         sessionState
-	modelHostList tea.Model
-	modelEditHost tea.Model
+	appContext      context.Context
+	hostStorage     storage.HostStorage
+	state           sessionState
+	activeComponent tea.Model
+	modelHostList   tea.Model
+	modelEditHost   tea.Model
 	// TODO: Move mainModel to "State" object or vice versa
 	appState *state.ApplicationState
 	logger   logger
+	viewport viewport.Model
+	ready    bool
 }
 
-func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
@@ -53,11 +60,21 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
+	case tickMsg:
+		terminalFd := int(os.Stdout.Fd())
+		w, h, _ := term.GetSize(terminalFd)
+		if w != m.appState.Width || h != m.appState.Height {
+			m.updateViewPort(w, h)
+			cmds = append(cmds, message.TeaCmd(tea.WindowSizeMsg{Width: w, Height: h}))
+		}
+		cmds = append(cmds, tick)
 	case tea.WindowSizeMsg:
 		m.logger.Debug("Terminal window new size: %d %d", msg.Width, msg.Height)
 		m.appState.Width = msg.Width
 		m.appState.Height = msg.Height
+		m.updateViewPort(msg.Width, msg.Height)
 	case hostlist.MsgEditItem:
+		// cmds = append(cmds, func() tea.Msg { return msg })
 		m.state = viewEditItem
 		ctx := context.WithValue(m.appContext, edithost.ItemID, msg.HostID)
 		m.modelEditHost = edithost.New(ctx, m.hostStorage, m.appState, m.logger)
@@ -79,12 +96,10 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	}
 
-	cmds = append(cmds, cmd)
-
 	return m, tea.Batch(cmds...)
 }
 
-func (m mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if msg.Type == tea.KeyCtrlC {
 		return m, tea.Quit
 	}
@@ -100,13 +115,28 @@ func (m mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m mainModel) View() string {
+func (m *mainModel) View() string {
+	var content string
 	switch m.state {
 	case viewEditItem:
-		return m.modelEditHost.View()
+		content = m.modelEditHost.View()
 	case viewHostList:
-		return m.modelHostList.View()
+		content = m.modelHostList.View()
 	}
 
-	panic("Should not be here")
+	m.viewport.SetContent(content)
+
+	return m.viewport.View()
+}
+
+func (m *mainModel) updateViewPort(w, h int) tea.Model {
+	if !m.ready {
+		m.ready = true
+		m.viewport = viewport.New(m.appState.Width, m.appState.Height)
+	} else {
+		m.viewport.Width = w
+		m.viewport.Height = h
+	}
+
+	return m
 }

@@ -45,7 +45,7 @@ func main() {
 
 	appState := state.Get(appConfig.HomeFolder, &lg)
 	uiComponent := ui.NewMainModel(ctx, hostStorage, appState, &lg)
-	p := tea.NewProgram(uiComponent, tea.WithAltScreen())
+	p := tea.NewProgram(&uiComponent, tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {
 		lg.Debug("Error running program: %v", err)
