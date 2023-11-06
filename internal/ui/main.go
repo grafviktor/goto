@@ -62,13 +62,13 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// resize events, that is why we poll terminal size with intervals
 		// First message is being triggered by Windows version of the model.Init function.
 		if msg.Width != m.appState.Width || msg.Height != m.appState.Height {
-			m.logger.Debug("Windows size polling message received. New size: %d %d", msg.Width, msg.Height)
+			m.logger.Debug("Terminal size polling message received: %d %d", msg.Width, msg.Height)
 			cmds = append(cmds, message.TeaCmd(tea.WindowSizeMsg{Width: msg.Width, Height: msg.Height}))
 		}
 
 		// We're dispatching the same message from this function and therefore cycling TerminalSizePollingMsg.
 		// That's done on purpose to keep this process running. Message.TerminalSizePollingMsg will trigger
-		// automatically after an artificial pause which set by message tick.
+		// automatically after an artificial delay which set by Time.Sleep inside message.
 		cmds = append(cmds, message.TerminalSizePolling)
 	case tea.WindowSizeMsg:
 		m.logger.Debug("Terminal window new size: %d %d", msg.Width, msg.Height)
