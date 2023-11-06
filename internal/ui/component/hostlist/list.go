@@ -19,6 +19,10 @@ import (
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
+type logger interface {
+	Debug(format string, args ...any)
+}
+
 type (
 	MsgEditItem     struct{ HostID int }
 	MsgCopyItem     struct{ HostID int }
@@ -30,22 +34,24 @@ type (
 	msgFocusChanged struct{}
 )
 
-type listModel struct {
+type ListModel struct {
 	innerModel list.Model
 	repo       storage.HostStorage
 	keyMap     *keyMap
 	appState   *state.ApplicationState
+	logger     logger
 }
 
-func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState) listModel {
+func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log logger) ListModel {
 	delegate := list.NewDefaultDelegate()
 	delegateKeys := newDelegateKeyMap()
 	listItems := []list.Item{}
-	m := listModel{
+	m := ListModel{
 		innerModel: list.New(listItems, delegate, 0, 0),
 		keyMap:     delegateKeys,
 		repo:       storage,
 		appState:   appState,
+		logger:     log,
 	}
 
 	m.innerModel.KeyMap.CursorUp.Unbind()
@@ -62,11 +68,11 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	return m
 }
 
-func (m listModel) Init() tea.Cmd {
+func (m ListModel) Init() tea.Cmd {
 	return tea.Batch(TeaCmd(msgInitComplete{}))
 }
 
-func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -95,6 +101,7 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// triggers immediately after app start because we render this component by default
 		h, v := docStyle.GetFrameSize()
 		m.innerModel.SetSize(msg.Width-h, msg.Height-v)
+		m.logger.Debug("New frame size: %d %d", m.innerModel.Width(), m.innerModel.Height())
 	case msgErrorOccured:
 		return m.listTitleUpdate(msg)
 	case MsgRepoUpdated:
@@ -102,7 +109,8 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case msgInitComplete:
 		return m.refreshRepo(msg)
 	case msgFocusChanged:
-		m, cmd := m.listTitleUpdate(msg)
+		var cmd tea.Cmd
+		m, cmd = m.listTitleUpdate(msg)
 		cmds = append(cmds, cmd)
 		m, cmd = m.onFocusChanged(msg)
 		cmds = append(cmds, cmd)
@@ -117,11 +125,11 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m listModel) View() string {
+func (m ListModel) View() string {
 	return docStyle.Render(m.innerModel.View())
 }
 
-func (m listModel) removeItem(_ tea.Msg) (listModel, tea.Cmd) {
+func (m ListModel) removeItem(_ tea.Msg) (ListModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		return m, TeaCmd(msgErrorOccured{err: errors.New("You must select an item")})
@@ -131,7 +139,7 @@ func (m listModel) removeItem(_ tea.Msg) (listModel, tea.Cmd) {
 	return m, tea.Batch(TeaCmd(MsgRepoUpdated{}), TeaCmd(msgFocusChanged{}))
 }
 
-func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
+func (m ListModel) refreshRepo(_ tea.Msg) (ListModel, tea.Cmd) {
 	items := []list.Item{}
 	hosts, err := m.repo.GetAll()
 	if err != nil {
@@ -165,7 +173,7 @@ func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
 	return m, tea.Batch(setItemsCmd, TeaCmd(msgFocusChanged{}))
 }
 
-func (m listModel) editItem(_ tea.Msg) (listModel, tea.Cmd) {
+func (m ListModel) editItem(_ tea.Msg) (ListModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		errText := "You must select an item"
@@ -176,7 +184,7 @@ func (m listModel) editItem(_ tea.Msg) (listModel, tea.Cmd) {
 	return m, TeaCmd(MsgEditItem{HostID: host.ID})
 }
 
-func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
+func (m ListModel) copyItem(_ tea.Msg) (ListModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		errText := "You must select an item"
@@ -205,7 +213,7 @@ func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 	return m, tea.Batch(TeaCmd(MsgRepoUpdated{}), TeaCmd(msgFocusChanged{}))
 }
 
-func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
+func (m ListModel) executeCmd(_ tea.Msg) (ListModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		errText := "You must select an item"
@@ -221,7 +229,22 @@ func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
 
 	connectSSHCmd := ssh.Connect(host)
 	return m, tea.ExecProcess(connectSSHCmd, func(err error) tea.Msg {
+		// return m, tea.ExecProcess(exec.Command("ping", "-t", "localhost"), func(err error) tea.Msg {
 		if err != nil {
+			/*
+			 * That's to attempt to restore windows terminal when user pressed ctrl+c when using SSH connection.
+			 * It works, when we close SSH, however it breaks all subsequent ssh connections
+			 */
+			/*
+				if runtime.GOOS == "windows" {
+					// If try to connect to a remote host and instead of typing a password, type "CTRL+C",
+					// the application UI will be broken. Flushing terminal window, helps to resolve the problem.
+					cmd := exec.Command("cmd", "/c", "cls")
+					cmd.Stdout = os.Stdout
+					cmd.Run()
+				}
+			*/
+
 			return msgErrorOccured{err}
 		}
 
@@ -229,7 +252,7 @@ func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
 	})
 }
 
-func (m listModel) listTitleUpdate(msg tea.Msg) (listModel, tea.Cmd) {
+func (m ListModel) listTitleUpdate(msg tea.Msg) (ListModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case msgErrorOccured:
 		m.innerModel.Title = fmt.Sprintf("%s", msg.err.Error())
@@ -247,7 +270,7 @@ func (m listModel) listTitleUpdate(msg tea.Msg) (listModel, tea.Cmd) {
 	}
 }
 
-func (m listModel) onFocusChanged(msg tea.Msg) (listModel, tea.Cmd) {
+func (m ListModel) onFocusChanged(msg tea.Msg) (ListModel, tea.Cmd) {
 	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
 		return m, TeaCmd(MsgSelectItem{HostID: hostItem.ID})
 	}
