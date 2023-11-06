@@ -2,13 +2,16 @@ package ui
 
 import (
 	"context"
+	"log"
 
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/edithost"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
+	"github.com/grafviktor/goto/internal/ui/message"
 )
 
 type sessionState int
@@ -18,12 +21,17 @@ const (
 	viewEditItem
 )
 
-func NewMainModel(ctx context.Context, storage storage.HostStorage, appState *state.ApplicationState) mainModel {
+type logger interface {
+	Debug(format string, args ...any)
+}
+
+func NewMainModel(ctx context.Context, storage storage.HostStorage, appState *state.ApplicationState, log logger) mainModel {
 	m := mainModel{
-		modelHostList: hostlist.New(ctx, storage, appState),
+		modelHostList: hostlist.New(ctx, storage, appState, log),
 		appContext:    ctx,
 		hostStorage:   storage,
 		appState:      appState,
+		logger:        log,
 	}
 
 	return m
@@ -35,22 +43,13 @@ type mainModel struct {
 	state         sessionState
 	modelHostList tea.Model
 	modelEditHost tea.Model
-	// TODO: Move mainModel to "State" object or vice versa
-	appState *state.ApplicationState
+	appState      *state.ApplicationState
+	logger        logger
+	viewport      viewport.Model
+	ready         bool
 }
 
-func (m mainModel) Init() tea.Cmd {
-	switch m.state {
-	case viewEditItem:
-		return m.modelEditHost.Init()
-	case viewHostList:
-		return m.modelHostList.Init()
-	}
-
-	return nil
-}
-
-func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
@@ -59,16 +58,31 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
+	case message.TerminalSizePollingMsg:
+		// That is Windows OS specific. Windows cmd.exe does not trigger terminal
+		// resize events, that is why we poll terminal size with intervals
+		// First message is being triggered by Windows version of the model.Init function.
+		if msg.Width != m.appState.Width || msg.Height != m.appState.Height {
+			m.logger.Debug("Terminal size polling message received: %d %d", msg.Width, msg.Height)
+			cmds = append(cmds, message.TeaCmd(tea.WindowSizeMsg{Width: msg.Width, Height: msg.Height}))
+		}
+
+		// We're dispatching the same message from this function and therefore cycling TerminalSizePollingMsg.
+		// That's done on purpose to keep this process running. Message.TerminalSizePollingMsg will trigger
+		// automatically after an artificial delay which set by Time.Sleep inside message.
+		cmds = append(cmds, message.TerminalSizePolling)
 	case tea.WindowSizeMsg:
+		m.logger.Debug("Terminal window new size: %d %d", msg.Width, msg.Height)
 		m.appState.Width = msg.Width
 		m.appState.Height = msg.Height
+		m.updateViewPort(msg.Width, msg.Height)
 	case hostlist.MsgEditItem:
 		m.state = viewEditItem
 		ctx := context.WithValue(m.appContext, edithost.ItemID, msg.HostID)
-		m.modelEditHost = edithost.New(ctx, m.hostStorage, m.appState)
+		m.modelEditHost = edithost.New(ctx, m.hostStorage, m.appState, m.logger)
 	case hostlist.MsgNewItem:
 		m.state = viewEditItem
-		m.modelEditHost = edithost.New(m.appContext, m.hostStorage, m.appState)
+		m.modelEditHost = edithost.New(m.appContext, m.hostStorage, m.appState, m.logger)
 	case hostlist.MsgSelectItem:
 		m.appState.Selected = msg.HostID
 	case edithost.MsgClose:
@@ -84,12 +98,10 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	}
 
-	cmds = append(cmds, cmd)
-
 	return m, tea.Batch(cmds...)
 }
 
-func (m mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if msg.Type == tea.KeyCtrlC {
 		return m, tea.Quit
 	}
@@ -105,13 +117,31 @@ func (m mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m mainModel) View() string {
+func (m *mainModel) View() string {
+	var content string
 	switch m.state {
 	case viewEditItem:
-		return m.modelEditHost.View()
+		content = m.modelEditHost.View()
 	case viewHostList:
-		return m.modelHostList.View()
+		content = m.modelHostList.View()
 	}
 
-	panic("Should not be here")
+	m.viewport.SetContent(content)
+	viewPortContent := m.viewport.View()
+
+	log.Println(viewPortContent)
+
+	return viewPortContent
+}
+
+func (m *mainModel) updateViewPort(w, h int) tea.Model {
+	if !m.ready {
+		m.ready = true
+		m.viewport = viewport.New(m.appState.Width, m.appState.Height)
+	} else {
+		m.viewport.Width = w
+		m.viewport.Height = h
+	}
+
+	return m
 }
