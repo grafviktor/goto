@@ -14,22 +14,20 @@ import (
 	"golang.org/x/term"
 )
 
-// type sessionState int
+type sessionState int
 
-// const (
-// 	viewHostList sessionState = iota
-// 	viewEditItem
-// )
+const (
+	viewHostList sessionState = iota
+	viewEditItem
+)
 
 type logger interface {
 	Debug(format string, args ...any)
 }
 
 func NewMainModel(ctx context.Context, storage storage.HostStorage, appState *state.ApplicationState, log logger) mainModel {
-	hostList := hostlist.New(ctx, storage, appState, log)
-
 	m := mainModel{
-		modelHostList: hostList,
+		modelHostList: hostlist.New(ctx, storage, appState, log),
 		appContext:    ctx,
 		hostStorage:   storage,
 		appState:      appState,
@@ -40,12 +38,11 @@ func NewMainModel(ctx context.Context, storage storage.HostStorage, appState *st
 }
 
 type mainModel struct {
-	appContext  context.Context
-	hostStorage storage.HostStorage
-	// state           sessionState
-	activeComponent *tea.Model
-	modelHostList   tea.Model
-	// modelEditHost   tea.Model
+	appContext    context.Context
+	hostStorage   storage.HostStorage
+	state         sessionState
+	modelHostList tea.Model
+	modelEditHost tea.Model
 	// TODO: Move mainModel to "State" object or vice versa
 	appState *state.ApplicationState
 	logger   logger
@@ -62,47 +59,40 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
-	case tickMsg:
+	case message.TickMsg:
 		terminalFd := int(os.Stdout.Fd())
 		w, h, _ := term.GetSize(terminalFd)
 		if w != m.appState.Width || h != m.appState.Height {
 			m.updateViewPort(w, h)
 			cmds = append(cmds, message.TeaCmd(tea.WindowSizeMsg{Width: w, Height: h}))
 		}
-		cmds = append(cmds, tick)
+		cmds = append(cmds, message.Tick)
 	case tea.WindowSizeMsg:
 		m.logger.Debug("Terminal window new size: %d %d", msg.Width, msg.Height)
 		m.appState.Width = msg.Width
 		m.appState.Height = msg.Height
 		m.updateViewPort(msg.Width, msg.Height)
 	case hostlist.MsgEditItem:
-		// cmds = append(cmds, func() tea.Msg { return msg })
-		// m.state = viewEditItem
+		m.state = viewEditItem
 		ctx := context.WithValue(m.appContext, edithost.ItemID, msg.HostID)
-		var editHost tea.Model = edithost.New(ctx, m.hostStorage, m.appState, m.logger)
-		m.activeComponent = &editHost
+		m.modelEditHost = edithost.New(ctx, m.hostStorage, m.appState, m.logger)
 	case hostlist.MsgNewItem:
-		// m.state = viewEditItem
-		var editHost tea.Model = edithost.New(m.appContext, m.hostStorage, m.appState, m.logger)
-		m.activeComponent = &editHost
+		m.state = viewEditItem
+		m.modelEditHost = edithost.New(m.appContext, m.hostStorage, m.appState, m.logger)
 	case hostlist.MsgSelectItem:
 		m.appState.Selected = msg.HostID
 	case edithost.MsgClose:
-		m.activeComponent = &m.modelHostList
+		m.state = viewHostList
 	}
 
-	activeComponent, cmd := (*m.activeComponent).Update(msg)
-	m.activeComponent = &activeComponent
-	cmds = append(cmds, cmd)
-
-	/*m.modelHostList, cmd = m.modelHostList.Update(msg)
+	m.modelHostList, cmd = m.modelHostList.Update(msg)
 	cmds = append(cmds, cmd)
 
 	if m.state == viewEditItem {
 		// edit host receives messages only if it's active. We re-create this component every time we go to edit mode
 		m.modelEditHost, cmd = m.modelEditHost.Update(msg)
 		cmds = append(cmds, cmd)
-	}*/
+	}
 
 	return m, tea.Batch(cmds...)
 }
@@ -112,30 +102,27 @@ func (m *mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	// var cmd tea.Cmd
-	activeComponent, cmd := (*m.activeComponent).Update(msg)
-	m.activeComponent = &activeComponent
-
-	// switch m.state { // Only active component receives key messages
-	// case viewHostList:
-	// 	m.modelHostList, cmd = m.modelHostList.Update(msg)
-	// case viewEditItem:
-	// 	m.modelEditHost, cmd = m.modelEditHost.Update(msg)
-	// }
+	var cmd tea.Cmd
+	switch m.state { // Only active component receives key messages
+	case viewHostList:
+		m.modelHostList, cmd = m.modelHostList.Update(msg)
+	case viewEditItem:
+		m.modelEditHost, cmd = m.modelEditHost.Update(msg)
+	}
 
 	return m, cmd
 }
 
 func (m *mainModel) View() string {
-	// var content string
-	// switch m.state {
-	// case viewEditItem:
-	// 	content = m.modelEditHost.View()
-	// case viewHostList:
-	// 	content = m.modelHostList.View()
-	// }
+	var content string
+	switch m.state {
+	case viewEditItem:
+		content = m.modelEditHost.View()
+	case viewHostList:
+		content = m.modelHostList.View()
+	}
 
-	m.viewport.SetContent((*m.activeComponent).View())
+	m.viewport.SetContent(content)
 
 	return m.viewport.View()
 }

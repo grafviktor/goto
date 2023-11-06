@@ -111,15 +111,12 @@ func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case msgInitComplete:
 		return m.refreshRepo(msg)
 	case msgFocusChanged:
-		m, cmd := m.listTitleUpdate(msg)
+		var cmd tea.Cmd
+		m, cmd = m.listTitleUpdate(msg)
 		cmds = append(cmds, cmd)
 		m, cmd = m.onFocusChanged(msg)
 		cmds = append(cmds, cmd)
 		return m, tea.Batch(cmds...)
-	}
-
-	if len(m.innerModel.Items()) == 0 {
-		fmt.Println(0)
 	}
 
 	// If we could not find our own update handler, we pass message to the original model
