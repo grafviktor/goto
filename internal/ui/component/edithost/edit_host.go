@@ -85,7 +85,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		case 5:
 			t.Label = "Identity file path"
 			t.CharLimit = 512
-			t.Placeholder = "default: not set"
+			t.Placeholder = "default: $HOME/.ssh/id_rsa"
 			t.SetValue(host.PrivateKeyPath)
 		}
 

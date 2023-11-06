@@ -40,7 +40,6 @@ type ListModel struct {
 	keyMap     *keyMap
 	appState   *state.ApplicationState
 	logger     logger
-	Created    string
 }
 
 func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log logger) ListModel {
@@ -53,7 +52,6 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 		repo:       storage,
 		appState:   appState,
 		logger:     log,
-		Created:    "A",
 	}
 
 	m.innerModel.KeyMap.CursorUp.Unbind()

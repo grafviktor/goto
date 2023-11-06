@@ -2,7 +2,6 @@ package ui
 
 import (
 	"context"
-	"os"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,7 +10,6 @@ import (
 	"github.com/grafviktor/goto/internal/ui/component/edithost"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
 	"github.com/grafviktor/goto/internal/ui/message"
-	"golang.org/x/term"
 )
 
 type sessionState int
@@ -59,14 +57,19 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
-	case message.TickMsg:
-		terminalFd := int(os.Stdout.Fd())
-		w, h, _ := term.GetSize(terminalFd)
-		if w != m.appState.Width || h != m.appState.Height {
-			m.updateViewPort(w, h)
-			cmds = append(cmds, message.TeaCmd(tea.WindowSizeMsg{Width: w, Height: h}))
+	case message.TerminalSizePollingMsg:
+		// That is Windows OS specific. Windows cmd.exe does not trigger terminal
+		// resize events, that is why we poll terminal size with intervals
+		// First message is being triggered by Windows version of the model.Init function.
+		if msg.Width != m.appState.Width || msg.Height != m.appState.Height {
+			m.logger.Debug("Windows size polling message received. New size: %d %d", msg.Width, msg.Height)
+			cmds = append(cmds, message.TeaCmd(tea.WindowSizeMsg{Width: msg.Width, Height: msg.Height}))
 		}
-		cmds = append(cmds, message.Tick)
+
+		// We're dispatching the same message from this function and therefore cycling TerminalSizePollingMsg.
+		// That's done on purpose to keep this process running. Message.TerminalSizePollingMsg will trigger
+		// automatically after an artificial pause which set by message tick.
+		cmds = append(cmds, message.TerminalSizePolling)
 	case tea.WindowSizeMsg:
 		m.logger.Debug("Terminal window new size: %d %d", msg.Width, msg.Height)
 		m.appState.Width = msg.Width
