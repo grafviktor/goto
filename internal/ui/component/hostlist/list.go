@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
+	"runtime"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -229,7 +232,20 @@ func (m ListModel) executeCmd(_ tea.Msg) (ListModel, tea.Cmd) {
 
 	connectSSHCmd := ssh.Connect(host)
 	return m, tea.ExecProcess(connectSSHCmd, func(err error) tea.Msg {
+		// return m, tea.ExecProcess(exec.Command("ping", "-t", "localhost"), func(err error) tea.Msg {
 		if err != nil {
+			/*
+			 * That's to attempt to restore windows terminal when user pressed ctrl+c when using SSH connection.
+			 * It works, when we close SSH, however it breaks all subsequent ssh connections
+			 */
+			if runtime.GOOS == "windows" {
+				// If try to connect to a remote host and instead of typing a password, type "CTRL+C",
+				// the application UI will be broken. Flushing terminal window, helps to resolve the problem.
+				cmd := exec.Command("cmd", "/c", "cls")
+				cmd.Stdout = os.Stdout
+				cmd.Run()
+			}
+
 			return msgErrorOccured{err}
 		}
 
