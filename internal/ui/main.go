@@ -2,7 +2,6 @@ package ui
 
 import (
 	"context"
-	"log"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -128,8 +127,6 @@ func (m *mainModel) View() string {
 
 	m.viewport.SetContent(content)
 	viewPortContent := m.viewport.View()
-
-	log.Println(viewPortContent)
 
 	return viewPortContent
 }

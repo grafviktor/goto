@@ -42,21 +42,27 @@ func New(ctx context.Context, logger Logger) Application {
 	return config
 }
 
+type EnvironmentSettings struct {
+	HostsFilePath string `env:"HOSTS_FILE"`
+	ConfigFile    string `env:"CONFIG"`
+	LogLevel      string `env:"LOG_LEVEL"`
+}
+
 type Application struct {
 	HomeFolder string
 	AppName    string
 	Context    context.Context
 	Logger     Logger
-	configFile string
 	model.AppConfig
+	EnvironmentSettings
 }
 
 func (app *Application) load() error {
 	var appConfigModel model.AppConfig
-	app.configFile = path.Join(app.HomeFolder, configFile)
+	app.ConfigFile = path.Join(app.HomeFolder, configFile)
 
-	app.Logger.Debug("Read application configuration from %s\n", app.configFile)
-	fileData, err := os.ReadFile(app.configFile)
+	app.Logger.Debug("Read application configuration from %s\n", app.ConfigFile)
+	fileData, err := os.ReadFile(app.ConfigFile)
 	if err != nil {
 		app.Logger.Debug("Can't read application configuration %v\n", err)
 		return err
@@ -79,7 +85,7 @@ func (app *Application) Save() error {
 		return err
 	}
 
-	err = os.WriteFile(app.configFile, result, 0o600)
+	err = os.WriteFile(app.ConfigFile, result, 0o600)
 	if err != nil {
 		return err
 	}
