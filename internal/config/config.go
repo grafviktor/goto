@@ -5,47 +5,82 @@ import (
 	"os"
 	"path"
 
-	"github.com/grafviktor/goto/internal/model"
 	"github.com/grafviktor/goto/internal/utils"
 	"gopkg.in/yaml.v2"
 )
 
 var appName = "goto"
-var configFile = "config.yaml"
+var configFileName = "config.yaml"
 
 type Logger interface {
 	Debug(format string, args ...any)
 	Close()
 }
+type UserSettings struct {
+	logger         Logger
+	configFilePath string
+	homeFolder     string
+	HostsFilePath  string `env:"HOSTS_FILE" yaml:"host_file,omitempty"`
+	LogLevel       string `env:"LOG_LEVEL"  yaml:"log_level,omitempty"`
+	LogFilePath    string `env:"LOG_PATH"   yaml:"log_path, omitempty"`
+}
 
-func New(ctx context.Context, logger Logger) Application {
-	// TODO:
-	// AppHome should come from main module and can be overwritten by a user
-	// AppHome cannot be read from a config file
+func NewUserSettings(logger Logger) (UserSettings, error) {
+	us := UserSettings{logger: logger}
+
 	appHome, err := utils.GetAppDir(logger, appName)
 	if err != nil {
-		logger.Debug("Could not get application home folder")
+		logger.Debug("Failed to get application home folder%v\n", err)
+
+		return us, err
 	}
+
+	configFilePath := path.Join(appHome, configFileName)
+
+	logger.Debug("Read application configuration from %s\n", configFilePath)
+	fileData, err := os.ReadFile(configFilePath)
+	if err != nil {
+		logger.Debug("Can't read application configuration %v\n", err)
+
+	}
+
+	us.homeFolder = appHome
+
+	err = yaml.Unmarshal(fileData, &us)
+	if err != nil {
+		us.logger.Debug("Can't read parse application configuration %v\n", err)
+
+		return us, err
+	}
+
+	return us, nil
+
+}
+
+func (us *UserSettings) Save() error {
+	result, err := yaml.Marshal(us)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(us.configFilePath, result, 0o600)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func New(ctx context.Context, logger Logger, settings UserSettings) Application {
 
 	config := Application{
-		Context:    ctx,
-		Logger:     logger,
-		HomeFolder: appHome,
-		AppName:    appName,
-	}
-
-	err = config.load()
-	if err != nil {
-		logger.Debug("Could not load application from a config file")
+		Context:      ctx,
+		Logger:       logger,
+		AppName:      appName,
+		UserSettings: settings,
 	}
 
 	return config
-}
-
-type EnvironmentSettings struct {
-	HostsFilePath string `env:"HOSTS_FILE"`
-	ConfigFile    string `env:"CONFIG"`
-	LogLevel      string `env:"LOG_LEVEL"`
 }
 
 type Application struct {
@@ -53,42 +88,5 @@ type Application struct {
 	AppName    string
 	Context    context.Context
 	Logger     Logger
-	model.AppConfig
-	EnvironmentSettings
-}
-
-func (app *Application) load() error {
-	var appConfigModel model.AppConfig
-	app.ConfigFile = path.Join(app.HomeFolder, configFile)
-
-	app.Logger.Debug("Read application configuration from %s\n", app.ConfigFile)
-	fileData, err := os.ReadFile(app.ConfigFile)
-	if err != nil {
-		app.Logger.Debug("Can't read application configuration %v\n", err)
-		return err
-	}
-
-	err = yaml.Unmarshal(fileData, &appConfigModel)
-	if err != nil {
-		app.Logger.Debug("Can't read parse application configuration %v\n", err)
-		return err
-	}
-
-	app.AppConfig = appConfigModel
-
-	return nil
-}
-
-func (app *Application) Save() error {
-	result, err := yaml.Marshal(app.AppConfig)
-	if err != nil {
-		return err
-	}
-
-	err = os.WriteFile(app.ConfigFile, result, 0o600)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	UserSettings
 }

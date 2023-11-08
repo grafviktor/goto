@@ -9,7 +9,7 @@ This utility helps to maintain a list of ssh servers. Unlike PuTTY id doesn't in
 * Download the latest version from the [Releases](https://github.com/grafviktor/goto/releases) section;
 * Choose a binary file which matches your platform;
 * Place the binary into your user's binary path;
-* Optionally: rename `gg-${YOUR_PLATFORM_NAME}` to `gg`.
+* Optionally: rename `gg-${YOUR_PLATFORM_TYPE}` to `gg`.
 
 ## Functional preview ##
 

@@ -24,24 +24,24 @@ var (
 	buildCommit  string
 )
 
-func main() {
-	// Set application version and build details
-	version.Set(buildVersion, buildDate, buildCommit)
+func readSettings() config.UserSettings {
 
-	var environmentSettings config.EnvironmentSettings
+	var userSettings config.UserSettings
 
-	if err := env.Parse(&environmentSettings); err != nil {
+	if err := env.Parse(&userSettings); err != nil {
 		fmt.Printf("%+v\n", err)
 	}
 
-	appConfig := config.New()
-
-	flag.StringVar(&appConfig.ConfigFile, "c", environmentSettings.ConfigFile, "Application configuration file")
-	flag.StringVar(&appConfig.HostsFilePath, "f", environmentSettings.HostsFilePath, "Path to yaml file with hosts")
-	flag.StringVar(&appConfig.LogLevel, "l", environmentSettings.LogLevel, "Log level")
+	// Read environment variables, fallback to file settings
+	flag.StringVar(&userSettings.HostsFilePath, "f", userSettings.HostsFilePath, "Path to yaml file with the list of hosts")
+	flag.StringVar(&userSettings.LogFilePath, "p", userSettings.LogFilePath, "Log file path")
+	flag.StringVar(&userSettings.LogLevel, "l", userSettings.LogLevel, "Log level: debug, info, none")
 	flag.Parse()
+}
 
-	// fileConfig, ok := config.ReadFromFile(appConfig.ConfigFilePath)
+func main() {
+	// Set application version and build details
+	version.Set(buildVersion, buildDate, buildCommit)
 
 	lg, err := logger.New("goto", logger.LevelDebug)
 	if err != nil {
