@@ -1,6 +1,6 @@
 # GOTO - A simple SSH manager #
 
-This utility helps to maintain a list of ssh servers. Unlike PuTTY id doesn't incorporate any connection logic, but relying on `ssh` utility which should be installed on your system.
+This utility helps to maintain a list of ssh servers. Unlike PuTTY it doesn't incorporate any connection logic, but relying on `ssh` utility which should be installed on your system.
 
 ## Installation ##
 
