@@ -101,7 +101,7 @@ func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// triggers immediately after app start because we render this component by default
 		h, v := docStyle.GetFrameSize()
 		m.innerModel.SetSize(msg.Width-h, msg.Height-v)
-		m.logger.Debug("New frame size: %d %d", m.innerModel.Width(), m.innerModel.Height())
+		m.logger.Debug("Set host list size: %d %d", m.innerModel.Width(), m.innerModel.Height())
 	case msgErrorOccured:
 		return m.listTitleUpdate(msg)
 	case MsgRepoUpdated:

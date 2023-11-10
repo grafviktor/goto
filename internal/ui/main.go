@@ -71,7 +71,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// automatically after an artificial delay which set by Time.Sleep inside message.
 		cmds = append(cmds, message.TerminalSizePolling)
 	case tea.WindowSizeMsg:
-		m.logger.Debug("Terminal window new size: %d %d", msg.Width, msg.Height)
+		m.logger.Debug("Set terminal window size: %d %d", msg.Width, msg.Height)
 		m.appState.Width = msg.Width
 		m.appState.Height = msg.Height
 		m.updateViewPort(msg.Width, msg.Height)
