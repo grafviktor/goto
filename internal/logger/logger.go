@@ -5,43 +5,42 @@ import (
 	"log"
 	"os"
 	"path"
-
-	"github.com/grafviktor/goto/internal/utils"
 )
 
-type logLevel int
+type LogLevel int
 
 const (
-	LevelDebug logLevel = iota
+	LevelDebug LogLevel = iota
 	LevelInfo
-	LevelError
-	LevelNone = 9
 )
 
-func New(appName string, level logLevel) (Logger, error) {
-	l := Logger{}
-	l.logLevel = level
+const logFileName = "app.log"
 
-	var appPath string
-	appPath, err := utils.GetAppDir(&l, appName)
-	if err != nil {
-		return l, nil
+func New(appPath, userSetLogLevel string) (Logger, error) {
+	var logLevel LogLevel
+	switch userSetLogLevel {
+	case "debug":
+		logLevel = LevelDebug
+	default:
+		logLevel = LevelInfo
 	}
 
-	logFilePath := path.Join(appPath, "goto.log")
-	l.logFile, err = os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	l := Logger{logLevel: logLevel}
+
+	logFilePath := path.Join(appPath, logFileName)
+	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return l, err
 	}
 
-	l.logger = log.New(l.logFile, "", log.Ldate|log.Ltime)
+	l.logger = log.New(logFile, "", log.Ldate|log.Ltime)
 
 	return l, nil
 }
 
 type Logger struct {
 	logFile  *os.File
-	logLevel logLevel
+	logLevel LogLevel
 	logger   *log.Logger
 }
 
@@ -63,9 +62,7 @@ func (l *Logger) Info(format string, args ...any) {
 }
 
 func (l *Logger) Error(format string, args ...any) {
-	if l.logLevel <= LevelError {
-		l.print("ERRO", format, args...)
-	}
+	l.print("ERRO", format, args...)
 }
 
 func (l *Logger) Close() {
