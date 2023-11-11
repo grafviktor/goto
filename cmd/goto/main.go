@@ -38,8 +38,10 @@ func main() {
 	}
 
 	commandLineParams := config.User{}
+	displayApplicationDetailsAndExit := false
 	// Command line parameters have the highest precedence
-	flag.StringVar(&commandLineParams.AppHome, "d", environmentParams.AppHome, "Application home directory")
+	flag.BoolVar(&displayApplicationDetailsAndExit, "v", false, "Display application details")
+	flag.StringVar(&commandLineParams.AppHome, "f", environmentParams.AppHome, "Application home folder")
 	flag.StringVar(&commandLineParams.LogLevel, "l", environmentParams.LogLevel, "Log verbosity level: debug, info")
 	flag.Parse()
 
@@ -63,11 +65,20 @@ func main() {
 	// Create application configuration and set application home folder
 	appConfig := config.Merge(environmentParams, commandLineParams, &lg)
 
+	// If "-v" parameter provided, display application version configuration and exit
+	if displayApplicationDetailsAndExit {
+		version.Print()
+		fmt.Println()
+		appConfig.Print()
+
+		os.Exit(0)
+	}
+
 	// Logger created. Immediately print application version
 	lg.Info("Start application")
-	lg.Info("Version %s", version.BuildVersion())
-	lg.Info("Build date %s", version.BuildDate())
-	lg.Info("Commit %s", version.BuildCommit())
+	lg.Info("Version:    %s", version.BuildVersion())
+	lg.Info("Commit:     %s", version.BuildCommit())
+	lg.Info("Build date: %s", version.BuildDate())
 
 	ctx := context.Background()
 	application := config.NewApplication(ctx, appConfig, &lg)

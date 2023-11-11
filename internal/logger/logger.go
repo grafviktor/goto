@@ -7,6 +7,7 @@ import (
 	"path"
 )
 
+// LogLevel is a subject for revising. Probably it's better to have a boolean flag to switch on/off debug logging
 type LogLevel int
 
 const (

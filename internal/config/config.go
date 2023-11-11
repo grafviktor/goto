@@ -2,9 +2,8 @@ package config
 
 import (
 	"context"
+	"fmt"
 )
-
-// const configFileName = "config.yaml"
 
 type Logger interface {
 	Debug(format string, args ...any)
@@ -13,8 +12,13 @@ type Logger interface {
 }
 
 type User struct {
-	AppHome  string `yaml:"-" env:"GG_HOME"`
-	LogLevel string `yaml:"log_level,omitempty" env:"GG_LOG_LEVEL" envDefault:"info"`
+	AppHome  string `env:"GG_HOME"`
+	LogLevel string `env:"GG_LOG_LEVEL" envDefault:"info"`
+}
+
+func (userConfig User) Print() {
+	fmt.Printf("App home:  %s\n", userConfig.AppHome)
+	fmt.Printf("Log level: %s\n", userConfig.LogLevel)
 }
 
 func Merge(envParams, cmdParams User, logger Logger) User {
