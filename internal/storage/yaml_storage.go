@@ -6,17 +6,20 @@ import (
 	"os"
 	"path"
 
-	"github.com/grafviktor/goto/internal/constant"
-	"github.com/grafviktor/goto/internal/model"
 	"github.com/samber/lo"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v2"
+
+	"github.com/grafviktor/goto/internal/constant"
+	"github.com/grafviktor/goto/internal/model"
 )
 
 var _ HostStorage = &yamlStorage{}
 
-const hostsFile = "hosts.yaml"
-const idEmpty = 0
+const (
+	hostsFile = "hosts.yaml"
+	idEmpty   = 0
+)
 
 type Logger interface {
 	Debug(format string, args ...any)

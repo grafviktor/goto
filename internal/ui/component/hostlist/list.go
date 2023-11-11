@@ -9,12 +9,13 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"golang.org/x/exp/slices"
+
 	"github.com/grafviktor/goto/internal/connector/ssh"
 	"github.com/grafviktor/goto/internal/model"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	. "github.com/grafviktor/goto/internal/ui/message" //nolint dot-imports
-	"golang.org/x/exp/slices"
 )
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)

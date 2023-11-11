@@ -29,7 +29,7 @@ func New(appPath, userSetLogLevel string) (Logger, error) {
 	l := Logger{logLevel: logLevel}
 
 	logFilePath := path.Join(appPath, logFileName)
-	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return l, err
 	}
