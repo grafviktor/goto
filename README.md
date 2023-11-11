@@ -1,31 +1,44 @@
-[![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/grafviktor/goto/master/LICENSE)
-
 # GOTO - A simple SSH manager #
+
+[![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/grafviktor/goto/master/LICENSE)
 
 This utility helps to maintain a list of ssh servers. Unlike PuTTY id doesn't incorporate any connection logic, but relying on `ssh` utility which should be installed on your system.
 
-## Installation ##
+## 1. Installation ##
 
 * Download the latest version from the [Releases](https://github.com/grafviktor/goto/releases) section;
 * Choose a binary file which matches your platform;
 * Place the binary into your user's binary path;
 * Optionally: rename `gg-${YOUR_PLATFORM_TYPE}` to `gg`.
 
-## Functional preview ##
+## 2. Functional preview ##
 
-### Edit and connect to a remote box ###
+### 2.1. Edit and connect to a remote box ###
 
 ![Small demo where we open ssh session using goto](demo/edit_and_connect.gif)
 
-### Duplicate an existing record ###
+### 2.2. Duplicate an existing record ###
 
 ![Small demo where duplicate an existing record in goto database](demo/duplicate_existing_record.gif)
 
-### Find a requried host easily among all your records ###
+### 2.3. Find a requried host easily among all your records ###
 
 ![Small demo where we open ssh session using goto](demo/search_through_database.gif)
 
-## File storage structure ##
+## 3. Configuration ##
+
+### 3.1. Command line options ###
+
+* `-f` - application home folder;
+* `-l` - log verbosity level. Only `info`(default) or `debug` values are currently supported;
+* `-v` - display version and configuration details.
+
+### 3.2. Environment variables ###
+
+* `GG_HOME` - log verbosity level. Only `info`(default) or `debug` values are currently supported;
+* `GG_LOG_LEVEL` - display version and configuration details.
+
+## 4. File storage structure ##
 
 Currently you can only store your hosts in a yaml file, which is called `hosts.yaml`. The file is located in your user config folder which exact path depends on a running platform:
 
@@ -49,15 +62,14 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
     identity_file_path: /home/user/.ssh/id_rsa_microsoft
 ```
 
-## Known bugs ##
+## 5. Known problems ##
 
-* Terminal resizing in Windows OS is not yet supported, as `cmd.exe` does not fire window resize events;
-* You cannot disable generating `debug.log` file;
 * User input validators do not exist;
 * There is no confirmation dialog when you delete an existing item from the database;
+* On Windows platform, when ssh session exits with non-zero code the application UI breaks;
 * Maybe some other things as the utility hasn't even reached a stable version.
 
-## Changelog ##
+## 6. Changelog ##
 
 **v0.2.0**
 
