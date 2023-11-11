@@ -1,61 +1,71 @@
 package logger
 
 import (
-	"context"
-	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path"
-
-	tea "github.com/charmbracelet/bubbletea"
-
-	"github.com/grafviktor/goto/internal/utils"
 )
 
-func New(appName string) (Logger, error) {
-	var l Logger
-	var err error
+// LogLevel is a subject for revising. Probably it's better to have a boolean flag to switch on/off debug logging
+type LogLevel int
 
-	if len(os.Getenv("DEBUG")) > 0 || true { // TODO: remove force debug flag
-		var appPath string
-		appPath, err = utils.GetAppDir(&l, appName)
-		if err != nil {
-			return Logger{}, nil
-		}
+const (
+	LevelDebug LogLevel = iota
+	LevelInfo
+)
 
-		logFilePath := path.Join(appPath, "debug.log")
-		l.logFile, err = tea.LogToFile(logFilePath, "debug")
+const logFileName = "app.log"
+
+func New(appPath, userSetLogLevel string) (Logger, error) {
+	var logLevel LogLevel
+	switch userSetLogLevel {
+	case "debug":
+		logLevel = LevelDebug
+	default:
+		logLevel = LevelInfo
 	}
 
+	l := Logger{logLevel: logLevel}
+
+	logFilePath := path.Join(appPath, logFileName)
+	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return l, err
 	}
 
-	return Logger{}, nil
+	l.logger = log.New(logFile, "", log.Ldate|log.Ltime)
+
+	return l, nil
 }
 
 type Logger struct {
-	logFile *os.File
+	logFile  *os.File
+	logLevel LogLevel
+	logger   *log.Logger
+}
+
+func (l *Logger) print(prefix, format string, args ...any) {
+	msg := fmt.Sprintf("[%s] %s", prefix, format)
+	l.logger.Printf(msg, args...)
 }
 
 func (l *Logger) Debug(format string, args ...any) {
-	log.Printf(format, args...)
+	if l.logLevel <= LevelDebug {
+		l.print("DEBG", format, args...)
+	}
+}
+
+func (l *Logger) Info(format string, args ...any) {
+	if l.logLevel <= LevelInfo {
+		l.print("INFO", format, args...)
+	}
+}
+
+func (l *Logger) Error(format string, args ...any) {
+	l.print("ERRO", format, args...)
 }
 
 func (l *Logger) Close() {
 	l.logFile.Close()
-}
-
-var ctxKey = struct{}{}
-
-func ToContext(ctx context.Context, logger *Logger) context.Context {
-	return context.WithValue(ctx, ctxKey, logger)
-}
-
-func FromContext(ctx context.Context) (*Logger, error) {
-	if logger, ok := ctx.Value(ctxKey).(*Logger); ok {
-		return logger, nil
-	}
-
-	return nil, errors.New("Logger not found in the context")
 }

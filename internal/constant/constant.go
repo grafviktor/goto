@@ -9,6 +9,4 @@ var ErrNotFound = errors.New("not found")
 // ErrNoUserID        = errors.New("no user ID")
 // ErrBadArgument     = errors.New("bad argument")
 
-const (
-	ProtocolSSH = "ssh"
-)
+const ProtocolSSH = "ssh"

@@ -1,6 +1,10 @@
 // Package version is a singleton module which stores project build information.
 package version
 
+import (
+	"fmt"
+)
+
 type buildInfo struct {
 	buildNumber string
 	buildDate   string
@@ -47,4 +51,10 @@ func BuildDate() string {
 // BuildCommit sets last commit id
 func BuildCommit() string {
 	return bi.buildCommit
+}
+
+func Print() {
+	fmt.Printf("Version:    %s\n", BuildVersion())
+	fmt.Printf("Commit:     %s\n", BuildCommit())
+	fmt.Printf("Build date: %s\n", BuildDate())
 }

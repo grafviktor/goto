@@ -15,5 +15,5 @@ type HostStorage interface {
 }
 
 func Get(ctx context.Context, appConfig config.Application) (HostStorage, error) {
-	return NewYAML(ctx, appConfig.AppName, appConfig.Logger)
+	return NewYAML(ctx, appConfig.Config.AppHome, appConfig.Logger)
 }

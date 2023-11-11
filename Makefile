@@ -1,6 +1,6 @@
-BUILD_VERSION=v0.1.3
+BUILD_VERSION=v0.2.0
 NO_DEBUG_FLAGS=-s -w
-LD_FLAGS = -ldflags="-X main.buildVersion=$(BUILD_VERSION) -X main.buildDate=$(shell date +%Y-%m-%d) -X main.buildCommit=$(shell git rev-parse --short=8 HEAD) $(NO_DEBUG_FLAGS)"
+LD_FLAGS = -ldflags="$(NO_DEBUG_FLAGS) -X main.buildVersion=$(BUILD_VERSION) -X main.buildDate=$(shell date +%Y-%m-%d) -X main.buildCommit=$(shell git rev-parse --short=8 HEAD)"
 
 ## help: print this help message
 help:
@@ -42,11 +42,11 @@ run:
 	@-rm debug.log 2>/dev/null
 	go run cmd/goto/*
 
-## build: create binary with debugging symbols in /build folder
+## build: create binaries for all supported platforms in ./build folder. Archive all binaries with zip.
 .PHONY: build
 build:
 	@-rm -r ./build/*
-	@echo 'Creating debug build'
+	@echo 'Creating binary files'
 	GOOS=darwin  GOARCH=amd64 go build $(LD_FLAGS) -o ./build/gg-mac     ./cmd/goto/*.go
 	GOOS=linux   GOARCH=amd64 go build $(LD_FLAGS) -o ./build/gg-lin     ./cmd/goto/*.go
 	GOOS=windows GOARCH=amd64 go build $(LD_FLAGS) -o ./build/gg-win.exe ./cmd/goto/*.go
@@ -54,3 +54,9 @@ build:
 	@cp ./build/gg* ./build/goto-$(BUILD_VERSION)
 	@cd ./build && zip -r goto-$(BUILD_VERSION).zip goto-$(BUILD_VERSION)
 	@rm -r ./build/goto-$(BUILD_VERSION)
+
+## build-quick: create binary in ./build folder for your current platform
+.PHONY: build-quick
+build-quick:
+	go build $(LD_FLAGS) -o ./build/gg ./cmd/goto/*.go
+	@echo 'Creating build'

@@ -3,11 +3,13 @@ module github.com/grafviktor/goto
 go 1.19
 
 require (
+	github.com/caarlos0/env/v10 v10.0.0
 	github.com/charmbracelet/bubbles v0.16.1
 	github.com/charmbracelet/bubbletea v0.24.2
 	github.com/charmbracelet/lipgloss v0.8.0
 	github.com/samber/lo v1.38.1
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
+	golang.org/x/term v0.6.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -27,6 +29,5 @@ require (
 	github.com/sahilm/fuzzy v0.1.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.12.0 // indirect
-	golang.org/x/term v0.6.0 // indirect
 	golang.org/x/text v0.3.8 // indirect
 )
