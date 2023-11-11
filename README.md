@@ -35,8 +35,8 @@ This utility helps to maintain a list of ssh servers. Unlike PuTTY id doesn't in
 
 ### 3.2. Environment variables ###
 
-* `GG_HOME` - log verbosity level. Only `info`(default) or `debug` values are currently supported;
-* `GG_LOG_LEVEL` - display version and configuration details.
+* `GG_HOME` - application home folder;
+* `GG_LOG_LEVEL` - log verbosity level. Only `info`(default) or `debug` values are currently supported.
 
 ## 4. File storage structure ##
 
