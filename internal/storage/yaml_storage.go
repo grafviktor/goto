@@ -6,30 +6,26 @@ import (
 	"os"
 	"path"
 
-	"github.com/grafviktor/goto/internal/constant"
-	"github.com/grafviktor/goto/internal/model"
-	"github.com/grafviktor/goto/internal/utils"
 	"github.com/samber/lo"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v2"
+
+	"github.com/grafviktor/goto/internal/constant"
+	"github.com/grafviktor/goto/internal/model"
 )
 
 var _ HostStorage = &yamlStorage{}
 
-const hostsFile = "hosts.yaml"
-const idEmpty = 0
+const (
+	hostsFile = "hosts.yaml"
+	idEmpty   = 0
+)
 
 type Logger interface {
 	Debug(format string, args ...any)
 }
 
-func NewYAML(ctx context.Context, appName string, logger Logger) (*yamlStorage, error) {
-	appFolder, err := utils.GetAppDir(logger, appName)
-	if err != nil {
-		logger.Debug("Error %s", err.Error())
-		return nil, err
-	}
-
+func NewYAML(ctx context.Context, appFolder string, logger Logger) (*yamlStorage, error) {
 	logger.Debug("Config folder %s", appFolder)
 	fsDataPath := path.Join(appFolder, hostsFile)
 

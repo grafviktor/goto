@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/grafviktor/goto/internal/model"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
@@ -25,8 +26,10 @@ type Size struct {
 	Height int
 }
 
-type MsgClose struct{}
-type MsgSave struct{}
+type (
+	MsgClose struct{}
+	MsgSave  struct{}
+)
 
 const ItemID string = "itemID"
 

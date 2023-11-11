@@ -7,8 +7,9 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/grafviktor/goto/internal/ui/message"
 	"golang.org/x/term"
+
+	"github.com/grafviktor/goto/internal/ui/message"
 )
 
 var terminalSizePollingInterval = time.Second / 2
