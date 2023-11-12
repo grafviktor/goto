@@ -16,7 +16,7 @@ func CreateAppDirIfNotExists(appConfigDir string) error {
 	_, err := os.Stat(appConfigDir)
 
 	if os.IsNotExist(err) {
-		err := os.MkdirAll(appConfigDir, 0o700)
+		err = os.MkdirAll(appConfigDir, 0o700)
 		if err != nil {
 			return err
 		}

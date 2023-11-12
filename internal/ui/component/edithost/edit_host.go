@@ -130,8 +130,7 @@ func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// create or Update viewport
 	m = m.updateViewPort(msg)
 
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	if msg, ok := msg.(tea.KeyMsg); ok {
 		switch {
 		case key.Matches(msg, m.keyMap.Save):
 			m, cmd = m.save(msg)
@@ -157,7 +156,7 @@ func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m editModel) save(msg tea.Msg) (editModel, tea.Cmd) {
+func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
 	for i := range m.inputs {
 		switch i {
 		case 0:

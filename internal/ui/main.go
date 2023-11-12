@@ -24,7 +24,12 @@ type logger interface {
 	Debug(format string, args ...any)
 }
 
-func NewMainModel(ctx context.Context, storage storage.HostStorage, appState *state.ApplicationState, log logger) mainModel {
+func NewMainModel(
+	ctx context.Context,
+	storage storage.HostStorage,
+	appState *state.ApplicationState,
+	log logger,
+) mainModel {
 	m := mainModel{
 		modelHostList: hostlist.New(ctx, storage, appState, log),
 		appContext:    ctx,
