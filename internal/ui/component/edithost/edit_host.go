@@ -17,7 +17,6 @@ import (
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
 	"github.com/grafviktor/goto/internal/ui/message"
-	. "github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
 )
 
@@ -31,7 +30,7 @@ type (
 	MsgSave  struct{}
 )
 
-const ItemID string = "itemID"
+var ItemID = struct{}{}
 
 type logger interface {
 	Debug(format string, args ...any)
@@ -131,8 +130,7 @@ func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// create or Update viewport
 	m = m.updateViewPort(msg)
 
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	if msg, ok := msg.(tea.KeyMsg); ok {
 		switch {
 		case key.Matches(msg, m.keyMap.Save):
 			m, cmd = m.save(msg)
@@ -158,7 +156,7 @@ func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m editModel) save(msg tea.Msg) (editModel, tea.Cmd) {
+func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
 	for i := range m.inputs {
 		switch i {
 		case 0:
@@ -178,8 +176,8 @@ func (m editModel) save(msg tea.Msg) (editModel, tea.Cmd) {
 
 	_ = m.hostStorage.Save(m.host)
 	return m, tea.Batch(
-		TeaCmd(MsgClose{}),
-		TeaCmd(hostlist.MsgRepoUpdated{}),
+		message.TeaCmd(MsgClose{}),
+		message.TeaCmd(hostlist.MsgRepoUpdated{}),
 	)
 }
 

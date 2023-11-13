@@ -33,7 +33,8 @@ func Get(appHomePath string, lg logger) *ApplicationState {
 			logger:           lg,
 		}
 
-		appState.readFromFile()
+		// if we cannot read previously created application state, that's fine
+		_ = appState.readFromFile()
 	})
 
 	return appState

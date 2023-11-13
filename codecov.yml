@@ -1,0 +1,3 @@
+ignore:
+  - "cmd/*"
+  - "github.com/grafviktor/goto/internal/ui/*"
