@@ -1,4 +1,4 @@
-BUILD_VERSION=v0.2.0
+BUILD_VERSION=v0.3.0
 NO_DEBUG_FLAGS=-s -w
 LD_FLAGS = -ldflags="$(NO_DEBUG_FLAGS) -X main.buildVersion=$(BUILD_VERSION) -X main.buildDate=$(shell date +%Y-%m-%d) -X main.buildCommit=$(shell git rev-parse --short=8 HEAD)"
 
