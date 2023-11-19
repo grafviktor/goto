@@ -77,7 +77,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		case 3:
 			t.Label = "Login"
 			t.CharLimit = 128
-			t.Placeholder = fmt.Sprintf("default: %s", utils.GetCurrentOSUser())
+			t.Placeholder = fmt.Sprintf("default: %s", utils.CurrentOSUsername())
 			t.SetValue(host.LoginName)
 		case 4:
 			t.Label = "Port"
