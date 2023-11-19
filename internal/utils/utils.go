@@ -11,14 +11,14 @@ import (
 	"github.com/grafviktor/goto/internal/constant"
 )
 
-type Logger interface {
-	Debug(format string, args ...any)
-}
-
+// stringEmpty - checks if string is empty or contains only spaces.
+// s is string to check.
 func stringEmpty(s string) bool {
 	return len(strings.TrimSpace(s)) == 0
 }
 
+// CreateAppDirIfNotExists - creates application home folder if it doesn't exist.
+// appConfigDir is application home folder path.
 func CreateAppDirIfNotExists(appConfigDir string) error {
 	if stringEmpty(appConfigDir) {
 		return constant.ErrBadArgument
