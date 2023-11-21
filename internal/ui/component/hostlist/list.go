@@ -236,7 +236,7 @@ func (m ListModel) executeCmd(_ tea.Msg) (ListModel, tea.Cmd) {
 		return m, message.TeaCmd(msgErrorOccured{err})
 	}
 
-	connectSSHCmd := ssh.Connect(host)
+	connectSSHCmd := ssh.ConnectCmd(host)
 	return m, tea.ExecProcess(connectSSHCmd, func(err error) tea.Msg {
 		// return m, tea.ExecProcess(exec.Command("ping", "-t", "localhost"), func(err error) tea.Msg {
 		if err != nil {

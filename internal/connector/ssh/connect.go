@@ -13,7 +13,8 @@ const (
 	optionLoginName  = "-l"
 )
 
-func Connect(h model.Host) *exec.Cmd {
+func ConnectCmd(h model.Host) *exec.Cmd {
+	sshCmd := SSHCmd()
 	args := []string{}
 
 	privateKeyPath := strings.Trim(h.PrivateKeyPath, " ")
@@ -34,5 +35,7 @@ func Connect(h model.Host) *exec.Cmd {
 		args = append(args, loginName)
 	}
 
-	return exec.Command("ssh", append(args, h.Address)...)
+	args = append(sshCmd[1:], args...)
+
+	return exec.Command(sshCmd[0], append(args, h.Address)...)
 }
