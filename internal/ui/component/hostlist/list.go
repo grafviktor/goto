@@ -11,11 +11,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/exp/slices"
 
-	"github.com/grafviktor/goto/internal/connector/ssh"
 	"github.com/grafviktor/goto/internal/model"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/message"
+	"github.com/grafviktor/goto/internal/utils"
+	"github.com/grafviktor/goto/internal/utils/ssh"
 )
 
 var (
@@ -236,24 +237,10 @@ func (m ListModel) executeCmd(_ tea.Msg) (ListModel, tea.Cmd) {
 		return m, message.TeaCmd(msgErrorOccured{err})
 	}
 
-	connectSSHCmd := ssh.Connect(host)
-	return m, tea.ExecProcess(connectSSHCmd, func(err error) tea.Msg {
-		// return m, tea.ExecProcess(exec.Command("ping", "-t", "localhost"), func(err error) tea.Msg {
+	command := ssh.ConstructCMD(ssh.BaseCMD(), utils.HostModelToOptionsAdaptor(host))
+	process := utils.BuildProcess(command)
+	return m, tea.ExecProcess(process, func(err error) tea.Msg {
 		if err != nil {
-			/*
-			 * That's to attempt to restore windows terminal when user pressed ctrl+c when using SSH connection.
-			 * It works, when we close SSH, however it breaks all subsequent ssh connections
-			 */
-			/*
-				if runtime.GOOS == "windows" {
-					// If try to connect to a remote host and instead of typing a password, type "CTRL+C",
-					// the application UI will be broken. Flushing terminal window, helps to resolve the problem.
-					cmd := exec.Command("cmd", "/c", "cls")
-					cmd.Stdout = os.Stdout
-					cmd.Run()
-				}
-			*/
-
 			return msgErrorOccured{err}
 		}
 
