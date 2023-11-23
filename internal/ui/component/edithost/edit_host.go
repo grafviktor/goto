@@ -260,7 +260,7 @@ func (m editModel) inputsView() string {
 }
 
 func (m editModel) headerView() string {
-	return titleStyle.Render("add a new host")
+	return titleStyle.Render("edit host")
 }
 
 func (m editModel) helpView() string {
