@@ -37,6 +37,11 @@ func main() {
 		fmt.Printf("%+v\n", err)
 	}
 
+	// Check if "ssh" utility is in application path
+	if err := utils.CheckAppInstalled("ssh"); err != nil {
+		log.Fatalf("ssh utility is not installed or cannot be found in the executable path: %v", err)
+	}
+
 	commandLineParams := config.User{}
 	displayApplicationDetailsAndExit := false
 	// Command line parameters have the highest precedence
@@ -52,7 +57,7 @@ func main() {
 	}
 
 	// Create application folder
-	if err = utils.CreateAppDirIfNotExists(commandLineParams.AppHome); err != nil {
+	if err := utils.CreateAppDirIfNotExists(commandLineParams.AppHome); err != nil {
 		log.Fatalf("Can't create application home folder: %v", err)
 	}
 
