@@ -51,13 +51,14 @@ func main() {
 	flag.Parse()
 
 	var err error
+	// Get application home folder path
 	commandLineParams.AppHome, err = utils.GetAppDir(appName, commandLineParams.AppHome)
 	if err != nil {
 		log.Fatalf("Can't get application home folder: %v", err)
 	}
 
 	// Create application folder
-	if err := utils.CreateAppDirIfNotExists(commandLineParams.AppHome); err != nil {
+	if err = utils.CreateAppDirIfNotExists(commandLineParams.AppHome); err != nil {
 		log.Fatalf("Can't create application home folder: %v", err)
 	}
 

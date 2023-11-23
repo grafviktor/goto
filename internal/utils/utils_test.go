@@ -108,11 +108,13 @@ func TestBuildProcess(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := BuildProcess(tt.cmd)
 
-			if tt.expectedCmd == nil && result != nil {
+			switch {
+			case tt.expectedCmd == nil && result != nil:
 				t.Errorf("Expected nil, but got %+v", result)
-			} else if tt.expectedCmd != nil && result == nil {
+
+			case tt.expectedCmd != nil && result == nil:
 				t.Errorf("Expected %+v, but got nil", tt.expectedCmd)
-			} else if tt.expectedCmd != nil && result != nil {
+			case tt.expectedCmd != nil && result != nil:
 				// Compare relevant fields of the Cmd struct
 				if tt.expectedCmd.Path != result.Path {
 					t.Errorf("Expected Path %s, but got %s", tt.expectedCmd.Path, result.Path)
