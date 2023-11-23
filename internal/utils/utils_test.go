@@ -16,7 +16,7 @@ func TestCheckAppInstalled(t *testing.T) {
 	}{
 		{
 			name:          "Installed App",
-			appName:       "cd", // Assuming 'ls' is always installed
+			appName:       "echo", // Assuming 'echo' is always installed
 			expectedError: false,
 		},
 		{
