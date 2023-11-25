@@ -7,9 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/grafviktor/goto/internal/model"
 	"github.com/grafviktor/goto/internal/utils/ssh"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_stringEmpty(t *testing.T) {
