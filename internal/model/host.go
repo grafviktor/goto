@@ -1,5 +1,7 @@
+// Package model contains description of data models. For now there is only 'Host' model
 package model
 
+// NewHost - constructs new Host model.
 func NewHost(id int, title, description, address, loginName, privateKeyPath, remotePort string) Host {
 	return Host{
 		ID:             id,
@@ -12,6 +14,7 @@ func NewHost(id int, title, description, address, loginName, privateKeyPath, rem
 	}
 }
 
+// Host model definition.
 type Host struct {
 	ID             int    `yaml:"-"`
 	Title          string `yaml:"title"`
@@ -22,6 +25,7 @@ type Host struct {
 	PrivateKeyPath string `yaml:"identity_file_path,omitempty"`
 }
 
+// Clone host model.
 func (h Host) Clone() Host {
 	newHost := Host{
 		Title:          h.Title,

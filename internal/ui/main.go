@@ -1,3 +1,4 @@
+// Package ui - contains UI iteraction code.
 package ui
 
 import (
@@ -24,6 +25,8 @@ type logger interface {
 	Debug(format string, args ...any)
 }
 
+// NewMainModel - creates a parent module for other component and preserves stat which
+// can be propagated to other sub-components.
 func NewMainModel(
 	ctx context.Context,
 	storage storage.HostStorage,

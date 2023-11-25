@@ -1,3 +1,4 @@
+// Package ssh - contains functions to construct ssh command for using when connecting to a remote host
 package ssh
 
 import (
@@ -5,13 +6,18 @@ import (
 	"strings"
 )
 
+// CommandLineOption - parent interface for command line option.
 type CommandLineOption interface{}
 
 type (
+	// OptionPrivateKey - ssh private key path in file system.
 	OptionPrivateKey struct{ Value string }
+	// OptionRemotePort - Remote port to connect to.
 	OptionRemotePort struct{ Value string }
-	OptionLoginName  struct{ Value string }
-	OptionAddress    struct{ Value string }
+	// OptionLoginName - is a login name which is used when connecting to a remote host. Ex: loginname@somehost.com.
+	OptionLoginName struct{ Value string }
+	// OptionAddress - is a remote host address. Example: somehost.com.
+	OptionAddress struct{ Value string }
 )
 
 func constructKeyValueOption(optionFlag, optionValue string) string {

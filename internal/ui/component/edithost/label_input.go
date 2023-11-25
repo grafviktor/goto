@@ -10,11 +10,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-func NewLabelInput() LabeledInput {
+// NewLabelInput - component which consists from input and label.
+func NewLabelInput() labeledInput {
 	inputModel := textinput.New()
 	inputModel.Prompt = ""
 
-	return LabeledInput{
+	return labeledInput{
 		Model:             inputModel,
 		FocusedPrompt:     "│ ",
 		LabelStyle:        noStyle,
@@ -24,7 +25,7 @@ func NewLabelInput() LabeledInput {
 	}
 }
 
-type LabeledInput struct {
+type labeledInput struct {
 	textinput.Model
 	Label             string
 	LabelStyle        lipgloss.Style
@@ -34,7 +35,7 @@ type LabeledInput struct {
 	FocusedPrompt     string
 }
 
-func (l LabeledInput) Update(msg tea.Msg) (LabeledInput, tea.Cmd) {
+func (l labeledInput) Update(msg tea.Msg) (labeledInput, tea.Cmd) {
 	var cmd tea.Cmd
 
 	l.Model, cmd = l.Model.Update(msg)
@@ -42,7 +43,7 @@ func (l LabeledInput) Update(msg tea.Msg) (LabeledInput, tea.Cmd) {
 	return l, cmd
 }
 
-func (l LabeledInput) prompt() string {
+func (l labeledInput) prompt() string {
 	if l.Focused() {
 		return l.FocusedLabelStyle.Render(l.FocusedPrompt)
 	}
@@ -50,7 +51,7 @@ func (l LabeledInput) prompt() string {
 	return strings.Repeat(" ", utf8.RuneCountInString(l.FocusedPrompt))
 }
 
-func (l LabeledInput) labelView() string {
+func (l labeledInput) labelView() string {
 	if l.Focused() {
 		return l.prompt() + l.FocusedLabelStyle.Render(l.Label)
 	}
@@ -58,7 +59,7 @@ func (l LabeledInput) labelView() string {
 	return l.prompt() + l.LabelStyle.Render(l.Label)
 }
 
-func (l LabeledInput) View() string {
+func (l labeledInput) View() string {
 	var view string
 	if l.Focused() {
 		view = lipgloss.NewStyle().Foreground(lipgloss.Color("#AD58B4")).Render(l.Model.View())

@@ -23,7 +23,7 @@ func init() {
 	}
 }
 
-// Set should be called from the main function to make application version details available for other app modules
+// Set should be called from the main function to make application version details available for other app modules.
 func Set(buildVersion, buildDate, buildCommit string) {
 	if len(buildVersion) > 0 {
 		bi.buildNumber = buildVersion
@@ -38,21 +38,22 @@ func Set(buildVersion, buildDate, buildCommit string) {
 	}
 }
 
-// BuildVersion sets version of the application
+// BuildVersion sets version of the application.
 func BuildVersion() string {
 	return bi.buildNumber
 }
 
-// BuildDate sets date of the build
+// BuildDate sets date of the build.
 func BuildDate() string {
 	return bi.buildDate
 }
 
-// BuildCommit sets last commit id
+// BuildCommit sets last commit id.
 func BuildCommit() string {
 	return bi.buildCommit
 }
 
+// Print - outputs build information right into terminal.
 func Print() {
 	fmt.Printf("Version:    %s\n", BuildVersion())
 	fmt.Printf("Commit:     %s\n", BuildCommit())

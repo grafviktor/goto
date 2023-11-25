@@ -1,3 +1,4 @@
+// Package utils contains various utility methods
 package utils
 
 import (
@@ -9,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model"
 	"github.com/grafviktor/goto/internal/utils/ssh"
 )
@@ -24,7 +24,7 @@ func stringEmpty(s string) bool {
 // appConfigDir is application home folder path.
 func CreateAppDirIfNotExists(appConfigDir string) error {
 	if stringEmpty(appConfigDir) {
-		return constant.ErrBadArgument
+		return errors.New("bad argument")
 	}
 
 	stat, err := os.Stat(appConfigDir)
@@ -90,7 +90,7 @@ func CurrentUsername() string {
 }
 
 // CheckAppInstalled - checks if application is installed and can be found in executable path
-// appName - name of the application to be looked for in $PATH
+// appName - name of the application to be looked for in $PATH.
 func CheckAppInstalled(appName string) error {
 	_, err := exec.LookPath(appName)
 
@@ -99,7 +99,7 @@ func CheckAppInstalled(appName string) error {
 
 // HostModelToOptionsAdaptor - extract values from model.Host into a set of ssh.CommandLineOption
 // host - model.Host to be adapted
-// returns []ssh.CommandLineOption
+// returns []ssh.CommandLineOption.
 func HostModelToOptionsAdaptor(host model.Host) []ssh.CommandLineOption {
 	return []ssh.CommandLineOption{
 		ssh.OptionAddress{Value: host.Address},
@@ -109,6 +109,7 @@ func HostModelToOptionsAdaptor(host model.Host) []ssh.CommandLineOption {
 	}
 }
 
+// BuildProcess - builds exec.Cmd object from command string.
 func BuildProcess(cmd string) *exec.Cmd {
 	if strings.TrimSpace(cmd) == "" {
 		return nil
