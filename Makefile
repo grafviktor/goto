@@ -35,6 +35,12 @@ test:
 	@echo 'Running unit tests'
 	go test -race -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
 
+## unit-test-report: display unit coverage report in html format
+.PHONY: unit-test-report
+unit-test-report:
+	@echo 'The report will be opened in the browser'
+	go tool cover -html unit.txt
+
 ## run: delete logs and run debug
 .PHONY: run
 run:

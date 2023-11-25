@@ -9,31 +9,45 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model"
 	"github.com/grafviktor/goto/internal/utils/ssh"
 )
 
-type Logger interface {
-	Debug(format string, args ...any)
+// stringEmpty - checks if string is empty or contains only spaces.
+// s is string to check.
+func stringEmpty(s string) bool {
+	return len(strings.TrimSpace(s)) == 0
 }
 
+// CreateAppDirIfNotExists - creates application home folder if it doesn't exist.
+// appConfigDir is application home folder path.
 func CreateAppDirIfNotExists(appConfigDir string) error {
-	_, err := os.Stat(appConfigDir)
+	if stringEmpty(appConfigDir) {
+		return constant.ErrBadArgument
+	}
 
+	stat, err := os.Stat(appConfigDir)
 	if os.IsNotExist(err) {
-		err = os.MkdirAll(appConfigDir, 0o700)
-		if err != nil {
-			return err
-		}
+		return os.MkdirAll(appConfigDir, 0o700)
 	} else if err != nil {
 		return err
+	}
+
+	if !stat.IsDir() {
+		return errors.New("app home path exists and it is not a directory")
 	}
 
 	return nil
 }
 
-func GetAppDir(appName, userDefinedPath string) (string, error) {
-	if len(userDefinedPath) > 0 {
+// AppDir - returns application home folder where all all files are stored.
+// appName is application name which will be used as folder name.
+// userDefinedPath allows you to set a custom path to application home folder, can be relative or absolute.
+// If userDefinedPath is not empty, it will be used as application home folder
+// Else, userConfigDir will be used, which is system dependent.
+func AppDir(appName, userDefinedPath string) (string, error) {
+	if !stringEmpty(userDefinedPath) {
 		absolutePath, err := filepath.Abs(userDefinedPath)
 		if err != nil {
 			return "", err
@@ -51,9 +65,12 @@ func GetAppDir(appName, userDefinedPath string) (string, error) {
 		return absolutePath, nil
 	}
 
-	// FIXME: -------- DEBUG ------------- /
+	if stringEmpty(appName) {
+		return "", errors.New("application home folder name is not provided")
+	}
+
+	// Left for debugging purposes
 	// userConfigDir, err := os.Getwd()
-	// -------- RELEASE ----------- /
 	userConfigDir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
@@ -62,7 +79,8 @@ func GetAppDir(appName, userDefinedPath string) (string, error) {
 	return path.Join(userConfigDir, appName), nil
 }
 
-func GetCurrentOSUser() string {
+// CurrentUsername - returns current OS username or "n/a" if it can't be determined.
+func CurrentUsername() string {
 	user, err := user.Current()
 	if err != nil {
 		return "n/a"

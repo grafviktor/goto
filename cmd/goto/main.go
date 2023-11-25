@@ -52,7 +52,7 @@ func main() {
 
 	var err error
 	// Get application home folder path
-	commandLineParams.AppHome, err = utils.GetAppDir(appName, commandLineParams.AppHome)
+	commandLineParams.AppHome, err = utils.AppDir(appName, commandLineParams.AppHome)
 	if err != nil {
 		log.Fatalf("Can't get application home folder: %v", err)
 	}
