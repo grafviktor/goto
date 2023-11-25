@@ -41,7 +41,7 @@ func CreateAppDirIfNotExists(appConfigDir string) error {
 	return nil
 }
 
-// AppDir - returns application home folder where all all files are stored.
+// AppDir - returns application home folder where all files are stored.
 // appName is application name which will be used as folder name.
 // userDefinedPath allows you to set a custom path to application home folder, can be relative or absolute.
 // If userDefinedPath is not empty, it will be used as application home folder
