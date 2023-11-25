@@ -34,7 +34,7 @@ audit:
 test:
 	@echo 'Running unit tests'
 	go test -race -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
-
+	go test -coverpkg=./internal/... -race -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
 ## unit-test-report: display unit coverage report in html format
 .PHONY: unit-test-report
 unit-test-report:
