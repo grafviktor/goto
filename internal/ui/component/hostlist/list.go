@@ -1,3 +1,4 @@
+// Package hostlist implements the host list view.
 package hostlist
 
 import (
@@ -29,17 +30,22 @@ type logger interface {
 }
 
 type (
-	MsgEditItem     struct{ HostID int }
-	MsgCopyItem     struct{ HostID int }
-	MsgSelectItem   struct{ HostID int }
+	// MsgEditItem fires when user press edit button.
+	MsgEditItem struct{ HostID int }
+	// MsgCopyItem fires when user press copy button.
+	MsgCopyItem struct{ HostID int }
+	// MsgSelectItem is required to let host list know that it's time to update title.
+	MsgSelectItem struct{ HostID int }
+	// MsgNewItem fires when user press new host button.
 	MsgNewItem      struct{}
 	msgInitComplete struct{}
 	msgErrorOccured struct{ err error }
+	// MsgRepoUpdated - fires when data layer updated and it's required to reload the host list.
 	MsgRepoUpdated  struct{}
 	msgFocusChanged struct{}
 )
 
-type ListModel struct {
+type listModel struct {
 	innerModel list.Model
 	repo       storage.HostStorage
 	keyMap     *keyMap
@@ -47,11 +53,11 @@ type ListModel struct {
 	logger     logger
 }
 
-func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log logger) ListModel {
+func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log logger) listModel {
 	delegate := list.NewDefaultDelegate()
 	delegateKeys := newDelegateKeyMap()
 	listItems := []list.Item{}
-	m := ListModel{
+	m := listModel{
 		innerModel: list.New(listItems, delegate, 0, 0),
 		keyMap:     delegateKeys,
 		repo:       storage,
@@ -73,11 +79,11 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	return m
 }
 
-func (m ListModel) Init() tea.Cmd {
+func (m listModel) Init() tea.Cmd {
 	return tea.Batch(message.TeaCmd(msgInitComplete{}))
 }
 
-func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -129,11 +135,11 @@ func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m ListModel) View() string {
+func (m listModel) View() string {
 	return docStyle.Render(m.innerModel.View())
 }
 
-func (m ListModel) removeItem(_ tea.Msg) (ListModel, tea.Cmd) {
+func (m listModel) removeItem(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New("you must select an item")})
@@ -150,7 +156,7 @@ func (m ListModel) removeItem(_ tea.Msg) (ListModel, tea.Cmd) {
 	)
 }
 
-func (m ListModel) refreshRepo(_ tea.Msg) (ListModel, tea.Cmd) {
+func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
 	items := []list.Item{}
 	hosts, err := m.repo.GetAll()
 	if err != nil {
@@ -184,7 +190,7 @@ func (m ListModel) refreshRepo(_ tea.Msg) (ListModel, tea.Cmd) {
 	return m, tea.Batch(setItemsCmd, message.TeaCmd(msgFocusChanged{}))
 }
 
-func (m ListModel) editItem(_ tea.Msg) (ListModel, tea.Cmd) {
+func (m listModel) editItem(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
@@ -194,7 +200,7 @@ func (m ListModel) editItem(_ tea.Msg) (ListModel, tea.Cmd) {
 	return m, message.TeaCmd(MsgEditItem{HostID: host.ID})
 }
 
-func (m ListModel) copyItem(_ tea.Msg) (ListModel, tea.Cmd) {
+func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
@@ -225,7 +231,7 @@ func (m ListModel) copyItem(_ tea.Msg) (ListModel, tea.Cmd) {
 	)
 }
 
-func (m ListModel) executeCmd(_ tea.Msg) (ListModel, tea.Cmd) {
+func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
@@ -237,7 +243,7 @@ func (m ListModel) executeCmd(_ tea.Msg) (ListModel, tea.Cmd) {
 		return m, message.TeaCmd(msgErrorOccured{err})
 	}
 
-	command := ssh.ConstructCMD(ssh.BaseCMD(), utils.HostModelToOptionsAdaptor(host))
+	command := ssh.ConstructCMD(ssh.BaseCMD(), utils.HostModelToOptionsAdaptor(host)...)
 	process := utils.BuildProcess(command)
 	return m, tea.ExecProcess(process, func(err error) tea.Msg {
 		if err != nil {
@@ -248,7 +254,7 @@ func (m ListModel) executeCmd(_ tea.Msg) (ListModel, tea.Cmd) {
 	})
 }
 
-func (m ListModel) listTitleUpdate(msg tea.Msg) ListModel {
+func (m listModel) listTitleUpdate(msg tea.Msg) listModel {
 	switch msg := msg.(type) {
 	case msgErrorOccured:
 		m.innerModel.Title = msg.err.Error()
@@ -266,7 +272,7 @@ func (m ListModel) listTitleUpdate(msg tea.Msg) ListModel {
 	}
 }
 
-func (m ListModel) onFocusChanged(_ tea.Msg) (ListModel, tea.Cmd) {
+func (m listModel) onFocusChanged(_ tea.Msg) (listModel, tea.Cmd) {
 	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
 		return m, message.TeaCmd(MsgSelectItem{HostID: hostItem.ID})
 	}
