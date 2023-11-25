@@ -79,8 +79,8 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 	return path.Join(userConfigDir, appName), nil
 }
 
-// CurrentOSUsername - returns current OS username or "n/a" if it can't be determined.
-func CurrentOSUsername() string {
+// CurrentUsername - returns current OS username or "n/a" if it can't be determined.
+func CurrentUsername() string {
 	user, err := user.Current()
 	if err != nil {
 		return "n/a"

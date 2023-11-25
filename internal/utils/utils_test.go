@@ -63,7 +63,7 @@ func Test_GetAppDir(t *testing.T) {
 }
 
 func Test_GetCurrentOSUser(t *testing.T) {
-	username := CurrentOSUsername()
+	username := CurrentUsername()
 	require.NotEmpty(t, username, "GetCurrentOSUser should return a non-empty string")
 }
 
