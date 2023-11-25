@@ -53,6 +53,12 @@ type listModel struct {
 	logger     logger
 }
 
+// New - creates new host list model.
+// context - is not used.
+// storage - is the data layer.
+// appState - is the application state, usually we want to restore previous state when application restarts,
+// for instance focus previously selected host.
+// log - application logger.
 func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log logger) listModel {
 	delegate := list.NewDefaultDelegate()
 	delegateKeys := newDelegateKeyMap()

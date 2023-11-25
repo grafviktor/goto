@@ -21,11 +21,12 @@ const (
 	idEmpty   = 0
 )
 
-type Logger interface {
+type iLogger interface {
 	Debug(format string, args ...any)
 }
 
-func NewYAML(ctx context.Context, appFolder string, logger Logger) (*yamlStorage, error) {
+// NewYAML creates new YAML storage.
+func NewYAML(ctx context.Context, appFolder string, logger iLogger) (*yamlStorage, error) {
 	logger.Debug("Config folder %s", appFolder)
 	fsDataPath := path.Join(appFolder, hostsFile)
 
@@ -40,7 +41,7 @@ type yamlStorage struct {
 	innerStorage map[int]yamlHostWrapper
 	nextID       int
 	fsDataPath   string
-	logger       Logger
+	logger       iLogger
 }
 
 type yamlHostWrapper struct {

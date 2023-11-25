@@ -19,9 +19,9 @@ var (
 		Margin(1, 4, 0)
 
 	menuStyle = lipgloss.NewStyle().Margin(3, 4, 0)
-	// placeholderStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#333"))
 )
 
+//nolint:dupword
 /*
 
 // DefaultItemStyles defines styling for a default list item.

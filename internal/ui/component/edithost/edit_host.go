@@ -1,3 +1,4 @@
+// Package edithost contains UI components for editing host model attributes.
 package edithost
 
 import (
@@ -20,23 +21,27 @@ import (
 	"github.com/grafviktor/goto/internal/utils"
 )
 
+// Size struct is used by terminal resize event.
 type Size struct {
 	Width  int
 	Height int
 }
 
 type (
+	// MsgClose triggers when users exits from edit form without saving results.
 	MsgClose struct{}
-	MsgSave  struct{}
+	// MsgSave triggers when users saves results.
+	MsgSave struct{}
 )
 
+// ItemID is a key to extract item id from application context.
 var ItemID = struct{}{}
 
 type logger interface {
 	Debug(format string, args ...any)
 }
 
-// func New(ctx context.Context, storage storage.HostStorage, width int, height int) editModel {
+// New - returns new edit host form.
 func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState, log logger) editModel {
 	// if we can't cast host id to int, that means we're adding a new host. Ignoring the error
 	hostID, _ := ctx.Value(ItemID).(int)
@@ -46,7 +51,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	}
 
 	m := editModel{
-		inputs:      make([]LabeledInput, 6),
+		inputs:      make([]labeledInput, 6),
 		hostStorage: storage,
 		host:        host,
 		help:        help.New(),
@@ -55,7 +60,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		logger:      log,
 	}
 
-	var t LabeledInput
+	var t labeledInput
 	for i := range m.inputs {
 		t = NewLabelInput()
 		t.Cursor.Style = cursorStyle
@@ -101,7 +106,7 @@ type editModel struct {
 	keyMap      keyMap
 	hostStorage storage.HostStorage
 	focusIndex  int
-	inputs      []LabeledInput
+	inputs      []labeledInput
 	host        model.Host
 	viewport    viewport.Model
 	help        help.Model

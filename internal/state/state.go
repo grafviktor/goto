@@ -1,3 +1,4 @@
+// Package state is in charge of storing and reading application state.
 package state
 
 import (
@@ -14,19 +15,21 @@ var (
 	stateFile = "state.yaml"
 )
 
-type logger interface {
+type iLogger interface {
 	Debug(format string, args ...any)
 }
 
+// ApplicationState stores application state.
 type ApplicationState struct {
 	Selected         int `yaml:"selected"`
 	appStateFilePath string
-	logger           logger
+	logger           iLogger
 	Width            int `yaml:"-"`
 	Height           int `yaml:"-"`
 }
 
-func Get(appHomePath string, lg logger) *ApplicationState {
+// Get - reads application stat from disk.
+func Get(appHomePath string, lg iLogger) *ApplicationState {
 	once.Do(func() {
 		appState = &ApplicationState{
 			appStateFilePath: path.Join(appHomePath, stateFile),
@@ -57,6 +60,7 @@ func (as *ApplicationState) readFromFile() error {
 	return nil
 }
 
+// Persist saves app state to disk.
 func (as *ApplicationState) Persist() error {
 	result, err := yaml.Marshal(as)
 	if err != nil {
