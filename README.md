@@ -74,6 +74,11 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
 
 ## 6. Changelog ##
 
+**v0.3.0**
+
+* Fix a problem which led to brokem cmd.exe UI on Windows platform [[details](https://github.com/grafviktor/goto/pull/14)].
+* Introduce linter rules and add unit test coverage report.
+
 **v0.2.0**
 
 * The Application supports environment and command line parameters [[details](https://github.com/grafviktor/goto/issues/8)].
