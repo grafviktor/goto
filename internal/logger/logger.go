@@ -40,20 +40,20 @@ func New(appPath, userSetLogLevel string) (appLogger, error) {
 		return l, err
 	}
 
-	l.logger = log.New(logFile, "", log.Ldate|log.Ltime)
+	l.innerLogger = log.New(logFile, "", log.Ldate|log.Ltime)
 
 	return l, nil
 }
 
 type appLogger struct {
-	logFile  *os.File
-	logLevel LogLevel
-	logger   *log.Logger
+	logFile     *os.File
+	logLevel    LogLevel
+	innerLogger *log.Logger
 }
 
 func (l *appLogger) print(prefix, format string, args ...any) {
 	msg := fmt.Sprintf("[%s] %s", prefix, format)
-	l.logger.Printf(msg, args...)
+	l.innerLogger.Printf(msg, args...)
 }
 
 func (l *appLogger) Debug(format string, args ...any) {
