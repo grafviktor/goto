@@ -69,7 +69,6 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
 
 * User input validators do not exist;
 * There is no confirmation dialog when you delete an existing item from the database;
-* On Windows platform, when ssh session exits with non-zero code the application UI breaks;
 * Maybe some other things as the utility hasn't even reached a stable version.
 
 ## 6. Changelog ##
