@@ -4,9 +4,11 @@ package state
 import (
 	"fmt"
 	"os"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v2"
 )
 
 // MockLogger implements the iLogger interface for testing.
@@ -22,6 +24,18 @@ func (ml *MockLogger) Debug(format string, args ...interface{}) {
 	ml.Logs = append(ml.Logs, logMessage)
 }
 
+// That's a wrapper function for state.Get which is required to overcome sync.Once restrictions
+func stateGet(tempDir string, mockLogger *MockLogger) *ApplicationState {
+	appState := Get(tempDir, mockLogger)
+
+	// We need this hack because state.Get function utilizes `sync.once`. That means, if all unit tests
+	// are ran by a single process, instead of the new tmpDir, the old one will be used. In other words
+	// the first test will affect all subsequent tests which rely on state.Get function.
+	appState.appStateFilePath = path.Join(tempDir, "state.yaml")
+
+	return appState
+}
+
 func Test_GetApplicationState(t *testing.T) {
 	// Set up a temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "test")
@@ -34,7 +48,7 @@ func Test_GetApplicationState(t *testing.T) {
 	mockLogger := &MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
-	appState := Get(tempDir, mockLogger)
+	appState := stateGet(tempDir, mockLogger)
 
 	// Ensure that the application state is not nil
 	assert.NotNil(t, appState)
@@ -44,8 +58,6 @@ func Test_GetApplicationState(t *testing.T) {
 	assert.Contains(t, mockLogger.Logs[0], "Read application state from")
 }
 
-/*
-FIXME: the below 2 tests are broken
 func Test_PersistApplicationState(t *testing.T) {
 	// Set up a temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "test")
@@ -58,7 +70,7 @@ func Test_PersistApplicationState(t *testing.T) {
 	mockLogger := &MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
-	appState := Get(tempDir, mockLogger)
+	appState := stateGet(tempDir, mockLogger)
 
 	// Modify the application state
 	appState.Selected = 42
@@ -79,9 +91,12 @@ func Test_PersistApplicationState(t *testing.T) {
 	assert.Equal(t, appState.Selected, persistedState.Selected)
 }
 
+/* FAILING
 // Test sync.Once call from multiple threads when reading app config
 func Test_ConcurrentInitialization(t *testing.T) {
 	// Set up a temporary directory for testing
+
+	// BUG: tempDir will not be used if we ran Get(tempDir, mockLogger) in previous unit tests
 	tempDir, err := os.MkdirTemp("", "test")
 	if err != nil {
 		t.Fatal(err)
@@ -98,9 +113,9 @@ func Test_ConcurrentInitialization(t *testing.T) {
 	numGoroutines := 10
 
 	// Pre-create file manually with minimum content
-	validYamlContent := []byte("{}")
-	err = os.WriteFile(path.Join(tempDir, "state.yaml"), validYamlContent, 0600)
-	require.NoError(t, err)
+	// validYamlContent := []byte("{}")
+	// err = os.WriteFile(path.Join(tempDir, "state.yaml"), validYamlContent, 0600)
+	// require.NoError(t, err)
 
 	// Initialize the application state concurrently
 	for i := 0; i < numGoroutines; i++ {
@@ -116,10 +131,6 @@ func Test_ConcurrentInitialization(t *testing.T) {
 
 	// Wait for all goroutines to finish
 	wg.Wait()
-
-	t.Logf("--- %v", mockLogger.Logs)
-
-	// panic("Helo!")
 
 	// Ensure that the application state is initialized only once
 	assert.Len(t, mockLogger.Logs, 1)
