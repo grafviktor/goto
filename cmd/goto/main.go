@@ -83,8 +83,8 @@ func main() {
 
 	// Logger created. Immediately print application version
 	lg.Info("Start application")
-	lg.Info("Version:    %s", version.BuildVersion())
-	lg.Info("Commit:     %s", version.BuildCommit())
+	lg.Info("Version:    %s", version.Number())
+	lg.Info("Commit:     %s", version.CommitHash())
 	lg.Info("Build date: %s", version.BuildDate())
 
 	ctx := context.Background()
