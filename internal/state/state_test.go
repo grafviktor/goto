@@ -36,6 +36,7 @@ func stateGet(tempDir string, mockLogger *MockLogger) *ApplicationState {
 	return appState
 }
 
+// Test reading app state
 func Test_GetApplicationState(t *testing.T) {
 	// Set up a temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "test")
@@ -58,6 +59,7 @@ func Test_GetApplicationState(t *testing.T) {
 	assert.Contains(t, mockLogger.Logs[0], "Read application state from")
 }
 
+// Test persisting app state
 func Test_PersistApplicationState(t *testing.T) {
 	// Set up a temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "test")
@@ -90,51 +92,3 @@ func Test_PersistApplicationState(t *testing.T) {
 	// Ensure that the persisted state matches the modified state
 	assert.Equal(t, appState.Selected, persistedState.Selected)
 }
-
-/* FAILING
-// Test sync.Once call from multiple threads when reading app config
-func Test_ConcurrentInitialization(t *testing.T) {
-	// Set up a temporary directory for testing
-
-	// BUG: tempDir will not be used if we ran Get(tempDir, mockLogger) in previous unit tests
-	tempDir, err := os.MkdirTemp("", "test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create a mock logger for testing
-	mockLogger := &MockLogger{}
-
-	// Use a wait group to synchronize goroutines
-	var wg sync.WaitGroup
-
-	// Number of goroutines for concurrent initialization
-	numGoroutines := 10
-
-	// Pre-create file manually with minimum content
-	// validYamlContent := []byte("{}")
-	// err = os.WriteFile(path.Join(tempDir, "state.yaml"), validYamlContent, 0600)
-	// require.NoError(t, err)
-
-	// Initialize the application state concurrently
-	for i := 0; i < numGoroutines; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			appState := Get(tempDir, mockLogger)
-			// Simulate some work with a short sleep
-			time.Sleep(50 * time.Millisecond)
-			assert.NotNil(t, appState)
-		}()
-	}
-
-	// Wait for all goroutines to finish
-	wg.Wait()
-
-	// Ensure that the application state is initialized only once
-	assert.Len(t, mockLogger.Logs, 1)
-	// BUG: Trying to read at index 0, but mockLogger.Logs is empty
-	assert.Contains(t, mockLogger.Logs[0], "Read application state from")
-}
-*/
