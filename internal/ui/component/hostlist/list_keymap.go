@@ -49,12 +49,12 @@ func (k keyMap) FullHelp() []key.Binding {
 func newDelegateKeyMap() *keyMap {
 	return &keyMap{
 		cursorUp: key.NewBinding(
-			key.WithKeys("up", "shift+tab"),
-			key.WithHelp("↑", "up"),
+			key.WithKeys("up", "k", "shift+tab"),
+			key.WithHelp("↑/k", "up"),
 		),
 		cursorDown: key.NewBinding(
-			key.WithKeys("down", "tab"),
-			key.WithHelp("↓", "down"),
+			key.WithKeys("down", "j", "tab"),
+			key.WithHelp("↓/j", "down"),
 		),
 		connect: key.NewBinding(
 			key.WithKeys("enter"),
