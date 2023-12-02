@@ -272,7 +272,7 @@ func (m listModel) listTitleUpdate(msg tea.Msg) listModel {
 			return m
 		}
 
-		m.innerModel.Title = fmt.Sprintf("goto: %s", item.Unwrap().Address)
+		m.innerModel.Title = ssh.ConstructCMD("ssh", utils.HostModelToOptionsAdaptor(*item.Unwrap())...)
 
 		return m
 	}
