@@ -6,8 +6,9 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/bubbles/list"
-	"github.com/grafviktor/goto/internal/model"
 	"github.com/stretchr/testify/require"
+
+	"github.com/grafviktor/goto/internal/model"
 )
 
 func TestListTitleUpdate(t *testing.T) {
