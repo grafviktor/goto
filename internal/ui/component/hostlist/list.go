@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -119,8 +120,8 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		h, v := docStyle.GetFrameSize()
 		m.innerModel.SetSize(msg.Width-h, msg.Height-v)
 		m.logger.Debug("Set host list size: %d %d", m.innerModel.Width(), m.innerModel.Height())
-	case msgErrorOccured:
-		return m.listTitleUpdate(msg), nil
+	// case msgErrorOccured:
+	// 	return m.listTitleUpdate(msg), nil
 	case MsgRepoUpdated:
 		return m.refreshRepo(msg)
 	case msgInitComplete:
@@ -148,7 +149,7 @@ func (m listModel) View() string {
 func (m listModel) removeItem(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
-		return m, message.TeaCmd(msgErrorOccured{err: errors.New("you must select an item")})
+		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
 	}
 
 	err := m.repo.Delete(item.ID)
@@ -237,6 +238,19 @@ func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 	)
 }
 
+type stdErrorWrapper struct {
+	err []byte
+}
+
+func (wrapper *stdErrorWrapper) Write(p []byte) (n int, err error) {
+	wrapper.err = append(wrapper.err, p...)
+
+	// Hide error from the console, otherwise it will be seen in a subsequent ssh calls
+	// To return to default behavior use:
+	// return os.Stderr.Write(p)
+	return 0, nil
+}
+
 func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
@@ -251,31 +265,42 @@ func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
 
 	command := ssh.ConstructCMD(ssh.BaseCMD(), utils.HostModelToOptionsAdaptor(host)...)
 	process := utils.BuildProcess(command)
-	return m, tea.ExecProcess(process, func(err error) tea.Msg {
+	errorWrapper := stdErrorWrapper{}
+	process.Stderr = &errorWrapper
+	execCmd := tea.ExecProcess(process, func(err error) tea.Msg {
 		if err != nil {
-			return msgErrorOccured{err}
+			errorMessage := strings.TrimSpace(string(errorWrapper.err))
+			if utils.StringEmpty(errorMessage) {
+				errorMessage = err.Error()
+			}
+
+			// errorDetails contains command which was executed and the error text
+			errorDetails := fmt.Sprintf("Command: %s\nError: %s", command, errorMessage)
+			return message.RemoteSessionErrorOccured{Err: errors.New(errorDetails)}
 		}
 
 		return nil
 	})
+
+	return m, execCmd
 }
 
-func (m listModel) listTitleUpdate(msg tea.Msg) listModel {
-	switch msg := msg.(type) {
-	case msgErrorOccured:
-		m.innerModel.Title = msg.err.Error()
+func (m listModel) listTitleUpdate(_ tea.Msg) listModel {
+	// switch msg := msg.(type) {
+	// case msgErrorOccured:
+	// 	m.innerModel.Title = msg.err.Error()
 
-		return m
-	default:
-		item, ok := m.innerModel.SelectedItem().(ListItemHost)
-		if !ok {
-			return m
-		}
-
-		m.innerModel.Title = ssh.ConstructCMD("ssh", utils.HostModelToOptionsAdaptor(*item.Unwrap())...)
-
+	// 	return m
+	// default:
+	item, ok := m.innerModel.SelectedItem().(ListItemHost)
+	if !ok {
 		return m
 	}
+
+	m.innerModel.Title = ssh.ConstructCMD("ssh", utils.HostModelToOptionsAdaptor(*item.Unwrap())...)
+
+	return m
+	// }
 }
 
 func (m listModel) onFocusChanged(_ tea.Msg) (listModel, tea.Cmd) {

@@ -14,9 +14,9 @@ import (
 )
 
 func Test_stringEmpty(t *testing.T) {
-	require.True(t, stringEmpty(""))
-	require.True(t, stringEmpty(" "))
-	require.False(t, stringEmpty("test"))
+	require.True(t, StringEmpty(""))
+	require.True(t, StringEmpty(" "))
+	require.False(t, StringEmpty("test"))
 }
 
 func Test_CreateAppDirIfNotExists(t *testing.T) {

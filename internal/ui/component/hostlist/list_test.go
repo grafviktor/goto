@@ -2,12 +2,14 @@
 package hostlist
 
 import (
+	"context"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/grafviktor/goto/internal/model"
 	"github.com/stretchr/testify/require"
+
+	"github.com/grafviktor/goto/internal/model"
 )
 
 func Test_ListTitleUpdate(t *testing.T) {
@@ -42,7 +44,7 @@ func Test_listModel_Change_Selection(t *testing.T) {
 		items := []list.Item{ListItemHost{h}, ListItemHost{h}, ListItemHost{h}, ListItemHost{h}}
 
 		// Create listModel using constructor function (using 'New' is important to preserve hotkeys)
-		lm := New(nil, nil, nil, nil)
+		lm := New(context.TODO(), nil, nil, nil)
 		lm.innerModel.SetItems(items)
 
 		// Select item at index 1. We need this preselection in order to test 'focus previous' and 'focus next' messages

@@ -9,6 +9,17 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type view int
+
+const (
+	// ViewHostList mode is active when we browse through a list of hostnames.
+	ViewHostList view = iota
+	// ViewEditItem mode is active when we edit existing or add a new host.
+	ViewEditItem
+	// ViewErrorMessage mode is active when there was an error when attenpted to connect to a remote host.
+	ViewErrorMessage
+)
+
 var (
 	appState  *ApplicationState
 	once      sync.Once
@@ -24,8 +35,10 @@ type ApplicationState struct {
 	Selected         int `yaml:"selected"`
 	appStateFilePath string
 	logger           iLogger
-	Width            int `yaml:"-"`
-	Height           int `yaml:"-"`
+	CurrentView      view  `yaml:"-"`
+	Err              error `yaml:"-"`
+	Width            int   `yaml:"-"`
+	Height           int   `yaml:"-"`
 }
 
 // Get - reads application stat from disk.
@@ -36,7 +49,7 @@ func Get(appHomePath string, lg iLogger) *ApplicationState {
 			logger:           lg,
 		}
 
-		// if we cannot read previously created application state, that's fine
+		// If we cannot read previously created application state, that's fine - we can continue execution.
 		_ = appState.readFromFile()
 	})
 

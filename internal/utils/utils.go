@@ -14,16 +14,16 @@ import (
 	"github.com/grafviktor/goto/internal/utils/ssh"
 )
 
-// stringEmpty - checks if string is empty or contains only spaces.
+// StringEmpty - checks if string is empty or contains only spaces.
 // s is string to check.
-func stringEmpty(s string) bool {
+func StringEmpty(s string) bool {
 	return len(strings.TrimSpace(s)) == 0
 }
 
 // CreateAppDirIfNotExists - creates application home folder if it doesn't exist.
 // appConfigDir is application home folder path.
 func CreateAppDirIfNotExists(appConfigDir string) error {
-	if stringEmpty(appConfigDir) {
+	if StringEmpty(appConfigDir) {
 		return errors.New("bad argument")
 	}
 
@@ -47,7 +47,7 @@ func CreateAppDirIfNotExists(appConfigDir string) error {
 // If userDefinedPath is not empty, it will be used as application home folder
 // Else, userConfigDir will be used, which is system dependent.
 func AppDir(appName, userDefinedPath string) (string, error) {
-	if !stringEmpty(userDefinedPath) {
+	if !StringEmpty(userDefinedPath) {
 		absolutePath, err := filepath.Abs(userDefinedPath)
 		if err != nil {
 			return "", err
@@ -65,7 +65,7 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 		return absolutePath, nil
 	}
 
-	if stringEmpty(appName) {
+	if StringEmpty(appName) {
 		return "", errors.New("application home folder name is not provided")
 	}
 
