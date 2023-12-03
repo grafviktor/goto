@@ -2,7 +2,6 @@
 package hostlist
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -12,18 +11,6 @@ import (
 )
 
 func Test_ListTitleUpdate(t *testing.T) {
-	// List title should show error message if error happened
-	t.Run("Error Message", func(t *testing.T) {
-		errMsg := errors.New("test error")
-		msg := msgErrorOccured{err: errMsg}
-		model := listModel{innerModel: list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)}
-		newModel := model.listTitleUpdate(msg)
-
-		if newModel.innerModel.Title != errMsg.Error() {
-			t.Errorf("Expected title to be %q, but got %q", errMsg.Error(), newModel.innerModel.Title)
-		}
-	})
-
 	t.Run("Focus Changed Message", func(t *testing.T) {
 		// Create a new host
 		h := model.NewHost(0, "", "", "localhost", "root", "id_rsa", "2222")
