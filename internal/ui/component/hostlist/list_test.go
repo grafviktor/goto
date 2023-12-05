@@ -7,52 +7,45 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/grafviktor/goto/internal/model"
 )
 
+func getTestListModel() *listModel {
+	// Create a new host
+	h := model.NewHost(0, "", "", "localhost", "root", "id_rsa", "2222")
+
+	// Add three items to the list
+	items := []list.Item{ListItemHost{h}, ListItemHost{h}, ListItemHost{h}, ListItemHost{h}}
+
+	// Create listModel using constructor function (using 'New' is important to preserve hotkeys)
+	lm := New(context.TODO(), nil, nil, nil)
+	lm.innerModel.SetItems(items)
+
+	// Select item at index 1. We need this preselection in order to test 'focus previous' and 'focus next' messages
+	lm.innerModel.Select(1)
+
+	return &lm
+}
+
 func Test_ListTitleUpdate(t *testing.T) {
-	t.Run("Focus Changed Message", func(t *testing.T) {
-		// Create a new host
-		h := model.NewHost(0, "", "", "localhost", "root", "id_rsa", "2222")
+	// Create a lm with initial state
+	lm := *getTestListModel()
 
-		// Create items
-		items := []list.Item{ListItemHost{h}}
+	// Select host
+	lm.innerModel.Select(0)
 
-		// Create a lm with initial state
-		lm := listModel{innerModel: list.New(items, list.NewDefaultDelegate(), 0, 0)}
+	// Create a message of type msgFocusChanged
+	msg := msgFocusChanged{}
+	// Apply the function
+	lm = lm.listTitleUpdate(msg)
 
-		// Select host
-		lm.innerModel.Select(0)
-
-		// Create a message of type msgFocusChanged
-		msg := msgFocusChanged{}
-		// Apply the function
-		lm = lm.listTitleUpdate(msg)
-
-		require.Equal(t, lm.innerModel.Title, "ssh localhost -l root -p 2222 -i id_rsa")
-	})
+	require.Equal(t, lm.innerModel.Title, "ssh localhost -l root -p 2222 -i id_rsa")
 }
 
 func Test_listModel_Change_Selection(t *testing.T) {
-	getListModel := func() *listModel {
-		// Create a new host
-		h := model.NewHost(0, "", "", "localhost", "root", "id_rsa", "2222")
-
-		// Add three items to the list
-		items := []list.Item{ListItemHost{h}, ListItemHost{h}, ListItemHost{h}, ListItemHost{h}}
-
-		// Create listModel using constructor function (using 'New' is important to preserve hotkeys)
-		lm := New(context.TODO(), nil, nil, nil)
-		lm.innerModel.SetItems(items)
-
-		// Select item at index 1. We need this preselection in order to test 'focus previous' and 'focus next' messages
-		lm.innerModel.Select(1)
-
-		return &lm
-	}
-
 	tests := []struct {
 		name                   string
 		expectedSelectionIndex int
@@ -63,38 +56,38 @@ func Test_listModel_Change_Selection(t *testing.T) {
 		{
 			"Select next using 'j' key",
 			2,
-			*getListModel(),
+			*getTestListModel(),
 			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		},
 		{
 			"Select next using '↓' key",
 			2,
-			*getListModel(),
+			*getTestListModel(),
 			tea.KeyMsg{Type: tea.KeyDown},
 		},
 		{
 			"Select next using 'tab' key",
 			2,
-			*getListModel(),
+			*getTestListModel(),
 			tea.KeyMsg{Type: tea.KeyTab},
 		},
 		// Simulate focus previous event
 		{
 			"Select previous using 'k' key",
 			0,
-			*getListModel(),
+			*getTestListModel(),
 			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}},
 		},
 		{
 			"Select previous using '↑' key",
 			0,
-			*getListModel(),
+			*getTestListModel(),
 			tea.KeyMsg{Type: tea.KeyUp},
 		},
 		{
 			"Select previous using 'shift+tab' key",
 			0,
-			*getListModel(),
+			*getTestListModel(),
 			tea.KeyMsg{Type: tea.KeyShiftTab},
 		},
 	}
@@ -111,4 +104,18 @@ func Test_listModel_Change_Selection(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_StdErrorWriter_Write(t *testing.T) {
+	// Test the Write method of stdErrorWriter
+	writer := stdErrorWriter{}
+	data := []byte("test error")
+	// 'n' should be equal to zero, as we're not writing errors to the terminal
+	n, err := writer.Write(data)
+
+	assert.NoError(t, err)
+	// Make sure that 'n' is zero, because we don't want to see errors in the console
+	assert.Equal(t, len(data), n)
+	// However we can read the error text from writer.err variable when we need
+	assert.Equal(t, data, writer.err)
 }

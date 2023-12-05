@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -120,8 +122,6 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		h, v := docStyle.GetFrameSize()
 		m.innerModel.SetSize(msg.Width-h, msg.Height-v)
 		m.logger.Debug("Set host list size: %d %d", m.innerModel.Width(), m.innerModel.Height())
-	// case msgErrorOccured:
-	// 	return m.listTitleUpdate(msg), nil
 	case MsgRepoUpdated:
 		return m.refreshRepo(msg)
 	case msgInitComplete:
@@ -238,44 +238,33 @@ func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 	)
 }
 
-type stdErrorWrapper struct {
-	err []byte
-}
-
-func (wrapper *stdErrorWrapper) Write(p []byte) (n int, err error) {
-	wrapper.err = append(wrapper.err, p...)
-
-	// Hide error from the console, otherwise it will be seen in a subsequent ssh calls
-	// To return to default behavior use:
-	// return os.Stderr.Write(p)
-	return 0, nil
-}
-
-func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
+func (m listModel) buildProcess(errorWriter *stdErrorWriter) (*exec.Cmd, error) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
-		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
+		return nil, errors.New(itemNotSelectedMessage)
 	}
 
 	host := *item.Unwrap()
-	err := m.repo.Save(host)
-	if err != nil {
-		return m, message.TeaCmd(msgErrorOccured{err})
-	}
-
 	command := ssh.ConstructCMD(ssh.BaseCMD(), utils.HostModelToOptionsAdaptor(host)...)
 	process := utils.BuildProcess(command)
-	errorWrapper := stdErrorWrapper{}
-	process.Stderr = &errorWrapper
+	process.Stdout = os.Stdout
+	process.Stderr = errorWriter
+
+	return process, nil
+}
+
+func (m listModel) runProcess(process *exec.Cmd, errorWriter *stdErrorWriter) (listModel, tea.Cmd) {
 	execCmd := tea.ExecProcess(process, func(err error) tea.Msg {
+		// This callback triggers when external process exits
 		if err != nil {
-			errorMessage := strings.TrimSpace(string(errorWrapper.err))
+			errorMessage := strings.TrimSpace(string(errorWriter.err))
 			if utils.StringEmpty(errorMessage) {
 				errorMessage = err.Error()
 			}
 
-			// errorDetails contains command which was executed and the error text
-			errorDetails := fmt.Sprintf("Command: %s\nError: %s", command, errorMessage)
+			commandWhichFailed := strings.Join(process.Args, " ")
+			// errorDetails contains command which was executed and the error text.
+			errorDetails := fmt.Sprintf("Command: %s\nError:   %s", commandWhichFailed, errorMessage)
 			return message.RemoteSessionErrorOccured{Err: errors.New(errorDetails)}
 		}
 
@@ -285,13 +274,17 @@ func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
 	return m, execCmd
 }
 
-func (m listModel) listTitleUpdate(_ tea.Msg) listModel {
-	// switch msg := msg.(type) {
-	// case msgErrorOccured:
-	// 	m.innerModel.Title = msg.err.Error()
+func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
+	errorWriter := stdErrorWriter{}
+	process, err := m.buildProcess(&errorWriter)
+	if err != nil {
+		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
+	}
 
-	// 	return m
-	// default:
+	return m.runProcess(process, &errorWriter)
+}
+
+func (m listModel) listTitleUpdate(_ tea.Msg) listModel {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		return m
@@ -300,7 +293,6 @@ func (m listModel) listTitleUpdate(_ tea.Msg) listModel {
 	m.innerModel.Title = ssh.ConstructCMD("ssh", utils.HostModelToOptionsAdaptor(*item.Unwrap())...)
 
 	return m
-	// }
 }
 
 func (m listModel) onFocusChanged(_ tea.Msg) (listModel, tea.Cmd) {
@@ -309,4 +301,22 @@ func (m listModel) onFocusChanged(_ tea.Msg) (listModel, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// stdErrorWriter - is an object which pretends to be a writer, however it saves all data into 'err' variable
+// for future reading and do not write anything in terminal. We need it to display a formatted error in the console
+// when it's required, but not when it's done by default.
+type stdErrorWriter struct {
+	err []byte
+}
+
+// Write - doesn't write anything, it saves all data in err variable, which can ve read later.
+func (writer *stdErrorWriter) Write(p []byte) (n int, err error) {
+	writer.err = append(writer.err, p...)
+
+	// Hide error from the console, otherwise it will be seen in a subsequent ssh calls
+	// To return to default behavior use: return os.Stderr.Write(p)
+	// We must return the number of bytes which were written using `len(p)`,
+	// otherwise exec.go will throw 'short write' error.
+	return len(p), nil
 }
