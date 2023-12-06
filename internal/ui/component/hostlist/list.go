@@ -265,7 +265,7 @@ func (m listModel) runProcess(process *exec.Cmd, errorWriter *stdErrorWriter) (l
 			commandWhichFailed := strings.Join(process.Args, " ")
 			// errorDetails contains command which was executed and the error text.
 			errorDetails := fmt.Sprintf("Command: %s\nError:   %s", commandWhichFailed, errorMessage)
-			return message.RemoteSessionErrorOccured{Err: errors.New(errorDetails)}
+			return message.RunProcessErrorOccured{Err: errors.New(errorDetails)}
 		}
 
 		return nil

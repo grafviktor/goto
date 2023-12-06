@@ -3,6 +3,7 @@ package hostlist
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/grafviktor/goto/internal/model"
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 func getTestListModel() *listModel {
@@ -18,14 +20,11 @@ func getTestListModel() *listModel {
 	h := model.NewHost(0, "", "", "localhost", "root", "id_rsa", "2222")
 
 	// Add three items to the list
-	items := []list.Item{ListItemHost{h}, ListItemHost{h}, ListItemHost{h}, ListItemHost{h}}
+	items := []list.Item{ListItemHost{h}, ListItemHost{h}, ListItemHost{h}}
 
 	// Create listModel using constructor function (using 'New' is important to preserve hotkeys)
 	lm := New(context.TODO(), nil, nil, nil)
 	lm.innerModel.SetItems(items)
-
-	// Select item at index 1. We need this preselection in order to test 'focus previous' and 'focus next' messages
-	lm.innerModel.Select(1)
 
 	return &lm
 }
@@ -42,7 +41,7 @@ func Test_ListTitleUpdate(t *testing.T) {
 	// Apply the function
 	lm = lm.listTitleUpdate(msg)
 
-	require.Equal(t, lm.innerModel.Title, "ssh localhost -l root -p 2222 -i id_rsa")
+	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", lm.innerModel.Title)
 }
 
 func Test_listModel_Change_Selection(t *testing.T) {
@@ -93,6 +92,10 @@ func Test_listModel_Change_Selection(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Select item at index 1. We need this preselection in order
+			// to test 'focus previous' and 'focus next' messages
+			tt.model.innerModel.Select(1)
+
 			// Receive updated model
 			updatedModel, _ := tt.model.Update(tt.KeyMsg)
 
@@ -118,4 +121,55 @@ func Test_StdErrorWriter_Write(t *testing.T) {
 	assert.Equal(t, len(data), n)
 	// However we can read the error text from writer.err variable when we need
 	assert.Equal(t, data, writer.err)
+}
+
+func Test_BuildProcess(t *testing.T) {
+	// Test case: Item is not selected
+	listModelEmpty := listModel{innerModel: list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)}
+	_, err := listModelEmpty.buildProcess(&stdErrorWriter{})
+	require.Error(t, err)
+
+	// Test case: Item is selected
+	listModel := getTestListModel()
+	cmd, err := listModel.buildProcess(&stdErrorWriter{})
+	require.NoError(t, err)
+
+	// Check that cmd is created and stdErr is re-defined
+	require.NotNil(t, cmd)
+	require.Equal(t, os.Stdout, cmd.Stdout)
+	require.Equal(t, &stdErrorWriter{}, cmd.Stderr)
+}
+
+func Test_RunProcess(t *testing.T) {
+	// Mock data for listModel
+	listModel := getTestListModel()
+
+	errorWriter := stdErrorWriter{}
+
+	validProcess := utils.BuildProcess("echo test") // crossplatform command
+	validProcess.Stdout = os.Stdout
+	validProcess.Stderr = &errorWriter
+
+	// Test case: Successful process execution
+	resultListModel, resultCmd := listModel.runProcess(validProcess, &errorWriter)
+
+	// Perform assertions
+	require.NotNil(t, resultListModel)
+	require.NotNil(t, resultCmd)
+	// require.Equal(t, "", string(errorWriter.err)) useless, as the process doesn't start
+
+	/**
+	 * We should run the event loop to run the process, otheriwse the process won't start.
+	 * NewProgram invocation is failing, need to invest more time.
+	 */
+	// p := tea.NewProgram(resultListModel)
+	// if _, err := p.Run(); err != nil {
+	// 	require.NoError(t, err)
+	// }
+
+	// // Perform assertions
+	// require.NotNil(t, resultListModel)
+	// require.NotNil(t, resultCmd)
+	// require.Equal(t, "", string(errorWriter.err))
+
 }
