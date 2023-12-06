@@ -67,7 +67,7 @@ func Test_GetCurrentOSUser(t *testing.T) {
 	require.NotEmpty(t, username, "GetCurrentOSUser should return a non-empty string")
 }
 
-func TestCheckAppInstalled(t *testing.T) {
+func Test_CheckAppInstalled(t *testing.T) {
 	tests := []struct {
 		name          string
 		appName       string
@@ -100,7 +100,7 @@ func TestCheckAppInstalled(t *testing.T) {
 	}
 }
 
-func TestHostModelToOptionsAdaptor(t *testing.T) {
+func Test_HostModelToOptionsAdaptor(t *testing.T) {
 	tests := []struct {
 		name            string
 		host            model.Host
@@ -115,10 +115,10 @@ func TestHostModelToOptionsAdaptor(t *testing.T) {
 				PrivateKeyPath: "/path/to/private_key",
 			},
 			expectedOptions: []ssh.CommandLineOption{
-				ssh.OptionAddress{Value: "example.com"},
-				ssh.OptionLoginName{Value: "user"},
-				ssh.OptionRemotePort{Value: "22"},
 				ssh.OptionPrivateKey{Value: "/path/to/private_key"},
+				ssh.OptionRemotePort{Value: "22"},
+				ssh.OptionLoginName{Value: "user"},
+				ssh.OptionAddress{Value: "example.com"},
 			},
 		},
 	}

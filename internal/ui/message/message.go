@@ -14,8 +14,8 @@ type (
 	InitComplete struct{}
 	// TerminalSizePolling - is a message which is sent when terminal width and/or height changes.
 	TerminalSizePolling struct{ Width, Height int }
-	// RemoteSessionErrorOccured fires when there is an error connecting to a remote host.
-	RemoteSessionErrorOccured struct{ Err error }
+	// RunProcessErrorOccured fires when there is an error executing an external process.
+	RunProcessErrorOccured struct{ Err error }
 )
 
 var terminalSizePollingInterval = time.Second / 2

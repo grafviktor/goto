@@ -102,10 +102,10 @@ func CheckAppInstalled(appName string) error {
 // returns []ssh.CommandLineOption.
 func HostModelToOptionsAdaptor(host model.Host) []ssh.CommandLineOption {
 	return []ssh.CommandLineOption{
-		ssh.OptionAddress{Value: host.Address},
-		ssh.OptionLoginName{Value: host.LoginName},
-		ssh.OptionRemotePort{Value: host.RemotePort},
 		ssh.OptionPrivateKey{Value: host.PrivateKeyPath},
+		ssh.OptionRemotePort{Value: host.RemotePort},
+		ssh.OptionLoginName{Value: host.LoginName},
+		ssh.OptionAddress{Value: host.Address},
 	}
 }
 

@@ -86,7 +86,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.appState.Selected = msg.HostID
 	case edithost.MsgClose:
 		m.appState.CurrentView = state.ViewHostList
-	case message.RemoteSessionErrorOccured:
+	case message.RunProcessErrorOccured:
 		m.appState.Err = msg.Err
 		m.appState.CurrentView = state.ViewErrorMessage
 	}
