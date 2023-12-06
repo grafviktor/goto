@@ -19,7 +19,7 @@ func TerminalSizePolling() tea.Msg {
 	terminalFd := int(os.Stdout.Fd())
 	Width, Height, _ := term.GetSize(terminalFd)
 
-	return message.TerminalSizePollingMsg{Width, Height}
+	return message.TerminalSizePolling{Width, Height}
 }
 
 func (m *mainModel) Init() tea.Cmd {
@@ -27,5 +27,5 @@ func (m *mainModel) Init() tea.Cmd {
 	cmd := m.modelHostList.Init()
 
 	m.logger.Debug("Start polling terminal size")
-	return tea.Batch(cmd, message.TerminalSizePolling)
+	return tea.Batch(cmd, TerminalSizePolling)
 }
