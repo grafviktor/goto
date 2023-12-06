@@ -12,19 +12,21 @@ import (
 type (
 	// InitComplete - is a message which is sent when bubbletea models are initialized.
 	InitComplete struct{}
-	// TerminalSizePollingMsg - is a message which is sent when terminal width and/or height changes.
-	TerminalSizePollingMsg struct{ Width, Height int }
+	// TerminalSizePolling - is a message which is sent when terminal width and/or height changes.
+	TerminalSizePolling struct{ Width, Height int }
+	// RunProcessErrorOccured fires when there is an error executing an external process.
+	RunProcessErrorOccured struct{ Err error }
 )
 
 var terminalSizePollingInterval = time.Second / 2
 
-// TerminalSizePolling - is a tea.Msg which is used to poll terminal size.
-func TerminalSizePolling() tea.Msg {
+// TerminalSizePollingMsg - is a tea.Msg which is used to poll terminal size.
+func TerminalSizePollingMsg() tea.Msg {
 	time.Sleep(terminalSizePollingInterval)
 	terminalFd := int(os.Stdout.Fd())
 	Width, Height, _ := term.GetSize(terminalFd)
 
-	return TerminalSizePollingMsg{Width, Height}
+	return TerminalSizePolling{Width, Height}
 }
 
 // TeaCmd - is a helper function which returns create tea.Cmd from tea.Msg object.

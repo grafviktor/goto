@@ -14,13 +14,6 @@ import (
 	"github.com/grafviktor/goto/internal/ui/message"
 )
 
-type sessionState int
-
-const (
-	viewHostList sessionState = iota
-	viewEditItem
-)
-
 type logger interface {
 	Debug(format string, args ...any)
 }
@@ -47,7 +40,6 @@ func NewMainModel(
 type mainModel struct {
 	appContext    context.Context
 	hostStorage   storage.HostStorage
-	state         sessionState
 	modelHostList tea.Model
 	modelEditHost tea.Model
 	appState      *state.ApplicationState
@@ -65,7 +57,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
-	case message.TerminalSizePollingMsg:
+	case message.TerminalSizePolling:
 		// That is Windows OS specific. Windows cmd.exe does not trigger terminal
 		// resize events, that is why we poll terminal size with intervals
 		// First message is being triggered by Windows version of the model.Init function.
@@ -77,30 +69,33 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// We're dispatching the same message from this function and therefore cycling TerminalSizePollingMsg.
 		// That's done on purpose to keep this process running. Message.TerminalSizePollingMsg will trigger
 		// automatically after an artificial delay which set by Time.Sleep inside message.
-		cmds = append(cmds, message.TerminalSizePolling)
+		cmds = append(cmds, message.TerminalSizePollingMsg)
 	case tea.WindowSizeMsg:
 		m.logger.Debug("Set terminal window size: %d %d", msg.Width, msg.Height)
 		m.appState.Width = msg.Width
 		m.appState.Height = msg.Height
 		m.updateViewPort(msg.Width, msg.Height)
 	case hostlist.MsgEditItem:
-		m.state = viewEditItem
+		m.appState.CurrentView = state.ViewEditItem
 		ctx := context.WithValue(m.appContext, edithost.ItemID, msg.HostID)
 		m.modelEditHost = edithost.New(ctx, m.hostStorage, m.appState, m.logger)
 	case hostlist.MsgNewItem:
-		m.state = viewEditItem
+		m.appState.CurrentView = state.ViewEditItem
 		m.modelEditHost = edithost.New(m.appContext, m.hostStorage, m.appState, m.logger)
 	case hostlist.MsgSelectItem:
 		m.appState.Selected = msg.HostID
 	case edithost.MsgClose:
-		m.state = viewHostList
+		m.appState.CurrentView = state.ViewHostList
+	case message.RunProcessErrorOccured:
+		m.appState.Err = msg.Err
+		m.appState.CurrentView = state.ViewErrorMessage
 	}
 
 	m.modelHostList, cmd = m.modelHostList.Update(msg)
 	cmds = append(cmds, cmd)
 
-	if m.state == viewEditItem {
-		// edit host receives messages only if it's active. We re-create this component every time we go to edit mode
+	if m.appState.CurrentView == state.ViewEditItem {
+		// Edit host receives messages only if it's active. We re-create this component every time we go to edit mode
 		m.modelEditHost, cmd = m.modelEditHost.Update(msg)
 		cmds = append(cmds, cmd)
 	}
@@ -114,10 +109,18 @@ func (m *mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	var cmd tea.Cmd
-	switch m.state { // Only active component receives key messages
-	case viewHostList:
+
+	// Only current view receives key messages
+	switch m.appState.CurrentView {
+	case state.ViewErrorMessage:
+		// When display external process's output and receieve any keyboard event, we:
+		// 1. Reset the error message
+		// 2. Switch to HostList view
+		m.appState.Err = nil
+		m.appState.CurrentView = state.ViewHostList
+	case state.ViewHostList:
 		m.modelHostList, cmd = m.modelHostList.Update(msg)
-	case viewEditItem:
+	case state.ViewEditItem:
 		m.modelEditHost, cmd = m.modelEditHost.Update(msg)
 	}
 
@@ -125,14 +128,18 @@ func (m *mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *mainModel) View() string {
+	// Build UI
 	var content string
-	switch m.state {
-	case viewEditItem:
+	switch m.appState.CurrentView {
+	case state.ViewErrorMessage:
+		content = m.appState.Err.Error()
+	case state.ViewEditItem:
 		content = m.modelEditHost.View()
-	case viewHostList:
+	case state.ViewHostList:
 		content = m.modelHostList.View()
 	}
 
+	// Wrap UI into the ViewPort
 	m.viewport.SetContent(content)
 	viewPortContent := m.viewport.View()
 
