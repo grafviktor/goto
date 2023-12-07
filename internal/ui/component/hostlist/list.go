@@ -54,6 +54,7 @@ type listModel struct {
 	keyMap     *keyMap
 	appState   *state.ApplicationState
 	logger     logger
+	mode       string
 }
 
 // New - creates new host list model.
@@ -82,7 +83,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	m.innerModel.AdditionalShortHelpKeys = delegateKeys.ShortHelp
 	m.innerModel.AdditionalFullHelpKeys = delegateKeys.FullHelp
 
-	m.innerModel.Title = "goto:"
+	m.innerModel.Title = "goto"
 	m.innerModel.SetShowStatusBar(false)
 
 	return m
@@ -105,11 +106,21 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 
+		if m.mode != "" {
+			if key.Matches(msg, m.keyMap.confirm) {
+				return m.confirmAction(msg)
+			} else {
+				// If user doesn't confirm the operation, we go back to normal mode and update title.
+				m.mode = ""
+				return m.listTitleUpdate(msg), nil
+			}
+		}
+
 		switch {
 		case key.Matches(msg, m.keyMap.connect):
 			return m.executeCmd(msg)
 		case key.Matches(msg, m.keyMap.remove):
-			return m.removeItem(msg)
+			return m.prepareRemoveItem(msg)
 		case key.Matches(msg, m.keyMap.edit):
 			return m.editItem(msg)
 		case key.Matches(msg, m.keyMap.append):
@@ -144,6 +155,27 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m listModel) View() string {
 	return docStyle.Render(m.innerModel.View())
+}
+
+func (m listModel) confirmAction(msg tea.Msg) (listModel, tea.Cmd) {
+	if m.mode == "removeItem" {
+		m.mode = ""
+		return m.removeItem(msg)
+	}
+
+	return m, nil
+}
+
+func (m listModel) prepareRemoveItem(_ tea.Msg) (listModel, tea.Cmd) {
+	// Check if item is selected
+	_, ok := m.innerModel.SelectedItem().(ListItemHost)
+	if !ok {
+		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
+	}
+
+	m.mode = "removeItem"
+
+	return m, message.TeaCmd(msgFocusChanged{})
 }
 
 func (m listModel) removeItem(_ tea.Msg) (listModel, tea.Cmd) {
@@ -290,8 +322,13 @@ func (m listModel) listTitleUpdate(_ tea.Msg) listModel {
 		return m
 	}
 
-	m.innerModel.Title = ssh.ConstructCMD("ssh", utils.HostModelToOptionsAdaptor(*item.Unwrap())...)
+	if m.mode == "removeItem" {
+		// m.innerModel.Title = fmt.Sprintf("remove '%s' from the list? [y/N]", item.Title())
+		m.innerModel.Title = "remove current selection ? y/N"
+		return m
+	}
 
+	m.innerModel.Title = ssh.ConstructCMD("ssh", utils.HostModelToOptionsAdaptor(*item.Unwrap())...)
 	return m
 }
 
