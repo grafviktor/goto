@@ -3,6 +3,7 @@ package hostlist
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/grafviktor/goto/internal/model"
+	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/utils"
 )
 
@@ -171,5 +173,127 @@ func Test_RunProcess(t *testing.T) {
 	// require.NotNil(t, resultListModel)
 	// require.NotNil(t, resultCmd)
 	// require.Equal(t, "", string(errorWriter.err))
+}
 
+type mockRepo struct {
+	shouldFail bool
+}
+
+// Delete implements storage.HostStorage.
+func (mr mockRepo) Delete(id int) error {
+	if mr.shouldFail {
+		return errors.New("Mock error")
+	}
+
+	return nil
+}
+
+// Get implements storage.HostStorage.
+func (mr mockRepo) Get(hostID int) (model.Host, error) {
+	if mr.shouldFail {
+		return model.Host{}, errors.New("Mock error")
+	}
+
+	return model.Host{}, nil
+}
+
+// GetAll implements storage.HostStorage.
+func (mr mockRepo) GetAll() ([]model.Host, error) {
+	if mr.shouldFail {
+		return []model.Host{}, errors.New("Mock error")
+	}
+
+	return []model.Host{}, nil
+}
+
+// Save implements storage.HostStorage.
+func (mr mockRepo) Save(model.Host) error {
+	if mr.shouldFail {
+		return errors.New("Mock error")
+	}
+
+	return nil
+}
+
+/*
+func Test_confirmAction(t *testing.T) {
+	// Set up the initial state with mode set to "modeRemoveItem"
+	model := getTestListModel()
+	model.mode = modeRemoveItem
+	// msg := tea.KeyMsg{Type: tea.KeyDown},
+	msg := tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune{'d'},
+	}
+
+	model.repo = mockRepo{}
+	// Call the confirmAction function
+	newModel, cmd := model.confirmAction(msg)
+
+	// Assert that the mode has been reset and removeItem function was called
+	require.Equal(t, "", newModel.mode, "Expected mode to be reset")
+
+	// Expected to be tea.Batch, because when removing host we trigger extra commands
+	require.IsType(t, tea.Batch(), cmd, "Expected to be tea.Batch")
+}
+*/
+
+func Test_removeItem(t *testing.T) {
+	tests := []struct {
+		name         string
+		model        listModel
+		mode         string
+		repo         storage.HostStorage
+		want         interface{}
+		selectedItem int
+	}{
+		{
+			name:         "Remove item success",
+			model:        *getTestListModel(),
+			repo:         mockRepo{},
+			mode:         modeRemoveItem,
+			want:         tea.BatchMsg{},
+			selectedItem: 0,
+		},
+		{
+			name:         "Remove item error because of the database error",
+			model:        *getTestListModel(),
+			repo:         mockRepo{shouldFail: true},
+			mode:         modeRemoveItem,
+			want:         msgErrorOccured{},
+			selectedItem: 0,
+		},
+		{
+			name:         "Remove item error wrong item selected",
+			model:        *getTestListModel(),
+			repo:         mockRepo{shouldFail: false},
+			mode:         modeRemoveItem,
+			want:         msgErrorOccured{},
+			selectedItem: 10,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := tea.KeyMsg{
+				Type:  tea.KeyRunes,
+				Runes: []rune{'d'},
+			}
+
+			// Set mode removeMode
+			tt.model.mode = tt.mode
+			// Setup database
+			tt.model.repo = tt.repo
+			// Select item
+			tt.model.innerModel.Select(tt.selectedItem)
+			// Call the confirmAction function
+			newModel, cmd := tt.model.confirmAction(msg)
+
+			// Assert that the mode has been reset and removeItem function was called. That's happening in any case
+			// independtently whether the operation was succesfull or not.
+			require.Equal(t, "", newModel.mode, "Expected removeMode to be cleared")
+
+			// Expected to be tea.Batch, because when removing host we trigger extra commands
+			require.IsType(t, tt.want, cmd(), "Wrong message type")
+		})
+	}
 }

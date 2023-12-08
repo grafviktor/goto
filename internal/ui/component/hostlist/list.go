@@ -26,6 +26,7 @@ import (
 var (
 	docStyle               = lipgloss.NewStyle().Margin(1, 2)
 	itemNotSelectedMessage = "you must select an item"
+	modeRemoveItem         = "removeItem"
 )
 
 type logger interface {
@@ -109,11 +110,11 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.mode != "" {
 			if key.Matches(msg, m.keyMap.confirm) {
 				return m.confirmAction(msg)
-			} else {
-				// If user doesn't confirm the operation, we go back to normal mode and update title.
-				m.mode = ""
-				return m.listTitleUpdate(msg), nil
 			}
+
+			// If user doesn't confirm the operation, we go back to normal mode and update title.
+			m.mode = ""
+			return m.listTitleUpdate(msg), nil
 		}
 
 		switch {
@@ -158,7 +159,7 @@ func (m listModel) View() string {
 }
 
 func (m listModel) confirmAction(msg tea.Msg) (listModel, tea.Cmd) {
-	if m.mode == "removeItem" {
+	if m.mode == modeRemoveItem {
 		m.mode = ""
 		return m.removeItem(msg)
 	}
@@ -173,7 +174,7 @@ func (m listModel) prepareRemoveItem(_ tea.Msg) (listModel, tea.Cmd) {
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
 	}
 
-	m.mode = "removeItem"
+	m.mode = modeRemoveItem
 
 	return m, message.TeaCmd(msgFocusChanged{})
 }
@@ -322,9 +323,8 @@ func (m listModel) listTitleUpdate(_ tea.Msg) listModel {
 		return m
 	}
 
-	if m.mode == "removeItem" {
-		// m.innerModel.Title = fmt.Sprintf("remove '%s' from the list? [y/N]", item.Title())
-		m.innerModel.Title = "remove current selection ? y/N"
+	if m.mode == modeRemoveItem {
+		m.innerModel.Title = fmt.Sprintf("delete \"%s\" ? (y/N)", item.Title())
 		return m
 	}
 
