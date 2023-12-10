@@ -12,6 +12,7 @@ type keyMap struct {
 	clone      key.Binding
 	edit       key.Binding
 	remove     key.Binding
+	confirm    key.Binding
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
@@ -75,6 +76,10 @@ func newDelegateKeyMap() *keyMap {
 		remove: key.NewBinding(
 			key.WithKeys("d"),
 			key.WithHelp("d", "delete"),
+		),
+		confirm: key.NewBinding(
+			key.WithKeys("y", "Y"),
+			key.WithHelp("y", "confirm"),
 		),
 	}
 }
