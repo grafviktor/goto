@@ -24,13 +24,14 @@ var (
 	buildVersion string
 	buildDate    string
 	buildCommit  string
+	buildBranch  string
 )
 
 const appName = "goto"
 
 func main() {
 	// Set application version and build details
-	version.Set(buildVersion, buildDate, buildCommit)
+	version.Set(buildVersion, buildCommit, buildBranch, buildDate)
 
 	environmentParams := config.User{}
 	// Command line parameters have higher precedence than other parameters, but lower than command line
@@ -85,6 +86,7 @@ func main() {
 	lg.Info("Start application")
 	lg.Info("Version:    %s", version.Number())
 	lg.Info("Commit:     %s", version.CommitHash())
+	lg.Info("Branch:     %s", version.BuildBranch())
 	lg.Info("Build date: %s", version.BuildDate())
 
 	ctx := context.Background()
