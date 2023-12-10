@@ -136,7 +136,7 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case msgInitComplete:
 		return m.refreshRepo(msg)
 	case msgRefreshUI:
-		m = m.listTitleUpdate(msg)
+		m = m.listTitleUpdate()
 		var cmd tea.Cmd
 		m, cmd = m.onFocusChanged(msg)
 		cmds = append(cmds, cmd)
@@ -163,7 +163,7 @@ func (m listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) (listModel, tea
 	// If user doesn't confirm the operation, we go back to normal mode and update
 	// title back to normal, this exact key event won't be handled
 	m.mode = ""
-	return m.listTitleUpdate(msg), nil
+	return m.listTitleUpdate(), nil
 }
 
 func (m listModel) confirmAction() (listModel, tea.Cmd) {
@@ -325,7 +325,7 @@ func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
 	return m.runProcess(process, &errorWriter)
 }
 
-func (m listModel) listTitleUpdate(_ tea.Msg) listModel {
+func (m listModel) listTitleUpdate() listModel {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		return m

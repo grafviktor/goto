@@ -23,10 +23,8 @@ func Test_ListTitleUpdate(t *testing.T) {
 	// Select host
 	lm.innerModel.Select(0)
 
-	// Create a message of type msgFocusChanged
-	msg := msgRefreshUI{}
 	// Apply the function
-	lm = lm.listTitleUpdate(msg)
+	lm = lm.listTitleUpdate()
 
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", lm.innerModel.Title)
 }
@@ -260,6 +258,51 @@ func Test_enterRemoveItemMode(t *testing.T) {
 	require.IsType(t, msgRefreshUI{}, cmd(), "Wrong message type")
 }
 
+func Test_listTitleUpdate(t *testing.T) {
+	// func (m listModel) listTitleUpdate(_ tea.Msg) listModel {
+	// 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
+	// 	if !ok {
+	// 		return m
+	// 	}
+
+	// 	if m.mode == modeRemoveItem {
+	// 		m.innerModel.Title = fmt.Sprintf("delete \"%s\" ? (y/N)", item.Title())
+	// 		return m
+	// 	}
+
+	// 	m.innerModel.Title = ssh.ConstructCMD("ssh", utils.HostModelToOptionsAdaptor(*item.Unwrap())...)
+	// 	return m
+	// }
+	// 1 Call listTitleUpdate when host is not selected
+	model := *NewMockListModel(false)
+	// Select non-existent item
+	model.innerModel.Select(10)
+	// Call listTitleUpdate function, but it will fail, however without throwing any errors
+	model = model.listTitleUpdate()
+	// Check that model is not nil
+	require.NotNil(t, model)
+
+	// 2 Call listTitleUpdate when removeMode is active
+	model = *NewMockListModel(false)
+	// Select a host by valid index
+	model.innerModel.Select(0)
+	// Enter remove mode
+	model, _ = model.enterRemoveItemMode()
+	// Call listTitleUpdate function
+	model = model.listTitleUpdate()
+	// Check that app is now asking for a confirmation befor delete
+	require.Equal(t, "delete \"Mock Host\" ? (y/N)", model.innerModel.Title)
+
+	// 3 Call listTitleUpdate selected a host
+	model = *NewMockListModel(false)
+	// Select a host by valid index
+	model.innerModel.Select(0)
+	// Call listTitleUpdate function
+	model = model.listTitleUpdate()
+	// Check that app is displaying ssh connection string
+	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", model.innerModel.Title)
+}
+
 // ================================================ MOCKS ========================================== //
 
 // ============================================== List Model
@@ -286,9 +329,9 @@ func NewMockListModel(storageShouldFail bool) *listModel {
 
 func NewMockStorage(shouldFail bool) *mockStorage {
 	hosts := []model.Host{
-		model.NewHost(0, "", "", "localhost", "root", "id_rsa", "2222"),
-		model.NewHost(0, "", "", "localhost", "root", "id_rsa", "2222"),
-		model.NewHost(0, "", "", "localhost", "root", "id_rsa", "2222"),
+		model.NewHost(0, "Mock Host", "", "localhost", "root", "id_rsa", "2222"),
+		model.NewHost(0, "Mock Host", "", "localhost", "root", "id_rsa", "2222"),
+		model.NewHost(0, "Mock Host", "", "localhost", "root", "id_rsa", "2222"),
 	}
 
 	return &mockStorage{
