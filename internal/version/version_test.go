@@ -12,7 +12,7 @@ import (
 
 func TestSetAndGet(t *testing.T) {
 	// Test Set function to update build information
-	Set("1.0", "2023-09-01", "abcdef")
+	Set("1.0", "abcdef", "develop", "2023-09-01")
 
 	// Check if the values are correctly updated
 	if Number() != "1.0" {
@@ -26,6 +26,10 @@ func TestSetAndGet(t *testing.T) {
 	if CommitHash() != "abcdef" {
 		t.Errorf("Expected BuildCommit() to return 'abcdef', but got '%s'", CommitHash())
 	}
+
+	if BuildBranch() != "develop" {
+		t.Errorf("Expected BuildBranch() to return 'develop', but got '%s'", BuildBranch())
+	}
 }
 
 func TestPrintConsole(t *testing.T) {
@@ -36,6 +40,7 @@ func TestPrintConsole(t *testing.T) {
 
 	expectedOutput := fmt.Sprintf("Version:    %s\n", Number())
 	expectedOutput += fmt.Sprintf("Commit:     %s\n", CommitHash())
+	expectedOutput += fmt.Sprintf("Branch:     %s\n", BuildBranch())
 	expectedOutput += fmt.Sprintf("Build date: %s\n", BuildDate())
 
 	require.Equal(t, output, expectedOutput)

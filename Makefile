@@ -1,6 +1,15 @@
-BUILD_VERSION=v0.3.0
-NO_DEBUG_FLAGS=-s -w
-LD_FLAGS = -ldflags="$(NO_DEBUG_FLAGS) -X main.buildVersion=$(BUILD_VERSION) -X main.buildDate=$(shell date +%Y-%m-%d) -X main.buildCommit=$(shell git rev-parse --short=8 HEAD)"
+BUILD_BRANCH  = $(shell git rev-parse --abbrev-ref HEAD)
+BUILD_COMMIT  = $(shell git rev-parse --short=8 HEAD)
+BUILD_VERSION = v0.4.0
+BUILD_DATE    = $(shell date +%Y-%m-%d)
+NO_DEBUG_FLAGS = -s -w
+# Check if there is no associated tag with this commit, that means that it is a dev build.
+BUILD_VERSION_SUFFIX = $(shell git describe --tags --exact-match > /dev/null 2>&1 || echo \\\(dev\\\))
+# Use build version and suffix for burning in buildVersion variable:
+# For tagged builds - "vX.X.X"
+# For non tagged - "vX.X.X (dev)"
+BUILD_VERSION_AND_SUFFIX = $(strip $(BUILD_VERSION) $(BUILD_VERSION_SUFFIX))
+LD_FLAGS = -ldflags="$(NO_DEBUG_FLAGS) -X main.buildVersion="$(BUILD_VERSION)$(BUILD_VERSION_SUFFIX)" -X main.buildDate=$(BUILD_DATE) -X main.buildCommit=$(BUILD_COMMIT) -X main.buildBranch=$(BUILD_BRANCH)"
 
 ## help: print this help message
 help:

@@ -6,9 +6,10 @@ import (
 )
 
 type buildInfo struct {
-	number     string
-	date       string
-	commitHash string
+	number      string
+	date        string
+	commitHash  string
+	buildBranch string
 }
 
 var bi buildInfo
@@ -17,14 +18,15 @@ func init() {
 	valueIsNotAvailable := "N/A"
 
 	bi = buildInfo{
-		number:     valueIsNotAvailable,
-		date:       valueIsNotAvailable,
-		commitHash: valueIsNotAvailable,
+		number:      valueIsNotAvailable,
+		date:        valueIsNotAvailable,
+		commitHash:  valueIsNotAvailable,
+		buildBranch: valueIsNotAvailable,
 	}
 }
 
 // Set should be called from the main function to make application version details available for other app modules.
-func Set(buildVersion, buildDate, buildCommit string) {
+func Set(buildVersion, buildCommit, buildBranch, buildDate string) {
 	if len(buildVersion) > 0 {
 		bi.number = buildVersion
 	}
@@ -36,26 +38,36 @@ func Set(buildVersion, buildDate, buildCommit string) {
 	if len(buildCommit) > 0 {
 		bi.commitHash = buildCommit
 	}
+
+	if len(buildBranch) > 0 {
+		bi.buildBranch = buildBranch
+	}
 }
 
-// Number sets version of the application.
+// Number returns version of the application.
 func Number() string {
 	return bi.number
 }
 
-// BuildDate sets date of the build.
+// BuildDate returns date of the build.
 func BuildDate() string {
 	return bi.date
 }
 
-// CommitHash sets last commit id.
+// BuildBranch returns branch which was used to build the app.
+func BuildBranch() string {
+	return bi.buildBranch
+}
+
+// CommitHash returns last commit id which was used to build the app.
 func CommitHash() string {
 	return bi.commitHash
 }
 
-// Print - outputs build information right into terminal.
+// Print - outputs build information right into the terminal.
 func Print() {
 	fmt.Printf("Version:    %s\n", Number())
 	fmt.Printf("Commit:     %s\n", CommitHash())
+	fmt.Printf("Branch:     %s\n", BuildBranch())
 	fmt.Printf("Build date: %s\n", BuildDate())
 }
