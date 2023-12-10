@@ -45,8 +45,8 @@ type (
 	msgInitComplete struct{}
 	msgErrorOccured struct{ err error }
 	// MsgRepoUpdated - fires when data layer updated and it's required to reload the host list.
-	MsgRepoUpdated  struct{}
-	msgFocusChanged struct{}
+	MsgRepoUpdated struct{}
+	msgRefreshUI   struct{}
 )
 
 type listModel struct {
@@ -99,29 +99,22 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		// dispatch msgFocusChanged message to update list title
-		cmds = append(cmds, message.TeaCmd(msgFocusChanged{}))
-
 		if m.innerModel.FilterState() == list.Filtering {
-			// if filter is enabled, we should not handle any keyboard messages
+			// If filter is enabled, we should not handle any keyboard messages,
+			// it should be done by filter component.
 			break
 		}
 
 		if m.mode != "" {
-			if key.Matches(msg, m.keyMap.confirm) {
-				return m.confirmAction(msg)
-			}
-
-			// If user doesn't confirm the operation, we go back to normal mode and update title.
-			m.mode = ""
-			return m.listTitleUpdate(msg), nil
+			// Handle key event when some mode is enabled. For instance "removeMode".
+			return m.handleKeyEventWhenModeEnabled(msg)
 		}
 
 		switch {
 		case key.Matches(msg, m.keyMap.connect):
 			return m.executeCmd(msg)
 		case key.Matches(msg, m.keyMap.remove):
-			return m.prepareRemoveItem(msg)
+			return m.enterRemoveItemMode()
 		case key.Matches(msg, m.keyMap.edit):
 			return m.editItem(msg)
 		case key.Matches(msg, m.keyMap.append):
@@ -129,6 +122,10 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keyMap.clone):
 			return m.copyItem(msg)
 		}
+
+		// Dispatch msgRefreshUI message to update list title.
+		// Actually we only need to dispatch it when we switch between list items
+		cmds = append(cmds, message.TeaCmd(msgRefreshUI{}))
 	case tea.WindowSizeMsg:
 		// triggers immediately after app start because we render this component by default
 		h, v := docStyle.GetFrameSize()
@@ -138,7 +135,7 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.refreshRepo(msg)
 	case msgInitComplete:
 		return m.refreshRepo(msg)
-	case msgFocusChanged:
+	case msgRefreshUI:
 		m = m.listTitleUpdate(msg)
 		var cmd tea.Cmd
 		m, cmd = m.onFocusChanged(msg)
@@ -158,17 +155,28 @@ func (m listModel) View() string {
 	return docStyle.Render(m.innerModel.View())
 }
 
-func (m listModel) confirmAction(msg tea.Msg) (listModel, tea.Cmd) {
+func (m listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) (listModel, tea.Cmd) {
+	if key.Matches(msg, m.keyMap.confirm) {
+		return m.confirmAction()
+	}
+
+	// If user doesn't confirm the operation, we go back to normal mode and update
+	// title back to normal, this exact key event won't be handled
+	m.mode = ""
+	return m.listTitleUpdate(msg), nil
+}
+
+func (m listModel) confirmAction() (listModel, tea.Cmd) {
 	if m.mode == modeRemoveItem {
 		m.mode = ""
-		return m.removeItem(msg)
+		return m.removeItem()
 	}
 
 	return m, nil
 }
 
-func (m listModel) prepareRemoveItem(_ tea.Msg) (listModel, tea.Cmd) {
-	// Check if item is selected
+func (m listModel) enterRemoveItemMode() (listModel, tea.Cmd) {
+	// Check if item is selected.
 	_, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
@@ -176,10 +184,10 @@ func (m listModel) prepareRemoveItem(_ tea.Msg) (listModel, tea.Cmd) {
 
 	m.mode = modeRemoveItem
 
-	return m, message.TeaCmd(msgFocusChanged{})
+	return m, message.TeaCmd(msgRefreshUI{})
 }
 
-func (m listModel) removeItem(_ tea.Msg) (listModel, tea.Cmd) {
+func (m listModel) removeItem() (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
@@ -192,7 +200,7 @@ func (m listModel) removeItem(_ tea.Msg) (listModel, tea.Cmd) {
 
 	return m, tea.Batch(
 		message.TeaCmd(MsgRepoUpdated{}),
-		message.TeaCmd(msgFocusChanged{}),
+		message.TeaCmd(msgRefreshUI{}),
 	)
 }
 
@@ -227,7 +235,7 @@ func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
 		}
 	}
 
-	return m, tea.Batch(setItemsCmd, message.TeaCmd(msgFocusChanged{}))
+	return m, tea.Batch(setItemsCmd, message.TeaCmd(msgRefreshUI{}))
 }
 
 func (m listModel) editItem(_ tea.Msg) (listModel, tea.Cmd) {
@@ -267,7 +275,7 @@ func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 
 	return m, tea.Batch(
 		message.TeaCmd(MsgRepoUpdated{}),
-		message.TeaCmd(msgFocusChanged{}),
+		message.TeaCmd(msgRefreshUI{}),
 	)
 }
 
