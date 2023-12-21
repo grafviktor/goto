@@ -4,6 +4,7 @@ package edithost
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -41,6 +42,26 @@ type logger interface {
 	Debug(format string, args ...any)
 }
 
+func notEmptyValidator(s string) error {
+	if utils.StringEmpty(s) {
+		return fmt.Errorf("value is required")
+	}
+
+	return nil
+}
+
+func networkPortValidator(s string) error {
+	if utils.StringEmpty(s) {
+		return nil
+	}
+
+	if num, err := strconv.ParseInt(s, 10, 16); err != nil || num < 1 {
+		return fmt.Errorf("network port must be a number which is less than 65 535")
+	}
+
+	return nil
+}
+
 // New - returns new edit host form.
 func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState, log logger) editModel {
 	// if we can't cast host id to int, that means we're adding a new host. Ignoring the error
@@ -71,10 +92,12 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 			t.Label = "Title"
 			t.Focus()
 			t.SetValue(host.Title)
+			t.Validate = notEmptyValidator
 		case 1:
 			t.Label = "IP Address or Hostname"
 			t.CharLimit = 128
 			t.SetValue(host.Address)
+			t.Validate = notEmptyValidator
 		case 2:
 			t.Label = "Description"
 			t.CharLimit = 512
@@ -89,6 +112,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 			t.CharLimit = 5
 			t.Placeholder = "default: 22"
 			t.SetValue(host.RemotePort)
+			t.Validate = networkPortValidator
 		case 5:
 			t.Label = "Identity file path"
 			t.CharLimit = 512

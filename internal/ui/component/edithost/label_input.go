@@ -33,12 +33,14 @@ type labeledInput struct {
 	FocusedLabelStyle lipgloss.Style
 	FocusedInputStyle lipgloss.Style
 	FocusedPrompt     string
+	Err               error
 }
 
 func (l labeledInput) Update(msg tea.Msg) (labeledInput, tea.Cmd) {
 	var cmd tea.Cmd
 
 	l.Model, cmd = l.Model.Update(msg)
+	l.Err = l.Model.Err
 
 	return l, cmd
 }
@@ -62,7 +64,11 @@ func (l labeledInput) labelView() string {
 func (l labeledInput) View() string {
 	var view string
 	if l.Focused() {
-		view = lipgloss.NewStyle().Foreground(lipgloss.Color("#AD58B4")).Render(l.Model.View())
+		if l.Err != nil {
+			view = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF7783")).Render(l.Model.Err.Error())
+		} else {
+			view = lipgloss.NewStyle().Foreground(lipgloss.Color("#AD58B4")).Render(l.Model.View())
+		}
 	} else {
 		view = l.Model.View()
 	}
