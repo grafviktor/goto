@@ -12,7 +12,7 @@ import (
 type HostStorage interface {
 	GetAll() ([]model.Host, error)
 	Get(hostID int) (model.Host, error)
-	Save(model.Host) error
+	Save(model.Host) (model.Host, error)
 	Delete(id int) error
 }
 

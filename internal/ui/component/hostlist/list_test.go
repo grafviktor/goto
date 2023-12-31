@@ -375,10 +375,10 @@ func (ms *mockStorage) GetAll() ([]model.Host, error) {
 }
 
 // Save implements storage.HostStorage.
-func (ms *mockStorage) Save(model.Host) error {
+func (ms *mockStorage) Save(m model.Host) (model.Host, error) {
 	if ms.shouldFail {
-		return errors.New("Mock error")
+		return m, errors.New("Mock error")
 	}
 
-	return nil
+	return m, nil
 }
