@@ -42,7 +42,7 @@ audit:
 .PHONY: test
 test:
 	@echo 'Running unit tests'
-	go test -coverpkg=./internal/... -race -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
+	go test -coverpkg=$(go list ./internal/...|grep -v mock) -race -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
 
 ## unit-test-report: display unit coverage report in html format
 .PHONY: unit-test-report
