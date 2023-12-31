@@ -29,7 +29,7 @@ audit:
 	go mod tidy
 	go mod verify
 	@echo 'Formatting code...'
-	gofumpt -l -w ./..
+	gofumpt -l -w -extra ./
 	goimports -w -local github.com/grafviktor/goto .
 	@echo 'Vetting code...'
 	go vet ./...
