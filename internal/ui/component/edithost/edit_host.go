@@ -45,7 +45,10 @@ const (
 )
 
 // ItemID is a key to extract item id from application context.
-var ItemID = struct{}{}
+var (
+	ItemID       = struct{}{}
+	defaultTitle = "host details"
+)
 
 type logger interface {
 	Debug(format string, args ...any)
@@ -73,10 +76,19 @@ func networkPortValidator(s string) error {
 	return nil
 }
 
+func getKeyMap(focusedInput int) keyMap {
+	if focusedInput != inputAddress {
+		keys.CopyToTitle.SetEnabled(false)
+	} else {
+		keys.CopyToTitle.SetEnabled(true)
+	}
+
+	return keys
+}
+
 // New - returns new edit host form.
 func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState, log logger) editModel {
 	initialFocusedInput := inputTitle
-	isNewHost := false
 
 	// if we can't cast host id to int, that means we're adding a new host. Ignoring the error
 	hostID, _ := ctx.Value(ItemID).(int)
@@ -84,7 +96,6 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	if err != nil {
 		host = model.Host{}
 		initialFocusedInput = inputAddress
-		isNewHost = true
 	}
 
 	m := editModel{
@@ -92,11 +103,11 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		hostStorage:  storage,
 		host:         host,
 		help:         help.New(),
-		keyMap:       keys,
+		keyMap:       getKeyMap(initialFocusedInput),
 		appState:     state,
 		logger:       log,
 		focusedInput: initialFocusedInput,
-		isNewHost:    isNewHost,
+		title:        defaultTitle,
 	}
 
 	var t labeledInput
@@ -108,13 +119,13 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		case inputTitle:
 			t.Label = "Title"
 			t.SetValue(host.Title)
-			t.Placeholder = "title"
+			t.Placeholder = "*required*" //nolint:goconst
 			t.Validate = notEmptyValidator
 		case inputAddress:
-			t.Label = "IP Address or Hostname"
+			t.Label = "IP address or hostname"
 			t.CharLimit = 128
 			t.SetValue(host.Address)
-			t.Placeholder = "address"
+			t.Placeholder = "*required*"
 			t.Validate = notEmptyValidator
 		case inputDescription:
 			t.Label = "Description"
@@ -153,12 +164,12 @@ type editModel struct {
 	focusedInput int
 	inputs       []labeledInput
 	host         model.Host
-	isNewHost    bool
 	viewport     viewport.Model
 	help         help.Model
 	ready        bool
 	appState     *state.ApplicationState
 	logger       logger
+	title        string
 }
 
 func (m editModel) Init() tea.Cmd {
@@ -182,17 +193,20 @@ func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m = m.updateViewPort(msg)
 
 	if msg, ok := msg.(tea.KeyMsg); ok {
+		m.title = defaultTitle
+
 		switch {
 		case key.Matches(msg, m.keyMap.Save):
 			m, cmd = m.save(msg)
 			cmds = append(cmds, cmd)
+		case key.Matches(msg, m.keyMap.CopyToTitle):
+			// allow a user to copy address value to title, because
+			// the chances are that title will be equal to hostname
+			m.copyAddressToTitle()
 		case key.Matches(msg, m.keyMap.Down) || key.Matches(msg, m.keyMap.Up):
 			m, cmd = m.inputFocusChange(msg)
 			cmds = append(cmds, cmd)
-		}
-
-		switch msg.Type {
-		case tea.KeyEsc:
+		case key.Matches(msg, m.keyMap.Discard):
 			return m, message.TeaCmd(MsgClose{})
 		default:
 			// Handle all other key events
@@ -208,6 +222,15 @@ func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
 	for i := range m.inputs {
+		if m.inputs[i].Validate != nil {
+			if err := m.inputs[i].Validate(m.inputs[i].Value()); err != nil {
+				m.inputs[i].Err = err
+				m.title = fmt.Sprintf("%s is not valid", m.inputs[i].Label)
+
+				return m, nil
+			}
+		}
+
 		switch i {
 		case inputTitle:
 			m.host.Title = m.inputs[i].Value()
@@ -224,9 +247,13 @@ func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
 		}
 	}
 
-	_ = m.hostStorage.Save(m.host)
+	host, _ := m.hostStorage.Save(m.host)
 	return m, tea.Batch(
 		message.TeaCmd(MsgClose{}),
+		// Order matters here! 'HostListSelectItem' message should be dispatched
+		// before 'MsgRepoUpdated'. The reasons of that is because
+		// 'MsgRepoUpdated' handler automatically sets focus on previously selected item.
+		message.TeaCmd(message.HostListSelectItem{HostID: host.ID}),
 		message.TeaCmd(hostlist.MsgRepoUpdated{}),
 	)
 }
@@ -253,10 +280,11 @@ func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) (editModel, tea.Cmd)
 	var cmd tea.Cmd
 	var shouldUpdateTitle bool
 
-	// Decide if we need to propagate hostname to title
+	// Decide if we need to propagate hostname to title.
+	// Note, that we should make this decision BEFORE updating focused input
 	if m.focusedInput == inputAddress {
 		addressEqualsTitle := m.inputs[inputAddress].Value() == m.inputs[inputTitle].Value()
-		shouldUpdateTitle = m.isNewHost && addressEqualsTitle
+		shouldUpdateTitle = addressEqualsTitle
 	}
 
 	// Update focused input
@@ -303,7 +331,7 @@ func (m editModel) inputFocusChange(msg tea.Msg) (editModel, tea.Cmd) {
 	}
 
 	// Update index of the focused element
-	if key.Matches(keyMsg, m.keyMap.Up) && m.focusedInput > minFocusIndex { //nolint:gocritic // no need switch block here
+	if key.Matches(keyMsg, m.keyMap.Up) && m.focusedInput > minFocusIndex { //nolint:gocritic // it's better without switch
 		m.focusedInput--
 		m.viewport.LineUp(inputHeight)
 	} else if key.Matches(keyMsg, m.keyMap.Down) && m.focusedInput < maxFocusIndex {
@@ -319,6 +347,10 @@ func (m editModel) inputFocusChange(msg tea.Msg) (editModel, tea.Cmd) {
 		}
 
 		if i == m.focusedInput {
+			// KeyMap depends on focused input - when address is focused, we allow
+			// a user to copy address value to title.
+			m.keyMap = getKeyMap(i)
+
 			// Set focused state
 			cmd = m.inputs[i].Focus()
 		} else {
@@ -345,7 +377,7 @@ func (m editModel) inputsView() string {
 }
 
 func (m editModel) headerView() string {
-	return titleStyle.Render("edit host")
+	return titleStyle.Render(m.title)
 }
 
 func (m editModel) helpView() string {
