@@ -70,7 +70,7 @@ func networkPortValidator(s string) error {
 	auto := 0 // 0 is used to autodetect base, see strconv.ParseUint
 	maxLengthBit := 16
 	if num, err := strconv.ParseUint(s, auto, maxLengthBit); err != nil || num < 1 {
-		return fmt.Errorf("network port must be a number which is less than 65 535")
+		return fmt.Errorf("network port must be a number which is less than 65,535")
 	}
 
 	return nil
@@ -248,9 +248,15 @@ func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
 	}
 
 	host, _ := m.hostStorage.Save(m.host)
-	return m, tea.Batch(
+	// Need to check storage error and update application status:
+	// if err !=nil { return message.TeaCmd(message.Error{Err: err}) }
+	// or
+	// m.title = err
+
+	return m, tea.Sequence(
 		message.TeaCmd(MsgClose{}),
-		// Order matters here! 'HostListSelectItem' message should be dispatched
+		// Order matters here! That's why we use tea.Sequence instead of tea.Batch.
+		// 'HostListSelectItem' message should be dispatched
 		// before 'MsgRepoUpdated'. The reasons of that is because
 		// 'MsgRepoUpdated' handler automatically sets focus on previously selected item.
 		message.TeaCmd(message.HostListSelectItem{HostID: host.ID}),
