@@ -14,7 +14,7 @@ Supported platforms: macOS, Linux, Windows.
 * Place the binary into your user's binary path;
 * Optionally: rename `gg-${YOUR_PLATFORM_TYPE}` to `gg`.
 
-## 2. Functional preview ##
+## 2. Functional demo ##
 
 ### 2.1. Edit and connect to a remote box ###
 
@@ -65,13 +65,14 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
     identity_file_path: /home/user/.ssh/id_rsa_microsoft
 ```
 
-## 5. Known problems ##
+## 5. Changelog ##
 
-* User input validators do not exist;
-* There is no confirmation dialog when you delete an existing item from the database;
-* Maybe some other things as the utility hasn't even reached a stable version.
+**v0.4.0**
 
-## 6. Changelog ##
+* Display a confirmation dialog when delete a host from the database [[details](https://github.com/grafviktor/goto/pull/31)].
+* Add validation rules for user input [[details](https://github.com/grafviktor/goto/pull/34)].
+* When ssh throws an error user can see the full error message [[details](https://github.com/grafviktor/goto/pull/30)].
+* Application title displays the ssh command which is going to be executed [[details](https://github.com/grafviktor/goto/pull/27)].
 
 **v0.3.0**
 
