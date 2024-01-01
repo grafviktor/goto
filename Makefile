@@ -56,7 +56,8 @@ unit-test-report:
 run:
 	@echo 'Running debug build'
 	@-rm debug.log 2>/dev/null
-	go run cmd/goto/*
+	@echo 'To pass app arguments use: make run ARGS="-h"'
+	go run cmd/goto/* $(ARGS)
 
 ## build: create binaries for all supported platforms in ./build folder. Archive all binaries with zip.
 .PHONY: build
