@@ -4,6 +4,7 @@ package edithost
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -34,62 +35,115 @@ type (
 	MsgSave struct{}
 )
 
+const (
+	inputTitle int = iota
+	inputAddress
+	inputDescription
+	inputLogin
+	inputNetworkPort
+	inputIdentityFile
+)
+
 // ItemID is a key to extract item id from application context.
-var ItemID = struct{}{}
+var (
+	ItemID       = struct{}{}
+	defaultTitle = "host details"
+)
 
 type logger interface {
 	Debug(format string, args ...any)
 }
 
+func notEmptyValidator(s string) error {
+	if utils.StringEmpty(s) {
+		return fmt.Errorf("value is required")
+	}
+
+	return nil
+}
+
+func networkPortValidator(s string) error {
+	if utils.StringEmpty(s) {
+		return nil
+	}
+
+	auto := 0 // 0 is used to autodetect base, see strconv.ParseUint
+	maxLengthBit := 16
+	if num, err := strconv.ParseUint(s, auto, maxLengthBit); err != nil || num < 1 {
+		return fmt.Errorf("network port must be a number which is less than 65,535")
+	}
+
+	return nil
+}
+
+func getKeyMap(focusedInput int) keyMap {
+	if focusedInput != inputAddress {
+		keys.CopyToTitle.SetEnabled(false)
+	} else {
+		keys.CopyToTitle.SetEnabled(true)
+	}
+
+	return keys
+}
+
 // New - returns new edit host form.
 func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState, log logger) editModel {
+	initialFocusedInput := inputTitle
+
 	// if we can't cast host id to int, that means we're adding a new host. Ignoring the error
 	hostID, _ := ctx.Value(ItemID).(int)
 	host, err := storage.Get(hostID)
 	if err != nil {
 		host = model.Host{}
+		initialFocusedInput = inputAddress
 	}
 
 	m := editModel{
-		inputs:      make([]labeledInput, 6),
-		hostStorage: storage,
-		host:        host,
-		help:        help.New(),
-		keyMap:      keys,
-		appState:    state,
-		logger:      log,
+		inputs:       make([]labeledInput, 6),
+		hostStorage:  storage,
+		host:         host,
+		help:         help.New(),
+		keyMap:       getKeyMap(initialFocusedInput),
+		appState:     state,
+		logger:       log,
+		focusedInput: initialFocusedInput,
+		title:        defaultTitle,
 	}
 
 	var t labeledInput
 	for i := range m.inputs {
 		t = NewLabelInput()
 		t.Cursor.Style = cursorStyle
-		t.Placeholder = "n/a"
 
 		switch i {
-		case 0:
+		case inputTitle:
 			t.Label = "Title"
-			t.Focus()
 			t.SetValue(host.Title)
-		case 1:
-			t.Label = "IP Address or Hostname"
+			t.Placeholder = "*required*" //nolint:goconst
+			t.Validate = notEmptyValidator
+		case inputAddress:
+			t.Label = "IP address or hostname"
 			t.CharLimit = 128
 			t.SetValue(host.Address)
-		case 2:
+			t.Placeholder = "*required*"
+			t.Validate = notEmptyValidator
+		case inputDescription:
 			t.Label = "Description"
 			t.CharLimit = 512
+			t.Placeholder = "n/a"
 			t.SetValue(host.Description)
-		case 3:
+		case inputLogin:
 			t.Label = "Login"
 			t.CharLimit = 128
 			t.Placeholder = fmt.Sprintf("default: %s", utils.CurrentUsername())
 			t.SetValue(host.LoginName)
-		case 4:
-			t.Label = "Port"
+		case inputNetworkPort:
+			t.Label = "Network port"
 			t.CharLimit = 5
 			t.Placeholder = "default: 22"
 			t.SetValue(host.RemotePort)
-		case 5:
+			t.Validate = networkPortValidator
+		case inputIdentityFile:
 			t.Label = "Identity file path"
 			t.CharLimit = 512
 			t.Placeholder = "default: $HOME/.ssh/id_rsa"
@@ -99,20 +153,23 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		m.inputs[i] = t
 	}
 
+	m.inputs[m.focusedInput].Focus()
+
 	return m
 }
 
 type editModel struct {
-	keyMap      keyMap
-	hostStorage storage.HostStorage
-	focusIndex  int
-	inputs      []labeledInput
-	host        model.Host
-	viewport    viewport.Model
-	help        help.Model
-	ready       bool
-	appState    *state.ApplicationState
-	logger      logger
+	keyMap       keyMap
+	hostStorage  storage.HostStorage
+	focusedInput int
+	inputs       []labeledInput
+	host         model.Host
+	viewport     viewport.Model
+	help         help.Model
+	ready        bool
+	appState     *state.ApplicationState
+	logger       logger
+	title        string
 }
 
 func (m editModel) Init() tea.Cmd {
@@ -136,18 +193,20 @@ func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m = m.updateViewPort(msg)
 
 	if msg, ok := msg.(tea.KeyMsg); ok {
+		m.title = defaultTitle
+
 		switch {
 		case key.Matches(msg, m.keyMap.Save):
 			m, cmd = m.save(msg)
 			cmds = append(cmds, cmd)
-		case key.Matches(msg, m.keyMap.Down) ||
-			key.Matches(msg, m.keyMap.Up):
+		case key.Matches(msg, m.keyMap.CopyToTitle):
+			// allow a user to copy address value to title, because
+			// the chances are that title will be equal to hostname
+			m.copyAddressToTitle()
+		case key.Matches(msg, m.keyMap.Down) || key.Matches(msg, m.keyMap.Up):
 			m, cmd = m.inputFocusChange(msg)
 			cmds = append(cmds, cmd)
-		}
-
-		switch msg.Type {
-		case tea.KeyEsc:
+		case key.Matches(msg, m.keyMap.Discard):
 			return m, message.TeaCmd(MsgClose{})
 		default:
 			// Handle all other key events
@@ -163,32 +222,84 @@ func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
 	for i := range m.inputs {
+		if m.inputs[i].Validate != nil {
+			if err := m.inputs[i].Validate(m.inputs[i].Value()); err != nil {
+				m.inputs[i].Err = err
+				m.title = fmt.Sprintf("%s is not valid", m.inputs[i].Label)
+
+				return m, nil
+			}
+		}
+
 		switch i {
-		case 0:
+		case inputTitle:
 			m.host.Title = m.inputs[i].Value()
-		case 1:
+		case inputAddress:
 			m.host.Address = m.inputs[i].Value()
-		case 2:
+		case inputDescription:
 			m.host.Description = m.inputs[i].Value()
-		case 3:
+		case inputLogin:
 			m.host.LoginName = m.inputs[i].Value()
-		case 4:
+		case inputNetworkPort:
 			m.host.RemotePort = m.inputs[i].Value()
-		case 5:
+		case inputIdentityFile:
 			m.host.PrivateKeyPath = m.inputs[i].Value()
 		}
 	}
 
-	_ = m.hostStorage.Save(m.host)
-	return m, tea.Batch(
+	host, _ := m.hostStorage.Save(m.host)
+	// Need to check storage error and update application status:
+	// if err !=nil { return message.TeaCmd(message.Error{Err: err}) }
+	// or
+	// m.title = err
+
+	return m, tea.Sequence(
 		message.TeaCmd(MsgClose{}),
+		// Order matters here! That's why we use tea.Sequence instead of tea.Batch.
+		// 'HostListSelectItem' message should be dispatched
+		// before 'MsgRepoUpdated'. The reasons of that is because
+		// 'MsgRepoUpdated' handler automatically sets focus on previously selected item.
+		message.TeaCmd(message.HostListSelectItem{HostID: host.ID}),
 		message.TeaCmd(hostlist.MsgRepoUpdated{}),
 	)
 }
 
+func (m editModel) copyAddressToTitle() {
+	newValue := m.inputs[inputAddress].Value()
+
+	// Temprorary remove input validator.
+	// It's necessary, because input.SetValue(...) invokes Validate function,
+	// if the input contains invalid value, Validate function returns error and
+	// rejects new value. That leads to a problem - when user removes all symbols
+	// from address input, title input still preserves the very last letter.
+	// A better way would be to use own validation logic instead of relying
+	// on input.Validate.
+	validator := m.inputs[inputTitle].Validate
+	m.inputs[inputTitle].Validate = nil
+	m.inputs[inputTitle].SetValue(newValue)
+	m.inputs[inputTitle].SetCursor(len(newValue))
+	m.inputs[inputTitle].Validate = validator
+	m.inputs[inputTitle].Err = m.inputs[inputTitle].Validate(newValue)
+}
+
 func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) (editModel, tea.Cmd) {
 	var cmd tea.Cmd
-	m.inputs[m.focusIndex], cmd = m.inputs[m.focusIndex].Update(msg)
+	var shouldUpdateTitle bool
+
+	// Decide if we need to propagate hostname to title.
+	// Note, that we should make this decision BEFORE updating focused input
+	if m.focusedInput == inputAddress {
+		addressEqualsTitle := m.inputs[inputAddress].Value() == m.inputs[inputTitle].Value()
+		shouldUpdateTitle = addressEqualsTitle
+	}
+
+	// Update focused input
+	m.inputs[m.focusedInput], cmd = m.inputs[m.focusedInput].Update(msg)
+
+	// Then, update title if we should
+	if shouldUpdateTitle {
+		m.copyAddressToTitle()
+	}
 
 	return m, cmd
 }
@@ -218,27 +329,34 @@ func (m editModel) inputFocusChange(msg tea.Msg) (editModel, tea.Cmd) {
 	inputHeight := 0
 
 	if len(m.inputs) > 0 {
-		inputHeight = lipgloss.Height(m.inputsView()) / len(m.inputs)
-	}
-
-	// Update index of the focused element
-	if key.Matches(keyMsg, m.keyMap.Up) && m.focusIndex > minFocusIndex { //nolint:gocritic // no need switch block here
-		m.focusIndex--
-
 		// Control viewport manually because height of input element is greater than one
 		// therefore, we need to scroll several lines at once instead of just a single line.
 		// Normally we don't need to handle scroll events, other than forward app messages to
 		// the viewport: m.viewport, cmd = m.viewport.Update(msg)
+		inputHeight = lipgloss.Height(m.inputsView()) / len(m.inputs)
+	}
+
+	// Update index of the focused element
+	if key.Matches(keyMsg, m.keyMap.Up) && m.focusedInput > minFocusIndex { //nolint:gocritic // it's better without switch
+		m.focusedInput--
 		m.viewport.LineUp(inputHeight)
-	} else if key.Matches(keyMsg, m.keyMap.Down) && m.focusIndex < maxFocusIndex {
-		m.focusIndex++
+	} else if key.Matches(keyMsg, m.keyMap.Down) && m.focusedInput < maxFocusIndex {
+		m.focusedInput++
 		m.viewport.LineDown(inputHeight)
 	} else {
 		return m, nil
 	}
 
 	for i := 0; i <= len(m.inputs)-1; i++ {
-		if i == m.focusIndex {
+		if m.inputs[i].Validate != nil {
+			m.inputs[i].Err = m.inputs[i].Validate(m.inputs[i].Value())
+		}
+
+		if i == m.focusedInput {
+			// KeyMap depends on focused input - when address is focused, we allow
+			// a user to copy address value to title.
+			m.keyMap = getKeyMap(i)
+
 			// Set focused state
 			cmd = m.inputs[i].Focus()
 		} else {
@@ -265,7 +383,7 @@ func (m editModel) inputsView() string {
 }
 
 func (m editModel) headerView() string {
-	return titleStyle.Render("edit host")
+	return titleStyle.Render(m.title)
 }
 
 func (m editModel) helpView() string {

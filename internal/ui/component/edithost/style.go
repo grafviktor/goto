@@ -7,8 +7,12 @@ var (
 	focusedStyle = lipgloss.NewStyle().
 			BorderForeground(lipgloss.AdaptiveColor{Light: "#F793FF", Dark: "#AD58B4"}).
 			Foreground(lipgloss.AdaptiveColor{Light: "#EE6FF8", Dark: "#EE6FF8"})
-	cursorStyle = focusedStyle.Copy()
-	noStyle     = lipgloss.NewStyle()
+	errorStyle = lipgloss.NewStyle().
+			BorderForeground(lipgloss.AdaptiveColor{Light: "#F793FF", Dark: "#AD58B4"}).
+			Foreground(lipgloss.AdaptiveColor{Light: "#FF7783", Dark: "#FF7783"})
+	cursorStyle      = focusedStyle.Copy()
+	focusedInputText = lipgloss.NewStyle().Foreground(lipgloss.Color("#AD58B4"))
+	noStyle          = lipgloss.NewStyle()
 
 	titleStyle = lipgloss.NewStyle().
 			Background(lipgloss.Color("62")).

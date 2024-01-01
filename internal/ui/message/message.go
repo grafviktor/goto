@@ -16,6 +16,8 @@ type (
 	TerminalSizePolling struct{ Width, Height int }
 	// RunProcessErrorOccured fires when there is an error executing an external process.
 	RunProcessErrorOccured struct{ Err error }
+	// HostListSelectItem is required to let host list know that it's time to update title.
+	HostListSelectItem struct{ HostID int }
 )
 
 var terminalSizePollingInterval = time.Second / 2

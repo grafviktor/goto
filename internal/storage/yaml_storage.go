@@ -72,7 +72,7 @@ func (s *yamlStorage) flushToDisk() error {
 	return nil
 }
 
-func (s *yamlStorage) Save(host model.Host) error {
+func (s *yamlStorage) Save(host model.Host) (model.Host, error) {
 	if host.ID == idEmpty {
 		s.nextID++
 		host.ID = s.nextID
@@ -80,7 +80,7 @@ func (s *yamlStorage) Save(host model.Host) error {
 
 	s.innerStorage[host.ID] = yamlHostWrapper{host}
 
-	return s.flushToDisk()
+	return host, s.flushToDisk()
 }
 
 func (s *yamlStorage) Delete(id int) error {

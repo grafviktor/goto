@@ -30,7 +30,8 @@ run:
   # skip-files:
   #    - ".*\\.my\\.go$"
   #    - lib/bad.go
-
+  skip-dirs:
+    - internal/mock
 
 # output configuration options
 output:
@@ -127,7 +128,7 @@ linters:
   disable-all: true
   enable:
     #    - cyclop
-    - depguard
+    #    - depguard
     - dogsled
     #    - dupl
     - errcheck
@@ -153,7 +154,6 @@ linters:
     #    - gosec
     - gosimple
     - govet
-    - depguard
     #    - ifshort
     #    - ireturn
     - lll

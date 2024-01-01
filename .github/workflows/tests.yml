@@ -27,7 +27,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
           cache: true
       - name: Test
-        run: go test -coverpkg=./internal/... -race -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
+        run: go test -coverpkg=$(go list ./internal/..|grep -v mock) -race -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:

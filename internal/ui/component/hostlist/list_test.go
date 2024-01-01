@@ -3,7 +3,6 @@ package hostlist
 
 import (
 	"context"
-	"errors"
 	"os"
 	"testing"
 
@@ -12,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/grafviktor/goto/internal/model"
+	"github.com/grafviktor/goto/internal/mock"
 	"github.com/grafviktor/goto/internal/utils"
 )
 
@@ -308,14 +307,14 @@ func Test_listTitleUpdate(t *testing.T) {
 // ============================================== List Model
 
 func NewMockListModel(storageShouldFail bool) *listModel {
-	storage := NewMockStorage(storageShouldFail)
+	storage := mock.NewMockStorage(storageShouldFail)
 
 	// Create listModel using constructor function (using 'New' is important to preserve hotkeys)
 	lm := New(context.TODO(), storage, nil, nil)
 
 	items := make([]list.Item, 0)
 	// Wrap hosts into List items
-	hosts := storage.hosts
+	hosts := storage.Hosts
 	for _, h := range hosts {
 		items = append(items, ListItemHost{Host: h})
 	}
@@ -323,62 +322,4 @@ func NewMockListModel(storageShouldFail bool) *listModel {
 	lm.innerModel.SetItems(items)
 
 	return &lm
-}
-
-// =============================================== Storage
-
-func NewMockStorage(shouldFail bool) *mockStorage {
-	hosts := []model.Host{
-		model.NewHost(0, "Mock Host", "", "localhost", "root", "id_rsa", "2222"),
-		model.NewHost(0, "Mock Host", "", "localhost", "root", "id_rsa", "2222"),
-		model.NewHost(0, "Mock Host", "", "localhost", "root", "id_rsa", "2222"),
-	}
-
-	return &mockStorage{
-		shouldFail: shouldFail,
-		hosts:      hosts,
-	}
-}
-
-type mockStorage struct {
-	shouldFail bool
-	hosts      []model.Host
-}
-
-// Delete implements storage.HostStorage.
-func (ms *mockStorage) Delete(id int) error {
-	if ms.shouldFail {
-		return errors.New("Mock error")
-	}
-
-	ms.hosts = append(ms.hosts[:id], ms.hosts[id+1:]...)
-
-	return nil
-}
-
-// Get implements storage.HostStorage.
-func (ms *mockStorage) Get(hostID int) (model.Host, error) {
-	if ms.shouldFail {
-		return model.Host{}, errors.New("Mock error")
-	}
-
-	return model.Host{}, nil
-}
-
-// GetAll implements storage.HostStorage.
-func (ms *mockStorage) GetAll() ([]model.Host, error) {
-	if ms.shouldFail {
-		return ms.hosts, errors.New("Mock error")
-	}
-
-	return ms.hosts, nil
-}
-
-// Save implements storage.HostStorage.
-func (ms *mockStorage) Save(model.Host) error {
-	if ms.shouldFail {
-		return errors.New("Mock error")
-	}
-
-	return nil
 }

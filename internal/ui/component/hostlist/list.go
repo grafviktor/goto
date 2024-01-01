@@ -38,8 +38,6 @@ type (
 	MsgEditItem struct{ HostID int }
 	// MsgCopyItem fires when user press copy button.
 	MsgCopyItem struct{ HostID int }
-	// MsgSelectItem is required to let host list know that it's time to update title.
-	MsgSelectItem struct{ HostID int }
 	// MsgNewItem fires when user press new host button.
 	MsgNewItem      struct{}
 	msgInitComplete struct{}
@@ -269,7 +267,7 @@ func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 		}
 	}
 
-	if err := m.repo.Save(clonedHost); err != nil {
+	if _, err := m.repo.Save(clonedHost); err != nil {
 		return m, message.TeaCmd(msgErrorOccured{err})
 	}
 
@@ -342,7 +340,7 @@ func (m listModel) listTitleUpdate() listModel {
 
 func (m listModel) onFocusChanged(_ tea.Msg) (listModel, tea.Cmd) {
 	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
-		return m, message.TeaCmd(MsgSelectItem{HostID: hostItem.ID})
+		return m, message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID})
 	}
 
 	return m, nil
