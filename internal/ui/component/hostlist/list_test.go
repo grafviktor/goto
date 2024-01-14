@@ -302,6 +302,28 @@ func Test_listTitleUpdate(t *testing.T) {
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", model.innerModel.Title)
 }
 
+func Test_listModel_title_when_app_just_starts(t *testing.T) {
+	// This is just a sanity test, which checks title update function
+	model := *NewMockListModel(false)
+	// When app just starts, it should display "press 'n' to add a new host"
+	require.Equal(t, "press 'n' to add a new host", model.innerModel.Title)
+	// When press 'down' key, it should display a proper ssh connection string
+	updated, _ := model.Update(tea.KeyMsg{Type: tea.KeyDown})
+	// Calling refresh UI manually, otherwise would have to put time.Sleep function
+	updated, _ = updated.Update(msgRefreshUI{})
+	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", updated.(listModel).innerModel.Title)
+}
+
+func Test_listModel_title_when_filter_is_enabled(t *testing.T) {
+	// Test bugfix for https://github.com/grafviktor/goto/issues/37
+	model := *NewMockListModel(false)
+	// Enable filter
+	updated, _ := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	// Press down key and make sure that title is properly updated
+	updated, _ = updated.Update(tea.KeyMsg{Type: tea.KeyDown})
+	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", updated.(listModel).innerModel.Title)
+}
+
 // ================================================ MOCKS ========================================== //
 
 // ============================================== List Model
