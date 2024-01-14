@@ -82,7 +82,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	m.innerModel.AdditionalShortHelpKeys = delegateKeys.ShortHelp
 	m.innerModel.AdditionalFullHelpKeys = delegateKeys.FullHelp
 
-	m.innerModel.Title = "goto"
+	m.innerModel.Title = "press 'n' to add a new host"
 	m.innerModel.SetShowStatusBar(false)
 
 	return m
@@ -97,9 +97,16 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if m.innerModel.FilterState() == list.Filtering {
+		if m.innerModel.SettingFilter() {
 			// If filter is enabled, we should not handle any keyboard messages,
-			// it should be done by filter component.
+			// as it should be done by filter component.
+
+			// However, there is one special case, which should be taken into account:
+			// When user filter's out values and presses down key on her keyboard
+			// we need to ensure that the title contains proper selection.
+			// that's why we need to invoke title update function.
+			// See https://github.com/grafviktor/goto/issues/37
+			m = m.listTitleUpdate()
 			break
 		}
 
