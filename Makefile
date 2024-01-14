@@ -42,9 +42,7 @@ audit:
 .PHONY: test
 test:
 	@echo 'Running unit tests'
-# By using -coverpkg=$$(go list ./internal/..|grep -v mock) we exclude "mock" folder from codecov report
-	ALL_PACKAGES_EXCLUDE_MOCKS=$(go list ./internal/... | grep -v mocks | tr '\n' ',')
-	go test -coverpkg=$$ALL_PACKAGES_EXCLUDE_MOCKS -race -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
+	go test -coverpkg=./internal/... -race -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
 
 ## unit-test-report: display unit coverage report in html format
 .PHONY: unit-test-report
