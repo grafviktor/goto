@@ -45,7 +45,7 @@ test:
 	@echo 'Running unit tests'
 	go test -coverpkg=./internal/... -race -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
 
-## unit-test-report: display unit coverage report in html format
+# unit-test-report: display unit coverage report in html format. This option is hidden from make help menu.
 .PHONY: unit-test-report
 unit-test-report:
 	@echo 'The report will be opened in the browser'
@@ -59,10 +59,26 @@ run:
 	@echo 'To pass app arguments use: make run ARGS="-h"'
 	go run cmd/goto/* $(ARGS)
 
-## build: create binaries for all supported platforms in ./build folder. Archive all binaries with zip.
+## build: create binary in ./build/dist folder for your current platform. Use this option if you build it for personal use.
 .PHONY: build
 build:
-	@-rm -r $(BUILD_OUTPUT_PATH)/*
+	@-rm -r $(BUILD_OUTPUT_PATH)/gg
+	@echo 'Building'
+	go build $(LD_FLAGS) -o $(BUILD_OUTPUT_PATH)/gg ./cmd/goto/*.go
+
+## package: create rpm package and place it into ./build/dist folder.
+.PHONY: package
+package:
+	@-rm -r $(BUILD_OUTPUT_PATH)/*.rpm
+	@echo 'Build rpm package'
+# Use cut to convert version from 'vX.X.X' to 'X.X.X'
+	@DOCKER_BUILDKIT=1 docker build --build-arg VERSION=$(shell echo $(BUILD_VERSION) | cut -c 2-) -f build/rpm/Dockerfile --output build/dist .
+
+## dist: create binaries for all supported platforms in ./build/dist folder. Archive all binaries with zip.
+.PHONY: dist
+dist:
+	@-rm -r $(BUILD_OUTPUT_PATH)/gg-*
+	@-rm -r $(BUILD_OUTPUT_PATH)/*.zip
 	@echo 'Creating binary files'
 	GOOS=darwin  GOARCH=amd64 go build $(LD_FLAGS) -o $(BUILD_OUTPUT_PATH)/gg-mac     ./cmd/goto/*.go
 	GOOS=linux   GOARCH=amd64 go build $(LD_FLAGS) -o $(BUILD_OUTPUT_PATH)/gg-lin     ./cmd/goto/*.go
@@ -71,9 +87,3 @@ build:
 	@cp $(BUILD_OUTPUT_PATH)/gg* $(BUILD_OUTPUT_PATH)/goto-$(BUILD_VERSION)
 	@cd $(BUILD_OUTPUT_PATH) && zip -r goto-$(BUILD_VERSION).zip goto-$(BUILD_VERSION)
 	@rm -r $(BUILD_OUTPUT_PATH)/goto-$(BUILD_VERSION)
-
-## build-quick: create binary in ./build folder for your current platform
-.PHONY: build-quick
-build-quick:
-	go build $(LD_FLAGS) -o ./build/gg ./cmd/goto/*.go
-	@echo 'Creating build'
