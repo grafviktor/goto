@@ -34,5 +34,5 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/gg
 
 %changelog
-* Thu Jan  04 2024 Roman Leonenkov <6890447+grafviktor@users.noreply.github.com> - %{_version}
+* %{_date} Roman Leonenkov <6890447+grafviktor@users.noreply.github.com> - %{_version}
 Find full change log in the project's readme file - https://github.com/grafviktor/goto/blob/master/README.md#5-changelog

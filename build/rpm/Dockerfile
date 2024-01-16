@@ -23,8 +23,7 @@ ADD build/rpm/goto.spec /tmp/
 RUN dnf install -y rpmdevtools rpmlint golang git && \
   rpmdev-setuptree && \
   cp /tmp/goto.spec ~/rpmbuild/SPECS/ && \
-  # rpmlint ~/rpmbuild/SPECS/goto.spec && \
-  # download source code
+  # spectool is used to download source code
   spectool -gR --define "_version $VERSION" ~/rpmbuild/SPECS/goto.spec && \
   rpmbuild -ba --define "_version $VERSION" --define "_date $(date)" ~/rpmbuild/SPECS/goto.spec && \
   rpm -ivh ~/rpmbuild/RPMS/x86_64/goto-${VERSION}-1.el9.x86_64.rpm && \
