@@ -67,6 +67,11 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
 
 ## 5. Changelog ##
 
+**v0.4.1**
+
+* Fix an application title issue when filtering [[details](https://github.com/grafviktor/goto/issues/37)].
+* Support rpm package.
+
 **v0.4.0**
 
 * Display a confirmation dialog when delete a host from the database [[details](https://github.com/grafviktor/goto/pull/31)].
