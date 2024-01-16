@@ -70,7 +70,7 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
 **v0.4.1**
 
 * Fix an application title issue when filtering [[details](https://github.com/grafviktor/goto/issues/37)].
-* Support rpm package.
+* Add rpm package support.
 
 **v0.4.0**
 
