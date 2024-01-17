@@ -60,11 +60,12 @@ Set FontSize 13
 Set Width 600
 Set Height 400
 
-Sleep 1s
-Type "gg"
 Show
+Sleep 1
+Type "gg"
+Sleep 1
 Enter
-Sleep 5s
+Sleep 2s
 
 Down
 Sleep 1s
@@ -72,11 +73,12 @@ Up
 Sleep 1s
 
 Type "e"
+Sleep 2s
 Down
 Sleep 1s
-Backspace
+Backspace 10
 Sleep 1s
-Type "1"
+Type "localhost"
 Sleep 1s
 Ctrl+S
 Sleep 3s
@@ -84,12 +86,12 @@ Enter
 Sleep 3s
 Type "xxxx"
 
-
 Enter
 Sleep 5s
 Type "exit"
+Sleep 1s
 Enter
-Sleep 5s
+Sleep 3s
 Type "q"
 
-Sleep 5s
+Sleep 3s
