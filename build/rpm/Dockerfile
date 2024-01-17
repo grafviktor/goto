@@ -1,8 +1,4 @@
 
-# Install
-# dnf install ~/rpmbuild/RPMS/x86_64/goto-0.4.0-1.el9.x86_64.rpm
-# rpm -ivh ~/rpmbuild/RPMS/x86_64/goto-0.4.0-1.el9.x86_64.rpm
-#
 # Verify the package has been installed
 # rpm -qi goto
 #
