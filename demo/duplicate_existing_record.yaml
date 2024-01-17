@@ -1,0 +1,4 @@
+- host:
+    title: Server
+    description: My Server
+    address: localhost@localdomain
