@@ -65,38 +65,6 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
     identity_file_path: /home/user/.ssh/id_rsa_microsoft
 ```
 
-## 5. Changelog ##
+## [Changelog](CHANGELOG.md) ##
 
-**v0.4.1**
-
-* Fix an application title issue when filtering [[details](https://github.com/grafviktor/goto/issues/37)].
-* Add rpm package support.
-
-**v0.4.0**
-
-* Display a confirmation dialog when delete a host from the database [[details](https://github.com/grafviktor/goto/pull/31)].
-* Add validation rules for user input [[details](https://github.com/grafviktor/goto/pull/34)].
-* When ssh throws an error user can see the full error message [[details](https://github.com/grafviktor/goto/pull/30)].
-* Application title displays the ssh command which is going to be executed [[details](https://github.com/grafviktor/goto/pull/27)].
-
-**v0.3.0**
-
-* Fix a problem which led to broken cmd.exe UI on Windows platform [[details](https://github.com/grafviktor/goto/pull/14)].
-* Introduce linter rules and add unit test coverage report.
-
-**v0.2.0**
-
-* The Application supports environment and command line parameters [[details](https://github.com/grafviktor/goto/issues/8)].
-* Fix terminal resizing problem on Windows platform [[details](https://github.com/grafviktor/goto/issues/5)].
-
-**v0.1.2**
-
-* Resolve a problem with dissapearing host list when filter is enabled and a user is modifying the collection [[details](https://github.com/grafviktor/goto/issues/3)].
-
-**v0.1.1**
-
-* Fix a focusing issue when saving an existing item using a different title [[details](https://github.com/grafviktor/goto/issues/1)].
-
-## License ##
-
-[MIT](LICENSE)
+## [License](LICENSE) ##
