@@ -1,6 +1,6 @@
 # Changelog #
 
-**[v0.4.1](https://github.com/grafviktor/goto/compare/v0.4.0...v0.4.1) - 01.01.2021**
+**[v0.4.1](https://github.com/grafviktor/goto/compare/v0.4.0...v0.4.1) - 2024-01-16**
 
 * Fix an application title issue when filtering [[details](https://github.com/grafviktor/goto/issues/37)].
 * Add rpm package support.
