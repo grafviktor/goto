@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/grafviktor/goto/internal/mock"
@@ -60,23 +62,13 @@ func Test_NetworkPortValidator(t *testing.T) {
 }
 
 func Test_GetKeyMap(t *testing.T) {
-	keyMap := getKeyMap(inputAddress)
-	require.True(t, keyMap.CopyToTitle.Enabled())
+	// When title is selected, we can copy its value into address field using keyboard shortcut
+	keyMap := getKeyMap(inputTitle)
+	require.True(t, keyMap.CopyToAddress.Enabled())
 
-	keyMap = getKeyMap(inputTitle)
-	require.False(t, keyMap.CopyToTitle.Enabled())
-}
-
-func Test_New(t *testing.T) {
-	state := state.ApplicationState{}
-
-	// If we open host details, but host does not exist, we should focus Address input by default
-	editHostModel := New(context.TODO(), mock.NewMockStorage(true), &state, &mock.MockLogger{})
-	require.Equal(t, inputAddress, editHostModel.focusedInput)
-
-	// If we open host details, but host does not exist, we should focus Title input by default
-	editHostModel = New(context.TODO(), mock.NewMockStorage(false), &state, &mock.MockLogger{})
-	require.Equal(t, inputTitle, editHostModel.focusedInput)
+	// However, when any other input selected, this keyboard shortcut should NOT be avaiable.
+	keyMap = getKeyMap(inputAddress)
+	require.False(t, keyMap.CopyToAddress.Enabled())
 }
 
 // func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
@@ -121,7 +113,7 @@ func Test_save(t *testing.T) {
 	state := state.ApplicationState{}
 
 	editHostModel := New(context.TODO(), mock.NewMockStorage(true), &state, &mock.MockLogger{})
-	require.Equal(t, inputAddress, editHostModel.focusedInput)
+	require.Equal(t, inputTitle, editHostModel.focusedInput)
 
 	editHostModel.inputs[inputDescription].SetValue("test")
 	editHostModel.inputs[inputLogin].SetValue("root")
@@ -156,4 +148,55 @@ func Test_save(t *testing.T) {
 
 		require.Equal(t, one, two)
 	*/
+}
+
+func Test_Propagate_Title_Value_To_Hostname(t *testing.T) {
+	// Test copy values from title to hostname when create a new record in hosts database
+	state := state.ApplicationState{}
+
+	storageHostNoFound := mock.NewMockStorage(false)
+	editHostModel := New(context.TODO(), storageHostNoFound, &state, &mock.MockLogger{})
+	// Check that selected input is title
+	assert.Equal(t, editHostModel.focusedInput, inputTitle)
+
+	// Type word 'test' in title
+	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
+	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
+
+	// Check that both inputs contain the same values
+	require.Equal(t, editHostModel.inputs[inputTitle].Value(), "test")
+	require.Equal(t, editHostModel.inputs[inputAddress].Value(), "test")
+
+	// Select address input
+	tmp, _ := editHostModel.Update(tea.KeyMsg{Type: tea.KeyDown})
+	editHostModel = tmp.(editModel) // just casting
+	// Check that selected input is now address
+	assert.Equal(t, editHostModel.focusedInput, inputAddress)
+
+	// Append word 'test' to address so it will become "testtest"
+	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
+	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
+
+	// Check that address was updated, but title still preserves the initial value
+	require.Equal(t, editHostModel.inputs[inputTitle].Value(), "test")
+	require.Equal(t, editHostModel.inputs[inputAddress].Value(), "testtest")
+
+	// Select title again
+	tmp, _ = editHostModel.Update(tea.KeyMsg{Type: tea.KeyUp})
+	editHostModel = tmp.(editModel) // just casting
+	// Check that selected input is title
+	assert.Equal(t, editHostModel.focusedInput, inputTitle)
+
+	// Append '123' to title so it will become "test123"
+	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}})
+	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}})
+	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}})
+
+	// Check that title was updated, but address still preserves the initial value
+	require.Equal(t, editHostModel.inputs[inputTitle].Value(), "test123")
+	require.Equal(t, editHostModel.inputs[inputAddress].Value(), "testtest")
 }
