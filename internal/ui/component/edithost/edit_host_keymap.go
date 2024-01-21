@@ -5,15 +5,15 @@ import (
 )
 
 type keyMap struct {
-	Up          key.Binding
-	Down        key.Binding
-	Save        key.Binding
-	CopyToTitle key.Binding
-	Discard     key.Binding
+	Up            key.Binding
+	Down          key.Binding
+	Save          key.Binding
+	CopyToAddress key.Binding
+	Discard       key.Binding
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Save, k.CopyToTitle, k.Discard}
+	return []key.Binding{k.Up, k.Down, k.Save, k.CopyToAddress, k.Discard}
 }
 
 func (k keyMap) FullHelp() [][]key.Binding {
@@ -33,9 +33,9 @@ var keys = keyMap{
 		key.WithKeys("ctrl+s"),
 		key.WithHelp("ctrl+s", "save"),
 	),
-	CopyToTitle: key.NewBinding(
+	CopyToAddress: key.NewBinding(
 		key.WithKeys("alt+enter"),
-		key.WithHelp("alt+enter", "copy to title"),
+		key.WithHelp("alt+enter", "copy to address"),
 	),
 	Discard: key.NewBinding(
 		key.WithKeys("esc"),

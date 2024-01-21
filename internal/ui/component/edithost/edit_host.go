@@ -77,10 +77,10 @@ func networkPortValidator(s string) error {
 }
 
 func getKeyMap(focusedInput int) keyMap {
-	if focusedInput != inputAddress {
-		keys.CopyToTitle.SetEnabled(false)
+	if focusedInput != inputTitle {
+		keys.CopyToAddress.SetEnabled(false)
 	} else {
-		keys.CopyToTitle.SetEnabled(true)
+		keys.CopyToAddress.SetEnabled(true)
 	}
 
 	return keys
@@ -95,7 +95,6 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	host, err := storage.Get(hostID)
 	if err != nil {
 		host = model.Host{}
-		initialFocusedInput = inputAddress
 	}
 
 	m := editModel{
@@ -199,10 +198,10 @@ func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keyMap.Save):
 			m, cmd = m.save(msg)
 			cmds = append(cmds, cmd)
-		case key.Matches(msg, m.keyMap.CopyToTitle):
+		case key.Matches(msg, m.keyMap.CopyToAddress):
 			// allow a user to copy address value to title, because
 			// the chances are that title will be equal to hostname
-			m.copyAddressToTitle()
+			m.copyTitleToAddress()
 		case key.Matches(msg, m.keyMap.Down) || key.Matches(msg, m.keyMap.Up):
 			m, cmd = m.inputFocusChange(msg)
 			cmds = append(cmds, cmd)
@@ -264,8 +263,8 @@ func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
 	)
 }
 
-func (m editModel) copyAddressToTitle() {
-	newValue := m.inputs[inputAddress].Value()
+func (m editModel) copyTitleToAddress() {
+	newValue := m.inputs[inputTitle].Value()
 
 	// Temprorary remove input validator.
 	// It's necessary, because input.SetValue(...) invokes Validate function,
@@ -274,12 +273,12 @@ func (m editModel) copyAddressToTitle() {
 	// from address input, title input still preserves the very last letter.
 	// A better way would be to use own validation logic instead of relying
 	// on input.Validate.
-	validator := m.inputs[inputTitle].Validate
-	m.inputs[inputTitle].Validate = nil
-	m.inputs[inputTitle].SetValue(newValue)
-	m.inputs[inputTitle].SetCursor(len(newValue))
-	m.inputs[inputTitle].Validate = validator
-	m.inputs[inputTitle].Err = m.inputs[inputTitle].Validate(newValue)
+	validator := m.inputs[inputAddress].Validate
+	m.inputs[inputAddress].Validate = nil
+	m.inputs[inputAddress].SetValue(newValue)
+	m.inputs[inputAddress].SetCursor(len(newValue))
+	m.inputs[inputAddress].Validate = validator
+	m.inputs[inputAddress].Err = m.inputs[inputAddress].Validate(newValue)
 }
 
 func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) (editModel, tea.Cmd) {
@@ -288,8 +287,8 @@ func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) (editModel, tea.Cmd)
 
 	// Decide if we need to propagate hostname to title.
 	// Note, that we should make this decision BEFORE updating focused input
-	if m.focusedInput == inputAddress {
-		addressEqualsTitle := m.inputs[inputAddress].Value() == m.inputs[inputTitle].Value()
+	if m.focusedInput == inputTitle {
+		addressEqualsTitle := m.inputs[inputTitle].Value() == m.inputs[inputAddress].Value()
 		shouldUpdateTitle = addressEqualsTitle
 	}
 
@@ -298,7 +297,7 @@ func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) (editModel, tea.Cmd)
 
 	// Then, update title if we should
 	if shouldUpdateTitle {
-		m.copyAddressToTitle()
+		m.copyTitleToAddress()
 	}
 
 	return m, cmd
