@@ -65,6 +65,6 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
     identity_file_path: /home/user/.ssh/id_rsa_microsoft
 ```
 
-## [Changelog](CHANGELOG.md) ##
+## 5. [Changelog](CHANGELOG.md) ##
 
-## [License](LICENSE) ##
+## 6. [License](LICENSE) ##
