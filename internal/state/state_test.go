@@ -2,30 +2,17 @@
 package state
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"testing"
 
+	"github.com/grafviktor/goto/internal/mock"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 )
 
-// MockLogger implements the iLogger interface for testing.
-type MockLogger struct {
-	Logs []string
-}
-
-func (ml *MockLogger) Debug(format string, args ...interface{}) {
-	logMessage := format
-	if len(args) > 0 {
-		logMessage = fmt.Sprintf(format, args...)
-	}
-	ml.Logs = append(ml.Logs, logMessage)
-}
-
 // That's a wrapper function for state.Get which is required to overcome sync.Once restrictions
-func stateGet(tempDir string, mockLogger *MockLogger) *ApplicationState {
+func stateGet(tempDir string, mockLogger *mock.MockLogger) *ApplicationState {
 	appState := Get(tempDir, mockLogger)
 
 	// We need this hack because state.Get function utilizes `sync.once`. That means, if all unit tests
@@ -46,7 +33,7 @@ func Test_GetApplicationState(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// Create a mock logger for testing
-	mockLogger := &MockLogger{}
+	mockLogger := &mock.MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
 	appState := stateGet(tempDir, mockLogger)
@@ -69,7 +56,7 @@ func Test_PersistApplicationState(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// Create a mock logger for testing
-	mockLogger := &MockLogger{}
+	mockLogger := &mock.MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
 	appState := stateGet(tempDir, mockLogger)

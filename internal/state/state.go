@@ -28,6 +28,8 @@ var (
 
 type iLogger interface {
 	Debug(format string, args ...any)
+	Info(format string, args ...any)
+	Error(format string, args ...any)
 }
 
 // ApplicationState stores application state.
@@ -43,6 +45,7 @@ type ApplicationState struct {
 
 // Get - reads application stat from disk.
 func Get(appHomePath string, lg iLogger) *ApplicationState {
+	lg.Debug("[APPSTATE] Get application state")
 	once.Do(func() {
 		appState = &ApplicationState{
 			appStateFilePath: path.Join(appHomePath, stateFile),
@@ -50,6 +53,7 @@ func Get(appHomePath string, lg iLogger) *ApplicationState {
 		}
 
 		// If we cannot read previously created application state, that's fine - we can continue execution.
+		lg.Debug("[APPSTATE] Application is not ready, should read from file")
 		_ = appState.readFromFile()
 	})
 
@@ -57,16 +61,16 @@ func Get(appHomePath string, lg iLogger) *ApplicationState {
 }
 
 func (as *ApplicationState) readFromFile() error {
-	as.logger.Debug("Read application state from %s\n", as.appStateFilePath)
+	as.logger.Debug("[APPSTATE] Read application state from: %s", as.appStateFilePath)
 	fileData, err := os.ReadFile(as.appStateFilePath)
 	if err != nil {
-		as.logger.Debug("Can't read application state %v\n", err)
+		as.logger.Info("[APPSTATE] Can't read application state %v", err)
 		return err
 	}
 
 	err = yaml.Unmarshal(fileData, as)
 	if err != nil {
-		as.logger.Debug("Can't read parse application state %v\n", err)
+		as.logger.Error("[APPSTATE] Can't parse application state %v", err)
 		return err
 	}
 
@@ -75,13 +79,16 @@ func (as *ApplicationState) readFromFile() error {
 
 // Persist saves app state to disk.
 func (as *ApplicationState) Persist() error {
+	as.logger.Debug("[APPSTATE] Persist application state to file: %s", as.appStateFilePath)
 	result, err := yaml.Marshal(as)
 	if err != nil {
+		as.logger.Error("[APPSTATE] Cannot marshall application state. %v", err)
 		return err
 	}
 
 	err = os.WriteFile(as.appStateFilePath, result, 0o600)
 	if err != nil {
+		as.logger.Error("[APPSTATE] Cannot save application state. %v", err)
 		return err
 	}
 

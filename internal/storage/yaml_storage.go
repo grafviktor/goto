@@ -23,11 +23,13 @@ const (
 
 type iLogger interface {
 	Debug(format string, args ...any)
+	Info(format string, args ...any)
+	Error(format string, args ...any)
 }
 
 // NewYAML creates new YAML storage.
 func NewYAML(ctx context.Context, appFolder string, logger iLogger) (*yamlStorage, error) {
-	logger.Debug("Config folder %s", appFolder)
+	logger.Debug("[STORAGE]: Init YAML storage. Config folder %s", appFolder)
 	fsDataPath := path.Join(appFolder, hostsFile)
 
 	return &yamlStorage{
@@ -74,38 +76,55 @@ func (s *yamlStorage) flushToDisk() error {
 
 func (s *yamlStorage) Save(host model.Host) (model.Host, error) {
 	if host.ID == idEmpty {
+		s.logger.Debug("[STORAGE]: Generate new id for new host with title: %s", host.Title)
 		s.nextID++
 		host.ID = s.nextID
 	}
 
+	s.logger.Debug("[STORAGE]: Save host with id: %d, title: %s", host.ID, host.Title)
 	s.innerStorage[host.ID] = yamlHostWrapper{host}
 
-	return host, s.flushToDisk()
+	err := s.flushToDisk()
+	if err != nil {
+		s.logger.Error("[STORAGE]: Cannot flush database changes to disk. %v", err)
+	}
+
+	return host, err
 }
 
-func (s *yamlStorage) Delete(id int) error {
-	delete(s.innerStorage, id)
+func (s *yamlStorage) Delete(hostID int) error {
+	s.logger.Debug("[STORAGE]: Delete host with id: %d", hostID)
+	delete(s.innerStorage, hostID)
 
-	return s.flushToDisk()
+	err := s.flushToDisk()
+	if err != nil {
+		s.logger.Error("[STORAGE]: Error deleting host id: %d from the database. %v", hostID, err)
+	}
+	return err
 }
 
 func (s *yamlStorage) GetAll() ([]model.Host, error) {
 	// re-create innerStorage before reading file data
 	s.innerStorage = make(map[int]yamlHostWrapper)
-	s.logger.Debug("Read hosts file list %s\n", s.fsDataPath)
+	s.logger.Debug("[STORAGE]: Read hosts from file: %s\n", s.fsDataPath)
 	fileData, err := os.ReadFile(s.fsDataPath)
 	if err != nil {
 		var pathErr *os.PathError
 		if errors.As(err, &pathErr) {
+			s.logger.Info("[STORAGE]: Path no found: %s. Assuming it's not created yet", s.fsDataPath)
+
 			return make([]model.Host, 0), nil
 		}
 
+		s.logger.Error("[STORAGE]: Read hosts error. %v", err)
 		return nil, err
 	}
 
 	var yamlHosts []yamlHostWrapper
+	s.logger.Debug("[STORAGE]: Unmarshal hosts data from yaml storage")
 	err = yaml.Unmarshal(fileData, &yamlHosts)
 	if err != nil {
+		s.logger.Error("[STORAGE]: Could not unmarshal hosts data. %v", err)
 		return nil, err
 	}
 
@@ -122,15 +141,19 @@ func (s *yamlStorage) GetAll() ([]model.Host, error) {
 		return value.Host
 	})
 
+	s.logger.Debug("[STORAGE]: Found %d items in the database", len(hosts))
 	return hosts, nil
 }
 
 func (s *yamlStorage) Get(hostID int) (model.Host, error) {
+	s.logger.Debug("[STORAGE]: Read host with id %d from the database", hostID)
 	found, ok := s.innerStorage[hostID]
 
 	if !ok {
+		s.logger.Debug("[STORAGE]: Host id %d NOT found in the database", hostID)
 		return model.Host{}, constant.ErrNotFound
 	}
 
+	s.logger.Debug("[STORAGE]: Host id %d found in the database", hostID)
 	return found.Host, nil
 }
