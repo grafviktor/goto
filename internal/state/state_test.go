@@ -42,8 +42,8 @@ func Test_GetApplicationState(t *testing.T) {
 	assert.NotNil(t, appState)
 
 	// Ensure that the logger was called during the initialization.
-	// The first line always contains "Read application state from"
-	assert.Contains(t, mockLogger.Logs[0], "Read application state from")
+	// The first line always contains "Get application state"
+	assert.Contains(t, mockLogger.Logs[0], "Get application state")
 }
 
 // Test persisting app state

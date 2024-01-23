@@ -15,15 +15,15 @@ func (ml *MockLogger) print(format string, args ...interface{}) {
 }
 
 func (l *MockLogger) Debug(format string, args ...any) {
-	print(format, args)
+	l.print(format, args...)
 }
 
 func (l *MockLogger) Info(format string, args ...any) {
-	print(format, args)
+	l.print(format, args...)
 }
 
 func (l *MockLogger) Error(format string, args ...any) {
-	print(format, args)
+	l.print(format, args...)
 }
 
 func (l *MockLogger) Close() {
