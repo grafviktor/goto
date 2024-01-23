@@ -6,9 +6,10 @@ import (
 	"path"
 	"testing"
 
-	"github.com/grafviktor/goto/internal/mock"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
+
+	"github.com/grafviktor/goto/internal/mock"
 )
 
 // That's a wrapper function for state.Get which is required to overcome sync.Once restrictions

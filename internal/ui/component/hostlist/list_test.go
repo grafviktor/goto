@@ -104,12 +104,17 @@ func Test_StdErrorWriter_Write(t *testing.T) {
 
 func Test_BuildProcess(t *testing.T) {
 	// Test case: Item is not selected
-	listModelEmpty := listModel{innerModel: list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)}
+	listModelEmpty := listModel{
+		innerModel: list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0),
+		logger:     &mock.MockLogger{},
+	}
+
 	_, err := listModelEmpty.buildProcess(&stdErrorWriter{})
 	require.Error(t, err)
 
 	// Test case: Item is selected
 	listModel := NewMockListModel(false)
+	listModel.logger = &mock.MockLogger{}
 	cmd, err := listModel.buildProcess(&stdErrorWriter{})
 	require.NoError(t, err)
 
@@ -122,6 +127,7 @@ func Test_BuildProcess(t *testing.T) {
 func Test_RunProcess(t *testing.T) {
 	// Mock data for listModel
 	listModel := NewMockListModel(false)
+	listModel.logger = &mock.MockLogger{}
 
 	errorWriter := stdErrorWriter{}
 
@@ -190,6 +196,7 @@ func Test_removeItem(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.model.logger = &mock.MockLogger{}
 			// Preselect item
 			tt.model.innerModel.Select(tt.preselectItem)
 			// Set mode removeMode
@@ -209,6 +216,7 @@ func Test_removeItem(t *testing.T) {
 func Test_confirmAction(t *testing.T) {
 	// Create a new model. There is no special mode (for instance remove item mode)
 	model := NewMockListModel(false)
+	model.logger = &mock.MockLogger{}
 	// Imagine that user triggers confirm aciton
 	updatedModel, cmd := model.confirmAction()
 	// When cancel action, we reset mode and return back to normal state
@@ -220,6 +228,7 @@ func Test_confirmAction(t *testing.T) {
 
 	// Create a new model
 	model = NewMockListModel(false)
+	model.logger = &mock.MockLogger{}
 	// Now we enable remove mode
 	model.mode = modeRemoveItem
 	// Imagine that user triggers confirm aciton
@@ -236,6 +245,7 @@ func Test_confirmAction(t *testing.T) {
 func Test_enterRemoveItemMode(t *testing.T) {
 	// Create a new model
 	model := *NewMockListModel(false)
+	model.logger = &mock.MockLogger{}
 	// Select non-existent index
 	model.innerModel.Select(10)
 	// Call enterRemoveItemMode function
@@ -247,6 +257,7 @@ func Test_enterRemoveItemMode(t *testing.T) {
 
 	// Create another model
 	model = *NewMockListModel(false)
+	model.logger = &mock.MockLogger{}
 	// Select a first item, which is valid
 	model.innerModel.Select(0)
 	// Call enterRemoveItemMode function
@@ -274,6 +285,7 @@ func Test_listTitleUpdate(t *testing.T) {
 	// }
 	// 1 Call listTitleUpdate when host is not selected
 	model := *NewMockListModel(false)
+	model.logger = &mock.MockLogger{}
 	// Select non-existent item
 	model.innerModel.Select(10)
 	// Call listTitleUpdate function, but it will fail, however without throwing any errors
@@ -283,6 +295,7 @@ func Test_listTitleUpdate(t *testing.T) {
 
 	// 2 Call listTitleUpdate when removeMode is active
 	model = *NewMockListModel(false)
+	model.logger = &mock.MockLogger{}
 	// Select a host by valid index
 	model.innerModel.Select(0)
 	// Enter remove mode
@@ -294,6 +307,7 @@ func Test_listTitleUpdate(t *testing.T) {
 
 	// 3 Call listTitleUpdate selected a host
 	model = *NewMockListModel(false)
+	model.logger = &mock.MockLogger{}
 	// Select a host by valid index
 	model.innerModel.Select(0)
 	// Call listTitleUpdate function
@@ -305,6 +319,7 @@ func Test_listTitleUpdate(t *testing.T) {
 func Test_listModel_title_when_app_just_starts(t *testing.T) {
 	// This is just a sanity test, which checks title update function
 	model := *NewMockListModel(false)
+	model.logger = &mock.MockLogger{}
 	// When app just starts, it should display "press 'n' to add a new host"
 	require.Equal(t, "press 'n' to add a new host", model.innerModel.Title)
 	// When press 'down' key, it should display a proper ssh connection string
@@ -317,6 +332,7 @@ func Test_listModel_title_when_app_just_starts(t *testing.T) {
 func Test_listModel_title_when_filter_is_enabled(t *testing.T) {
 	// Test bugfix for https://github.com/grafviktor/goto/issues/37
 	model := *NewMockListModel(false)
+	model.logger = &mock.MockLogger{}
 	// Enable filter
 	updated, _ := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
 	// Press down key and make sure that title is properly updated
