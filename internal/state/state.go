@@ -53,7 +53,7 @@ func Get(appHomePath string, lg iLogger) *ApplicationState {
 		}
 
 		// If we cannot read previously created application state, that's fine - we can continue execution.
-		lg.Debug("[APPSTATE] Application is not ready, should read from file")
+		lg.Debug("[APPSTATE] Application state is not ready, should restore from file")
 		_ = appState.readFromFile()
 	})
 

@@ -31,6 +31,7 @@ var (
 
 type logger interface {
 	Debug(format string, args ...any)
+	Error(format string, args ...any)
 }
 
 type (
@@ -135,13 +136,16 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// triggers immediately after app start because we render this component by default
 		h, v := docStyle.GetFrameSize()
 		m.innerModel.SetSize(msg.Width-h, msg.Height-v)
-		m.logger.Debug("Set host list size: %d %d", m.innerModel.Width(), m.innerModel.Height())
+		m.logger.Debug("[UI] Set host list size: %d %d", m.innerModel.Width(), m.innerModel.Height())
 	case MsgRepoUpdated:
+		m.logger.Debug("[UI] Load hostnames from the database")
 		return m.refreshRepo(msg)
 	case msgInitComplete:
+		m.logger.Debug("[UI] Load hostnames from the database")
 		return m.refreshRepo(msg)
 	case msgRefreshUI:
 		m = m.listTitleUpdate()
+		m.logger.Debug("[UI] Update hostlist title: %s", m.innerModel.Title)
 		var cmd tea.Cmd
 		m, cmd = m.onFocusChanged(msg)
 		cmds = append(cmds, cmd)
@@ -162,17 +166,20 @@ func (m listModel) View() string {
 
 func (m listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) (listModel, tea.Cmd) {
 	if key.Matches(msg, m.keyMap.confirm) {
+		m.logger.Debug("[UI] User confirms action")
 		return m.confirmAction()
 	}
 
 	// If user doesn't confirm the operation, we go back to normal mode and update
 	// title back to normal, this exact key event won't be handled
+	m.logger.Debug("[UI] User cancels action")
 	m.mode = ""
 	return m.listTitleUpdate(), nil
 }
 
 func (m listModel) confirmAction() (listModel, tea.Cmd) {
 	if m.mode == modeRemoveItem {
+		m.logger.Debug("[UI] Exit remove mode")
 		m.mode = ""
 		return m.removeItem()
 	}
@@ -182,24 +189,29 @@ func (m listModel) confirmAction() (listModel, tea.Cmd) {
 
 func (m listModel) enterRemoveItemMode() (listModel, tea.Cmd) {
 	// Check if item is selected.
-	_, ok := m.innerModel.SelectedItem().(ListItemHost)
+	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
 	}
 
+	host := item.Unwrap()
+	m.logger.Debug("[UI] Enter remove mode. Selected host id: %d, title %s", host.ID, host.Title)
 	m.mode = modeRemoveItem
 
 	return m, message.TeaCmd(msgRefreshUI{})
 }
 
 func (m listModel) removeItem() (listModel, tea.Cmd) {
+	m.logger.Debug("[UI] Remove host from the database")
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
+		m.logger.Error("[UI] Cannot cast selected item to host model")
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
 	}
 
 	err := m.repo.Delete(item.ID)
 	if err != nil {
+		m.logger.Debug("[UI] Error removing host from the database. %v", err)
 		return m, message.TeaCmd(msgErrorOccured{err})
 	}
 
@@ -213,6 +225,7 @@ func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
 	items := []list.Item{}
 	hosts, err := m.repo.GetAll()
 	if err != nil {
+		m.logger.Error("[UI] Cannot read database. %v", err)
 		return m, message.TeaCmd(msgErrorOccured{err})
 	}
 
@@ -250,16 +263,19 @@ func (m listModel) editItem(_ tea.Msg) (listModel, tea.Cmd) {
 	}
 
 	host := *item.Unwrap()
+	m.logger.Debug("[UI] Edit item id: %d, title: %s", host.ID, host.Title)
 	return m, message.TeaCmd(MsgEditItem{HostID: host.ID})
 }
 
 func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
+		m.logger.Error("[UI] Cannot cast selected item to host model")
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
 	}
 
 	originalHost := item.Unwrap()
+	m.logger.Debug("[UI] Duplicate selected item id: %d, %s", originalHost.ID, originalHost.Title)
 	clonedHost := originalHost.Clone()
 	for i := 1; ok; i++ {
 		clonedHostTitle := fmt.Sprintf("%s %d", originalHost.Title, i)
@@ -285,6 +301,7 @@ func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 }
 
 func (m listModel) buildProcess(errorWriter *stdErrorWriter) (*exec.Cmd, error) {
+	m.logger.Debug("[UI] Build external command")
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		return nil, errors.New(itemNotSelectedMessage)
@@ -300,9 +317,11 @@ func (m listModel) buildProcess(errorWriter *stdErrorWriter) (*exec.Cmd, error) 
 }
 
 func (m listModel) runProcess(process *exec.Cmd, errorWriter *stdErrorWriter) (listModel, tea.Cmd) {
+	m.logger.Debug("[UI] Prepare external process")
 	execCmd := tea.ExecProcess(process, func(err error) tea.Msg {
 		// This callback triggers when external process exits
 		if err != nil {
+			m.logger.Error("[UI] External process build error. %v", err)
 			errorMessage := strings.TrimSpace(string(errorWriter.err))
 			if utils.StringEmpty(errorMessage) {
 				errorMessage = err.Error()
@@ -321,9 +340,11 @@ func (m listModel) runProcess(process *exec.Cmd, errorWriter *stdErrorWriter) (l
 }
 
 func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
+	m.logger.Debug("[UI] Run external process")
 	errorWriter := stdErrorWriter{}
 	process, err := m.buildProcess(&errorWriter)
 	if err != nil {
+		m.logger.Debug("[UI] Error running external process. %v", err)
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
 	}
 

@@ -16,6 +16,7 @@ import (
 
 type logger interface {
 	Debug(format string, args ...any)
+	Error(format string, args ...any)
 }
 
 // NewMainModel - creates a parent module for other component and preserves stat which
@@ -53,6 +54,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		m.logger.Debug("[UI] Keyboard event: %v", msg)
 		return m.handleKeyEvent(keyMsg)
 	}
 
@@ -62,7 +64,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// resize events, that is why we poll terminal size with intervals
 		// First message is being triggered by Windows version of the model.Init function.
 		if msg.Width != m.appState.Width || msg.Height != m.appState.Height {
-			m.logger.Debug("Terminal size polling message received: %d %d", msg.Width, msg.Height)
+			m.logger.Debug("[UI] Terminal size polling message received: %d %d", msg.Width, msg.Height)
 			cmds = append(cmds, message.TeaCmd(tea.WindowSizeMsg{Width: msg.Width, Height: msg.Height}))
 		}
 
@@ -71,22 +73,27 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// automatically after an artificial delay which set by Time.Sleep inside message.
 		cmds = append(cmds, message.TerminalSizePollingMsg)
 	case tea.WindowSizeMsg:
-		m.logger.Debug("Set terminal window size: %d %d", msg.Width, msg.Height)
+		m.logger.Debug("[UI] Set terminal window size: %d %d", msg.Width, msg.Height)
 		m.appState.Width = msg.Width
 		m.appState.Height = msg.Height
 		m.updateViewPort(msg.Width, msg.Height)
 	case hostlist.MsgEditItem:
+		m.logger.Debug("[UI] Open host edit form")
 		m.appState.CurrentView = state.ViewEditItem
 		ctx := context.WithValue(m.appContext, edithost.ItemID, msg.HostID)
 		m.modelEditHost = edithost.New(ctx, m.hostStorage, m.appState, m.logger)
 	case hostlist.MsgNewItem:
+		m.logger.Debug("[UI] Create a new host")
 		m.appState.CurrentView = state.ViewEditItem
 		m.modelEditHost = edithost.New(m.appContext, m.hostStorage, m.appState, m.logger)
 	case message.HostListSelectItem:
+		m.logger.Debug("[UI] Select host id: %d", msg.HostID)
 		m.appState.Selected = msg.HostID
 	case edithost.MsgClose:
+		m.logger.Debug("[UI] Close host edit form")
 		m.appState.CurrentView = state.ViewHostList
 	case message.RunProcessErrorOccured:
+		m.logger.Debug("[UI] External process error. %v", msg.Err)
 		m.appState.Err = msg.Err
 		m.appState.CurrentView = state.ViewErrorMessage
 	}

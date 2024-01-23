@@ -32,12 +32,12 @@ func Merge(envParams, cmdParams User, logger iLogger) User {
 	if len(cmdParams.AppHome) > 0 {
 		envParams.AppHome = cmdParams.AppHome
 	}
-	logger.Debug("Set application home folder to %s\n", envParams.AppHome)
+	logger.Debug("[CONFIG] Set application home folder to %s\n", envParams.AppHome)
 
 	if len(cmdParams.LogLevel) > 0 {
 		envParams.LogLevel = cmdParams.LogLevel
 	}
-	logger.Debug("Set application log level to %s\n", envParams.LogLevel)
+	logger.Debug("[CONFIG] Set application log level to %s\n", envParams.LogLevel)
 
 	return envParams
 }

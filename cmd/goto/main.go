@@ -41,7 +41,7 @@ func main() {
 
 	// Check if "ssh" utility is in application path
 	if err := utils.CheckAppInstalled("ssh"); err != nil {
-		log.Fatalf("ssh utility is not installed or cannot be found in the executable path: %v", err)
+		log.Fatalf("[MAIN] ssh utility is not installed or cannot be found in the executable path: %v", err)
 	}
 
 	commandLineParams := config.User{}
@@ -56,18 +56,18 @@ func main() {
 	// Get application home folder path
 	commandLineParams.AppHome, err = utils.AppDir(appName, commandLineParams.AppHome)
 	if err != nil {
-		log.Fatalf("Can't get application home folder: %v", err)
+		log.Fatalf("[MAIN] Can't get application home folder: %v", err)
 	}
 
 	// Create application folder
 	if err = utils.CreateAppDirIfNotExists(commandLineParams.AppHome); err != nil {
-		log.Fatalf("Can't create application home folder: %v", err)
+		log.Fatalf("[MAIN] Can't create application home folder: %v", err)
 	}
 
 	// Create application logger
 	lg, err := logger.New(commandLineParams.AppHome, commandLineParams.LogLevel)
 	if err != nil {
-		log.Fatalf("Can't create log file: %v", err)
+		log.Fatalf("[MAIN] Can't create log file: %v", err)
 	}
 
 	// Create application configuration and set application home folder
@@ -75,26 +75,28 @@ func main() {
 
 	// If "-v" parameter provided, display application version configuration and exit
 	if displayApplicationDetailsAndExit {
+		lg.Debug("[MAIN] Display application version")
 		version.Print()
 		fmt.Println()
 		appConfig.Print()
 
+		lg.Debug("[MAIN] Exit application")
 		os.Exit(0)
 	}
 
 	// Logger created. Immediately print application version
-	lg.Info("Start application")
-	lg.Info("Version:    %s", version.Number())
-	lg.Info("Commit:     %s", version.CommitHash())
-	lg.Info("Branch:     %s", version.BuildBranch())
-	lg.Info("Build date: %s", version.BuildDate())
+	lg.Info("[MAIN] Start application")
+	lg.Info("[MAIN] Version:    %s", version.Number())
+	lg.Info("[MAIN] Commit:     %s", version.CommitHash())
+	lg.Info("[MAIN] Branch:     %s", version.BuildBranch())
+	lg.Info("[MAIN] Build date: %s", version.BuildDate())
 
 	ctx := context.Background()
 	application := config.NewApplication(ctx, appConfig, &lg)
 
 	hostStorage, err := storage.Get(ctx, application)
 	if err != nil {
-		lg.Error("Error running application: %v", err)
+		lg.Error("[MAIN] Error running application: %v", err)
 		os.Exit(1)
 	}
 
@@ -102,16 +104,17 @@ func main() {
 	uiComponent := ui.NewMainModel(ctx, hostStorage, appState, &lg)
 	p := tea.NewProgram(&uiComponent, tea.WithAltScreen())
 
+	lg.Debug("[MAIN] Start user interface")
 	if _, err = p.Run(); err != nil {
-		lg.Error("Error running application: %v", err)
+		lg.Error("[MAIN] Error starting user interface: %v", err)
 		os.Exit(1)
 	}
 
-	lg.Debug("Save application state")
+	lg.Debug("[MAIN] Save application state")
 	err = appState.Persist()
 	if err != nil {
-		lg.Error("Can't save application state before closing %v", err)
+		lg.Error("[MAIN] Can't save application state before closing %v", err)
 	}
 
-	lg.Info("Close the application")
+	lg.Info("[MAIN] Close the application")
 }
