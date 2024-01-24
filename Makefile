@@ -80,9 +80,9 @@ dist:
 	@-rm -r $(BUILD_OUTPUT_PATH)/gg-*
 	@-rm -r $(BUILD_OUTPUT_PATH)/*.zip
 	@echo 'Creating binary files'
-	GOOS=darwin  GOARCH=amd64 go build $(LD_FLAGS) -o $(BUILD_OUTPUT_PATH)/gg-mac     ./cmd/goto/*.go
-	GOOS=linux   GOARCH=amd64 go build $(LD_FLAGS) -o $(BUILD_OUTPUT_PATH)/gg-lin     ./cmd/goto/*.go
-	GOOS=windows GOARCH=amd64 go build $(LD_FLAGS) -o $(BUILD_OUTPUT_PATH)/gg-win.exe ./cmd/goto/*.go
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(LD_FLAGS) -o $(BUILD_OUTPUT_PATH)/gg-mac     ./cmd/goto/*.go
+	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(LD_FLAGS) -o $(BUILD_OUTPUT_PATH)/gg-lin     ./cmd/goto/*.go
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(LD_FLAGS) -o $(BUILD_OUTPUT_PATH)/gg-win.exe ./cmd/goto/*.go
 	@mkdir $(BUILD_OUTPUT_PATH)/goto-$(BUILD_VERSION)/
 	@cp $(BUILD_OUTPUT_PATH)/gg* $(BUILD_OUTPUT_PATH)/goto-$(BUILD_VERSION)
 	@cd $(BUILD_OUTPUT_PATH) && zip -r goto-$(BUILD_VERSION).zip goto-$(BUILD_VERSION)
