@@ -317,22 +317,22 @@ func (m listModel) buildProcess(errorWriter *stdErrorWriter) (*exec.Cmd, error) 
 }
 
 func (m listModel) runProcess(process *exec.Cmd, errorWriter *stdErrorWriter) (listModel, tea.Cmd) {
-	m.logger.Debug("[UI] Prepare external process")
 	execCmd := tea.ExecProcess(process, func(err error) tea.Msg {
 		// This callback triggers when external process exits
 		if err != nil {
-			m.logger.Error("[UI] External process build error. %v", err)
 			errorMessage := strings.TrimSpace(string(errorWriter.err))
 			if utils.StringEmpty(errorMessage) {
 				errorMessage = err.Error()
 			}
 
+			m.logger.Error("[EXEC] %v", errorMessage)
 			commandWhichFailed := strings.Join(process.Args, " ")
 			// errorDetails contains command which was executed and the error text.
 			errorDetails := fmt.Sprintf("Command: %s\nError:   %s", commandWhichFailed, errorMessage)
 			return message.RunProcessErrorOccured{Err: errors.New(errorDetails)}
 		}
 
+		m.logger.Debug("[EXEC] Exit process: %s", process.String())
 		return nil
 	})
 
@@ -340,14 +340,14 @@ func (m listModel) runProcess(process *exec.Cmd, errorWriter *stdErrorWriter) (l
 }
 
 func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
-	m.logger.Debug("[UI] Run external process")
 	errorWriter := stdErrorWriter{}
 	process, err := m.buildProcess(&errorWriter)
 	if err != nil {
-		m.logger.Debug("[UI] Error running external process. %v", err)
+		m.logger.Error("[EXEC] Build process error. %v", err)
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
 	}
 
+	m.logger.Debug("[EXEC] Run process: %s", process.String())
 	return m.runProcess(process, &errorWriter)
 }
 
