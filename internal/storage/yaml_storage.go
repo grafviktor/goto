@@ -141,7 +141,7 @@ func (s *yamlStorage) GetAll() ([]model.Host, error) {
 		return value.Host
 	})
 
-	s.logger.Debug("[STORAGE] Found %d items in the database", len(hosts))
+	s.logger.Debug("[STORAGE] Read %d items from the database", len(hosts))
 	return hosts, nil
 }
 

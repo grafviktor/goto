@@ -259,7 +259,7 @@ func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
 		// before 'MsgRepoUpdated'. The reasons of that is because
 		// 'MsgRepoUpdated' handler automatically sets focus on previously selected item.
 		message.TeaCmd(message.HostListSelectItem{HostID: host.ID}),
-		message.TeaCmd(hostlist.MsgRepoUpdated{}),
+		message.TeaCmd(hostlist.MsgRefreshRepo{}),
 	)
 }
 

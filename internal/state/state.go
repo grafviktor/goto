@@ -53,7 +53,7 @@ func Get(appHomePath string, lg iLogger) *ApplicationState {
 		}
 
 		// If we cannot read previously created application state, that's fine - we can continue execution.
-		lg.Debug("[APPSTATE] Application state is not ready, should restore from file")
+		lg.Debug("[APPSTATE] Application state is not ready, restore from file")
 		_ = appState.readFromFile()
 	})
 
@@ -64,13 +64,13 @@ func (as *ApplicationState) readFromFile() error {
 	as.logger.Debug("[APPSTATE] Read application state from: %s", as.appStateFilePath)
 	fileData, err := os.ReadFile(as.appStateFilePath)
 	if err != nil {
-		as.logger.Info("[APPSTATE] Can't read application state %v", err)
+		as.logger.Info("[APPSTATE] Can't read application state loaded from file %v", err)
 		return err
 	}
 
 	err = yaml.Unmarshal(fileData, as)
 	if err != nil {
-		as.logger.Error("[APPSTATE] Can't parse application state %v", err)
+		as.logger.Error("[APPSTATE] Can't parse application state loaded from file %v", err)
 		return err
 	}
 

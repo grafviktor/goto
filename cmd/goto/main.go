@@ -110,6 +110,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Quit signal should be intercepted on the UI level, however it will require an
+	// additional switch-case block with an appropriate checks. Leaving this message here.
+	lg.Debug("[MAIN] Receive quit signal")
 	lg.Debug("[MAIN] Save application state")
 	err = appState.Persist()
 	if err != nil {

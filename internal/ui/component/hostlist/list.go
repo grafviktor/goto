@@ -41,10 +41,9 @@ type (
 	MsgCopyItem struct{ HostID int }
 	// MsgNewItem fires when user press new host button.
 	MsgNewItem      struct{}
-	msgInitComplete struct{}
 	msgErrorOccured struct{ err error }
-	// MsgRepoUpdated - fires when data layer updated and it's required to reload the host list.
-	MsgRepoUpdated struct{}
+	// MsgRefreshRepo - fires when data layer updated and it's required to reload the host list.
+	MsgRefreshRepo struct{}
 	msgRefreshUI   struct{}
 )
 
@@ -90,7 +89,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 }
 
 func (m listModel) Init() tea.Cmd {
-	return tea.Batch(message.TeaCmd(msgInitComplete{}))
+	return tea.Batch(message.TeaCmd(MsgRefreshRepo{}))
 }
 
 func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -99,11 +98,12 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if m.innerModel.SettingFilter() {
+			m.logger.Debug("[UI] Process key message when in filter mode")
 			// If filter is enabled, we should not handle any keyboard messages,
 			// as it should be done by filter component.
 
 			// However, there is one special case, which should be taken into account:
-			// When user filter's out values and presses down key on her keyboard
+			// When user filters out values and presses down key on her keyboard
 			// we need to ensure that the title contains proper selection.
 			// that's why we need to invoke title update function.
 			// See https://github.com/grafviktor/goto/issues/37
@@ -137,17 +137,15 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		h, v := docStyle.GetFrameSize()
 		m.innerModel.SetSize(msg.Width-h, msg.Height-v)
 		m.logger.Debug("[UI] Set host list size: %d %d", m.innerModel.Width(), m.innerModel.Height())
-	case MsgRepoUpdated:
-		m.logger.Debug("[UI] Load hostnames from the database")
-		return m.refreshRepo(msg)
-	case msgInitComplete:
+	case MsgRefreshRepo:
 		m.logger.Debug("[UI] Load hostnames from the database")
 		return m.refreshRepo(msg)
 	case msgRefreshUI:
+		m.logger.Debug("[UI] Change list focus")
 		m = m.listTitleUpdate()
-		m.logger.Debug("[UI] Update hostlist title: %s", m.innerModel.Title)
 		var cmd tea.Cmd
 		m, cmd = m.onFocusChanged(msg)
+		m.logger.Debug("[UI] New list title: %s", m.innerModel.Title)
 		cmds = append(cmds, cmd)
 		return m, tea.Batch(cmds...)
 	}
@@ -166,20 +164,19 @@ func (m listModel) View() string {
 
 func (m listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) (listModel, tea.Cmd) {
 	if key.Matches(msg, m.keyMap.confirm) {
-		m.logger.Debug("[UI] User confirms action")
 		return m.confirmAction()
 	}
 
 	// If user doesn't confirm the operation, we go back to normal mode and update
 	// title back to normal, this exact key event won't be handled
-	m.logger.Debug("[UI] User cancels action")
+	m.logger.Debug("[UI] Exit %s mode. Cancel action", m.mode)
 	m.mode = ""
 	return m.listTitleUpdate(), nil
 }
 
 func (m listModel) confirmAction() (listModel, tea.Cmd) {
 	if m.mode == modeRemoveItem {
-		m.logger.Debug("[UI] Exit remove mode")
+		m.logger.Debug("[UI] Exit %s mode. Confirm action", m.mode)
 		m.mode = ""
 		return m.removeItem()
 	}
@@ -189,14 +186,14 @@ func (m listModel) confirmAction() (listModel, tea.Cmd) {
 
 func (m listModel) enterRemoveItemMode() (listModel, tea.Cmd) {
 	// Check if item is selected.
-	item, ok := m.innerModel.SelectedItem().(ListItemHost)
+	_, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
+		m.logger.Debug("[UI] Cannot remove. Item is not selected")
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
 	}
 
-	host := item.Unwrap()
-	m.logger.Debug("[UI] Enter remove mode. Selected host id: %d, title %s", host.ID, host.Title)
 	m.mode = modeRemoveItem
+	m.logger.Debug("[UI] Enter %s mode. Ask user for confirmation", m.mode)
 
 	return m, message.TeaCmd(msgRefreshUI{})
 }
@@ -216,7 +213,7 @@ func (m listModel) removeItem() (listModel, tea.Cmd) {
 	}
 
 	return m, tea.Batch(
-		message.TeaCmd(MsgRepoUpdated{}),
+		message.TeaCmd(MsgRefreshRepo{}),
 		message.TeaCmd(msgRefreshUI{}),
 	)
 }
@@ -295,7 +292,7 @@ func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 	}
 
 	return m, tea.Batch(
-		message.TeaCmd(MsgRepoUpdated{}),
+		message.TeaCmd(MsgRefreshRepo{}),
 		message.TeaCmd(msgRefreshUI{}),
 	)
 }
@@ -368,9 +365,11 @@ func (m listModel) listTitleUpdate() listModel {
 
 func (m listModel) onFocusChanged(_ tea.Msg) (listModel, tea.Cmd) {
 	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
+		m.logger.Debug("[UI] Select host id: %v, title: %s", hostItem.ID, hostItem.Title())
 		return m, message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID})
 	}
 
+	m.logger.Error("[UI] Select unknown item type from the list")
 	return m, nil
 }
 

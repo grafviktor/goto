@@ -62,15 +62,15 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case message.TerminalSizePolling:
 		// That is Windows OS specific. Windows cmd.exe does not trigger terminal
 		// resize events, that is why we poll terminal size with intervals
-		// First message is being triggered by Windows version of the model.Init function.
+		// First message is being triggered by Windows version of the model. Init function.
 		if msg.Width != m.appState.Width || msg.Height != m.appState.Height {
 			m.logger.Debug("[UI] Terminal size polling message received: %d %d", msg.Width, msg.Height)
 			cmds = append(cmds, message.TeaCmd(tea.WindowSizeMsg{Width: msg.Width, Height: msg.Height}))
 		}
 
-		// We're dispatching the same message from this function and therefore cycling TerminalSizePollingMsg.
+		// We dispatch the same message from this function and therefore cycle TerminalSizePollingMsg.
 		// That's done on purpose to keep this process running. Message.TerminalSizePollingMsg will trigger
-		// automatically after an artificial delay which set by Time.Sleep inside message.
+		// automatically after an artificial delay which is set by Time.Sleep inside message.
 		cmds = append(cmds, message.TerminalSizePollingMsg)
 	case tea.WindowSizeMsg:
 		m.logger.Debug("[UI] Set terminal window size: %d %d", msg.Width, msg.Height)
@@ -78,21 +78,23 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.appState.Height = msg.Height
 		m.updateViewPort(msg.Width, msg.Height)
 	case hostlist.MsgEditItem:
-		m.logger.Debug("[UI] Open host edit form")
+		m.logger.Debug("[UI] Open host edit form for existing item")
 		m.appState.CurrentView = state.ViewEditItem
 		ctx := context.WithValue(m.appContext, edithost.ItemID, msg.HostID)
 		m.modelEditHost = edithost.New(ctx, m.hostStorage, m.appState, m.logger)
 	case hostlist.MsgNewItem:
-		m.logger.Debug("[UI] Create a new host")
+		m.logger.Debug("[UI] Open host edit form for new item")
 		m.appState.CurrentView = state.ViewEditItem
 		m.modelEditHost = edithost.New(m.appContext, m.hostStorage, m.appState, m.logger)
 	case message.HostListSelectItem:
-		m.logger.Debug("[UI] Select host id: %d", msg.HostID)
+		m.logger.Debug("[UI] Update app state. Active host id: %d", msg.HostID)
 		m.appState.Selected = msg.HostID
 	case edithost.MsgClose:
 		m.logger.Debug("[UI] Close host edit form")
 		m.appState.CurrentView = state.ViewHostList
 	case message.RunProcessErrorOccured:
+		// We use m.logger.Debug method to report about the error,
+		// because the error was already reported by run process module.
 		m.logger.Debug("[UI] External process error. %v", msg.Err)
 		m.appState.Err = msg.Err
 		m.appState.CurrentView = state.ViewErrorMessage
@@ -112,6 +114,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if msg.Type == tea.KeyCtrlC {
+		m.logger.Debug("[UI] Receive Ctrl+C. Quit the application")
 		return m, tea.Quit
 	}
 
