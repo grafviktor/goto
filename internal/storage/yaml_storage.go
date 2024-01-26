@@ -81,7 +81,7 @@ func (s *yamlStorage) Save(host model.Host) (model.Host, error) {
 		host.ID = s.nextID
 	}
 
-	s.logger.Debug("[STORAGE] Save host with id: %d, title: %s", host.ID, host.Title)
+	s.logger.Info("[STORAGE] Save host with id: %d, title: %s", host.ID, host.Title)
 	s.innerStorage[host.ID] = yamlHostWrapper{host}
 
 	err := s.flushToDisk()
@@ -93,7 +93,7 @@ func (s *yamlStorage) Save(host model.Host) (model.Host, error) {
 }
 
 func (s *yamlStorage) Delete(hostID int) error {
-	s.logger.Debug("[STORAGE] Delete host with id: %d", hostID)
+	s.logger.Info("[STORAGE] Delete host with id: %d", hostID)
 	delete(s.innerStorage, hostID)
 
 	err := s.flushToDisk()

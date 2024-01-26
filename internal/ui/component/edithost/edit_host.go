@@ -52,6 +52,7 @@ var (
 
 type logger interface {
 	Debug(format string, args ...any)
+	Info(format string, args ...any)
 }
 
 func notEmptyValidator(s string) error {
@@ -196,6 +197,7 @@ func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch {
 		case key.Matches(msg, m.keyMap.Save):
+			m.logger.Info("[UI] Save changes for host id: %v", m.host.ID)
 			m, cmd = m.save(msg)
 			cmds = append(cmds, cmd)
 		case key.Matches(msg, m.keyMap.CopyToAddress):
@@ -206,6 +208,7 @@ func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m, cmd = m.inputFocusChange(msg)
 			cmds = append(cmds, cmd)
 		case key.Matches(msg, m.keyMap.Discard):
+			m.logger.Info("[UI] Discard changes for host id: %v", m.host.ID)
 			return m, message.TeaCmd(MsgClose{})
 		default:
 			// Handle all other key events
@@ -223,6 +226,12 @@ func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
 	for i := range m.inputs {
 		if m.inputs[i].Validate != nil {
 			if err := m.inputs[i].Validate(m.inputs[i].Value()); err != nil {
+				m.logger.Info(
+					"[UI] Cannot save host with id %v. Reason: '%s' is not valid, %s",
+					m.host.ID,
+					m.inputs[i].Label,
+					err.Error(),
+				)
 				m.inputs[i].Err = err
 				m.title = fmt.Sprintf("%s is not valid", m.inputs[i].Label)
 
@@ -279,6 +288,7 @@ func (m editModel) copyTitleToAddress() {
 	m.inputs[inputAddress].SetCursor(len(newValue))
 	m.inputs[inputAddress].Validate = validator
 	m.inputs[inputAddress].Err = m.inputs[inputAddress].Validate(newValue)
+	m.logger.Debug("[UI] Copy 'Title' value to 'Address', new value = %s", newValue)
 }
 
 func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) (editModel, tea.Cmd) {
@@ -349,12 +359,14 @@ func (m editModel) inputFocusChange(msg tea.Msg) (editModel, tea.Cmd) {
 	for i := 0; i <= len(m.inputs)-1; i++ {
 		if m.inputs[i].Validate != nil {
 			m.inputs[i].Err = m.inputs[i].Validate(m.inputs[i].Value())
+			m.logger.Debug("[UI] Input '%s' is valid: %t", m.inputs[i].Label, m.inputs[i].Err == nil)
 		}
 
 		if i == m.focusedInput {
 			// KeyMap depends on focused input - when address is focused, we allow
 			// a user to copy address value to title.
 			m.keyMap = getKeyMap(i)
+			m.logger.Debug("[UI] Focus input: '%s'", m.inputs[i].Label)
 
 			// Set focused state
 			cmd = m.inputs[i].Focus()

@@ -31,6 +31,7 @@ var (
 
 type logger interface {
 	Debug(format string, args ...any)
+	Info(format string, args ...any)
 	Error(format string, args ...any)
 }
 
@@ -260,7 +261,7 @@ func (m listModel) editItem(_ tea.Msg) (listModel, tea.Cmd) {
 	}
 
 	host := *item.Unwrap()
-	m.logger.Debug("[UI] Edit item id: %d, title: %s", host.ID, host.Title)
+	m.logger.Info("[UI] Edit item id: %d, title: %s", host.ID, host.Title)
 	return m, message.TeaCmd(MsgEditItem{HostID: host.ID})
 }
 
@@ -272,7 +273,7 @@ func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 	}
 
 	originalHost := item.Unwrap()
-	m.logger.Debug("[UI] Duplicate selected item id: %d, %s", originalHost.ID, originalHost.Title)
+	m.logger.Info("[UI] Copy host item id: %d, title: %s", originalHost.ID, originalHost.Title)
 	clonedHost := originalHost.Clone()
 	for i := 1; ok; i++ {
 		clonedHostTitle := fmt.Sprintf("%s %d", originalHost.Title, i)
@@ -322,14 +323,14 @@ func (m listModel) runProcess(process *exec.Cmd, errorWriter *stdErrorWriter) (l
 				errorMessage = err.Error()
 			}
 
-			m.logger.Error("[EXEC] %v", errorMessage)
+			m.logger.Error("[EXEC] Terminate process with reason %v", errorMessage)
 			commandWhichFailed := strings.Join(process.Args, " ")
 			// errorDetails contains command which was executed and the error text.
 			errorDetails := fmt.Sprintf("Command: %s\nError:   %s", commandWhichFailed, errorMessage)
 			return message.RunProcessErrorOccured{Err: errors.New(errorDetails)}
 		}
 
-		m.logger.Debug("[EXEC] Exit process: %s", process.String())
+		m.logger.Info("[EXEC] Terminate process gracefully: %s", process.String())
 		return nil
 	})
 
@@ -344,7 +345,7 @@ func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
 	}
 
-	m.logger.Debug("[EXEC] Run process: %s", process.String())
+	m.logger.Info("[EXEC] Run process: %s", process.String())
 	return m.runProcess(process, &errorWriter)
 }
 
