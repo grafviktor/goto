@@ -20,7 +20,7 @@ const (
 	hostsFile = "hosts.yaml"
 	// Yaml storage specific: if host has id which is equal to "0"
 	// that means that this host doesn't yet exist. It's a hack,
-	// but simplifies the application. That's why idEmpty = "0"
+	// but simplifies the application. That's why idEmpty = "0".
 	idEmpty = 0
 )
 
