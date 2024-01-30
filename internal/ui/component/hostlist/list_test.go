@@ -4,15 +4,16 @@ package hostlist
 import (
 	"context"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/grafviktor/goto/internal/mock"
+	"github.com/grafviktor/goto/internal/state"
+	"github.com/grafviktor/goto/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/grafviktor/goto/internal/mock"
-	"github.com/grafviktor/goto/internal/utils"
 )
 
 func Test_ListTitleUpdate(t *testing.T) {
@@ -303,7 +304,7 @@ func Test_listTitleUpdate(t *testing.T) {
 	// Call listTitleUpdate function
 	model = model.listTitleUpdate()
 	// Check that app is now asking for a confirmation befor delete
-	require.Equal(t, "delete \"Mock Host\" ? (y/N)", model.innerModel.Title)
+	require.Equal(t, "delete \"Mock Host 1\" ? (y/N)", model.innerModel.Title)
 
 	// 3 Call listTitleUpdate selected a host
 	model = *NewMockListModel(false)
@@ -340,7 +341,129 @@ func Test_listModel_title_when_filter_is_enabled(t *testing.T) {
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", updated.(listModel).innerModel.Title)
 }
 
-// ================================================ MOCKS ========================================== //
+func Test_listModel_refreshRepo(t *testing.T) {
+	// Test refreshRepo function with normal storage behavior
+	storageShouldFail := false
+	storage := mock.NewMockStorage(storageShouldFail)
+	fakeAppState := state.ApplicationState{Selected: 1}
+	lm := New(context.TODO(), storage, &fakeAppState, nil)
+	lm, teaCmd := lm.refreshRepo(nil)
+	result := teaCmd().(tea.BatchMsg)
+	receivedMsgRefresh := false
+
+	for _, v := range result {
+		if reflect.TypeOf(v).Kind() == reflect.Func {
+			msg := v()
+			if reflect.TypeOf(msg).String() == "hostlist.msgRefreshUI" {
+				receivedMsgRefresh = true
+			}
+		}
+	}
+
+	// Check that hosts are filtered by Title
+	require.Equal(t, "Mock Host 1", lm.innerModel.Items()[0].(ListItemHost).Title())
+	require.Equal(t, "Mock Host 2", lm.innerModel.Items()[1].(ListItemHost).Title())
+	// Check that currently selected item is "1", as it is set in the fakeAppState object
+	require.Equal(t, 1, lm.innerModel.Index())
+	// Check that msgRefreshUI{} was found among returned messages, which indicate normal function return
+	require.True(t, receivedMsgRefresh)
+
+	// Now test refreshRepo function simulating a broken storage
+	storageShouldFail = true
+	storage = mock.NewMockStorage(storageShouldFail)
+	lm = New(
+		context.TODO(),
+		storage,
+		nil, // we don't need app state, as error should be reported before we can even use it
+		nil,
+	)
+	lm.logger = &mock.MockLogger{}
+	lm, teaCmd = lm.refreshRepo(nil)
+
+	// Check that msgErrorOccured{} was found among returned messages, which indicate that
+	// something is wrong with the storage
+	require.Equal(t, "mock error", teaCmd().(msgErrorOccured).err.Error())
+}
+
+func Test_listModel_editItem(t *testing.T) {
+	// Test edit item function by making sure that it's returning correct messages
+
+	// First case - when host is not selected in the list of hosts.
+	// We should receive an error because there is nothing to edit
+	storage := mock.NewMockStorage(false)
+	lm := New(
+		context.TODO(),
+		storage,
+		nil, // we don't need app state, as error should be reported before we can even use it
+		nil,
+	)
+	lm.logger = &mock.MockLogger{}
+	lm, teaCmd := lm.editItem(nil)
+
+	require.IsType(t, msgErrorOccured{}, teaCmd())
+
+	// Second case - we select a host from the list and sending a message to parent form
+	// That a host with a certain ID is ready to be modified.
+	//
+	// Note, that here we use NewMockListModel instead of just 'list.New(...)' like in the first case
+	// we need it to automatically preselect first item from the list of hosts
+	lm = *NewMockListModel(false)
+	lm.logger = &mock.MockLogger{}
+
+	lm, teaCmd = lm.editItem(nil)
+	require.Equal(t, 0, teaCmd().(MsgEditItem).HostID)
+}
+
+func Test_listModel_copyItem(t *testing.T) {
+	// item, ok := m.innerModel.SelectedItem().(ListItemHost)
+	// if !ok {
+	// 		m.logger.Error("[UI] Cannot cast selected item to host model")
+	// 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
+	// }
+
+	// First case - test that we receive an error when item is not selected
+	storageShouldFail := true
+	storage := mock.NewMockStorage(storageShouldFail)
+	lm := New(context.TODO(), storage, nil, nil)
+	lm.logger = &mock.MockLogger{}
+	lm, teaCmd := lm.copyItem(nil)
+	require.Equal(t, itemNotSelectedMessage, teaCmd().(msgErrorOccured).err.Error())
+
+	// originalHost := item.Unwrap()
+	// m.logger.Info("[UI] Copy host item id: %d, title: %s", originalHost.ID, originalHost.Title)
+	// clonedHost := originalHost.Clone()
+	// for i := 1; ok; i++ {
+	// 		clonedHostTitle := fmt.Sprintf("%s %d", originalHost.Title, i)
+	// 		listItems := m.innerModel.Items()
+	// 		idx := slices.IndexFunc(listItems, func(li list.Item) bool {
+	// 				return li.(ListItemHost).Title() == clonedHostTitle
+	// 		})
+
+	// 		if idx < 0 {
+	// 				clonedHost.Title = clonedHostTitle
+	// 				break
+	// 		}
+	// }
+
+	// Second case: storage is OK and we have to ensure that copied host title as we expect it to be:
+	lm = *NewMockListModel(false)
+	lm.logger = &mock.MockLogger{}
+
+	lm, teaCmd = lm.copyItem(nil)
+	// require.Equal(t, 0, teaCmd().().HostID)
+	host, err := lm.repo.Get(3)
+	require.NoError(t, err)
+	require.Equal(t, "Mock Host 1 1", host.Title)
+
+	// if _, err := m.repo.Save(clonedHost); err != nil {
+	// 		return m, message.TeaCmd(msgErrorOccured{err})
+	// }
+
+	// return m, tea.Batch(
+	// 		message.TeaCmd(MsgRefreshRepo{}),
+	// 		message.TeaCmd(msgRefreshUI{}),
+	// )
+}
 
 // ============================================== List Model
 
