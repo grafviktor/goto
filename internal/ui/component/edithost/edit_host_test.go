@@ -154,7 +154,7 @@ func Test_Propagate_Title_Value_To_Hostname(t *testing.T) {
 	// Test copy values from title to hostname when create a new record in hosts database
 	state := state.ApplicationState{}
 
-	storageHostNoFound := mock.NewMockStorage(false)
+	storageHostNoFound := mock.NewMockStorage(true)
 	editHostModel := New(context.TODO(), storageHostNoFound, &state, &mock.MockLogger{})
 	// Check that selected input is title
 	assert.Equal(t, editHostModel.focusedInput, inputTitle)

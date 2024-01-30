@@ -9,11 +9,12 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/grafviktor/goto/internal/mock"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/utils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_ListTitleUpdate(t *testing.T) {
@@ -364,7 +365,7 @@ func Test_listModel_refreshRepo(t *testing.T) {
 	require.Equal(t, "Mock Host 1", lm.innerModel.Items()[0].(ListItemHost).Title())
 	require.Equal(t, "Mock Host 2", lm.innerModel.Items()[1].(ListItemHost).Title())
 	// Check that currently selected item is "1", as it is set in the fakeAppState object
-	require.Equal(t, 1, lm.innerModel.Index())
+	require.Equal(t, 1, lm.innerModel.SelectedItem().(ListItemHost).ID)
 	// Check that msgRefreshUI{} was found among returned messages, which indicate normal function return
 	require.True(t, receivedMsgRefresh)
 
@@ -406,12 +407,13 @@ func Test_listModel_editItem(t *testing.T) {
 	// That a host with a certain ID is ready to be modified.
 	//
 	// Note, that here we use NewMockListModel instead of just 'list.New(...)' like in the first case
-	// we need it to automatically preselect first item from the list of hosts
+	// we need it to automatically preselect first item from the list of hosts and NewMockListModel
+	// will do that for us
 	lm = *NewMockListModel(false)
 	lm.logger = &mock.MockLogger{}
 
 	lm, teaCmd = lm.editItem(nil)
-	require.Equal(t, 0, teaCmd().(MsgEditItem).HostID)
+	require.Equal(t, 1, teaCmd().(MsgEditItem).HostID)
 }
 
 func Test_listModel_copyItem(t *testing.T) {
