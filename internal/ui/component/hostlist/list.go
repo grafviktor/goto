@@ -31,6 +31,8 @@ var (
 
 type logger interface {
 	Debug(format string, args ...any)
+	Info(format string, args ...any)
+	Error(format string, args ...any)
 }
 
 type (
@@ -40,10 +42,9 @@ type (
 	MsgCopyItem struct{ HostID int }
 	// MsgNewItem fires when user press new host button.
 	MsgNewItem      struct{}
-	msgInitComplete struct{}
 	msgErrorOccured struct{ err error }
-	// MsgRepoUpdated - fires when data layer updated and it's required to reload the host list.
-	MsgRepoUpdated struct{}
+	// MsgRefreshRepo - fires when data layer updated and it's required to reload the host list.
+	MsgRefreshRepo struct{}
 	msgRefreshUI   struct{}
 )
 
@@ -89,7 +90,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 }
 
 func (m listModel) Init() tea.Cmd {
-	return tea.Batch(message.TeaCmd(msgInitComplete{}))
+	return tea.Batch(message.TeaCmd(MsgRefreshRepo{}))
 }
 
 func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -98,11 +99,12 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if m.innerModel.SettingFilter() {
+			m.logger.Debug("[UI] Process key message when in filter mode")
 			// If filter is enabled, we should not handle any keyboard messages,
 			// as it should be done by filter component.
 
 			// However, there is one special case, which should be taken into account:
-			// When user filter's out values and presses down key on her keyboard
+			// When user filters out values and presses down key on her keyboard
 			// we need to ensure that the title contains proper selection.
 			// that's why we need to invoke title update function.
 			// See https://github.com/grafviktor/goto/issues/37
@@ -135,15 +137,16 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// triggers immediately after app start because we render this component by default
 		h, v := docStyle.GetFrameSize()
 		m.innerModel.SetSize(msg.Width-h, msg.Height-v)
-		m.logger.Debug("Set host list size: %d %d", m.innerModel.Width(), m.innerModel.Height())
-	case MsgRepoUpdated:
-		return m.refreshRepo(msg)
-	case msgInitComplete:
+		m.logger.Debug("[UI] Set host list size: %d %d", m.innerModel.Width(), m.innerModel.Height())
+	case MsgRefreshRepo:
+		m.logger.Debug("[UI] Load hostnames from the database")
 		return m.refreshRepo(msg)
 	case msgRefreshUI:
+		m.logger.Debug("[UI] Change list focus")
 		m = m.listTitleUpdate()
 		var cmd tea.Cmd
 		m, cmd = m.onFocusChanged(msg)
+		m.logger.Debug("[UI] New list title: %s", m.innerModel.Title)
 		cmds = append(cmds, cmd)
 		return m, tea.Batch(cmds...)
 	}
@@ -167,12 +170,14 @@ func (m listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) (listModel, tea
 
 	// If user doesn't confirm the operation, we go back to normal mode and update
 	// title back to normal, this exact key event won't be handled
+	m.logger.Debug("[UI] Exit %s mode. Cancel action", m.mode)
 	m.mode = ""
 	return m.listTitleUpdate(), nil
 }
 
 func (m listModel) confirmAction() (listModel, tea.Cmd) {
 	if m.mode == modeRemoveItem {
+		m.logger.Debug("[UI] Exit %s mode. Confirm action", m.mode)
 		m.mode = ""
 		return m.removeItem()
 	}
@@ -184,27 +189,32 @@ func (m listModel) enterRemoveItemMode() (listModel, tea.Cmd) {
 	// Check if item is selected.
 	_, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
+		m.logger.Debug("[UI] Cannot remove. Item is not selected")
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
 	}
 
 	m.mode = modeRemoveItem
+	m.logger.Debug("[UI] Enter %s mode. Ask user for confirmation", m.mode)
 
 	return m, message.TeaCmd(msgRefreshUI{})
 }
 
 func (m listModel) removeItem() (listModel, tea.Cmd) {
+	m.logger.Debug("[UI] Remove host from the database")
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
+		m.logger.Error("[UI] Cannot cast selected item to host model")
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
 	}
 
 	err := m.repo.Delete(item.ID)
 	if err != nil {
+		m.logger.Debug("[UI] Error removing host from the database. %v", err)
 		return m, message.TeaCmd(msgErrorOccured{err})
 	}
 
 	return m, tea.Batch(
-		message.TeaCmd(MsgRepoUpdated{}),
+		message.TeaCmd(MsgRefreshRepo{}),
 		message.TeaCmd(msgRefreshUI{}),
 	)
 }
@@ -213,6 +223,7 @@ func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
 	items := []list.Item{}
 	hosts, err := m.repo.GetAll()
 	if err != nil {
+		m.logger.Error("[UI] Cannot read database. %v", err)
 		return m, message.TeaCmd(msgErrorOccured{err})
 	}
 
@@ -250,16 +261,19 @@ func (m listModel) editItem(_ tea.Msg) (listModel, tea.Cmd) {
 	}
 
 	host := *item.Unwrap()
+	m.logger.Info("[UI] Edit item id: %d, title: %s", host.ID, host.Title)
 	return m, message.TeaCmd(MsgEditItem{HostID: host.ID})
 }
 
 func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
+		m.logger.Error("[UI] Cannot cast selected item to host model")
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
 	}
 
 	originalHost := item.Unwrap()
+	m.logger.Info("[UI] Copy host item id: %d, title: %s", originalHost.ID, originalHost.Title)
 	clonedHost := originalHost.Clone()
 	for i := 1; ok; i++ {
 		clonedHostTitle := fmt.Sprintf("%s %d", originalHost.Title, i)
@@ -279,12 +293,13 @@ func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 	}
 
 	return m, tea.Batch(
-		message.TeaCmd(MsgRepoUpdated{}),
+		message.TeaCmd(MsgRefreshRepo{}),
 		message.TeaCmd(msgRefreshUI{}),
 	)
 }
 
 func (m listModel) buildProcess(errorWriter *stdErrorWriter) (*exec.Cmd, error) {
+	m.logger.Debug("[UI] Build external command")
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		return nil, errors.New(itemNotSelectedMessage)
@@ -308,12 +323,14 @@ func (m listModel) runProcess(process *exec.Cmd, errorWriter *stdErrorWriter) (l
 				errorMessage = err.Error()
 			}
 
+			m.logger.Error("[EXEC] Terminate process with reason %v", errorMessage)
 			commandWhichFailed := strings.Join(process.Args, " ")
 			// errorDetails contains command which was executed and the error text.
 			errorDetails := fmt.Sprintf("Command: %s\nError:   %s", commandWhichFailed, errorMessage)
 			return message.RunProcessErrorOccured{Err: errors.New(errorDetails)}
 		}
 
+		m.logger.Info("[EXEC] Terminate process gracefully: %s", process.String())
 		return nil
 	})
 
@@ -324,9 +341,11 @@ func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
 	errorWriter := stdErrorWriter{}
 	process, err := m.buildProcess(&errorWriter)
 	if err != nil {
+		m.logger.Error("[EXEC] Build process error. %v", err)
 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
 	}
 
+	m.logger.Info("[EXEC] Run process: %s", process.String())
 	return m.runProcess(process, &errorWriter)
 }
 
@@ -347,9 +366,11 @@ func (m listModel) listTitleUpdate() listModel {
 
 func (m listModel) onFocusChanged(_ tea.Msg) (listModel, tea.Cmd) {
 	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
+		m.logger.Debug("[UI] Select host id: %v, title: %s", hostItem.ID, hostItem.Title())
 		return m, message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID})
 	}
 
+	m.logger.Error("[UI] Select unknown item type from the list")
 	return m, nil
 }
 

@@ -154,7 +154,7 @@ func Test_Propagate_Title_Value_To_Hostname(t *testing.T) {
 	// Test copy values from title to hostname when create a new record in hosts database
 	state := state.ApplicationState{}
 
-	storageHostNoFound := mock.NewMockStorage(false)
+	storageHostNoFound := mock.NewMockStorage(true)
 	editHostModel := New(context.TODO(), storageHostNoFound, &state, &mock.MockLogger{})
 	// Check that selected input is title
 	assert.Equal(t, editHostModel.focusedInput, inputTitle)
@@ -166,8 +166,8 @@ func Test_Propagate_Title_Value_To_Hostname(t *testing.T) {
 	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
 
 	// Check that both inputs contain the same values
-	require.Equal(t, editHostModel.inputs[inputTitle].Value(), "test")
-	require.Equal(t, editHostModel.inputs[inputAddress].Value(), "test")
+	require.Equal(t, "test", editHostModel.inputs[inputTitle].Value())
+	require.Equal(t, "test", editHostModel.inputs[inputAddress].Value())
 
 	// Select address input
 	tmp, _ := editHostModel.Update(tea.KeyMsg{Type: tea.KeyDown})
@@ -182,8 +182,8 @@ func Test_Propagate_Title_Value_To_Hostname(t *testing.T) {
 	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
 
 	// Check that address was updated, but title still preserves the initial value
-	require.Equal(t, editHostModel.inputs[inputTitle].Value(), "test")
-	require.Equal(t, editHostModel.inputs[inputAddress].Value(), "testtest")
+	require.Equal(t, "test", editHostModel.inputs[inputTitle].Value())
+	require.Equal(t, "testtest", editHostModel.inputs[inputAddress].Value())
 
 	// Select title again
 	tmp, _ = editHostModel.Update(tea.KeyMsg{Type: tea.KeyUp})
@@ -197,6 +197,6 @@ func Test_Propagate_Title_Value_To_Hostname(t *testing.T) {
 	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}})
 
 	// Check that title was updated, but address still preserves the initial value
-	require.Equal(t, editHostModel.inputs[inputTitle].Value(), "test123")
-	require.Equal(t, editHostModel.inputs[inputAddress].Value(), "testtest")
+	require.Equal(t, "test123", editHostModel.inputs[inputTitle].Value())
+	require.Equal(t, "testtest", editHostModel.inputs[inputAddress].Value())
 }
