@@ -2,6 +2,7 @@ package hostlist
 
 import (
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/samber/lo"
 )
 
 type keyMap struct {
@@ -15,7 +16,31 @@ type keyMap struct {
 	confirm    key.Binding
 }
 
-func (k keyMap) ShortHelp() []key.Binding {
+func (k *keyMap) SetShouldShowEditButtons(val bool) {
+	k.clone.SetEnabled(val)
+	k.connect.SetEnabled(val)
+	k.cursorDown.SetEnabled(val)
+	k.cursorUp.SetEnabled(val)
+	k.edit.SetEnabled(val)
+	k.remove.SetEnabled(val)
+}
+
+func (k *keyMap) ShortHelp() []key.Binding {
+	tmp := []key.Binding{
+		k.connect,
+		k.append,
+		k.clone,
+		k.edit,
+		k.remove,
+	}
+
+	// Hide all disabled key shortcuts from the screen
+	return lo.Filter[key.Binding](tmp, func(k key.Binding, _ int) bool {
+		return k.Enabled()
+	})
+}
+
+func (k *keyMap) FullHelp() []key.Binding {
 	return []key.Binding{
 		k.connect,
 		k.append,
@@ -24,28 +49,6 @@ func (k keyMap) ShortHelp() []key.Binding {
 		k.remove,
 	}
 }
-
-func (k keyMap) FullHelp() []key.Binding {
-	return []key.Binding{
-		k.connect,
-		k.append,
-		k.clone,
-		k.edit,
-		k.remove,
-	}
-}
-
-/* func (k keyMap) FullHelp() [][]key.Binding {
-	return [][]key.Binding{
-		{
-			k.connect,
-			k.append,
-			k.clone,
-			k.edit,
-			k.remove,
-		},
-	}
-} */
 
 func newDelegateKeyMap() *keyMap {
 	return &keyMap{

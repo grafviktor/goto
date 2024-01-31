@@ -144,6 +144,8 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case msgRefreshUI:
 		m.logger.Debug("[UI] Change list focus")
 		m = m.listTitleUpdate()
+		m.logger.Debug("[UI] Update help menu")
+		m.updateKeyMap()
 		var cmd tea.Cmd
 		m, cmd = m.onFocusChanged(msg)
 		m.logger.Debug("[UI] New list title: %s", m.innerModel.Title)
@@ -157,6 +159,18 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.innerModel, innerModelCmd = m.innerModel.Update(msg)
 	cmds = append(cmds, innerModelCmd)
 	return m, tea.Batch(cmds...)
+}
+
+func (m listModel) updateKeyMap() {
+	isHostSelected := m.innerModel.SelectedItem() != nil
+	m.logger.Debug("[UI] Hide edit keyboard shortcuts: %v", isHostSelected)
+
+	m.keyMap.clone.SetEnabled(isHostSelected)
+	m.keyMap.connect.SetEnabled(isHostSelected)
+	m.keyMap.cursorDown.SetEnabled(isHostSelected)
+	m.keyMap.cursorUp.SetEnabled(isHostSelected)
+	m.keyMap.edit.SetEnabled(isHostSelected)
+	m.keyMap.remove.SetEnabled(isHostSelected)
 }
 
 func (m listModel) View() string {

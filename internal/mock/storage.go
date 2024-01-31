@@ -3,6 +3,8 @@ package mock
 import (
 	"errors"
 
+	"github.com/samber/lo"
+
 	"github.com/grafviktor/goto/internal/model"
 )
 
@@ -33,6 +35,14 @@ type mockStorage struct {
 func (ms *mockStorage) Delete(id int) error {
 	if ms.shouldFail {
 		return errors.New("mock error")
+	}
+
+	_, id, found := lo.FindIndexOf[model.Host](ms.Hosts, func(h model.Host) bool {
+		return h.ID == id
+	})
+
+	if !found {
+		return errors.New("host not found")
 	}
 
 	ms.Hosts = append(ms.Hosts[:id], ms.Hosts[id+1:]...)
