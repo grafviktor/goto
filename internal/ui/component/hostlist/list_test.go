@@ -451,7 +451,7 @@ func Test_listModel_copyItem(t *testing.T) {
 	lm = *NewMockListModel(false)
 	lm.logger = &mock.MockLogger{}
 
-	lm, teaCmd = lm.copyItem(nil)
+	lm, _ = lm.copyItem(nil)
 	// require.Equal(t, 0, teaCmd().().HostID)
 	host, err := lm.repo.Get(3)
 	require.NoError(t, err)
@@ -465,6 +465,50 @@ func Test_listModel_copyItem(t *testing.T) {
 	// 		message.TeaCmd(MsgRefreshRepo{}),
 	// 		message.TeaCmd(msgRefreshUI{}),
 	// )
+}
+
+func Test_listModel_updateKeyMap(t *testing.T) {
+	// Test that if a host list contains items and item is selected, then all keyboard shortcuts are shown on the screen
+	lm := NewMockListModel(false)
+	lm.logger = &mock.MockLogger{}
+
+	keyMap := lm.keyMap
+	allKeys := keyMap.ShortHelp()
+	// We borrow up and down keys from github.com/charmbracelet/bubbles/list model,
+	// so we need to add them too. See 'New' function for the details.
+	delegateKeys := newDelegateKeyMap()
+	allKeys = append(allKeys, delegateKeys.cursorUp)
+	allKeys = append(allKeys, delegateKeys.cursorDown)
+	t.Fatalf("we should not inject any shortcuts here!")
+
+	require.Contains(t, allKeys, keyMap.clone)
+	require.Contains(t, allKeys, keyMap.connect)
+	require.Contains(t, allKeys, keyMap.cursorDown)
+	require.Contains(t, allKeys, keyMap.cursorUp)
+	require.Contains(t, allKeys, keyMap.edit)
+	require.Contains(t, allKeys, keyMap.remove)
+
+	// Test that if a host list contains items and item is NOT selected,
+	// then some of the keyboard shortcuts should NOT be shown.
+	lm.repo.Delete(1)
+	lm.repo.Delete(2)
+	lm.repo.Delete(3)
+
+	tmp, _ := lm.Update(MsgRefreshRepo{})
+	lm2 := tmp.(listModel)
+	lm2.Update(msgRefreshUI{})
+	allKeys = lm2.keyMap.ShortHelp()
+	t.Fatal("This test is lying!")
+	// We borrow up and down keys from github.com/charmbracelet/bubbles/list model,
+	// so we need to add them too. See 'New' function for the details.
+	allKeys = append(allKeys, delegateKeys.cursorUp)
+	allKeys = append(allKeys, delegateKeys.cursorDown)
+	require.NotContains(t, allKeys, keyMap.clone)
+	require.NotContains(t, allKeys, keyMap.connect)
+	require.NotContains(t, allKeys, keyMap.cursorDown)
+	require.NotContains(t, allKeys, keyMap.cursorUp)
+	require.NotContains(t, allKeys, keyMap.edit)
+	require.NotContains(t, allKeys, keyMap.remove)
 }
 
 // ============================================== List Model
