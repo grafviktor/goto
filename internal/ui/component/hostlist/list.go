@@ -41,9 +41,9 @@ type (
 	// MsgCopyItem fires when user press copy button.
 	MsgCopyItem struct{ HostID int }
 	// MsgNewItem fires when user press new host button.
-	MsgNewItem      struct{}
-	msgErrorOccured struct{ err error }
-	// MsgRefreshRepo - fires when data layer updated and it's required to reload the host list.
+	MsgNewItem       struct{}
+	msgErrorOccurred struct{ err error }
+	// MsgRefreshRepo - fires when data layer updated, and it's required to reload the host list.
 	MsgRefreshRepo struct{}
 	msgRefreshUI   struct{}
 )
@@ -204,7 +204,7 @@ func (m listModel) enterRemoveItemMode() (listModel, tea.Cmd) {
 	_, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Debug("[UI] Cannot remove. Item is not selected")
-		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
+		return m, message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
 	m.mode = modeRemoveItem
@@ -218,13 +218,13 @@ func (m listModel) removeItem() (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Error("[UI] Cannot cast selected item to host model")
-		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
+		return m, message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
 	err := m.repo.Delete(item.ID)
 	if err != nil {
 		m.logger.Debug("[UI] Error removing host from the database. %v", err)
-		return m, message.TeaCmd(msgErrorOccured{err})
+		return m, message.TeaCmd(msgErrorOccurred{err})
 	}
 
 	return m, tea.Batch(
@@ -238,7 +238,7 @@ func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
 	hosts, err := m.repo.GetAll()
 	if err != nil {
 		m.logger.Error("[UI] Cannot read database. %v", err)
-		return m, message.TeaCmd(msgErrorOccured{err})
+		return m, message.TeaCmd(msgErrorOccurred{err})
 	}
 
 	slices.SortFunc(hosts, func(a, b model.Host) int {
@@ -271,7 +271,7 @@ func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
 func (m listModel) editItem(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
-		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
+		return m, message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
 	host := *item.Unwrap()
@@ -283,7 +283,7 @@ func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Error("[UI] Cannot cast selected item to host model")
-		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
+		return m, message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
 	originalHost := item.Unwrap()
@@ -303,7 +303,7 @@ func (m listModel) copyItem(_ tea.Msg) (listModel, tea.Cmd) {
 	}
 
 	if _, err := m.repo.Save(clonedHost); err != nil {
-		return m, message.TeaCmd(msgErrorOccured{err})
+		return m, message.TeaCmd(msgErrorOccurred{err})
 	}
 
 	return m, tea.Batch(
@@ -356,7 +356,7 @@ func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
 	process, err := m.buildProcess(&errorWriter)
 	if err != nil {
 		m.logger.Error("[EXEC] Build process error. %v", err)
-		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
+		return m, message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
 	m.logger.Info("[EXEC] Run process: %s", process.String())

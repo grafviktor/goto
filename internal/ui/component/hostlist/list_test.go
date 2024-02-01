@@ -133,7 +133,7 @@ func Test_RunProcess(t *testing.T) {
 
 	errorWriter := stdErrorWriter{}
 
-	validProcess := utils.BuildProcess("echo test") // crossplatform command
+	validProcess := utils.BuildProcess("echo test") // cross-platform command
 	validProcess.Stdout = os.Stdout
 	validProcess.Stderr = &errorWriter
 
@@ -184,14 +184,14 @@ func Test_removeItem(t *testing.T) {
 			name:          "Remove item error because of the database error",
 			model:         *NewMockListModel(true),
 			mode:          modeRemoveItem,
-			want:          msgErrorOccured{},
+			want:          msgErrorOccurred{},
 			expectedItems: 3,
 		},
 		{
 			name:          "Remove item error wrong item selected",
 			model:         *NewMockListModel(false),
 			mode:          modeRemoveItem,
-			want:          msgErrorOccured{},
+			want:          msgErrorOccurred{},
 			preselectItem: 10,
 			expectedItems: 3,
 		},
@@ -254,8 +254,8 @@ func Test_enterRemoveItemMode(t *testing.T) {
 	model, cmd := model.enterRemoveItemMode()
 	// and make sure that mode is unchanged
 	require.Len(t, model.mode, 0)
-	// cmd() should return msgErrorOccured error
-	require.IsType(t, msgErrorOccured{}, cmd(), "Wrong message type")
+	// cmd() should return msgErrorOccurred error
+	require.IsType(t, msgErrorOccurred{}, cmd(), "Wrong message type")
 
 	// Create another model
 	model = *NewMockListModel(false)
@@ -381,9 +381,9 @@ func Test_listModel_refreshRepo(t *testing.T) {
 	lm.logger = &mock.MockLogger{}
 	lm, teaCmd = lm.refreshRepo(nil)
 
-	// Check that msgErrorOccured{} was found among returned messages, which indicate that
+	// Check that msgErrorOccurred{} was found among returned messages, which indicate that
 	// something is wrong with the storage
-	require.Equal(t, "mock error", teaCmd().(msgErrorOccured).err.Error())
+	require.Equal(t, "mock error", teaCmd().(msgErrorOccurred).err.Error())
 }
 
 func Test_listModel_editItem(t *testing.T) {
@@ -401,7 +401,7 @@ func Test_listModel_editItem(t *testing.T) {
 	lm.logger = &mock.MockLogger{}
 	lm, teaCmd := lm.editItem(nil)
 
-	require.IsType(t, msgErrorOccured{}, teaCmd())
+	require.IsType(t, msgErrorOccurred{}, teaCmd())
 
 	// Second case - we select a host from the list and sending a message to parent form
 	// That a host with a certain ID is ready to be modified.
@@ -420,7 +420,7 @@ func Test_listModel_copyItem(t *testing.T) {
 	// item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	// if !ok {
 	// 		m.logger.Error("[UI] Cannot cast selected item to host model")
-	// 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
+	// 		return m, message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	// }
 
 	// First case - test that we receive an error when item is not selected
@@ -429,7 +429,7 @@ func Test_listModel_copyItem(t *testing.T) {
 	lm := New(context.TODO(), storage, nil, nil)
 	lm.logger = &mock.MockLogger{}
 	lm, teaCmd := lm.copyItem(nil)
-	require.Equal(t, itemNotSelectedMessage, teaCmd().(msgErrorOccured).err.Error())
+	require.Equal(t, itemNotSelectedMessage, teaCmd().(msgErrorOccurred).err.Error())
 
 	// originalHost := item.Unwrap()
 	// m.logger.Info("[UI] Copy host item id: %d, title: %s", originalHost.ID, originalHost.Title)
@@ -447,7 +447,7 @@ func Test_listModel_copyItem(t *testing.T) {
 	// 		}
 	// }
 
-	// Second case: storage is OK and we have to ensure that copied host title as we expect it to be:
+	// Second case: storage is, OK and we have to ensure that copied host title as we expect it to be:
 	lm = *NewMockListModel(false)
 	lm.logger = &mock.MockLogger{}
 
@@ -458,7 +458,7 @@ func Test_listModel_copyItem(t *testing.T) {
 	require.Equal(t, "Mock Host 1 1", host.Title)
 
 	// if _, err := m.repo.Save(clonedHost); err != nil {
-	// 		return m, message.TeaCmd(msgErrorOccured{err})
+	// 		return m, message.TeaCmd(msgErrorOccurred{err})
 	// }
 
 	// return m, tea.Batch(
@@ -468,47 +468,54 @@ func Test_listModel_copyItem(t *testing.T) {
 }
 
 func Test_listModel_updateKeyMap(t *testing.T) {
-	// Test that if a host list contains items and item is selected, then all keyboard shortcuts are shown on the screen
-	lm := NewMockListModel(false)
+	// var keyMapToArray = func(k keyMap) {
+	// 	val := reflect.ValueOf(k.ShortHelp())
+	// 	fieldValues := make([]key.Binding, 0)
+	//
+	// 	// Iterate through the fields and extract their values
+	// 	for i := 0; i < val.NumField(); i++ {
+	// 		fieldValues[i] = val.Field(i).(key.Binding)
+	// 	}
+	//
+	// }
+
+	// Case 1: Test that if a host list contains items and item is selected, then all keyboard shortcuts are shown on the screen
+	lm := *NewMockListModel(false)
 	lm.logger = &mock.MockLogger{}
 
-	keyMap := lm.keyMap
-	allKeys := keyMap.ShortHelp()
+	// allKeys := lm.innerModel.AdditionalShortHelpKeys()
+	allKeys := lm.keyMap
 	// We borrow up and down keys from github.com/charmbracelet/bubbles/list model,
 	// so we need to add them too. See 'New' function for the details.
 	delegateKeys := newDelegateKeyMap()
-	allKeys = append(allKeys, delegateKeys.cursorUp)
-	allKeys = append(allKeys, delegateKeys.cursorDown)
-	t.Fatalf("we should not inject any shortcuts here!")
+	// allKeys = append(allKeys, delegateKeys.cursorUp)
+	// allKeys = append(allKeys, delegateKeys.cursorDown)
+	require.Contains(t, allKeys, delegateKeys.clone)
+	require.Contains(t, allKeys, delegateKeys.connect)
+	require.Contains(t, allKeys, delegateKeys.cursorDown)
+	require.Contains(t, allKeys, delegateKeys.cursorUp)
+	require.Contains(t, allKeys, delegateKeys.edit)
+	require.Contains(t, allKeys, delegateKeys.remove)
 
-	require.Contains(t, allKeys, keyMap.clone)
-	require.Contains(t, allKeys, keyMap.connect)
-	require.Contains(t, allKeys, keyMap.cursorDown)
-	require.Contains(t, allKeys, keyMap.cursorUp)
-	require.Contains(t, allKeys, keyMap.edit)
-	require.Contains(t, allKeys, keyMap.remove)
-
-	// Test that if a host list contains items and item is NOT selected,
+	// Case 2: Test that if a host list contains items and item is NOT selected,
 	// then some of the keyboard shortcuts should NOT be shown.
+
+	// Now let's delete all elements from the database
 	lm.repo.Delete(1)
 	lm.repo.Delete(2)
 	lm.repo.Delete(3)
 
 	tmp, _ := lm.Update(MsgRefreshRepo{})
-	lm2 := tmp.(listModel)
-	lm2.Update(msgRefreshUI{})
-	allKeys = lm2.keyMap.ShortHelp()
-	t.Fatal("This test is lying!")
-	// We borrow up and down keys from github.com/charmbracelet/bubbles/list model,
-	// so we need to add them too. See 'New' function for the details.
-	allKeys = append(allKeys, delegateKeys.cursorUp)
-	allKeys = append(allKeys, delegateKeys.cursorDown)
-	require.NotContains(t, allKeys, keyMap.clone)
-	require.NotContains(t, allKeys, keyMap.connect)
-	require.NotContains(t, allKeys, keyMap.cursorDown)
-	require.NotContains(t, allKeys, keyMap.cursorUp)
-	require.NotContains(t, allKeys, keyMap.edit)
-	require.NotContains(t, allKeys, keyMap.remove)
+	// Just casting to get a pointer to listModel
+	lm = tmp.(listModel)
+	lm.Update(msgRefreshUI{})
+	allKeys = lm.keyMap
+	require.NotContains(t, allKeys, delegateKeys.clone)
+	require.NotContains(t, allKeys, delegateKeys.connect)
+	require.NotContains(t, allKeys, delegateKeys.cursorDown)
+	require.NotContains(t, allKeys, delegateKeys.cursorUp)
+	require.NotContains(t, allKeys, delegateKeys.edit)
+	require.NotContains(t, allKeys, delegateKeys.remove)
 }
 
 // ============================================== List Model
