@@ -6,23 +6,29 @@ import (
 )
 
 type keyMap struct {
-	cursorUp   key.Binding
-	cursorDown key.Binding
-	connect    key.Binding
-	append     key.Binding
-	clone      key.Binding
-	edit       key.Binding
-	remove     key.Binding
-	confirm    key.Binding
+	cursorUp              key.Binding
+	cursorDown            key.Binding
+	connect               key.Binding
+	append                key.Binding
+	clone                 key.Binding
+	edit                  key.Binding
+	remove                key.Binding
+	confirm               key.Binding
+	shouldShowEditButtons bool
 }
 
 func (k *keyMap) SetShouldShowEditButtons(val bool) {
+	k.shouldShowEditButtons = val
 	k.clone.SetEnabled(val)
 	k.connect.SetEnabled(val)
 	k.cursorDown.SetEnabled(val)
 	k.cursorUp.SetEnabled(val)
 	k.edit.SetEnabled(val)
 	k.remove.SetEnabled(val)
+}
+
+func (k *keyMap) ShouldShowEditButtons() bool {
+	return k.shouldShowEditButtons
 }
 
 func (k *keyMap) ShortHelp() []key.Binding {

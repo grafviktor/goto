@@ -27,6 +27,7 @@ var (
 	docStyle               = lipgloss.NewStyle().Margin(1, 2)
 	itemNotSelectedMessage = "you must select an item"
 	modeRemoveItem         = "removeItem"
+	defaultListTitle       = "press 'n' to add a new host"
 )
 
 type logger interface {
@@ -66,7 +67,7 @@ type listModel struct {
 func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log logger) listModel {
 	delegate := list.NewDefaultDelegate()
 	delegateKeys := newDelegateKeyMap()
-	listItems := []list.Item{}
+	var listItems []list.Item
 	m := listModel{
 		innerModel: list.New(listItems, delegate, 0, 0),
 		keyMap:     delegateKeys,
@@ -80,10 +81,13 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	m.innerModel.KeyMap.CursorDown.Unbind()
 	m.innerModel.KeyMap.CursorDown = delegateKeys.cursorDown
 
+	// Additional key mappings for the short and full help views. This allows
+	// you to add additional key mappings to the help menu without
+	// re-implementing the help component.
 	m.innerModel.AdditionalShortHelpKeys = delegateKeys.ShortHelp
 	m.innerModel.AdditionalFullHelpKeys = delegateKeys.FullHelp
 
-	m.innerModel.Title = "press 'n' to add a new host"
+	m.innerModel.Title = defaultListTitle
 	m.innerModel.SetShowStatusBar(false)
 
 	return m
@@ -142,14 +146,12 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Load hostnames from the database")
 		return m.refreshRepo(msg)
 	case msgRefreshUI:
-		m.logger.Debug("[UI] Change list focus")
-		m = m.listTitleUpdate()
-		m.logger.Debug("[UI] Update help menu")
-		m.updateKeyMap()
 		var cmd tea.Cmd
 		m, cmd = m.onFocusChanged(msg)
-		m.logger.Debug("[UI] New list title: %s", m.innerModel.Title)
 		cmds = append(cmds, cmd)
+		m = m.listTitleUpdate()
+		m.updateKeyMap()
+
 		return m, tea.Batch(cmds...)
 	}
 
@@ -162,15 +164,12 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m listModel) updateKeyMap() {
-	isHostSelected := m.innerModel.SelectedItem() != nil
-	m.logger.Debug("[UI] Hide edit keyboard shortcuts: %v", isHostSelected)
+	shouldShowEditButtons := m.innerModel.SelectedItem() != nil
 
-	m.keyMap.clone.SetEnabled(isHostSelected)
-	m.keyMap.connect.SetEnabled(isHostSelected)
-	m.keyMap.cursorDown.SetEnabled(isHostSelected)
-	m.keyMap.cursorUp.SetEnabled(isHostSelected)
-	m.keyMap.edit.SetEnabled(isHostSelected)
-	m.keyMap.remove.SetEnabled(isHostSelected)
+	if shouldShowEditButtons != m.keyMap.ShouldShowEditButtons() {
+		m.logger.Debug("[UI] Show edit keyboard shortcuts: %v", shouldShowEditButtons)
+		m.keyMap.SetShouldShowEditButtons(shouldShowEditButtons)
+	}
 }
 
 func (m listModel) View() string {
@@ -234,7 +233,6 @@ func (m listModel) removeItem() (listModel, tea.Cmd) {
 }
 
 func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
-	items := []list.Item{}
 	hosts, err := m.repo.GetAll()
 	if err != nil {
 		m.logger.Error("[UI] Cannot read database. %v", err)
@@ -249,6 +247,7 @@ func (m listModel) refreshRepo(_ tea.Msg) (listModel, tea.Cmd) {
 	})
 
 	// Wrap hosts into List items
+	items := make([]list.Item, 0, len(hosts))
 	for _, h := range hosts {
 		items = append(items, ListItemHost{Host: h})
 	}
@@ -364,21 +363,32 @@ func (m listModel) executeCmd(_ tea.Msg) (listModel, tea.Cmd) {
 }
 
 func (m listModel) listTitleUpdate() listModel {
+	var newTitle string
+
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
-	if !ok {
-		return m
+
+	switch {
+	case !ok:
+		newTitle = defaultListTitle
+	case m.mode == modeRemoveItem:
+		newTitle = fmt.Sprintf("delete \"%s\" ? (y/N)", item.Title())
+	default:
+		newTitle = ssh.ConstructCMD("ssh", utils.HostModelToOptionsAdaptor(*item.Unwrap())...)
 	}
 
-	if m.mode == modeRemoveItem {
-		m.innerModel.Title = fmt.Sprintf("delete \"%s\" ? (y/N)", item.Title())
-		return m
+	if m.innerModel.Title != newTitle {
+		m.innerModel.Title = newTitle
+		m.logger.Debug("[UI] New list title: %s", m.innerModel.Title)
 	}
 
-	m.innerModel.Title = ssh.ConstructCMD("ssh", utils.HostModelToOptionsAdaptor(*item.Unwrap())...)
 	return m
 }
 
 func (m listModel) onFocusChanged(_ tea.Msg) (listModel, tea.Cmd) {
+	if m.innerModel.SelectedItem() == nil {
+		return m, nil
+	}
+
 	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
 		m.logger.Debug("[UI] Select host id: %v, title: %s", hostItem.ID, hostItem.Title())
 		return m, message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID})

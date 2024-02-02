@@ -20,6 +20,7 @@ import (
 func Test_ListTitleUpdate(t *testing.T) {
 	// Create a lm with initial state
 	lm := *NewMockListModel(false)
+	lm.logger = &mock.MockLogger{}
 
 	// Select host
 	lm.innerModel.Select(0)
@@ -271,20 +272,6 @@ func Test_enterRemoveItemMode(t *testing.T) {
 }
 
 func Test_listTitleUpdate(t *testing.T) {
-	// func (m listModel) listTitleUpdate(_ tea.Msg) listModel {
-	// 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
-	// 	if !ok {
-	// 		return m
-	// 	}
-
-	// 	if m.mode == modeRemoveItem {
-	// 		m.innerModel.Title = fmt.Sprintf("delete \"%s\" ? (y/N)", item.Title())
-	// 		return m
-	// 	}
-
-	// 	m.innerModel.Title = ssh.ConstructCMD("ssh", utils.HostModelToOptionsAdaptor(*item.Unwrap())...)
-	// 	return m
-	// }
 	// 1 Call listTitleUpdate when host is not selected
 	model := *NewMockListModel(false)
 	model.logger = &mock.MockLogger{}
@@ -417,12 +404,6 @@ func Test_listModel_editItem(t *testing.T) {
 }
 
 func Test_listModel_copyItem(t *testing.T) {
-	// item, ok := m.innerModel.SelectedItem().(ListItemHost)
-	// if !ok {
-	// 		m.logger.Error("[UI] Cannot cast selected item to host model")
-	// 		return m, message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
-	// }
-
 	// First case - test that we receive an error when item is not selected
 	storageShouldFail := true
 	storage := mock.NewMockStorage(storageShouldFail)
@@ -431,71 +412,33 @@ func Test_listModel_copyItem(t *testing.T) {
 	lm, teaCmd := lm.copyItem(nil)
 	require.Equal(t, itemNotSelectedMessage, teaCmd().(msgErrorOccurred).err.Error())
 
-	// originalHost := item.Unwrap()
-	// m.logger.Info("[UI] Copy host item id: %d, title: %s", originalHost.ID, originalHost.Title)
-	// clonedHost := originalHost.Clone()
-	// for i := 1; ok; i++ {
-	// 		clonedHostTitle := fmt.Sprintf("%s %d", originalHost.Title, i)
-	// 		listItems := m.innerModel.Items()
-	// 		idx := slices.IndexFunc(listItems, func(li list.Item) bool {
-	// 				return li.(ListItemHost).Title() == clonedHostTitle
-	// 		})
-
-	// 		if idx < 0 {
-	// 				clonedHost.Title = clonedHostTitle
-	// 				break
-	// 		}
-	// }
-
 	// Second case: storage is, OK and we have to ensure that copied host title as we expect it to be:
 	lm = *NewMockListModel(false)
 	lm.logger = &mock.MockLogger{}
 
 	lm, _ = lm.copyItem(nil)
-	// require.Equal(t, 0, teaCmd().().HostID)
 	host, err := lm.repo.Get(3)
 	require.NoError(t, err)
 	require.Equal(t, "Mock Host 1 1", host.Title)
-
-	// if _, err := m.repo.Save(clonedHost); err != nil {
-	// 		return m, message.TeaCmd(msgErrorOccurred{err})
-	// }
-
-	// return m, tea.Batch(
-	// 		message.TeaCmd(MsgRefreshRepo{}),
-	// 		message.TeaCmd(msgRefreshUI{}),
-	// )
 }
 
 func Test_listModel_updateKeyMap(t *testing.T) {
-	// var keyMapToArray = func(k keyMap) {
-	// 	val := reflect.ValueOf(k.ShortHelp())
-	// 	fieldValues := make([]key.Binding, 0)
-	//
-	// 	// Iterate through the fields and extract their values
-	// 	for i := 0; i < val.NumField(); i++ {
-	// 		fieldValues[i] = val.Field(i).(key.Binding)
-	// 	}
-	//
-	// }
-
 	// Case 1: Test that if a host list contains items and item is selected, then all keyboard shortcuts are shown on the screen
 	lm := *NewMockListModel(false)
 	lm.logger = &mock.MockLogger{}
+	lm.Update(msgRefreshUI{})
 
-	// allKeys := lm.innerModel.AdditionalShortHelpKeys()
-	allKeys := lm.keyMap
-	// We borrow up and down keys from github.com/charmbracelet/bubbles/list model,
-	// so we need to add them too. See 'New' function for the details.
-	delegateKeys := newDelegateKeyMap()
-	// allKeys = append(allKeys, delegateKeys.cursorUp)
-	// allKeys = append(allKeys, delegateKeys.cursorDown)
-	require.Contains(t, allKeys, delegateKeys.clone)
-	require.Contains(t, allKeys, delegateKeys.connect)
-	require.Contains(t, allKeys, delegateKeys.cursorDown)
-	require.Contains(t, allKeys, delegateKeys.cursorUp)
-	require.Contains(t, allKeys, delegateKeys.edit)
-	require.Contains(t, allKeys, delegateKeys.remove)
+	// Actually "displayedKeys" will also contain cursor up and cursor down and help keybindings,
+	// but we're ignoring them in this test
+	displayedKeys := lm.keyMap.ShortHelp()
+	availableKeys := newDelegateKeyMap()
+
+	require.Equal(t, 5, len(displayedKeys))
+	require.Contains(t, displayedKeys, availableKeys.append)
+	require.Contains(t, displayedKeys, availableKeys.clone)
+	require.Contains(t, displayedKeys, availableKeys.connect)
+	require.Contains(t, displayedKeys, availableKeys.edit)
+	require.Contains(t, displayedKeys, availableKeys.remove)
 
 	// Case 2: Test that if a host list contains items and item is NOT selected,
 	// then some of the keyboard shortcuts should NOT be shown.
@@ -506,16 +449,17 @@ func Test_listModel_updateKeyMap(t *testing.T) {
 	lm.repo.Delete(3)
 
 	tmp, _ := lm.Update(MsgRefreshRepo{})
-	// Just casting to get a pointer to listModel
+	// Just casting from tea.Model to listModel
 	lm = tmp.(listModel)
 	lm.Update(msgRefreshUI{})
-	allKeys = lm.keyMap
-	require.NotContains(t, allKeys, delegateKeys.clone)
-	require.NotContains(t, allKeys, delegateKeys.connect)
-	require.NotContains(t, allKeys, delegateKeys.cursorDown)
-	require.NotContains(t, allKeys, delegateKeys.cursorUp)
-	require.NotContains(t, allKeys, delegateKeys.edit)
-	require.NotContains(t, allKeys, delegateKeys.remove)
+	displayedKeys = lm.keyMap.ShortHelp()
+
+	require.Equal(t, 1, len(displayedKeys))
+	require.Contains(t, displayedKeys, availableKeys.append)
+	require.NotContains(t, displayedKeys, availableKeys.clone)
+	require.NotContains(t, displayedKeys, availableKeys.connect)
+	require.NotContains(t, displayedKeys, availableKeys.edit)
+	require.NotContains(t, displayedKeys, availableKeys.remove)
 }
 
 // ============================================== List Model
