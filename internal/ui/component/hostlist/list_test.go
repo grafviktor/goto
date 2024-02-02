@@ -20,6 +20,7 @@ import (
 func Test_ListTitleUpdate(t *testing.T) {
 	// Create a lm with initial state
 	lm := *NewMockListModel(false)
+	lm.logger = &mock.MockLogger{}
 
 	// Select host
 	lm.innerModel.Select(0)
@@ -133,7 +134,7 @@ func Test_RunProcess(t *testing.T) {
 
 	errorWriter := stdErrorWriter{}
 
-	validProcess := utils.BuildProcess("echo test") // crossplatform command
+	validProcess := utils.BuildProcess("echo test") // cross-platform command
 	validProcess.Stdout = os.Stdout
 	validProcess.Stderr = &errorWriter
 
@@ -184,14 +185,14 @@ func Test_removeItem(t *testing.T) {
 			name:          "Remove item error because of the database error",
 			model:         *NewMockListModel(true),
 			mode:          modeRemoveItem,
-			want:          msgErrorOccured{},
+			want:          msgErrorOccurred{},
 			expectedItems: 3,
 		},
 		{
 			name:          "Remove item error wrong item selected",
 			model:         *NewMockListModel(false),
 			mode:          modeRemoveItem,
-			want:          msgErrorOccured{},
+			want:          msgErrorOccurred{},
 			preselectItem: 10,
 			expectedItems: 3,
 		},
@@ -254,8 +255,8 @@ func Test_enterRemoveItemMode(t *testing.T) {
 	model, cmd := model.enterRemoveItemMode()
 	// and make sure that mode is unchanged
 	require.Len(t, model.mode, 0)
-	// cmd() should return msgErrorOccured error
-	require.IsType(t, msgErrorOccured{}, cmd(), "Wrong message type")
+	// cmd() should return msgErrorOccurred error
+	require.IsType(t, msgErrorOccurred{}, cmd(), "Wrong message type")
 
 	// Create another model
 	model = *NewMockListModel(false)
@@ -271,20 +272,6 @@ func Test_enterRemoveItemMode(t *testing.T) {
 }
 
 func Test_listTitleUpdate(t *testing.T) {
-	// func (m listModel) listTitleUpdate(_ tea.Msg) listModel {
-	// 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
-	// 	if !ok {
-	// 		return m
-	// 	}
-
-	// 	if m.mode == modeRemoveItem {
-	// 		m.innerModel.Title = fmt.Sprintf("delete \"%s\" ? (y/N)", item.Title())
-	// 		return m
-	// 	}
-
-	// 	m.innerModel.Title = ssh.ConstructCMD("ssh", utils.HostModelToOptionsAdaptor(*item.Unwrap())...)
-	// 	return m
-	// }
 	// 1 Call listTitleUpdate when host is not selected
 	model := *NewMockListModel(false)
 	model.logger = &mock.MockLogger{}
@@ -381,9 +368,9 @@ func Test_listModel_refreshRepo(t *testing.T) {
 	lm.logger = &mock.MockLogger{}
 	lm, teaCmd = lm.refreshRepo(nil)
 
-	// Check that msgErrorOccured{} was found among returned messages, which indicate that
+	// Check that msgErrorOccurred{} was found among returned messages, which indicate that
 	// something is wrong with the storage
-	require.Equal(t, "mock error", teaCmd().(msgErrorOccured).err.Error())
+	require.Equal(t, "mock error", teaCmd().(msgErrorOccurred).err.Error())
 }
 
 func Test_listModel_editItem(t *testing.T) {
@@ -401,7 +388,7 @@ func Test_listModel_editItem(t *testing.T) {
 	lm.logger = &mock.MockLogger{}
 	lm, teaCmd := lm.editItem(nil)
 
-	require.IsType(t, msgErrorOccured{}, teaCmd())
+	require.IsType(t, msgErrorOccurred{}, teaCmd())
 
 	// Second case - we select a host from the list and sending a message to parent form
 	// That a host with a certain ID is ready to be modified.
@@ -417,54 +404,62 @@ func Test_listModel_editItem(t *testing.T) {
 }
 
 func Test_listModel_copyItem(t *testing.T) {
-	// item, ok := m.innerModel.SelectedItem().(ListItemHost)
-	// if !ok {
-	// 		m.logger.Error("[UI] Cannot cast selected item to host model")
-	// 		return m, message.TeaCmd(msgErrorOccured{err: errors.New(itemNotSelectedMessage)})
-	// }
-
 	// First case - test that we receive an error when item is not selected
 	storageShouldFail := true
 	storage := mock.NewMockStorage(storageShouldFail)
 	lm := New(context.TODO(), storage, nil, nil)
 	lm.logger = &mock.MockLogger{}
 	lm, teaCmd := lm.copyItem(nil)
-	require.Equal(t, itemNotSelectedMessage, teaCmd().(msgErrorOccured).err.Error())
+	require.Equal(t, itemNotSelectedMessage, teaCmd().(msgErrorOccurred).err.Error())
 
-	// originalHost := item.Unwrap()
-	// m.logger.Info("[UI] Copy host item id: %d, title: %s", originalHost.ID, originalHost.Title)
-	// clonedHost := originalHost.Clone()
-	// for i := 1; ok; i++ {
-	// 		clonedHostTitle := fmt.Sprintf("%s %d", originalHost.Title, i)
-	// 		listItems := m.innerModel.Items()
-	// 		idx := slices.IndexFunc(listItems, func(li list.Item) bool {
-	// 				return li.(ListItemHost).Title() == clonedHostTitle
-	// 		})
-
-	// 		if idx < 0 {
-	// 				clonedHost.Title = clonedHostTitle
-	// 				break
-	// 		}
-	// }
-
-	// Second case: storage is OK and we have to ensure that copied host title as we expect it to be:
+	// Second case: storage is, OK and we have to ensure that copied host title as we expect it to be:
 	lm = *NewMockListModel(false)
 	lm.logger = &mock.MockLogger{}
 
-	lm, teaCmd = lm.copyItem(nil)
-	// require.Equal(t, 0, teaCmd().().HostID)
+	lm, _ = lm.copyItem(nil)
 	host, err := lm.repo.Get(3)
 	require.NoError(t, err)
 	require.Equal(t, "Mock Host 1 1", host.Title)
+}
 
-	// if _, err := m.repo.Save(clonedHost); err != nil {
-	// 		return m, message.TeaCmd(msgErrorOccured{err})
-	// }
+func Test_listModel_updateKeyMap(t *testing.T) {
+	// Case 1: Test that if a host list contains items and item is selected, then all keyboard shortcuts are shown on the screen
+	lm := *NewMockListModel(false)
+	lm.logger = &mock.MockLogger{}
+	lm.Update(msgRefreshUI{})
 
-	// return m, tea.Batch(
-	// 		message.TeaCmd(MsgRefreshRepo{}),
-	// 		message.TeaCmd(msgRefreshUI{}),
-	// )
+	// Actually "displayedKeys" will also contain cursor up and cursor down and help keybindings,
+	// but we're ignoring them in this test
+	displayedKeys := lm.keyMap.ShortHelp()
+	availableKeys := newDelegateKeyMap()
+
+	require.Equal(t, 5, len(displayedKeys))
+	require.Contains(t, displayedKeys, availableKeys.append)
+	require.Contains(t, displayedKeys, availableKeys.clone)
+	require.Contains(t, displayedKeys, availableKeys.connect)
+	require.Contains(t, displayedKeys, availableKeys.edit)
+	require.Contains(t, displayedKeys, availableKeys.remove)
+
+	// Case 2: Test that if a host list contains items and item is NOT selected,
+	// then some of the keyboard shortcuts should NOT be shown.
+
+	// Now let's delete all elements from the database
+	lm.repo.Delete(1)
+	lm.repo.Delete(2)
+	lm.repo.Delete(3)
+
+	tmp, _ := lm.Update(MsgRefreshRepo{})
+	// Just casting from tea.Model to listModel
+	lm = tmp.(listModel)
+	lm.Update(msgRefreshUI{})
+	displayedKeys = lm.keyMap.ShortHelp()
+
+	require.Equal(t, 1, len(displayedKeys))
+	require.Contains(t, displayedKeys, availableKeys.append)
+	require.NotContains(t, displayedKeys, availableKeys.clone)
+	require.NotContains(t, displayedKeys, availableKeys.connect)
+	require.NotContains(t, displayedKeys, availableKeys.edit)
+	require.NotContains(t, displayedKeys, availableKeys.remove)
 }
 
 // ============================================== List Model
