@@ -10,7 +10,7 @@ BUILD_VERSION_SUFFIX = $(shell git describe --tags --exact-match > /dev/null 2>&
 # For non tagged - "vX.X.X (dev)"
 BUILD_VERSION_AND_SUFFIX = $(strip $(BUILD_VERSION) $(BUILD_VERSION_SUFFIX))
 LD_FLAGS = -ldflags="$(NO_DEBUG_FLAGS) -X main.buildVersion="$(BUILD_VERSION)$(BUILD_VERSION_SUFFIX)" -X main.buildDate=$(BUILD_DATE) -X main.buildCommit=$(BUILD_COMMIT) -X main.buildBranch=$(BUILD_BRANCH)"
-BUILD_OUTPUT_PATH=./build/dist
+DIST_PATH=./dist
 
 ## help: print this help message
 help:
@@ -62,28 +62,30 @@ run:
 ## build: create binary in ./build/dist folder for your current platform. Use this option if you build it for personal use.
 .PHONY: build
 build:
-	@-rm -r $(BUILD_OUTPUT_PATH)/gg
+	@-rm -r $(DIST_PATH)/gg
 	@echo 'Building'
-	go build $(LD_FLAGS) -o $(BUILD_OUTPUT_PATH)/gg ./cmd/goto/*.go
+	go build $(LD_FLAGS) -o $(DIST_PATH)/gg ./cmd/goto/*.go
 
 ## package: create rpm package and place it into ./build/dist folder.
 .PHONY: package
 package:
-	@-rm -r $(BUILD_OUTPUT_PATH)/*.rpm
+	@-rm -r $(DIST_PATH)/*.rpm $(DIST_PATH)/*.deb
 	@echo 'Build rpm package'
 # Use cut to convert version from 'vX.X.X' to 'X.X.X'
-	@DOCKER_BUILDKIT=1 docker build --build-arg VERSION=$(shell echo $(BUILD_VERSION) | cut -c 2-) -f build/rpm/Dockerfile --output build/dist .
+	@DOCKER_BUILDKIT=1 docker build --build-arg VERSION=$(shell echo $(BUILD_VERSION) | cut -c 2-) -f build/rpm/Dockerfile --output ./dist .
+	@echo 'Build deb package'
+	@DOCKER_BUILDKIT=1 docker build --build-arg VERSION=$(shell echo $(BUILD_VERSION) | cut -c 2-) -f build/deb/Dockerfile --output ./dist .
 
 ## dist: create binaries for all supported platforms in ./build/dist folder. Archive all binaries with zip.
 .PHONY: dist
 dist:
-	@-rm -r $(BUILD_OUTPUT_PATH)/gg-*
-	@-rm -r $(BUILD_OUTPUT_PATH)/*.zip
+	@-rm -r $(DIST_PATH)/gg-*
+	@-rm -r $(DIST_PATH)/*.zip
 	@echo 'Creating binary files'
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(LD_FLAGS) -o $(BUILD_OUTPUT_PATH)/gg-mac     ./cmd/goto/*.go
-	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(LD_FLAGS) -o $(BUILD_OUTPUT_PATH)/gg-lin     ./cmd/goto/*.go
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(LD_FLAGS) -o $(BUILD_OUTPUT_PATH)/gg-win.exe ./cmd/goto/*.go
-	@mkdir $(BUILD_OUTPUT_PATH)/goto-$(BUILD_VERSION)/
-	@cp $(BUILD_OUTPUT_PATH)/gg* $(BUILD_OUTPUT_PATH)/goto-$(BUILD_VERSION)
-	@cd $(BUILD_OUTPUT_PATH) && zip -r goto-$(BUILD_VERSION).zip goto-$(BUILD_VERSION)
-	@rm -r $(BUILD_OUTPUT_PATH)/goto-$(BUILD_VERSION)
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(LD_FLAGS) -o $(DIST_PATH)/gg-mac     ./cmd/goto/*.go
+	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(LD_FLAGS) -o $(DIST_PATH)/gg-lin     ./cmd/goto/*.go
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(LD_FLAGS) -o $(DIST_PATH)/gg-win.exe ./cmd/goto/*.go
+	@mkdir $(DIST_PATH)/goto-$(BUILD_VERSION)/
+	@cp $(DIST_PATH)/gg-mac $(DIST_PATH)/gg-lin $(DIST_PATH)/gg-win.exe $(DIST_PATH)/goto-$(BUILD_VERSION)
+	@cd $(DIST_PATH) && zip -r goto-$(BUILD_VERSION).zip goto-$(BUILD_VERSION)
+	@rm -r $(DIST_PATH)/goto-$(BUILD_VERSION)

@@ -1,0 +1,7 @@
+Package: goto
+Version: %VERSION%
+Architecture: amd64
+Essential: no
+Priority: optional
+Maintainer: Roman Leonenkov
+Description: This utility helps to maintain a list of ssh servers. Unlike PuTTY it doesn't incorporate any connection logic, but relying on openssh package which should be installed on your system.

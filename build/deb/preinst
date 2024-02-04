@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Set package version in debian control file
+sed -i 's|%VERSION%|$PACKAGE_SRC_ROOT/control|g' control
