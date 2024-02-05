@@ -12,8 +12,8 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Ignore build folder
-build/dist
+# Ignore dist folder
+dist/
 
 # Dependency directories (remove the comment below to include it)
 vendor/
@@ -30,7 +30,7 @@ unit.txt
 .vscode
 
 # Application temporary files and configs
-/goto
+goto/
 
 # Temporary project files
 *.svg
