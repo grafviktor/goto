@@ -1,19 +1,5 @@
-
-# Verify the package has been installed
-# rpm -qi goto
-#
-# See changelog
-# rpm -q goto --changelog
-#
-# See what’s in the RPM package
-# rpm -ql goto
-#
-# Remove the RPM package
-# dnf remove goto
-# rpm --verbose --erase hello
-
+# Build stage
 FROM almalinux:9.3-20231124 as rpm-build-stage
-
 ARG VERSION
 RUN yum install -y rpmdevtools rpmlint golang git
 ADD build/rpm/goto.spec /tmp/
@@ -27,6 +13,7 @@ RUN rpmdev-setuptree && \
   rpm -ivh ~/rpmbuild/RPMS/x86_64/goto-${VERSION}.x86_64.rpm && \
   gg -v
 
+# Export stage
 # Copy from build container to host file system.
 # Ensure that DOCKER_BUILDKIT=1 and docker build has parameter: --output ./dist
 FROM scratch AS export-stage

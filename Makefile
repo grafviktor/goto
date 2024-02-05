@@ -59,28 +59,29 @@ run:
 	@echo 'To pass app arguments use: make run ARGS="-h"'
 	go run cmd/goto/* $(ARGS)
 
-## build: create binary in ./build/dist folder for your current platform. Use this option if you build it for personal use.
+## build: create binary in ./dist folder for your current platform. Use this option if you build it for personal use.
 .PHONY: build
 build:
-	@-rm -r $(DIST_PATH)/gg
+	@-rm -r $(DIST_PATH)/gg 2>/dev/null
 	@echo 'Building'
 	go build $(LD_FLAGS) -o $(DIST_PATH)/gg ./cmd/goto/*.go
 
-## package: create rpm package and place it into ./build/dist folder.
+## package: create rpm and deb packages and place them into ./dist folder.
 .PHONY: package
 package:
-	@-rm -r $(DIST_PATH)/*.rpm $(DIST_PATH)/*.deb
+	@-rm -r $(DIST_PATH)/*.rpm $(DIST_PATH)/*.deb 2>/dev/null
 	@echo 'Build rpm package'
 # Use cut to convert version from 'vX.X.X' to 'X.X.X'
-	@DOCKER_BUILDKIT=1 docker build --build-arg VERSION=$(shell echo $(BUILD_VERSION) | cut -c 2-) -f build/rpm/Dockerfile --output ./dist .
+# Set branch to 'BRANCH=master' if want
+	@DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build --build-arg VERSION=$(shell echo $(BUILD_VERSION) | cut -c 2-) -f build/rpm/Dockerfile --output ./dist .
 	@echo 'Build deb package'
-	@DOCKER_BUILDKIT=1 docker build --build-arg VERSION=$(shell echo $(BUILD_VERSION) | cut -c 2-) -f build/deb/Dockerfile --output ./dist .
+	@DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build --build-arg VERSION=$(shell echo $(BUILD_VERSION) | cut -c 2-) -f build/deb/Dockerfile --output ./dist .
 
-## dist: create binaries for all supported platforms in ./build/dist folder. Archive all binaries with zip.
+## dist: create binaries for all supported platforms in ./dist folder. Archive all binaries with zip.
 .PHONY: dist
 dist:
-	@-rm -r $(DIST_PATH)/gg-*
-	@-rm -r $(DIST_PATH)/*.zip
+	@-rm -r $(DIST_PATH)/gg-* 2>/dev/null
+	@-rm -r $(DIST_PATH)/*.zip 2>/dev/null
 	@echo 'Creating binary files'
 	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(LD_FLAGS) -o $(DIST_PATH)/gg-mac     ./cmd/goto/*.go
 	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(LD_FLAGS) -o $(DIST_PATH)/gg-lin     ./cmd/goto/*.go
