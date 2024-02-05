@@ -6,7 +6,7 @@ We really welcome your pull requests. We encourage you to take a look at issues 
 
 ### Pull request conventions ###
 
-* Any change you make should have a corresponding issue (see [issues](https://github.com/grafviktor/goto/issues) page).
+* Any change you make should have a corresponding issue raised (see [issues](https://github.com/grafviktor/goto/issues) page).
 * If an issue is a bug, then pull request name should be prefixed with `BUGFIX-XXX`, where `XXX` is the issue number. If it's a feature or an improvement, then PR name should be `FEATURE-XXX`.
 * Add a short description to the PR name which will describe the purpose of the changes. Example: `BUGFIX-123: Fix validation rules for user input`.
 * It would be good, if you can add several words about the implementation details in the PR comments section.
