@@ -72,7 +72,6 @@ package:
 	@-rm -r $(DIST_PATH)/*.rpm $(DIST_PATH)/*.deb 2>/dev/null
 	@echo 'Build rpm package'
 # Use cut to convert version from 'vX.X.X' to 'X.X.X'
-# Set branch to 'BRANCH=master' if want
 	@DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build --build-arg VERSION=$(shell echo $(BUILD_VERSION) | cut -c 2-) -f build/rpm/Dockerfile --output ./dist .
 	@echo 'Build deb package'
 	@DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build --build-arg VERSION=$(shell echo $(BUILD_VERSION) | cut -c 2-) -f build/deb/Dockerfile --output ./dist .
