@@ -62,13 +62,15 @@ func Test_NetworkPortValidator(t *testing.T) {
 }
 
 func Test_GetKeyMap(t *testing.T) {
-	// When title is selected, we can copy its value into address field using keyboard shortcut
+	// When title or address is selected, we can copy its values between each other using a shortcut
 	keyMap := getKeyMap(inputTitle)
-	require.True(t, keyMap.CopyToAddress.Enabled())
+	require.True(t, keyMap.CopyInputValue.Enabled())
+	keyMap = getKeyMap(inputTitle)
+	require.True(t, keyMap.CopyInputValue.Enabled())
 
-	// However, when any other input selected, this keyboard shortcut should NOT be avaiable.
-	keyMap = getKeyMap(inputAddress)
-	require.False(t, keyMap.CopyToAddress.Enabled())
+	// However, when any other input selected, this keyboard shortcut should NOT be available.
+	keyMap = getKeyMap(inputDescription)
+	require.False(t, keyMap.CopyInputValue.Enabled())
 }
 
 // func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
