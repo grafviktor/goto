@@ -23,4 +23,4 @@ Major parts of your changes must be covered by unit tests.
 
 If you encountered a bug or a problem please raise a "New Issue" on the [issues](https://github.com/grafviktor/goto/issues) page first. Reporting an issue alone is already a great help for the project. If you have enough energy to send a bugfix you will help all those people who use the application. Please, leave a comment beneath the issue letting all know that the work is in progress, if you decide to resolve one of the problems.
 
-Though, in this project we're not following [TDD](https://en.wikipedia.org/wiki/Test-driven_development) practices, unit test coverage is a must. However, you can send your bugfix without tests. In that case, the project authors will be responsible for adding unit tests on your behalf.
+Though, in this project we do not follow [TDD](https://en.wikipedia.org/wiki/Test-driven_development) practices, unit test coverage is a must. However, you can send your bugfix without tests. In that case, the project authors will be responsible for adding unit tests on your behalf.
