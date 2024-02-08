@@ -24,4 +24,4 @@ Enter
 Sleep 1500ms
 Enter
 
-Sleep 3s
+Sleep 2s

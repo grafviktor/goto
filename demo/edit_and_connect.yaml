@@ -1,0 +1,9 @@
+- host:
+    title: kernel.org
+    description: Server 1
+    address: kernel.org
+- host:
+    title: microsoft.com
+    description: Server 2
+    address: microsoft.com
+    username: satya

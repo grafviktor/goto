@@ -81,6 +81,7 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 
 // CurrentUsername - returns current OS username or "n/a" if it can't be determined.
 func CurrentUsername() string {
+	// That's a naive implementation. ssh [-vvv] -G <hostname> should be used to request settings for a hostname.
 	user, err := user.Current()
 	if err != nil {
 		return "n/a"

@@ -52,6 +52,7 @@ var (
 
 type logger interface {
 	Debug(format string, args ...any)
+	Info(format string, args ...any)
 }
 
 func notEmptyValidator(s string) error {
@@ -77,10 +78,10 @@ func networkPortValidator(s string) error {
 }
 
 func getKeyMap(focusedInput int) keyMap {
-	if focusedInput != inputAddress {
-		keys.CopyToTitle.SetEnabled(false)
+	if focusedInput == inputTitle || focusedInput == inputAddress {
+		keys.CopyInputValue.SetEnabled(true)
 	} else {
-		keys.CopyToTitle.SetEnabled(true)
+		keys.CopyInputValue.SetEnabled(false)
 	}
 
 	return keys
@@ -90,12 +91,11 @@ func getKeyMap(focusedInput int) keyMap {
 func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState, log logger) editModel {
 	initialFocusedInput := inputTitle
 
-	// if we can't cast host id to int, that means we're adding a new host. Ignoring the error
+	// If we can't cast host id to int, that means we're adding a new host. Ignore the error
 	hostID, _ := ctx.Value(ItemID).(int)
 	host, err := storage.Get(hostID)
 	if err != nil {
 		host = model.Host{}
-		initialFocusedInput = inputAddress
 	}
 
 	m := editModel{
@@ -122,7 +122,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 			t.Placeholder = "*required*" //nolint:goconst
 			t.Validate = notEmptyValidator
 		case inputAddress:
-			t.Label = "IP address or hostname"
+			t.Label = "Host"
 			t.CharLimit = 128
 			t.SetValue(host.Address)
 			t.Placeholder = "*required*"
@@ -197,16 +197,16 @@ func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch {
 		case key.Matches(msg, m.keyMap.Save):
+			m.logger.Info("[UI] Save changes for host id: %v", m.host.ID)
 			m, cmd = m.save(msg)
 			cmds = append(cmds, cmd)
-		case key.Matches(msg, m.keyMap.CopyToTitle):
-			// allow a user to copy address value to title, because
-			// the chances are that title will be equal to hostname
-			m.copyAddressToTitle()
+		case key.Matches(msg, m.keyMap.CopyInputValue):
+			m.handleCopyInputValueShortcut()
 		case key.Matches(msg, m.keyMap.Down) || key.Matches(msg, m.keyMap.Up):
 			m, cmd = m.inputFocusChange(msg)
 			cmds = append(cmds, cmd)
 		case key.Matches(msg, m.keyMap.Discard):
+			m.logger.Info("[UI] Discard changes for host id: %v", m.host.ID)
 			return m, message.TeaCmd(MsgClose{})
 		default:
 			// Handle all other key events
@@ -224,6 +224,12 @@ func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
 	for i := range m.inputs {
 		if m.inputs[i].Validate != nil {
 			if err := m.inputs[i].Validate(m.inputs[i].Value()); err != nil {
+				m.logger.Info(
+					"[UI] Cannot save host with id %v. Reason: '%s' is not valid, %s",
+					m.host.ID,
+					m.inputs[i].Label,
+					err.Error(),
+				)
 				m.inputs[i].Err = err
 				m.title = fmt.Sprintf("%s is not valid", m.inputs[i].Label)
 
@@ -260,26 +266,27 @@ func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
 		// before 'MsgRepoUpdated'. The reasons of that is because
 		// 'MsgRepoUpdated' handler automatically sets focus on previously selected item.
 		message.TeaCmd(message.HostListSelectItem{HostID: host.ID}),
-		message.TeaCmd(hostlist.MsgRepoUpdated{}),
+		message.TeaCmd(hostlist.MsgRefreshRepo{}),
 	)
 }
 
-func (m editModel) copyAddressToTitle() {
-	newValue := m.inputs[inputAddress].Value()
+func (m editModel) copyInputValueFromTo(sourceInput, destinationInput int) {
+	newValue := m.inputs[sourceInput].Value()
 
-	// Temprorary remove input validator.
+	// Temporary remove input validator.
 	// It's necessary, because input.SetValue(...) invokes Validate function,
 	// if the input contains invalid value, Validate function returns error and
 	// rejects new value. That leads to a problem - when user removes all symbols
 	// from address input, title input still preserves the very last letter.
 	// A better way would be to use own validation logic instead of relying
 	// on input.Validate.
-	validator := m.inputs[inputTitle].Validate
-	m.inputs[inputTitle].Validate = nil
-	m.inputs[inputTitle].SetValue(newValue)
-	m.inputs[inputTitle].SetCursor(len(newValue))
-	m.inputs[inputTitle].Validate = validator
-	m.inputs[inputTitle].Err = m.inputs[inputTitle].Validate(newValue)
+	validator := m.inputs[destinationInput].Validate
+	m.inputs[destinationInput].Validate = nil
+	m.inputs[destinationInput].SetValue(newValue)
+	m.inputs[destinationInput].SetCursor(len(newValue))
+	m.inputs[destinationInput].Validate = validator
+	m.inputs[destinationInput].Err = m.inputs[destinationInput].Validate(newValue)
+	m.logger.Debug("[UI] Copy '%s' value to '%s', new value = %s", sourceInput, destinationInput, newValue)
 }
 
 func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) (editModel, tea.Cmd) {
@@ -288,9 +295,13 @@ func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) (editModel, tea.Cmd)
 
 	// Decide if we need to propagate hostname to title.
 	// Note, that we should make this decision BEFORE updating focused input
-	if m.focusedInput == inputAddress {
-		addressEqualsTitle := m.inputs[inputAddress].Value() == m.inputs[inputTitle].Value()
-		shouldUpdateTitle = addressEqualsTitle
+	if m.focusedInput == inputTitle {
+		addressEqualsTitle := m.inputs[inputTitle].Value() == m.inputs[inputAddress].Value()
+		if _, err := m.hostStorage.Get(m.host.ID); err != nil {
+			// If host doesn't exist in the repo and title equals address,
+			// we should copy text from address to title.
+			shouldUpdateTitle = addressEqualsTitle
+		}
 	}
 
 	// Update focused input
@@ -298,7 +309,7 @@ func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) (editModel, tea.Cmd)
 
 	// Then, update title if we should
 	if shouldUpdateTitle {
-		m.copyAddressToTitle()
+		m.copyInputValueFromTo(inputTitle, inputAddress)
 	}
 
 	return m, cmd
@@ -347,15 +358,18 @@ func (m editModel) inputFocusChange(msg tea.Msg) (editModel, tea.Cmd) {
 		return m, nil
 	}
 
+	// Should be extracted to "Validate" function
 	for i := 0; i <= len(m.inputs)-1; i++ {
 		if m.inputs[i].Validate != nil {
 			m.inputs[i].Err = m.inputs[i].Validate(m.inputs[i].Value())
+			m.logger.Debug("[UI] Input '%s' is valid: %t", m.inputs[i].Label, m.inputs[i].Err == nil)
 		}
 
 		if i == m.focusedInput {
 			// KeyMap depends on focused input - when address is focused, we allow
 			// a user to copy address value to title.
 			m.keyMap = getKeyMap(i)
+			m.logger.Debug("[UI] Focus input: '%s'", m.inputs[i].Label)
 
 			// Set focused state
 			cmd = m.inputs[i].Focus()
@@ -366,6 +380,17 @@ func (m editModel) inputFocusChange(msg tea.Msg) (editModel, tea.Cmd) {
 	}
 
 	return m, cmd
+}
+
+func (m editModel) handleCopyInputValueShortcut() {
+	// Allow a user to copy values between address and title,
+	// because the chances are that these two inputs will have
+	// the same values.
+	if m.focusedInput == inputTitle {
+		m.copyInputValueFromTo(m.focusedInput, inputAddress)
+	} else if m.focusedInput == inputAddress {
+		m.copyInputValueFromTo(m.focusedInput, inputTitle)
+	}
 }
 
 func (m editModel) inputsView() string {
