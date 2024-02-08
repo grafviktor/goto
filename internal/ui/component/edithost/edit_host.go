@@ -286,7 +286,12 @@ func (m editModel) copyInputValueFromTo(sourceInput, destinationInput int) {
 	m.inputs[destinationInput].SetCursor(len(newValue))
 	m.inputs[destinationInput].Validate = validator
 	m.inputs[destinationInput].Err = m.inputs[destinationInput].Validate(newValue)
-	m.logger.Debug("[UI] Copy '%s' value to '%s', new value = %s", sourceInput, destinationInput, newValue)
+	m.logger.Debug(
+		"[UI] Copy '%s' value to '%s', new value = %s",
+		m.inputs[sourceInput].Label,
+		m.inputs[destinationInput].Label,
+		newValue,
+	)
 }
 
 func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) (editModel, tea.Cmd) {

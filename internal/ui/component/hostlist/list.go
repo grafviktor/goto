@@ -40,9 +40,7 @@ type (
 	// MsgEditItem fires when user press edit button.
 	MsgEditItem struct{ HostID int }
 	// MsgCopyItem fires when user press copy button.
-	MsgCopyItem struct{ HostID int }
-	// MsgNewItem fires when user press new host button.
-	MsgNewItem       struct{}
+	MsgCopyItem      struct{ HostID int }
 	msgErrorOccurred struct{ err error }
 	// MsgRefreshRepo - fires when data layer updated, and it's required to reload the host list.
 	MsgRefreshRepo struct{}
