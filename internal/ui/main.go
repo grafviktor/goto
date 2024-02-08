@@ -79,14 +79,10 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.appState.Height = msg.Height
 		m.updateViewPort(msg.Width, msg.Height)
 	case hostlist.MsgEditItem:
-		m.logger.Debug("[UI] Open host edit form for existing item")
+		m.logger.Debug("[UI] Open host edit form")
 		m.appState.CurrentView = state.ViewEditItem
 		ctx := context.WithValue(m.appContext, edithost.ItemID, msg.HostID)
 		m.modelEditHost = edithost.New(ctx, m.hostStorage, m.appState, m.logger)
-	case hostlist.MsgNewItem:
-		m.logger.Debug("[UI] Open host edit form for new item")
-		m.appState.CurrentView = state.ViewEditItem
-		m.modelEditHost = edithost.New(m.appContext, m.hostStorage, m.appState, m.logger)
 	case message.HostListSelectItem:
 		m.logger.Debug("[UI] Update app state. Active host id: %d", msg.HostID)
 		m.appState.Selected = msg.HostID
