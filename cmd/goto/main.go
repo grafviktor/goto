@@ -119,5 +119,5 @@ func main() {
 		lg.Error("[MAIN] Can't save application state before closing %v", err)
 	}
 
-	lg.Info("[MAIN] Close the application")
+	lg.Info("[MAIN] Close application")
 }
