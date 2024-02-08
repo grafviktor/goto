@@ -225,15 +225,32 @@ func TestHandleCopyInputValueShortcut(t *testing.T) {
 	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}})
 	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}})
 	// Confirm that 'Title' value is 'test123' and 'Address' hasn't changed
-	assert.Equal(t, "test123", model.inputs[inputTitle].Value())
-	assert.Equal(t, "test", model.inputs[inputAddress].Value())
+	require.Equal(t, "test123", model.inputs[inputTitle].Value())
+	require.Equal(t, "test", model.inputs[inputAddress].Value())
 	// Now press the shortcut which will copy Title value to Address
-	// That's failing: need to use model.Update instead of directly calling handleCopyInputValueShortcut function
-	// updated, _ := model.Update(model.keyMap.CopyInputValue.Keys())
-	// assert.Equal(t, "test123", updated.(editModel).inputs[inputTitle].Value())
-	// assert.Equal(t, "test123", updated.(editModel).inputs[inputAddress].Value())
-	model.handleCopyInputValueShortcut()
+	model.Update(tea.KeyMsg{
+		Type: tea.KeyEnter,
+		Alt:  true,
+	})
 	// Confirm that 'Title' and 'Host' values are now equal top 'test123'
 	assert.Equal(t, "test123", model.inputs[inputTitle].Value())
 	assert.Equal(t, "test123", model.inputs[inputAddress].Value())
+
+	// Then select address input and append '456', so the value will be test123456
+	updated, _ := model.Update(tea.KeyMsg{Type: tea.KeyDown})
+	assert.Equal(t, inputAddress, updated.(editModel).focusedInput)
+	updated.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'4'}})
+	updated.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}})
+	updated.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}})
+	// Check that title still preserves value 'teste123' and address was updated
+	assert.Equal(t, "test123", updated.(editModel).inputs[inputTitle].Value())
+	assert.Equal(t, "test123456", updated.(editModel).inputs[inputAddress].Value())
+	// Now press the shortcut which will copy Address value to Title
+	updated.Update(tea.KeyMsg{
+		Type: tea.KeyEnter,
+		Alt:  true,
+	})
+	// Ensure that 'Title' and 'Host' values are now equal top 'test123456'
+	assert.Equal(t, "test123456", model.inputs[inputTitle].Value())
+	assert.Equal(t, "test123456", model.inputs[inputAddress].Value())
 }
