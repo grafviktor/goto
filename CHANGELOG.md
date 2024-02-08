@@ -1,5 +1,12 @@
 # Changelog #
 
+**[v1.0.0](https://github.com/grafviktor/goto/compare/v0.4.1...v1.0.0) - 2024-02-08**
+
+* Adjust help menu, disable certain shortcuts when the operation is not available in current context [[details](https://github.com/grafviktor/goto/issues/43)].
+* Disable automatic value copying from 'Title' to 'Host' input when the host is not new [[details](https://github.com/grafviktor/goto/issues/49)].
+* Automate deb package building [[details](https://github.com/grafviktor/goto/issues/44)].
+* Improve logging [[details](https://github.com/grafviktor/goto/issues/35)].
+
 **[v0.4.1](https://github.com/grafviktor/goto/compare/v0.4.0...v0.4.1) - 2024-01-16**
 
 * Fix an application title issue when filtering [[details](https://github.com/grafviktor/goto/issues/37)].
