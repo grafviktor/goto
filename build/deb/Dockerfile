@@ -1,13 +1,14 @@
 # Build stage
 FROM debian:12.4 as deb-build-stage
 ARG VERSION
+ARG BRANCH
 ENV CGO_ENABLED=0
 ENV WORK_DIR="/build"
 ENV PACKAGE_SRC_ROOT="${WORK_DIR}/goto_${VERSION}_amd64"
 RUN apt update && apt install git build-essential golang-go -y
 WORKDIR "$WORK_DIR"
 RUN \
-  git clone --depth 1 --branch v${VERSION} https://github.com/grafviktor/goto.git . && \
+  git clone --depth 1 --branch ${BRANCH} https://github.com/grafviktor/goto.git . && \
   make build
 ADD build/deb/goto.control /tmp/
 RUN \

@@ -21,7 +21,7 @@ This utility helps to maintain a list of ssh servers. Unlike PuTTY it doesn't in
 
 %prep
 rm -rf rpmbuild/BUILD/{,.[!.],..?}*
-git clone --depth 1 --branch v%{_version} https://github.com/grafviktor/goto.git .
+git clone --depth 1 --branch %{_branch} https://github.com/grafviktor/goto.git .
 
 %build
 # To avoid clib dependency and make this package portable across distributions, disable cgo
