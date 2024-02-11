@@ -65,8 +65,12 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
     identity_file_path: /home/user/.ssh/id_rsa_microsoft
 ```
 
-## 5. [Contributing guidelines](CONTRIBUTING.md) ##
+## 5. Known issues ##
 
-## 6. [Changelog](CHANGELOG.md) ##
+Occasional input errors on Windows platform when running `goto` within `cmd.exe`. As a workaround run the application using `powershell`, see the [details](https://github.com/grafviktor/goto/issues/55).
 
-## 7. [License](LICENSE) ##
+## 6. [Contributing guidelines](CONTRIBUTING.md) ##
+
+## 7. [Changelog](CHANGELOG.md) ##
+
+## 8. [License](LICENSE) ##
