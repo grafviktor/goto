@@ -9,6 +9,8 @@ ExclusiveArch: x86_64
 BuildRequires: golang
 Group:         Applications/System
 License:       MIT
+URL:           https://github.com/grafviktor/goto
+BugURL:        https://github.com/grafviktor/goto/issues
 Source0:       https://github.com/grafviktor/goto/archive/refs/tags/v%{_version}.tar.gz
 
 # Define a file name without using RH release version in resulting package suffix
@@ -41,4 +43,4 @@ rm -rf $RPM_BUILD_ROOT
 
 %changelog
 * %{_date} Roman Leonenkov <6890447+grafviktor@users.noreply.github.com> - %{_version}
-Find full changelog in the project's readme file - https://github.com/grafviktor/goto/blob/master/README.md#5-changelog
+Find full changelog on the project's site - https://github.com/grafviktor/goto/blob/master/CHANGELOG.md
