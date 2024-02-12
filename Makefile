@@ -72,6 +72,9 @@ package:
 	@-rm -r $(DIST_PATH)/*.rpm $(DIST_PATH)/*.deb 2>/dev/null
 	@echo 'Build rpm package'
 # Use cut to convert version from 'vX.X.X' to 'X.X.X'
+# Nice trick to avoid docker cache problem. Here we're passing an extra variable which contains last commit
+# if there is a new commit which is different which saved in cache, then the build will be invalidated
+# docker build --build-arg CACHEBUST=`git rev-parse ${GITHUB_REF}` ... or use --no-cache
 	@DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build --build-arg VERSION=$(shell echo $(BUILD_VERSION) | cut -c 2-) --build-arg BRANCH=$(BUILD_BRANCH) -f build/rpm/Dockerfile --output ./dist .
 	@echo 'Build deb package'
 	@DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build --build-arg VERSION=$(shell echo $(BUILD_VERSION) | cut -c 2-) --build-arg BRANCH=$(BUILD_BRANCH) -f build/deb/Dockerfile --output ./dist .

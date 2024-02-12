@@ -2,6 +2,7 @@
 FROM debian:12.4 as deb-build-stage
 ARG VERSION
 ARG BRANCH
+ENV LANG=C
 ENV CGO_ENABLED=0
 ENV WORK_DIR="/build"
 ENV PACKAGE_SRC_ROOT="${WORK_DIR}/goto_${VERSION}_amd64"
@@ -15,6 +16,7 @@ RUN \
   mkdir -p ${PACKAGE_SRC_ROOT}/DEBIAN && \
   cp /tmp/goto.control ${PACKAGE_SRC_ROOT}/DEBIAN/control && \
   sed -i "s/%VERSION%/$VERSION/g" ${PACKAGE_SRC_ROOT}/DEBIAN/control && \
+  sed -i "s/%DATE%/$(date '+%a %b %d %Y')/g" ${PACKAGE_SRC_ROOT}/DEBIAN/control && \
   mkdir -p ${PACKAGE_SRC_ROOT}/usr/bin && \
   cp ./dist/gg ${PACKAGE_SRC_ROOT}/usr/bin && \
   dpkg-deb -v --build "${WORK_DIR}/goto_${VERSION}_amd64"

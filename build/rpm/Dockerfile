@@ -2,6 +2,7 @@
 FROM almalinux:9.3-20231124 as rpm-build-stage
 ARG VERSION
 ARG BRANCH
+ENV LANG=C
 RUN yum install -y rpmdevtools rpmlint golang git
 ADD build/rpm/goto.spec /tmp/
 RUN rpmdev-setuptree && \
