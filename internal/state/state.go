@@ -43,7 +43,7 @@ type ApplicationState struct {
 	Height           int   `yaml:"-"`
 }
 
-// Get - reads application stat from disk.
+// Get - reads application state from disk.
 func Get(appHomePath string, lg iLogger) *ApplicationState {
 	lg.Debug("[APPSTATE] Get application state")
 	once.Do(func() {

@@ -20,9 +20,9 @@ type logger interface {
 	Error(format string, args ...any)
 }
 
-// NewMainModel - creates a parent module for other component and preserves stat which
+// New - creates a parent module for other component and preserves state which
 // can be propagated to other sub-components.
-func NewMainModel(
+func New(
 	ctx context.Context,
 	storage storage.HostStorage,
 	appState *state.ApplicationState,

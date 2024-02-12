@@ -9,7 +9,6 @@ import (
 	"os"
 
 	"github.com/caarlos0/env/v10"
-	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/logger"
@@ -93,22 +92,15 @@ func main() {
 
 	ctx := context.Background()
 	application := config.NewApplication(ctx, appConfig, &lg)
-
-	hostStorage, err := storage.Get(ctx, application)
+	appState := state.Get(application.Config.AppHome, &lg)
+	storage, err := storage.Get(ctx, application)
 	if err != nil {
 		lg.Error("[MAIN] Error running application: %v", err)
 		os.Exit(1)
 	}
 
-	appState := state.Get(application.Config.AppHome, &lg)
-	uiComponent := ui.NewMainModel(ctx, hostStorage, appState, &lg)
-	p := tea.NewProgram(&uiComponent, tea.WithAltScreen())
-
-	lg.Debug("[MAIN] Start user interface")
-	if _, err = p.Run(); err != nil {
-		lg.Error("[MAIN] Error starting user interface: %v", err)
-		os.Exit(1)
-	}
+	// Run user interface
+	ui.Start(ctx, storage, appState, &lg)
 
 	// Quit signal should be intercepted on the UI level, however it will require an
 	// additional switch-case block with an appropriate checks. Leaving this message here.
