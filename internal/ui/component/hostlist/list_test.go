@@ -79,14 +79,10 @@ func Test_listModel_Change_Selection(t *testing.T) {
 			model.innerModel.Select(1)
 
 			// Receive updated model
-			updatedModel, _ := model.Update(tt.KeyMsg)
+			model.Update(tt.KeyMsg)
 
 			// Check if the selected index is correct
-			if lm, ok := updatedModel.(listModel); ok {
-				require.Equal(t, tt.expectedSelectionIndex, lm.innerModel.Index())
-			} else {
-				t.Error("Can't cast updatedModel to listModel")
-			}
+			require.Equal(t, tt.expectedSelectionIndex, model.innerModel.Index())
 		})
 	}
 }
@@ -139,10 +135,10 @@ func Test_RunProcess(t *testing.T) {
 	validProcess.Stderr = &errorWriter
 
 	// Test case: Successful process execution
-	resultListModel, resultCmd := listModel.runProcess(validProcess, &errorWriter)
+	resultCmd := listModel.runProcess(validProcess, &errorWriter)
 
 	// Perform assertions
-	require.NotNil(t, resultListModel)
+	require.NotNil(t, listModel)
 	require.NotNil(t, resultCmd)
 	// require.Equal(t, "", string(errorWriter.err)) useless, as the process doesn't start
 
@@ -312,10 +308,10 @@ func Test_listModel_title_when_app_just_starts(t *testing.T) {
 	// When app just starts, it should display "press 'n' to add a new host"
 	require.Equal(t, "press 'n' to add a new host", model.innerModel.Title)
 	// When press 'down' key, it should display a proper ssh connection string
-	updated, _ := model.Update(tea.KeyMsg{Type: tea.KeyDown})
+	model.Update(tea.KeyMsg{Type: tea.KeyDown})
 	// Calling refresh UI manually, otherwise would have to put time.Sleep function
-	updated, _ = updated.Update(msgRefreshUI{})
-	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", updated.(listModel).innerModel.Title)
+	model.Update(msgRefreshUI{})
+	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", model.innerModel.Title)
 }
 
 func Test_listModel_title_when_filter_is_enabled(t *testing.T) {
@@ -323,10 +319,10 @@ func Test_listModel_title_when_filter_is_enabled(t *testing.T) {
 	model := *NewMockListModel(false)
 	model.logger = &mock.MockLogger{}
 	// Enable filter
-	updated, _ := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
 	// Press down key and make sure that title is properly updated
-	updated, _ = updated.Update(tea.KeyMsg{Type: tea.KeyDown})
-	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", updated.(listModel).innerModel.Title)
+	model.Update(tea.KeyMsg{Type: tea.KeyDown})
+	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", model.innerModel.Title)
 }
 
 func Test_listModel_refreshRepo(t *testing.T) {
@@ -386,7 +382,7 @@ func Test_listModel_editItem(t *testing.T) {
 		nil,
 	)
 	lm.logger = &mock.MockLogger{}
-	lm, teaCmd := lm.editItem(nil)
+	teaCmd := lm.editItem(nil)
 
 	require.IsType(t, msgErrorOccurred{}, teaCmd())
 
@@ -396,10 +392,10 @@ func Test_listModel_editItem(t *testing.T) {
 	// Note, that here we use NewMockListModel instead of just 'list.New(...)' like in the first case
 	// we need it to automatically preselect first item from the list of hosts and NewMockListModel
 	// will do that for us
-	lm = *NewMockListModel(false)
+	lm = NewMockListModel(false)
 	lm.logger = &mock.MockLogger{}
 
-	lm, teaCmd = lm.editItem(nil)
+	teaCmd = lm.editItem(nil)
 	require.Equal(t, 1, teaCmd().(MsgEditItem).HostID)
 }
 
@@ -409,14 +405,14 @@ func Test_listModel_copyItem(t *testing.T) {
 	storage := mock.NewMockStorage(storageShouldFail)
 	lm := New(context.TODO(), storage, nil, nil)
 	lm.logger = &mock.MockLogger{}
-	lm, teaCmd := lm.copyItem(nil)
+	teaCmd := lm.copyItem(nil)
 	require.Equal(t, itemNotSelectedMessage, teaCmd().(msgErrorOccurred).err.Error())
 
 	// Second case: storage is, OK and we have to ensure that copied host title as we expect it to be:
-	lm = *NewMockListModel(false)
+	lm = NewMockListModel(false)
 	lm.logger = &mock.MockLogger{}
 
-	lm, _ = lm.copyItem(nil)
+	lm.copyItem(nil)
 	host, err := lm.repo.Get(3)
 	require.NoError(t, err)
 	require.Equal(t, "Mock Host 1 1", host.Title)
@@ -448,9 +444,7 @@ func Test_listModel_updateKeyMap(t *testing.T) {
 	lm.repo.Delete(2)
 	lm.repo.Delete(3)
 
-	tmp, _ := lm.Update(MsgRefreshRepo{})
-	// Just casting from tea.Model to listModel
-	lm = tmp.(listModel)
+	lm.Update(MsgRefreshRepo{})
 	lm.Update(msgRefreshUI{})
 	displayedKeys = lm.keyMap.ShortHelp()
 
@@ -479,5 +473,5 @@ func NewMockListModel(storageShouldFail bool) *listModel {
 
 	lm.innerModel.SetItems(items)
 
-	return &lm
+	return lm
 }
