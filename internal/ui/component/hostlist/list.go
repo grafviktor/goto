@@ -120,19 +120,22 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *listModel) handleKeyEvents(msg tea.KeyMsg) tea.Cmd {
+	var cmd tea.Cmd
+
 	switch {
 	case m.innerModel.SettingFilter():
 		m.logger.Debug("[UI] Process key message when in filter mode")
 		// If filter is enabled, we should not handle any keyboard messages,
 		// as it should be done by filter component.
+		m.listTitleUpdate()
 
 		// However, there is one special case, which should be taken into account:
 		// When user filters out values and presses down key on her keyboard
 		// we need to ensure that the title contains proper selection.
 		// that's why we need to invoke title update function.
 		// See https://github.com/grafviktor/goto/issues/37
-		m.listTitleUpdate()
-		return nil
+		m.innerModel, cmd = m.innerModel.Update(msg)
+		return cmd
 	case m.mode != modeDefault:
 		// Handle key event when some mode is enabled. For instance "removeMode".
 		return m.handleKeyEventWhenModeEnabled(msg)
@@ -147,7 +150,6 @@ func (m *listModel) handleKeyEvents(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, m.keyMap.clone):
 		return m.copyItem(msg)
 	default:
-		var cmd tea.Cmd
 		// If we could not find our own update handler, we pass message to the original model
 		// otherwise we would have to implement all key handlers and other stuff by ourselves
 		m.innerModel, cmd = m.innerModel.Update(msg)
