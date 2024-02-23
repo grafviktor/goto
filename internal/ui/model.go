@@ -63,7 +63,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case message.TerminalSizePolling:
 		// That is Windows OS specific. Windows cmd.exe does not trigger terminal
 		// resize events, that is why we poll terminal size with intervals
-		// First message is being triggered by Windows version of the model. Init function.
+		// First message is being triggered by Windows version of the model.
 		if msg.Width != m.appState.Width || msg.Height != m.appState.Height {
 			m.logger.Debug("[UI] Terminal size polling message received: %d %d", msg.Width, msg.Height)
 			cmds = append(cmds, message.TeaCmd(tea.WindowSizeMsg{Width: msg.Width, Height: msg.Height}))
@@ -89,7 +89,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case edithost.MsgClose:
 		m.logger.Debug("[UI] Close host edit form")
 		m.appState.CurrentView = state.ViewHostList
-	case message.RunProcessErrorOccured:
+	case message.RunProcessErrorOccurred:
 		// We use m.logger.Debug method to report about the error,
 		// because the error was already reported by run process module.
 		m.logger.Debug("[UI] External process error. %v", msg.Err)

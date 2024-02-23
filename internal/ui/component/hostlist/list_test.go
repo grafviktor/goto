@@ -26,7 +26,7 @@ func Test_ListTitleUpdate(t *testing.T) {
 	lm.innerModel.Select(0)
 
 	// Apply the function
-	lm = lm.listTitleUpdate()
+	lm.listTitleUpdate()
 
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", lm.innerModel.Title)
 }
@@ -205,7 +205,7 @@ func Test_removeItem(t *testing.T) {
 			// Set mode removeMode
 			tt.model.mode = tt.mode
 			// Call remove function
-			_, cmd := tt.model.removeItem()
+			cmd := tt.model.removeItem()
 			// Expected to be tea.Batch, because when removing host we trigger extra commands
 			require.IsType(t, tt.want, cmd(), "Wrong message type")
 			// Get all items from the database without error
@@ -221,11 +221,11 @@ func Test_confirmAction(t *testing.T) {
 	model := NewMockListModel(false)
 	model.logger = &mock.MockLogger{}
 	// Imagine that user triggers confirm aciton
-	updatedModel, cmd := model.confirmAction()
+	cmd := model.confirmAction()
 	// When cancel action, we reset mode and return back to normal state
-	require.Len(t, updatedModel.mode, 0)
+	require.Len(t, model.mode, 0)
 	// Updated model should not be nil
-	require.NotNil(t, updatedModel)
+	require.NotNil(t, model)
 	// Because there is no active mode, model should ignore the event
 	require.Nil(t, cmd)
 
@@ -235,11 +235,11 @@ func Test_confirmAction(t *testing.T) {
 	// Now we enable remove mode
 	model.mode = modeRemoveItem
 	// Imagine that user triggers confirm aciton
-	updatedModel, cmd = model.confirmAction()
+	cmd = model.confirmAction()
 	// When confirm action is triggered, we reset mode and return back to normal state
-	require.Len(t, updatedModel.mode, 0)
+	require.Len(t, model.mode, 0)
 	// Updated model should not be nil
-	require.NotNil(t, updatedModel)
+	require.NotNil(t, model)
 	// cmd should not be nil because when we modify storage, some events will be dispatched
 	// we should not check the exact event type here, because it is action-dependent
 	require.NotNil(t, cmd)
@@ -252,7 +252,7 @@ func Test_enterRemoveItemMode(t *testing.T) {
 	// Select non-existent index
 	model.innerModel.Select(10)
 	// Call enterRemoveItemMode function
-	model, cmd := model.enterRemoveItemMode()
+	cmd := model.enterRemoveItemMode()
 	// and make sure that mode is unchanged
 	require.Len(t, model.mode, 0)
 	// cmd() should return msgErrorOccurred error
@@ -264,7 +264,7 @@ func Test_enterRemoveItemMode(t *testing.T) {
 	// Select a first item, which is valid
 	model.innerModel.Select(0)
 	// Call enterRemoveItemMode function
-	model, cmd = model.enterRemoveItemMode()
+	cmd = model.enterRemoveItemMode()
 	// Ensure that we entered remove mode
 	require.Equal(t, modeRemoveItem, model.mode)
 	// md() should return msgRefreshUI in order to update title
@@ -278,7 +278,7 @@ func Test_listTitleUpdate(t *testing.T) {
 	// Select non-existent item
 	model.innerModel.Select(10)
 	// Call listTitleUpdate function, but it will fail, however without throwing any errors
-	model = model.listTitleUpdate()
+	model.listTitleUpdate()
 	// Check that model is not nil
 	require.NotNil(t, model)
 
@@ -288,10 +288,10 @@ func Test_listTitleUpdate(t *testing.T) {
 	// Select a host by valid index
 	model.innerModel.Select(0)
 	// Enter remove mode
-	model, _ = model.enterRemoveItemMode()
+	model.enterRemoveItemMode()
 	// Call listTitleUpdate function
-	model = model.listTitleUpdate()
-	// Check that app is now asking for a confirmation befor delete
+	model.listTitleUpdate()
+	// Check that app is now asking for a confirmation before delete
 	require.Equal(t, "delete \"Mock Host 1\" ? (y/N)", model.innerModel.Title)
 
 	// 3 Call listTitleUpdate selected a host
@@ -300,7 +300,7 @@ func Test_listTitleUpdate(t *testing.T) {
 	// Select a host by valid index
 	model.innerModel.Select(0)
 	// Call listTitleUpdate function
-	model = model.listTitleUpdate()
+	model.listTitleUpdate()
 	// Check that app is displaying ssh connection string
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", model.innerModel.Title)
 }
@@ -335,7 +335,7 @@ func Test_listModel_refreshRepo(t *testing.T) {
 	storage := mock.NewMockStorage(storageShouldFail)
 	fakeAppState := state.ApplicationState{Selected: 1}
 	lm := New(context.TODO(), storage, &fakeAppState, nil)
-	lm, teaCmd := lm.refreshRepo(nil)
+	teaCmd := lm.refreshRepo(nil)
 	result := teaCmd().(tea.BatchMsg)
 	receivedMsgRefresh := false
 
@@ -366,7 +366,7 @@ func Test_listModel_refreshRepo(t *testing.T) {
 		nil,
 	)
 	lm.logger = &mock.MockLogger{}
-	lm, teaCmd = lm.refreshRepo(nil)
+	teaCmd = lm.refreshRepo(nil)
 
 	// Check that msgErrorOccurred{} was found among returned messages, which indicate that
 	// something is wrong with the storage
