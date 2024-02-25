@@ -396,7 +396,7 @@ func Test_listModel_editItem(t *testing.T) {
 	lm.logger = &mock.MockLogger{}
 
 	teaCmd = lm.editItem(nil)
-	require.Equal(t, 1, teaCmd().(MsgEditItem).HostID)
+	require.Equal(t, 1, teaCmd().(OpenEditForm).HostID)
 }
 
 func Test_listModel_copyItem(t *testing.T) {

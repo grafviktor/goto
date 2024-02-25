@@ -87,14 +87,29 @@ func getKeyMap(focusedInput int) keyMap {
 	return keys
 }
 
+type editModel struct {
+	keyMap       keyMap
+	hostStorage  storage.HostStorage
+	focusedInput int
+	inputs       []labeledInput
+	host         model.Host
+	viewport     viewport.Model
+	help         help.Model
+	ready        bool
+	appState     *state.ApplicationState
+	logger       logger
+	title        string
+	isNewHost    bool
+}
+
 // New - returns new edit host form.
 func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState, log logger) editModel {
 	initialFocusedInput := inputTitle
 
 	// If we can't cast host id to int, that means we're adding a new host. Ignore the error
 	hostID, _ := ctx.Value(ItemID).(int)
-	host, err := storage.Get(hostID)
-	if err != nil {
+	host, hostNotFoundErr := storage.Get(hostID)
+	if hostNotFoundErr != nil {
 		host = model.Host{}
 	}
 
@@ -108,6 +123,9 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		logger:       log,
 		focusedInput: initialFocusedInput,
 		title:        defaultTitle,
+		// This variable is for optimization. By introducing it, we can avoid unnecessary database reads
+		// every time we change values which depend on each other, for instance: "Title" and "Address".
+		isNewHost: hostNotFoundErr != nil,
 	}
 
 	var t labeledInput
@@ -156,20 +174,6 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	m.inputs[m.focusedInput].Focus()
 
 	return m
-}
-
-type editModel struct {
-	keyMap       keyMap
-	hostStorage  storage.HostStorage
-	focusedInput int
-	inputs       []labeledInput
-	host         model.Host
-	viewport     viewport.Model
-	help         help.Model
-	ready        bool
-	appState     *state.ApplicationState
-	logger       logger
-	title        string
 }
 
 func (m editModel) Init() tea.Cmd {
@@ -302,10 +306,11 @@ func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) (editModel, tea.Cmd)
 	// Note, that we should make this decision BEFORE updating focused input
 	if m.focusedInput == inputTitle {
 		addressEqualsTitle := m.inputs[inputTitle].Value() == m.inputs[inputAddress].Value()
-		if _, err := m.hostStorage.Get(m.host.ID); err != nil {
-			// If host doesn't exist in the repo and title equals address,
+
+		if m.isNewHost && addressEqualsTitle {
+			// If host doesn't exist in the repo and title equals address
 			// we should copy text from address to title.
-			shouldUpdateTitle = addressEqualsTitle
+			shouldUpdateTitle = true
 		}
 	}
 

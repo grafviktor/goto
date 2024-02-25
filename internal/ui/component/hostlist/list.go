@@ -38,8 +38,8 @@ type logger interface {
 }
 
 type (
-	// MsgEditItem fires when user press edit button.
-	MsgEditItem struct{ HostID int }
+	// OpenEditForm fires when user press edit button.
+	OpenEditForm struct{ HostID int }
 	// MsgCopyItem fires when user press copy button.
 	MsgCopyItem      struct{ HostID int }
 	msgErrorOccurred struct{ err error }
@@ -93,7 +93,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 }
 
 func (m *listModel) Init() tea.Cmd {
-	return tea.Batch(message.TeaCmd(MsgRefreshRepo{}))
+	return message.TeaCmd(MsgRefreshRepo{})
 }
 
 func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -101,7 +101,7 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		return m, m.handleKeyEvents(msg)
 	case tea.WindowSizeMsg:
-		// triggers immediately after app start because we render this component by default
+		// Triggers immediately after app start because we render this component by default
 		h, v := docStyle.GetFrameSize()
 		m.innerModel.SetSize(msg.Width-h, msg.Height-v)
 		m.logger.Debug("[UI] Set host list size: %d %d", m.innerModel.Width(), m.innerModel.Height())
@@ -115,27 +115,27 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateKeyMap()
 		return m, cmd
 	default:
-		return m, nil
+		return m, m.updateChildModel(msg)
 	}
 }
 
 func (m *listModel) handleKeyEvents(msg tea.KeyMsg) tea.Cmd {
-	var cmd tea.Cmd
-
 	switch {
 	case m.innerModel.SettingFilter():
 		m.logger.Debug("[UI] Process key message when in filter mode")
 		// If filter is enabled, we should not handle any keyboard messages,
 		// as it should be done by filter component.
-		m.listTitleUpdate()
 
 		// However, there is one special case, which should be taken into account:
 		// When user filters out values and presses down key on her keyboard
 		// we need to ensure that the title contains proper selection.
 		// that's why we need to invoke title update function.
 		// See https://github.com/grafviktor/goto/issues/37
-		m.innerModel, cmd = m.innerModel.Update(msg)
-		return cmd
+		m.listTitleUpdate()
+
+		// m.innerModel, cmd = m.innerModel.Update(msg)
+		// return cmd
+		return m.updateChildModel(msg)
 	case m.mode != modeDefault:
 		// Handle key event when some mode is enabled. For instance "removeMode".
 		return m.handleKeyEventWhenModeEnabled(msg)
@@ -146,19 +146,25 @@ func (m *listModel) handleKeyEvents(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, m.keyMap.edit):
 		return m.editItem(msg)
 	case key.Matches(msg, m.keyMap.append):
-		return message.TeaCmd(MsgEditItem{}) // When create a new item, jump to edit mode.
+		return message.TeaCmd(OpenEditForm{}) // When create a new item, jump to edit mode.
 	case key.Matches(msg, m.keyMap.clone):
 		return m.copyItem(msg)
 	default:
 		// If we could not find our own update handler, we pass message to the original model
 		// otherwise we would have to implement all key handlers and other stuff by ourselves
-		m.innerModel, cmd = m.innerModel.Update(msg)
 
 		// Dispatch 2 messages:
 		// 1 - message which was returned from the inner model.
 		// 2 - msgRefreshUI message to update list title. We only need to dispatch it when we switch between list items.
-		return tea.Batch(cmd, message.TeaCmd(msgRefreshUI{}))
+		return tea.Batch(m.updateChildModel(msg), message.TeaCmd(msgRefreshUI{}))
 	}
+}
+
+func (m *listModel) updateChildModel(msg tea.Msg) tea.Cmd {
+	var cmd tea.Cmd
+	m.innerModel, cmd = m.innerModel.Update(msg)
+
+	return cmd
 }
 
 func (m *listModel) updateKeyMap() {
@@ -273,7 +279,7 @@ func (m *listModel) editItem(_ tea.Msg) tea.Cmd {
 
 	host := *item.Unwrap()
 	m.logger.Info("[UI] Edit item id: %d, title: %s", host.ID, host.Title)
-	return message.TeaCmd(MsgEditItem{HostID: host.ID})
+	return message.TeaCmd(OpenEditForm{HostID: host.ID})
 }
 
 func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
