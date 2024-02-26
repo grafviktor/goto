@@ -123,17 +123,17 @@ func TestSave(t *testing.T) {
 	hostEditModel.inputs[inputIdentityFile].SetValue("id_rsa")
 
 	// Should fail because mandatory fields are not set
-	model, messageSequence := hostEditModel.save(nil)
+	messageSequence := hostEditModel.save(nil)
 
 	require.Nil(t, messageSequence)
-	require.Contains(t, model.title, "not valid")
+	require.Contains(t, hostEditModel.title, "not valid")
 
 	// model, messageSequence := hostEditModel.save(nil)
 
 	hostEditModel.inputs[inputTitle].SetValue("test")
 	hostEditModel.inputs[inputAddress].SetValue("localhost")
 
-	model, messageSequence = hostEditModel.save(nil)
+	messageSequence = hostEditModel.save(nil)
 
 	require.NotNil(t, messageSequence)
 
@@ -172,8 +172,7 @@ func TestCopyInputValueFromTo(t *testing.T) {
 	require.Equal(t, "test", hostEditModel.inputs[inputAddress].Value())
 
 	// Select address input
-	tmp, _ := hostEditModel.Update(tea.KeyMsg{Type: tea.KeyDown})
-	hostEditModel = tmp.(editModel) // just casting
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyDown})
 	// Check that selected input is now address
 	assert.Equal(t, hostEditModel.focusedInput, inputAddress)
 
@@ -188,8 +187,7 @@ func TestCopyInputValueFromTo(t *testing.T) {
 	require.Equal(t, "testtest", hostEditModel.inputs[inputAddress].Value())
 
 	// Select title again
-	tmp, _ = hostEditModel.Update(tea.KeyMsg{Type: tea.KeyUp})
-	hostEditModel = tmp.(editModel) // just casting
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyUp})
 	// Check that selected input is title
 	assert.Equal(t, hostEditModel.focusedInput, inputTitle)
 
@@ -237,16 +235,16 @@ func TestHandleCopyInputValueShortcut(t *testing.T) {
 	assert.Equal(t, "test123", model.inputs[inputAddress].Value())
 
 	// Then select address input and append '456', so the value will be test123456
-	updated, _ := model.Update(tea.KeyMsg{Type: tea.KeyDown})
-	assert.Equal(t, inputAddress, updated.(editModel).focusedInput)
-	updated.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'4'}})
-	updated.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}})
-	updated.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}})
+	model.Update(tea.KeyMsg{Type: tea.KeyDown})
+	assert.Equal(t, inputAddress, model.focusedInput)
+	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'4'}})
+	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}})
+	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}})
 	// Check that title still preserves value 'teste123' and address was updated
-	assert.Equal(t, "test123", updated.(editModel).inputs[inputTitle].Value())
-	assert.Equal(t, "test123456", updated.(editModel).inputs[inputAddress].Value())
+	assert.Equal(t, "test123", model.inputs[inputTitle].Value())
+	assert.Equal(t, "test123456", model.inputs[inputAddress].Value())
 	// Now press the shortcut which will copy Address value to Title
-	updated.Update(tea.KeyMsg{
+	model.Update(tea.KeyMsg{
 		Type: tea.KeyEnter,
 		Alt:  true,
 	})

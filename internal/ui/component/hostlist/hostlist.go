@@ -99,7 +99,7 @@ func (m *listModel) Init() tea.Cmd {
 func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		return m, m.handleKeyEvents(msg)
+		return m, m.handleKeyboardEvent(msg)
 	case tea.WindowSizeMsg:
 		// Triggers immediately after app start because we render this component by default
 		h, v := docStyle.GetFrameSize()
@@ -119,7 +119,7 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m *listModel) handleKeyEvents(msg tea.KeyMsg) tea.Cmd {
+func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	switch {
 	case m.innerModel.SettingFilter():
 		m.logger.Debug("[UI] Process key message when in filter mode")
