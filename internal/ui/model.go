@@ -9,7 +9,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
-	"github.com/grafviktor/goto/internal/ui/component/edithost"
+	"github.com/grafviktor/goto/internal/ui/component/hostedit"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
 	"github.com/grafviktor/goto/internal/ui/message"
 )
@@ -43,7 +43,7 @@ type mainModel struct {
 	appContext    context.Context
 	hostStorage   storage.HostStorage
 	modelHostList tea.Model
-	modelEditHost tea.Model
+	modelHostEdit tea.Model
 	appState      *state.ApplicationState
 	logger        logger
 	viewport      viewport.Model
@@ -81,12 +81,12 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case hostlist.OpenEditForm:
 		m.logger.Debug("[UI] Open host edit form")
 		m.appState.CurrentView = state.ViewEditItem
-		ctx := context.WithValue(m.appContext, edithost.ItemID, msg.HostID)
-		m.modelEditHost = edithost.New(ctx, m.hostStorage, m.appState, m.logger)
+		ctx := context.WithValue(m.appContext, hostedit.ItemID, msg.HostID)
+		m.modelHostEdit = hostedit.New(ctx, m.hostStorage, m.appState, m.logger)
 	case message.HostListSelectItem:
 		m.logger.Debug("[UI] Update app state. Active host id: %d", msg.HostID)
 		m.appState.Selected = msg.HostID
-	case edithost.MsgClose:
+	case hostedit.MsgClose:
 		m.logger.Debug("[UI] Close host edit form")
 		m.appState.CurrentView = state.ViewHostList
 	case message.RunProcessErrorOccurred:
@@ -102,7 +102,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if m.appState.CurrentView == state.ViewEditItem {
 		// Edit host receives messages only if it's active. We re-create this component every time we go to edit mode
-		m.modelEditHost, cmd = m.modelEditHost.Update(msg)
+		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
 		cmds = append(cmds, cmd)
 	}
 
@@ -128,7 +128,7 @@ func (m *mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case state.ViewHostList:
 		m.modelHostList, cmd = m.modelHostList.Update(msg)
 	case state.ViewEditItem:
-		m.modelEditHost, cmd = m.modelEditHost.Update(msg)
+		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
 	}
 
 	return m, cmd
@@ -141,7 +141,7 @@ func (m *mainModel) View() string {
 	case state.ViewErrorMessage:
 		content = m.appState.Err.Error()
 	case state.ViewEditItem:
-		content = m.modelEditHost.View()
+		content = m.modelHostEdit.View()
 	case state.ViewHostList:
 		content = m.modelHostList.View()
 	}

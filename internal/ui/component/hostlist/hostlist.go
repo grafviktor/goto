@@ -133,8 +133,6 @@ func (m *listModel) handleKeyEvents(msg tea.KeyMsg) tea.Cmd {
 		// See https://github.com/grafviktor/goto/issues/37
 		m.listTitleUpdate()
 
-		// m.innerModel, cmd = m.innerModel.Update(msg)
-		// return cmd
 		return m.updateChildModel(msg)
 	case m.mode != modeDefault:
 		// Handle key event when some mode is enabled. For instance "removeMode".
@@ -150,7 +148,7 @@ func (m *listModel) handleKeyEvents(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, m.keyMap.clone):
 		return m.copyItem(msg)
 	default:
-		// If we could not find our own update handler, we pass message to the original model
+		// If we could not find our own update handler, we pass message to the child model
 		// otherwise we would have to implement all key handlers and other stuff by ourselves
 
 		// Dispatch 2 messages:

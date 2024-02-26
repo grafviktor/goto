@@ -1,5 +1,5 @@
-// Package edithost contains UI components for editing host model attributes.
-package edithost
+// Package hostedit contains UI components for editing host model attributes.
+package hostedit
 
 import (
 	"context"
@@ -114,26 +114,26 @@ func TestGetKeyMap(t *testing.T) {
 func TestSave(t *testing.T) {
 	state := state.ApplicationState{}
 
-	editHostModel := New(context.TODO(), mock.NewMockStorage(true), &state, &mock.MockLogger{})
-	require.Equal(t, inputTitle, editHostModel.focusedInput)
+	hostEditModel := New(context.TODO(), mock.NewMockStorage(true), &state, &mock.MockLogger{})
+	require.Equal(t, inputTitle, hostEditModel.focusedInput)
 
-	editHostModel.inputs[inputDescription].SetValue("test")
-	editHostModel.inputs[inputLogin].SetValue("root")
-	editHostModel.inputs[inputNetworkPort].SetValue("2222")
-	editHostModel.inputs[inputIdentityFile].SetValue("id_rsa")
+	hostEditModel.inputs[inputDescription].SetValue("test")
+	hostEditModel.inputs[inputLogin].SetValue("root")
+	hostEditModel.inputs[inputNetworkPort].SetValue("2222")
+	hostEditModel.inputs[inputIdentityFile].SetValue("id_rsa")
 
 	// Should fail because mandatory fields are not set
-	model, messageSequence := editHostModel.save(nil)
+	model, messageSequence := hostEditModel.save(nil)
 
 	require.Nil(t, messageSequence)
 	require.Contains(t, model.title, "not valid")
 
-	// model, messageSequence := editHostModel.save(nil)
+	// model, messageSequence := hostEditModel.save(nil)
 
-	editHostModel.inputs[inputTitle].SetValue("test")
-	editHostModel.inputs[inputAddress].SetValue("localhost")
+	hostEditModel.inputs[inputTitle].SetValue("test")
+	hostEditModel.inputs[inputAddress].SetValue("localhost")
 
-	model, messageSequence = editHostModel.save(nil)
+	model, messageSequence = hostEditModel.save(nil)
 
 	require.NotNil(t, messageSequence)
 
@@ -157,50 +157,50 @@ func TestCopyInputValueFromTo(t *testing.T) {
 	state := state.ApplicationState{}
 
 	storageHostNoFound := mock.NewMockStorage(true)
-	editHostModel := New(context.TODO(), storageHostNoFound, &state, &mock.MockLogger{})
+	hostEditModel := New(context.TODO(), storageHostNoFound, &state, &mock.MockLogger{})
 	// Check that selected input is title
-	assert.Equal(t, editHostModel.focusedInput, inputTitle)
+	assert.Equal(t, hostEditModel.focusedInput, inputTitle)
 
 	// Type word 'test' in title
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
 
 	// Check that both inputs contain the same values
-	require.Equal(t, "test", editHostModel.inputs[inputTitle].Value())
-	require.Equal(t, "test", editHostModel.inputs[inputAddress].Value())
+	require.Equal(t, "test", hostEditModel.inputs[inputTitle].Value())
+	require.Equal(t, "test", hostEditModel.inputs[inputAddress].Value())
 
 	// Select address input
-	tmp, _ := editHostModel.Update(tea.KeyMsg{Type: tea.KeyDown})
-	editHostModel = tmp.(editModel) // just casting
+	tmp, _ := hostEditModel.Update(tea.KeyMsg{Type: tea.KeyDown})
+	hostEditModel = tmp.(editModel) // just casting
 	// Check that selected input is now address
-	assert.Equal(t, editHostModel.focusedInput, inputAddress)
+	assert.Equal(t, hostEditModel.focusedInput, inputAddress)
 
 	// Append word 'test' to address, so it will become "testtest"
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
 
 	// Check that address was updated, but title still preserves the initial value
-	require.Equal(t, "test", editHostModel.inputs[inputTitle].Value())
-	require.Equal(t, "testtest", editHostModel.inputs[inputAddress].Value())
+	require.Equal(t, "test", hostEditModel.inputs[inputTitle].Value())
+	require.Equal(t, "testtest", hostEditModel.inputs[inputAddress].Value())
 
 	// Select title again
-	tmp, _ = editHostModel.Update(tea.KeyMsg{Type: tea.KeyUp})
-	editHostModel = tmp.(editModel) // just casting
+	tmp, _ = hostEditModel.Update(tea.KeyMsg{Type: tea.KeyUp})
+	hostEditModel = tmp.(editModel) // just casting
 	// Check that selected input is title
-	assert.Equal(t, editHostModel.focusedInput, inputTitle)
+	assert.Equal(t, hostEditModel.focusedInput, inputTitle)
 
 	// Append '123' to title, so it will become "test123"
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}})
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}})
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}})
 
 	// Check that title was updated, but address still preserves the initial value
-	require.Equal(t, "test123", editHostModel.inputs[inputTitle].Value())
-	require.Equal(t, "testtest", editHostModel.inputs[inputAddress].Value())
+	require.Equal(t, "test123", hostEditModel.inputs[inputTitle].Value())
+	require.Equal(t, "testtest", hostEditModel.inputs[inputAddress].Value())
 }
 
 func TestHandleCopyInputValueShortcut(t *testing.T) {

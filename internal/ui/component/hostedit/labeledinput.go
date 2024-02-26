@@ -1,4 +1,4 @@
-package edithost
+package hostedit
 
 import (
 	"fmt"
@@ -9,8 +9,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// NewLabelInput - component which consists from input and label.
-func NewLabelInput() labeledInput {
+// NewLabeledInput - component which consists from input and label.
+func NewLabeledInput() labeledInput {
 	inputModel := textinput.New()
 	inputModel.Prompt = ""
 

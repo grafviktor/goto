@@ -1,5 +1,5 @@
-// Package edithost contains UI components for editing host model attributes.
-package edithost
+// Package hostedit contains UI components for editing host model attributes.
+package hostedit
 
 import (
 	"context"
@@ -130,7 +130,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 
 	var t labeledInput
 	for i := range m.inputs {
-		t = NewLabelInput()
+		t = NewLabeledInput()
 		t.Cursor.Style = cursorStyle
 
 		switch i {
