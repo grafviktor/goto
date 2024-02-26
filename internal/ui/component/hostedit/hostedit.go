@@ -109,7 +109,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	hostID, _ := ctx.Value(ItemID).(int)
 	host, hostNotFoundErr := storage.Get(hostID)
 	if hostNotFoundErr != nil {
-		// TODO: Logger should notify that this is a new host
+		// Logger should notify that this is a new host
 		host = model.Host{}
 	}
 
