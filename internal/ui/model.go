@@ -54,12 +54,10 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
-	if keyMsg, ok := msg.(tea.KeyMsg); ok {
-		m.logger.Debug("[UI] Keyboard event: %v", msg)
-		return m.handleKeyEvent(keyMsg)
-	}
-
 	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		m.logger.Debug("[UI] Keyboard event: %v", msg)
+		return m.handleKeyEvent(msg)
 	case message.TerminalSizePolling:
 		// That is Windows OS specific. Windows cmd.exe does not trigger terminal
 		// resize events, that is why we poll terminal size with intervals
@@ -109,6 +107,25 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+func (m *mainModel) View() string {
+	// Build UI
+	var content string
+	switch m.appState.CurrentView {
+	case state.ViewErrorMessage:
+		content = m.appState.Err.Error()
+	case state.ViewEditItem:
+		content = m.modelHostEdit.View()
+	case state.ViewHostList:
+		content = m.modelHostList.View()
+	}
+
+	// Wrap UI into the ViewPort
+	m.viewport.SetContent(content)
+	viewPortContent := m.viewport.View()
+
+	return viewPortContent
+}
+
 func (m *mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if msg.Type == tea.KeyCtrlC {
 		m.logger.Debug("[UI] Receive Ctrl+C. Quit the application")
@@ -132,25 +149,6 @@ func (m *mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, cmd
-}
-
-func (m *mainModel) View() string {
-	// Build UI
-	var content string
-	switch m.appState.CurrentView {
-	case state.ViewErrorMessage:
-		content = m.appState.Err.Error()
-	case state.ViewEditItem:
-		content = m.modelHostEdit.View()
-	case state.ViewHostList:
-		content = m.modelHostList.View()
-	}
-
-	// Wrap UI into the ViewPort
-	m.viewport.SetContent(content)
-	viewPortContent := m.viewport.View()
-
-	return viewPortContent
 }
 
 func (m *mainModel) updateViewPort(w, h int) tea.Model {

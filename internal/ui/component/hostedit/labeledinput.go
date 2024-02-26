@@ -10,11 +10,11 @@ import (
 )
 
 // NewLabeledInput - component which consists from input and label.
-func NewLabeledInput() labeledInput {
+func NewLabeledInput() *labeledInput {
 	inputModel := textinput.New()
 	inputModel.Prompt = ""
 
-	return labeledInput{
+	return &labeledInput{
 		Model:         inputModel,
 		FocusedPrompt: "│ ",
 	}
@@ -27,7 +27,9 @@ type labeledInput struct {
 	Err           error
 }
 
-func (l labeledInput) Update(msg tea.Msg) (labeledInput, tea.Cmd) {
+func (l *labeledInput) Init() tea.Cmd { return nil }
+
+func (l *labeledInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	l.Model, cmd = l.Model.Update(msg)
@@ -39,25 +41,7 @@ func (l labeledInput) Update(msg tea.Msg) (labeledInput, tea.Cmd) {
 	return l, cmd
 }
 
-func (l labeledInput) prompt() string {
-	if l.Focused() {
-		return focusedStyle.Render(l.FocusedPrompt)
-	}
-
-	return strings.Repeat(" ", utf8.RuneCountInString(l.FocusedPrompt))
-}
-
-func (l labeledInput) labelView() string {
-	if l.Err != nil {
-		return l.prompt() + errorStyle.Render(l.Label)
-	} else if l.Focused() {
-		return l.prompt() + focusedStyle.Render(l.Label)
-	}
-
-	return l.prompt() + noStyle.Render(l.Label)
-}
-
-func (l labeledInput) View() string {
+func (l *labeledInput) View() string {
 	var view string
 	if l.Focused() {
 		view = focusedInputText.Render(l.Model.View())
@@ -66,4 +50,22 @@ func (l labeledInput) View() string {
 	}
 
 	return fmt.Sprintf("%s\n%s%s", l.labelView(), l.prompt(), view)
+}
+
+func (l *labeledInput) prompt() string {
+	if l.Focused() {
+		return focusedStyle.Render(l.FocusedPrompt)
+	}
+
+	return strings.Repeat(" ", utf8.RuneCountInString(l.FocusedPrompt))
+}
+
+func (l *labeledInput) labelView() string {
+	if l.Err != nil {
+		return l.prompt() + errorStyle.Render(l.Label)
+	} else if l.Focused() {
+		return l.prompt() + focusedStyle.Render(l.Label)
+	}
+
+	return l.prompt() + noStyle.Render(l.Label)
 }

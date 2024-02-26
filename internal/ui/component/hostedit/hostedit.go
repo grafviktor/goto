@@ -109,6 +109,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	hostID, _ := ctx.Value(ItemID).(int)
 	host, hostNotFoundErr := storage.Get(hostID)
 	if hostNotFoundErr != nil {
+		// TODO: Logger should notify that this is a new host
 		host = model.Host{}
 	}
 
@@ -129,7 +130,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 
 	var t labeledInput
 	for i := range m.inputs {
-		t = NewLabeledInput()
+		t = *NewLabeledInput()
 		t.Cursor.Style = cursorStyle
 
 		switch i {
@@ -171,25 +172,18 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	}
 
 	m.inputs[m.focusedInput].Focus()
-	// Create viewport, ideally this call should be located in init function,
-	// but this function does not trigger for child components
-	m.updateViewPort(nil)
 
 	return &m
 }
 
-func (m *editModel) Init() tea.Cmd {
-	return nil
-}
+func (m *editModel) Init() tea.Cmd { return nil }
 
 func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		// This message never comes through automatically on Windows OS. Sending it from init_win.go
-		m.logger.Debug("Resizing edit host viewport: %d %d", msg.Width, msg.Height)
-		// Update viewport
+		// This message never comes through automatically on Windows OS. Sending it from init_win.go. Update viewport.
 		m.updateViewPort(msg)
 	case tea.KeyMsg:
 		cmd = m.handleKeyboardEvent(msg)
@@ -197,6 +191,17 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, cmd
+}
+
+func (m *editModel) View() string {
+	if !m.ready {
+		// Create viewport, ideally this call should be located in init function,
+		// but this function does not trigger for child components
+		m.updateViewPort(nil)
+	}
+
+	viewPortContent := m.viewport.View()
+	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), viewPortContent, m.helpView())
 }
 
 func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
@@ -313,7 +318,7 @@ func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 	}
 
 	// Update focused input
-	m.inputs[m.focusedInput], cmd = m.inputs[m.focusedInput].Update(msg)
+	m.inputs[m.focusedInput].Update(msg)
 
 	// Then, update title if we should
 	if shouldUpdateTitle {
@@ -334,7 +339,7 @@ func (m *editModel) updateViewPort(msg tea.Msg) {
 	} else if resizeMsg, ok := msg.(tea.WindowSizeMsg); ok {
 		m.viewport.Width = resizeMsg.Width
 		m.viewport.Height = resizeMsg.Height - headerHeight - helpMenuHeight
-		m.logger.Debug("Resizing edit host viewport: %d %d", m.viewport.Width, m.viewport.Height)
+		m.logger.Debug("[UI] Set edit host viewport size: %d %d", m.viewport.Width, m.viewport.Height)
 	}
 }
 
@@ -420,14 +425,4 @@ func (m *editModel) headerView() string {
 
 func (m *editModel) helpView() string {
 	return menuStyle.Render(m.help.View(m.keyMap))
-}
-
-func (m *editModel) View() string {
-	if !m.ready {
-		// this should never happen, because Update method where we set "ready" to "true" triggers first
-		return "Initializing..."
-	}
-
-	viewPortContent := m.viewport.View()
-	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), viewPortContent, m.helpView())
 }

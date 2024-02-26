@@ -93,6 +93,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 }
 
 func (m *listModel) Init() tea.Cmd {
+	// This function is called from init_$PLATFORM.go file
 	return message.TeaCmd(MsgRefreshRepo{})
 }
 
@@ -158,6 +159,10 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	}
 }
 
+func (m *listModel) View() string {
+	return docStyle.Render(m.innerModel.View())
+}
+
 func (m *listModel) updateChildModel(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	m.innerModel, cmd = m.innerModel.Update(msg)
@@ -172,10 +177,6 @@ func (m *listModel) updateKeyMap() {
 		m.logger.Debug("[UI] Show edit keyboard shortcuts: %v", shouldShowEditButtons)
 		m.keyMap.SetShouldShowEditButtons(shouldShowEditButtons)
 	}
-}
-
-func (m *listModel) View() string {
-	return docStyle.Render(m.innerModel.View())
 }
 
 func (m *listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
@@ -291,7 +292,7 @@ func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
 	m.logger.Info("[UI] Copy host item id: %d, title: %s", originalHost.ID, originalHost.Title)
 	clonedHost := originalHost.Clone()
 	for i := 1; ok; i++ {
-		clonedHostTitle := fmt.Sprintf("%s %d", originalHost.Title, i)
+		clonedHostTitle := fmt.Sprintf("%s (%d)", originalHost.Title, i)
 		listItems := m.innerModel.Items()
 		idx := slices.IndexFunc(listItems, func(li list.Item) bool {
 			return li.(ListItemHost).Title() == clonedHostTitle
