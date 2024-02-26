@@ -415,7 +415,7 @@ func Test_listModel_copyItem(t *testing.T) {
 	lm.copyItem(nil)
 	host, err := lm.repo.Get(3)
 	require.NoError(t, err)
-	require.Equal(t, "Mock Host 1 1", host.Title)
+	require.Equal(t, "Mock Host 1 (1)", host.Title)
 }
 
 func Test_listModel_updateKeyMap(t *testing.T) {
