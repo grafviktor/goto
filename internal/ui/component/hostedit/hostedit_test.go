@@ -252,3 +252,36 @@ func TestHandleCopyInputValueShortcut(t *testing.T) {
 	assert.Equal(t, "test123456", model.inputs[inputTitle].Value())
 	assert.Equal(t, "test123456", model.inputs[inputAddress].Value())
 }
+
+func TestUpdate_TeaSizeMsg(t *testing.T) {
+	// Test that if model is ready, WindowSizeMsg message will update viewport
+	model := New(context.TODO(), mock.NewMockStorage(false), &state.ApplicationState{}, &mock.MockLogger{})
+	model.ready = true
+	model.Update(tea.WindowSizeMsg{Width: 100, Height: 100})
+
+	require.Greater(t, model.viewport.Height, 0)
+	require.Greater(t, model.viewport.Width, 0)
+}
+
+func TestView(t *testing.T) {
+	// Test that by calling View() function first time, we set ready flag to true
+	// and view() returns non-empty string which will be used to build terminal user interface
+	model := New(context.TODO(), mock.NewMockStorage(false), &state.ApplicationState{}, &mock.MockLogger{})
+	assert.False(t, model.ready)
+	var ui string = model.View()
+
+	require.True(t, model.ready)
+	require.NotEmpty(t, ui)
+}
+
+func TestHelpView(t *testing.T) {
+	// Test that help view is not empty
+	model := New(context.TODO(), mock.NewMockStorage(false), &state.ApplicationState{}, &mock.MockLogger{})
+	require.NotEmpty(t, model.helpView())
+}
+
+func TestHeaderView(t *testing.T) {
+	// Test that header view is not empty
+	model := New(context.TODO(), mock.NewMockStorage(false), &state.ApplicationState{}, &mock.MockLogger{})
+	require.NotEmpty(t, model.headerView())
+}

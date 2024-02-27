@@ -183,7 +183,7 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		// This message never comes through automatically on Windows OS. Sending it from init_win.go. Update viewport.
+		// This message never comes through automatically on Windows OS, we send it from init_win.go.
 		m.updateViewPort(msg)
 	case tea.KeyMsg:
 		cmd = m.handleKeyboardEvent(msg)
