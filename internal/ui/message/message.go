@@ -31,7 +31,7 @@ func TerminalSizePollingMsg() tea.Msg {
 	return TerminalSizePolling{Width, Height}
 }
 
-// TeaCmd - is a helper function which returns create tea.Cmd from tea.Msg object.
+// TeaCmd - is a helper function which creates tea.Cmd from tea.Msg object.
 func TeaCmd(msg any) func() tea.Msg {
 	return func() tea.Msg {
 		return msg

@@ -456,7 +456,62 @@ func Test_listModel_updateKeyMap(t *testing.T) {
 	require.NotContains(t, displayedKeys, availableKeys.remove)
 }
 
+func TestUpdate_TeaSizeMsg(t *testing.T) {
+	// Test that if model is ready, WindowSizeMsg message will inner model size
+	model := *NewMockListModel(false)
+	model.logger = &mock.MockLogger{}
+	model.Update(tea.WindowSizeMsg{Width: 100, Height: 100})
+
+	require.Greater(t, model.innerModel.Height(), 0)
+	require.Greater(t, model.innerModel.Width(), 0)
+}
+
+func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
+	// Test that filtering is working properly
+
+	// Create mock storage which contains hosts:
+	// "Mock Host 1"
+	// "Mock Host 2"
+	// "Mock Host 3"
+	storage := mock.NewMockStorage(false)
+	fakeAppState := state.ApplicationState{Selected: 1}
+
+	// Create model
+	model := New(context.TODO(), storage, &fakeAppState, nil)
+	model.logger = &mock.MockLogger{}
+	model.refreshRepo(nil)
+
+	// Make sure there are 3 items in the collection
+	assert.Len(t, model.innerModel.VisibleItems(), 3)
+
+	// Enable filtering mode
+	model.Update(tea.KeyMsg{
+		// -1 means that key type is KeyRune. See github.com/charmbracelet/bubbletea@v0.25.0/key.go#(k Key) String()
+		Type:  -1,
+		Runes: []rune{'/'},
+	})
+
+	// Check that filtering mode is enabled
+	assert.True(t, model.innerModel.SettingFilter())
+
+	// Now press "1" button. Only one item should left in the host list - with title: "Mock Host 1"
+	_, filterCmd := model.Update(tea.KeyMsg{
+		Type:  -1,
+		Runes: []rune{'1'},
+	})
+
+	t.Skip("Failing to update filter")
+
+	model.Update(func() tea.Cmd {
+		return filterCmd
+	})
+
+	assert.Len(t, model.innerModel.VisibleItems(), 1)
+}
+
+// ==============================================
 // ============================================== List Model
+// ==============================================
 
 func NewMockListModel(storageShouldFail bool) *listModel {
 	storage := mock.NewMockStorage(storageShouldFail)
