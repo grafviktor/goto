@@ -16,7 +16,7 @@ type HostStorage interface {
 	Delete(id int) error
 }
 
-// Get eeturns new data service.
+// Get returns new data service.
 func Get(ctx context.Context, appConfig config.Application) (HostStorage, error) {
 	return NewYAML(ctx, appConfig.Config.AppHome, appConfig.Logger)
 }

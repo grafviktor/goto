@@ -1,5 +1,5 @@
-// Package edithost contains UI components for editing host model attributes.
-package edithost
+// Package hostedit contains UI components for editing host model attributes.
+package hostedit
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -87,14 +86,30 @@ func getKeyMap(focusedInput int) keyMap {
 	return keys
 }
 
+type editModel struct {
+	appState     *state.ApplicationState
+	focusedInput int
+	help         help.Model
+	host         model.Host
+	hostStorage  storage.HostStorage
+	inputs       []labeledInput
+	isNewHost    bool
+	keyMap       keyMap
+	logger       logger
+	ready        bool
+	title        string
+	viewport     viewport.Model
+}
+
 // New - returns new edit host form.
-func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState, log logger) editModel {
+func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState, log logger) *editModel {
 	initialFocusedInput := inputTitle
 
 	// If we can't cast host id to int, that means we're adding a new host. Ignore the error
 	hostID, _ := ctx.Value(ItemID).(int)
-	host, err := storage.Get(hostID)
-	if err != nil {
+	host, hostNotFoundErr := storage.Get(hostID)
+	if hostNotFoundErr != nil {
+		// Logger should notify that this is a new host
 		host = model.Host{}
 	}
 
@@ -108,11 +123,14 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		logger:       log,
 		focusedInput: initialFocusedInput,
 		title:        defaultTitle,
+		// This variable is for optimization. By introducing it, we can avoid unnecessary database reads
+		// every time we change values which depend on each other, for instance: "Title" and "Address".
+		isNewHost: hostNotFoundErr != nil,
 	}
 
 	var t labeledInput
 	for i := range m.inputs {
-		t = NewLabelInput()
+		t = *NewLabeledInput()
 		t.Cursor.Style = cursorStyle
 
 		switch i {
@@ -155,72 +173,61 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 
 	m.inputs[m.focusedInput].Focus()
 
-	return m
+	return &m
 }
 
-type editModel struct {
-	keyMap       keyMap
-	hostStorage  storage.HostStorage
-	focusedInput int
-	inputs       []labeledInput
-	host         model.Host
-	viewport     viewport.Model
-	help         help.Model
-	ready        bool
-	appState     *state.ApplicationState
-	logger       logger
-	title        string
-}
+func (m *editModel) Init() tea.Cmd { return nil }
 
-func (m editModel) Init() tea.Cmd {
-	return textinput.Blink
-}
-
-func (m editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// this message never comes through on windows. Sending it from init_win.go
-	if msg, ok := msg.(tea.WindowSizeMsg); ok {
-		m.logger.Debug("Resizing edit host viewport: %d %d", msg.Width, msg.Height)
-	}
-
+func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
-	var cmds []tea.Cmd
 
-	// forward keyboard events to help menu component
-	m.help, cmd = m.help.Update(msg)
-	cmds = append(cmds, cmd)
-
-	// create or Update viewport
-	m = m.updateViewPort(msg)
-
-	if msg, ok := msg.(tea.KeyMsg); ok {
-		m.title = defaultTitle
-
-		switch {
-		case key.Matches(msg, m.keyMap.Save):
-			m.logger.Info("[UI] Save changes for host id: %v", m.host.ID)
-			m, cmd = m.save(msg)
-			cmds = append(cmds, cmd)
-		case key.Matches(msg, m.keyMap.CopyInputValue):
-			m.handleCopyInputValueShortcut()
-		case key.Matches(msg, m.keyMap.Down) || key.Matches(msg, m.keyMap.Up):
-			m, cmd = m.inputFocusChange(msg)
-			cmds = append(cmds, cmd)
-		case key.Matches(msg, m.keyMap.Discard):
-			m.logger.Info("[UI] Discard changes for host id: %v", m.host.ID)
-			return m, message.TeaCmd(MsgClose{})
-		default:
-			// Handle all other key events
-			m, cmd = m.focusedInputProcessKeyEvent(msg)
-			cmds = append(cmds, cmd)
-		}
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		// This message never comes through automatically on Windows OS, we send it from init_win.go.
+		m.updateViewPort(msg)
+	case tea.KeyMsg:
+		cmd = m.handleKeyboardEvent(msg)
+		m.viewport.SetContent(m.inputsView())
 	}
 
-	m.viewport.SetContent(m.inputsView())
-
-	return m, tea.Batch(cmds...)
+	return m, cmd
 }
 
-func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
+func (m *editModel) View() string {
+	if !m.ready {
+		// Create viewport, ideally this call should be located in init function,
+		// but this function does not trigger for child components
+		m.updateViewPort(nil)
+	}
+
+	viewPortContent := m.viewport.View()
+	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), viewPortContent, m.helpView())
+}
+
+func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
+	// If title displays an error, due to an incorrect title for instance
+	// once user presses any button, we should reset it to default value
+	m.title = defaultTitle
+
+	switch {
+	case key.Matches(msg, m.keyMap.Save):
+		m.logger.Info("[UI] Save changes for host id: %v", m.host.ID)
+		return m.save(msg)
+	case key.Matches(msg, m.keyMap.CopyInputValue):
+		m.handleCopyInputValueShortcut()
+		return nil
+	case key.Matches(msg, m.keyMap.Down) || key.Matches(msg, m.keyMap.Up):
+		return m.inputFocusChange(msg)
+	case key.Matches(msg, m.keyMap.Discard):
+		m.logger.Info("[UI] Discard changes for host id: %v", m.host.ID)
+		return message.TeaCmd(MsgClose{})
+	default:
+		// Handle all other key events
+		return m.focusedInputProcessKeyEvent(msg)
+	}
+}
+
+func (m *editModel) save(_ tea.Msg) tea.Cmd {
 	for i := range m.inputs {
 		if m.inputs[i].Validate != nil {
 			if err := m.inputs[i].Validate(m.inputs[i].Value()); err != nil {
@@ -233,7 +240,7 @@ func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
 				m.inputs[i].Err = err
 				m.title = fmt.Sprintf("%s is not valid", m.inputs[i].Label)
 
-				return m, nil
+				return nil
 			}
 		}
 
@@ -259,7 +266,7 @@ func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
 	// or
 	// m.title = err
 
-	return m, tea.Sequence(
+	return tea.Sequence(
 		message.TeaCmd(MsgClose{}),
 		// Order matters here! That's why we use tea.Sequence instead of tea.Batch.
 		// 'HostListSelectItem' message should be dispatched
@@ -270,7 +277,7 @@ func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
 	)
 }
 
-func (m editModel) copyInputValueFromTo(sourceInput, destinationInput int) {
+func (m *editModel) copyInputValueFromTo(sourceInput, destinationInput int) {
 	newValue := m.inputs[sourceInput].Value()
 
 	// Temporary remove input validator.
@@ -294,7 +301,7 @@ func (m editModel) copyInputValueFromTo(sourceInput, destinationInput int) {
 	)
 }
 
-func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) (editModel, tea.Cmd) {
+func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	var shouldUpdateTitle bool
 
@@ -302,41 +309,41 @@ func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) (editModel, tea.Cmd)
 	// Note, that we should make this decision BEFORE updating focused input
 	if m.focusedInput == inputTitle {
 		addressEqualsTitle := m.inputs[inputTitle].Value() == m.inputs[inputAddress].Value()
-		if _, err := m.hostStorage.Get(m.host.ID); err != nil {
-			// If host doesn't exist in the repo and title equals address,
+
+		if m.isNewHost && addressEqualsTitle {
+			// If host doesn't exist in the repo and title equals address
 			// we should copy text from address to title.
-			shouldUpdateTitle = addressEqualsTitle
+			shouldUpdateTitle = true
 		}
 	}
 
 	// Update focused input
-	m.inputs[m.focusedInput], cmd = m.inputs[m.focusedInput].Update(msg)
+	m.inputs[m.focusedInput].Update(msg)
 
 	// Then, update title if we should
 	if shouldUpdateTitle {
 		m.copyInputValueFromTo(inputTitle, inputAddress)
 	}
 
-	return m, cmd
+	return cmd
 }
 
-func (m editModel) updateViewPort(msg tea.Msg) editModel {
+func (m *editModel) updateViewPort(msg tea.Msg) {
 	headerHeight := lipgloss.Height(m.headerView())
 	helpMenuHeight := lipgloss.Height(m.helpView())
 
 	if !m.ready {
 		m.ready = true
 		m.viewport = viewport.New(m.appState.Width, m.appState.Height-headerHeight-helpMenuHeight)
+		m.viewport.SetContent(m.inputsView())
 	} else if resizeMsg, ok := msg.(tea.WindowSizeMsg); ok {
 		m.viewport.Width = resizeMsg.Width
 		m.viewport.Height = resizeMsg.Height - headerHeight - helpMenuHeight
-		m.logger.Debug("Resizing edit host viewport: %d %d", m.viewport.Width, m.viewport.Height)
+		m.logger.Debug("[UI] Set edit host viewport size: %d %d", m.viewport.Width, m.viewport.Height)
 	}
-
-	return m
 }
 
-func (m editModel) inputFocusChange(msg tea.Msg) (editModel, tea.Cmd) {
+func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	keyMsg := msg.(tea.KeyMsg)
 
@@ -360,7 +367,7 @@ func (m editModel) inputFocusChange(msg tea.Msg) (editModel, tea.Cmd) {
 		m.focusedInput++
 		m.viewport.LineDown(inputHeight)
 	} else {
-		return m, nil
+		return nil
 	}
 
 	// Should be extracted to "Validate" function
@@ -384,10 +391,10 @@ func (m editModel) inputFocusChange(msg tea.Msg) (editModel, tea.Cmd) {
 		}
 	}
 
-	return m, cmd
+	return cmd
 }
 
-func (m editModel) handleCopyInputValueShortcut() {
+func (m *editModel) handleCopyInputValueShortcut() {
 	// Allow a user to copy values between address and title,
 	// because the chances are that these two inputs will have
 	// the same values.
@@ -398,7 +405,7 @@ func (m editModel) handleCopyInputValueShortcut() {
 	}
 }
 
-func (m editModel) inputsView() string {
+func (m *editModel) inputsView() string {
 	var b strings.Builder
 	for i := range m.inputs {
 		input := m.inputs[i]
@@ -412,20 +419,10 @@ func (m editModel) inputsView() string {
 	return docStyle.Render(b.String())
 }
 
-func (m editModel) headerView() string {
+func (m *editModel) headerView() string {
 	return titleStyle.Render(m.title)
 }
 
-func (m editModel) helpView() string {
+func (m *editModel) helpView() string {
 	return menuStyle.Render(m.help.View(m.keyMap))
-}
-
-func (m editModel) View() string {
-	if !m.ready {
-		// this should never happen, because Update method where we set "ready" to "true" triggers first
-		return "Initializing..."
-	}
-
-	viewPortContent := m.viewport.View()
-	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), viewPortContent, m.helpView())
 }

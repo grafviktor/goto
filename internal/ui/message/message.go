@@ -14,8 +14,8 @@ type (
 	InitComplete struct{}
 	// TerminalSizePolling - is a message which is sent when terminal width and/or height changes.
 	TerminalSizePolling struct{ Width, Height int }
-	// RunProcessErrorOccured fires when there is an error executing an external process.
-	RunProcessErrorOccured struct{ Err error }
+	// RunProcessErrorOccurred fires when there is an error executing an external process.
+	RunProcessErrorOccurred struct{ Err error }
 	// HostListSelectItem is required to let host list know that it's time to update title.
 	HostListSelectItem struct{ HostID int }
 )
@@ -31,7 +31,7 @@ func TerminalSizePollingMsg() tea.Msg {
 	return TerminalSizePolling{Width, Height}
 }
 
-// TeaCmd - is a helper function which returns create tea.Cmd from tea.Msg object.
+// TeaCmd - is a helper function which creates tea.Cmd from tea.Msg object.
 func TeaCmd(msg any) func() tea.Msg {
 	return func() tea.Msg {
 		return msg

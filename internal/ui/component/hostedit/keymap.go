@@ -1,4 +1,4 @@
-package edithost
+package hostedit
 
 import (
 	"github.com/charmbracelet/bubbles/key"

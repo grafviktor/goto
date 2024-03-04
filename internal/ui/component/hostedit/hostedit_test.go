@@ -1,5 +1,5 @@
-// Package edithost contains UI components for editing host model attributes.
-package edithost
+// Package hostedit contains UI components for editing host model attributes.
+package hostedit
 
 import (
 	"context"
@@ -114,26 +114,26 @@ func TestGetKeyMap(t *testing.T) {
 func TestSave(t *testing.T) {
 	state := state.ApplicationState{}
 
-	editHostModel := New(context.TODO(), mock.NewMockStorage(true), &state, &mock.MockLogger{})
-	require.Equal(t, inputTitle, editHostModel.focusedInput)
+	hostEditModel := New(context.TODO(), mock.NewMockStorage(true), &state, &mock.MockLogger{})
+	require.Equal(t, inputTitle, hostEditModel.focusedInput)
 
-	editHostModel.inputs[inputDescription].SetValue("test")
-	editHostModel.inputs[inputLogin].SetValue("root")
-	editHostModel.inputs[inputNetworkPort].SetValue("2222")
-	editHostModel.inputs[inputIdentityFile].SetValue("id_rsa")
+	hostEditModel.inputs[inputDescription].SetValue("test")
+	hostEditModel.inputs[inputLogin].SetValue("root")
+	hostEditModel.inputs[inputNetworkPort].SetValue("2222")
+	hostEditModel.inputs[inputIdentityFile].SetValue("id_rsa")
 
 	// Should fail because mandatory fields are not set
-	model, messageSequence := editHostModel.save(nil)
+	messageSequence := hostEditModel.save(nil)
 
 	require.Nil(t, messageSequence)
-	require.Contains(t, model.title, "not valid")
+	require.Contains(t, hostEditModel.title, "not valid")
 
-	// model, messageSequence := editHostModel.save(nil)
+	// model, messageSequence := hostEditModel.save(nil)
 
-	editHostModel.inputs[inputTitle].SetValue("test")
-	editHostModel.inputs[inputAddress].SetValue("localhost")
+	hostEditModel.inputs[inputTitle].SetValue("test")
+	hostEditModel.inputs[inputAddress].SetValue("localhost")
 
-	model, messageSequence = editHostModel.save(nil)
+	messageSequence = hostEditModel.save(nil)
 
 	require.NotNil(t, messageSequence)
 
@@ -157,50 +157,48 @@ func TestCopyInputValueFromTo(t *testing.T) {
 	state := state.ApplicationState{}
 
 	storageHostNoFound := mock.NewMockStorage(true)
-	editHostModel := New(context.TODO(), storageHostNoFound, &state, &mock.MockLogger{})
+	hostEditModel := New(context.TODO(), storageHostNoFound, &state, &mock.MockLogger{})
 	// Check that selected input is title
-	assert.Equal(t, editHostModel.focusedInput, inputTitle)
+	assert.Equal(t, hostEditModel.focusedInput, inputTitle)
 
 	// Type word 'test' in title
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
 
 	// Check that both inputs contain the same values
-	require.Equal(t, "test", editHostModel.inputs[inputTitle].Value())
-	require.Equal(t, "test", editHostModel.inputs[inputAddress].Value())
+	require.Equal(t, "test", hostEditModel.inputs[inputTitle].Value())
+	require.Equal(t, "test", hostEditModel.inputs[inputAddress].Value())
 
 	// Select address input
-	tmp, _ := editHostModel.Update(tea.KeyMsg{Type: tea.KeyDown})
-	editHostModel = tmp.(editModel) // just casting
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyDown})
 	// Check that selected input is now address
-	assert.Equal(t, editHostModel.focusedInput, inputAddress)
+	assert.Equal(t, hostEditModel.focusedInput, inputAddress)
 
 	// Append word 'test' to address, so it will become "testtest"
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
 
 	// Check that address was updated, but title still preserves the initial value
-	require.Equal(t, "test", editHostModel.inputs[inputTitle].Value())
-	require.Equal(t, "testtest", editHostModel.inputs[inputAddress].Value())
+	require.Equal(t, "test", hostEditModel.inputs[inputTitle].Value())
+	require.Equal(t, "testtest", hostEditModel.inputs[inputAddress].Value())
 
 	// Select title again
-	tmp, _ = editHostModel.Update(tea.KeyMsg{Type: tea.KeyUp})
-	editHostModel = tmp.(editModel) // just casting
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyUp})
 	// Check that selected input is title
-	assert.Equal(t, editHostModel.focusedInput, inputTitle)
+	assert.Equal(t, hostEditModel.focusedInput, inputTitle)
 
 	// Append '123' to title, so it will become "test123"
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}})
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}})
-	editHostModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}})
+	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}})
 
 	// Check that title was updated, but address still preserves the initial value
-	require.Equal(t, "test123", editHostModel.inputs[inputTitle].Value())
-	require.Equal(t, "testtest", editHostModel.inputs[inputAddress].Value())
+	require.Equal(t, "test123", hostEditModel.inputs[inputTitle].Value())
+	require.Equal(t, "testtest", hostEditModel.inputs[inputAddress].Value())
 }
 
 func TestHandleCopyInputValueShortcut(t *testing.T) {
@@ -237,20 +235,53 @@ func TestHandleCopyInputValueShortcut(t *testing.T) {
 	assert.Equal(t, "test123", model.inputs[inputAddress].Value())
 
 	// Then select address input and append '456', so the value will be test123456
-	updated, _ := model.Update(tea.KeyMsg{Type: tea.KeyDown})
-	assert.Equal(t, inputAddress, updated.(editModel).focusedInput)
-	updated.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'4'}})
-	updated.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}})
-	updated.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}})
+	model.Update(tea.KeyMsg{Type: tea.KeyDown})
+	assert.Equal(t, inputAddress, model.focusedInput)
+	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'4'}})
+	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}})
+	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}})
 	// Check that title still preserves value 'teste123' and address was updated
-	assert.Equal(t, "test123", updated.(editModel).inputs[inputTitle].Value())
-	assert.Equal(t, "test123456", updated.(editModel).inputs[inputAddress].Value())
+	assert.Equal(t, "test123", model.inputs[inputTitle].Value())
+	assert.Equal(t, "test123456", model.inputs[inputAddress].Value())
 	// Now press the shortcut which will copy Address value to Title
-	updated.Update(tea.KeyMsg{
+	model.Update(tea.KeyMsg{
 		Type: tea.KeyEnter,
 		Alt:  true,
 	})
 	// Ensure that 'Title' and 'Host' values are now equal top 'test123456'
 	assert.Equal(t, "test123456", model.inputs[inputTitle].Value())
 	assert.Equal(t, "test123456", model.inputs[inputAddress].Value())
+}
+
+func TestUpdate_TeaSizeMsg(t *testing.T) {
+	// Test that if model is ready, WindowSizeMsg message will update viewport
+	model := New(context.TODO(), mock.NewMockStorage(false), &state.ApplicationState{}, &mock.MockLogger{})
+	model.ready = true
+	model.Update(tea.WindowSizeMsg{Width: 100, Height: 100})
+
+	require.Greater(t, model.viewport.Height, 0)
+	require.Greater(t, model.viewport.Width, 0)
+}
+
+func TestView(t *testing.T) {
+	// Test that by calling View() function first time, we set ready flag to true
+	// and view() returns non-empty string which will be used to build terminal user interface
+	model := New(context.TODO(), mock.NewMockStorage(false), &state.ApplicationState{}, &mock.MockLogger{})
+	assert.False(t, model.ready)
+	var ui string = model.View()
+
+	require.True(t, model.ready)
+	require.NotEmpty(t, ui)
+}
+
+func TestHelpView(t *testing.T) {
+	// Test that help view is not empty
+	model := New(context.TODO(), mock.NewMockStorage(false), &state.ApplicationState{}, &mock.MockLogger{})
+	require.NotEmpty(t, model.helpView())
+}
+
+func TestHeaderView(t *testing.T) {
+	// Test that header view is not empty
+	model := New(context.TODO(), mock.NewMockStorage(false), &state.ApplicationState{}, &mock.MockLogger{})
+	require.NotEmpty(t, model.headerView())
 }
