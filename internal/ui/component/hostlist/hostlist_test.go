@@ -143,7 +143,7 @@ func Test_RunProcess(t *testing.T) {
 	// require.Equal(t, "", string(errorWriter.err)) useless, as the process doesn't start
 
 	/**
-	 * We should run the event loop to run the process, otheriwse the process won't start.
+	 * We should run the event loop to run the process, otherwise the process won't start.
 	 * NewProgram invocation is failing, need to invest more time.
 	 */
 	// p := tea.NewProgram(resultListModel)
@@ -495,18 +495,22 @@ func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
 	assert.True(t, model.innerModel.SettingFilter())
 
 	// Now press "1" button. Only one item should left in the host list - with title: "Mock Host 1"
-	_, filterCmd := model.Update(tea.KeyMsg{
+	_, cmds := model.Update(tea.KeyMsg{
 		Type:  -1,
 		Runes: []rune{'1'},
 	})
 
-	t.Skip("Failing to update filter")
+	// Extract batch messages from cmd
+	msgs := []tea.Msg{}
+	cmdToMessage(cmds, &msgs)
 
-	model.Update(func() tea.Cmd {
-		return filterCmd
-	})
+	// Feed all messages one by one to the model
+	for _, msg := range msgs {
+		model.Update(msg)
+	}
 
-	assert.Len(t, model.innerModel.VisibleItems(), 1)
+	// Ensure, that only one item left in the list (which is "Mock Host 1")
+	require.Len(t, model.innerModel.VisibleItems(), 1)
 }
 
 // ==============================================
@@ -529,4 +533,16 @@ func NewMockListModel(storageShouldFail bool) *listModel {
 	lm.innerModel.SetItems(items)
 
 	return lm
+}
+
+func cmdToMessage(cmd tea.Cmd, messages *[]tea.Msg) {
+	result := cmd()
+
+	if batchMsg, ok := result.(tea.BatchMsg); ok {
+		for _, msg := range batchMsg {
+			cmdToMessage(msg, messages)
+		}
+	} else {
+		*messages = append(*messages, result)
+	}
 }
