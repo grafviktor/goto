@@ -263,7 +263,31 @@ func Test_enterRemoveItemMode(t *testing.T) {
 	cmd = model.enterRemoveItemMode()
 	// Ensure that we entered remove mode
 	require.Equal(t, modeRemoveItem, model.mode)
-	// md() should return msgRefreshUI in order to update title
+	// cmd() should return msgRefreshUI in order to update title
+	require.IsType(t, msgRefreshUI{}, cmd(), "Wrong message type")
+}
+
+func Test_exitRemoveItemMode(t *testing.T) {
+	// Create a new model
+	model := *NewMockListModel(false)
+	model.logger = &mock.MockLogger{}
+	// Select a first item, which is valid
+	model.innerModel.Select(0)
+	// Call enterRemoveItemMode function
+	model.enterRemoveItemMode()
+	// Ensure that we entered remove mode
+	require.Equal(t, modeRemoveItem, model.mode)
+
+	// Reject the action by pressing 'n' (it can be any key apart from 'y')
+	_, cmd := model.Update(tea.KeyMsg{
+		Type:  -1,
+		Runes: []rune{'n'},
+	})
+
+	// Ensure that model exited remove move
+	require.Equal(t, modeDefault, model.mode)
+
+	// cmd() should return msgRefreshUI in order to update title
 	require.IsType(t, msgRefreshUI{}, cmd(), "Wrong message type")
 }
 
