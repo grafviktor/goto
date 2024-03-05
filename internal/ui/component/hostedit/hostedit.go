@@ -99,6 +99,18 @@ type editModel struct {
 	ready        bool
 	title        string
 	viewport     viewport.Model
+
+	// Values which should be extracted from 'ssh -G <hostname>' command:
+	// 1. 'identityfile'
+	// 2. 'user'
+	// 3. 'port'
+	// user roman
+	// hostname localhost
+	// port 22
+	// identityfile ~/.ssh/id_rsa
+	sshConfigIdentityFile string
+	sshConfigUser         string
+	sshConfigPort         string
 }
 
 // New - returns new edit host form.
@@ -125,6 +137,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		title:        defaultTitle,
 		// This variable is for optimization. By introducing it, we can avoid unnecessary database reads
 		// every time we change values which depend on each other, for instance: "Title" and "Address".
+		// Use text search and see where 'isNewHost' is used.
 		isNewHost: hostNotFoundErr != nil,
 	}
 
@@ -310,6 +323,7 @@ func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 	if m.focusedInput == inputTitle {
 		addressEqualsTitle := m.inputs[inputTitle].Value() == m.inputs[inputAddress].Value()
 
+		// If there wouldn't be 'm.isNewHost' variable we would have to query database for every key event
 		if m.isNewHost && addressEqualsTitle {
 			// If host doesn't exist in the repo and title equals address
 			// we should copy text from address to title.

@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 
@@ -146,7 +145,7 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		// Handle key event when some mode is enabled. For instance "removeMode".
 		return m.handleKeyEventWhenModeEnabled(msg)
 	case key.Matches(msg, m.keyMap.connect):
-		return m.executeCmd(msg)
+		return m.constructProcessCmd(msg)
 	case key.Matches(msg, m.keyMap.remove):
 		return m.enterRemoveItemMode()
 	case key.Matches(msg, m.keyMap.edit):
@@ -321,24 +320,8 @@ func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
 	)
 }
 
-func (m *listModel) buildProcess(errorWriter *stdErrorWriter) (*exec.Cmd, error) {
-	m.logger.Debug("[UI] Build external command")
-	item, ok := m.innerModel.SelectedItem().(ListItemHost)
-	if !ok {
-		return nil, errors.New(itemNotSelectedMessage)
-	}
-
-	host := *item.Unwrap()
-	command := ssh.ConstructCMD(ssh.BaseCMD(), utils.HostModelToOptionsAdaptor(host)...)
-	process := utils.BuildProcess(command)
-	process.Stdout = os.Stdout
-	process.Stderr = errorWriter
-
-	return process, nil
-}
-
-func (m *listModel) runProcess(process *exec.Cmd, errorWriter *stdErrorWriter) tea.Cmd {
-	execCmd := tea.ExecProcess(process, func(err error) tea.Msg {
+func (m *listModel) dispatchProcess(process *exec.Cmd, errorWriter *stdErrorWriter) tea.Cmd {
+	onProcessExitCallback := func(err error) tea.Msg {
 		// This callback triggers when external process exits
 		if err != nil {
 			errorMessage := strings.TrimSpace(string(errorWriter.err))
@@ -355,21 +338,28 @@ func (m *listModel) runProcess(process *exec.Cmd, errorWriter *stdErrorWriter) t
 
 		m.logger.Info("[EXEC] Terminate process gracefully: %s", process.String())
 		return nil
-	})
+	}
 
-	return execCmd
+	// Return value is 'tea.Cmd' struct
+	return tea.ExecProcess(process, onProcessExitCallback)
 }
 
-func (m *listModel) executeCmd(_ tea.Msg) tea.Cmd {
+func (m *listModel) constructProcessCmd(_ tea.KeyMsg) tea.Cmd {
+	var process *exec.Cmd
 	errorWriter := stdErrorWriter{}
-	process, err := m.buildProcess(&errorWriter)
-	if err != nil {
-		m.logger.Error("[EXEC] Build process error. %v", err)
+
+	item, ok := m.innerModel.SelectedItem().(ListItemHost)
+	if !ok {
+		m.logger.Error("[UI] Cannot cast selected item to host model")
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
+	m.logger.Debug("[EXEC] Build ssh connect command for hostname: %v, title: ", item.Address, item.Title)
+	host := *item.Unwrap()
+	process = utils.BuildConnectSSH(host, &errorWriter)
+
 	m.logger.Info("[EXEC] Run process: %s", process.String())
-	return m.runProcess(process, &errorWriter)
+	return m.dispatchProcess(process, &errorWriter)
 }
 
 func (m *listModel) listTitleUpdate() {

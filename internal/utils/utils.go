@@ -3,6 +3,7 @@ package utils
 
 import (
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"os/user"
@@ -81,6 +82,24 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 
 // CurrentUsername - returns current OS username or "n/a" if it can't be determined.
 func CurrentUsername() string {
+	// Read from 'ssh -G hostname' output:
+	// 1. 'identityfile'
+	// 2. 'user'
+	// 3. 'port'
+	// Example:
+	// ssh -G localhost
+	//
+	// user roman
+	// hostname localhost
+	// port 22
+	// identityfile ~/.ssh/id_rsa
+	// identityfile ~/.ssh/id_dsa
+	// identityfile ~/.ssh/id_ecdsa
+	// identityfile ~/.ssh/id_ecdsa_sk
+	// identityfile ~/.ssh/id_ed25519
+	// identityfile ~/.ssh/id_ed25519_sk
+	// identityfile ~/.ssh/id_xmss
+
 	// That's a naive implementation. ssh [-vvv] -G <hostname> should be used to request settings for a hostname.
 	user, err := user.Current()
 	if err != nil {
@@ -121,4 +140,24 @@ func BuildProcess(cmd string) *exec.Cmd {
 	arguments := commandWithArguments[1:]
 
 	return exec.Command(command, arguments...)
+}
+
+// BuildConnectSSH - builds ssh command which is based on host.Model.
+func BuildConnectSSH(host model.Host, errorWriter io.Writer) *exec.Cmd {
+	command := ssh.ConstructCMD(ssh.BaseCMD(), HostModelToOptionsAdaptor(host)...)
+	process := BuildProcess(command)
+	process.Stdout = os.Stdout
+	process.Stderr = errorWriter
+
+	return process
+}
+
+// BuildQuerySSHConfig - builds query ssh options command, which returns ssh_config options associated with the hostname
+func BuildQuerySSHConfig(hostname string, errorWriter io.Writer) *exec.Cmd {
+	command := ssh.ConstructCMD(ssh.BaseCMD(), ssh.OptionReadConfig{Value: hostname})
+	process := BuildProcess(command)
+	process.Stdout = os.Stdout
+	process.Stderr = errorWriter
+
+	return process
 }
