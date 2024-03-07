@@ -5,8 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os/exec"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -320,46 +318,14 @@ func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
 	)
 }
 
-func (m *listModel) dispatchProcess(process *exec.Cmd, errorWriter *stdErrorWriter) tea.Cmd {
-	onProcessExitCallback := func(err error) tea.Msg {
-		// This callback triggers when external process exits
-		if err != nil {
-			errorMessage := strings.TrimSpace(string(errorWriter.err))
-			if utils.StringEmpty(errorMessage) {
-				errorMessage = err.Error()
-			}
-
-			m.logger.Error("[EXEC] Terminate process with reason %v", errorMessage)
-			commandWhichFailed := strings.Join(process.Args, " ")
-			// errorDetails contains command which was executed and the error text.
-			errorDetails := fmt.Sprintf("Command: %s\nError:   %s", commandWhichFailed, errorMessage)
-			return message.RunProcessErrorOccurred{Err: errors.New(errorDetails)}
-		}
-
-		m.logger.Info("[EXEC] Terminate process gracefully: %s", process.String())
-		return nil
-	}
-
-	// Return value is 'tea.Cmd' struct
-	return tea.ExecProcess(process, onProcessExitCallback)
-}
-
 func (m *listModel) constructProcessCmd(_ tea.KeyMsg) tea.Cmd {
-	var process *exec.Cmd
-	errorWriter := stdErrorWriter{}
-
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Error("[UI] Cannot cast selected item to host model")
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
-	m.logger.Debug("[EXEC] Build ssh connect command for hostname: %v, title: ", item.Address, item.Title)
-	host := *item.Unwrap()
-	process = utils.BuildConnectSSH(host, &errorWriter)
-
-	m.logger.Info("[EXEC] Run process: %s", process.String())
-	return m.dispatchProcess(process, &errorWriter)
+	return message.TeaCmd(message.RunProcessConnectSSH{Host: *item.Unwrap()})
 }
 
 func (m *listModel) listTitleUpdate() {
@@ -394,22 +360,4 @@ func (m *listModel) onFocusChanged(_ tea.Msg) tea.Cmd {
 
 	m.logger.Error("[UI] Select unknown item type from the list")
 	return nil
-}
-
-// stdErrorWriter - is an object which pretends to be a writer, however it saves all data into 'err' variable
-// for future reading and do not write anything in terminal. We need it to display a formatted error in the console
-// when it's required, but not when it's done by default.
-type stdErrorWriter struct {
-	err []byte
-}
-
-// Write - doesn't write anything, it saves all data in err variable, which can ve read later.
-func (writer *stdErrorWriter) Write(p []byte) (n int, err error) {
-	writer.err = append(writer.err, p...)
-
-	// Hide error from the console, otherwise it will be seen in a subsequent ssh calls
-	// To return to default behavior use: return os.Stderr.Write(p)
-	// We must return the number of bytes which were written using `len(p)`,
-	// otherwise exec.go will throw 'short write' error.
-	return len(p), nil
 }

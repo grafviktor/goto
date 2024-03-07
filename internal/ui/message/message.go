@@ -7,6 +7,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"golang.org/x/term"
+
+	"github.com/grafviktor/goto/internal/model"
 )
 
 type (
@@ -18,6 +20,10 @@ type (
 	RunProcessErrorOccurred struct{ Err error }
 	// HostListSelectItem is required to let host list know that it's time to update title.
 	HostListSelectItem struct{ HostID int }
+	// RunProcessConnectSSH is dispatched when user wants to connect to a host.
+	RunProcessConnectSSH struct{ Host model.Host }
+	// RunProcessLoadHostConfig is dispatched it's required to read .ssh/config file for a certain host.
+	RunProcessLoadHostConfig struct{ Hostname string }
 )
 
 var terminalSizePollingInterval = time.Second / 2

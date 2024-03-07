@@ -117,18 +117,6 @@ func CheckAppInstalled(appName string) error {
 	return err
 }
 
-// HostModelToOptionsAdaptor - extract values from model.Host into a set of ssh.CommandLineOption
-// host - model.Host to be adapted
-// returns []ssh.CommandLineOption.
-func HostModelToOptionsAdaptor(host model.Host) []ssh.CommandLineOption {
-	return []ssh.CommandLineOption{
-		ssh.OptionPrivateKey{Value: host.PrivateKeyPath},
-		ssh.OptionRemotePort{Value: host.RemotePort},
-		ssh.OptionLoginName{Value: host.LoginName},
-		ssh.OptionAddress{Value: host.Address},
-	}
-}
-
 // BuildProcess - builds exec.Cmd object from command string.
 func BuildProcess(cmd string) *exec.Cmd {
 	if strings.TrimSpace(cmd) == "" {
@@ -142,6 +130,20 @@ func BuildProcess(cmd string) *exec.Cmd {
 	return exec.Command(command, arguments...)
 }
 
+// =============================== Move to SSH module:
+
+// HostModelToOptionsAdaptor - extract values from model.Host into a set of ssh.CommandLineOption
+// host - model.Host to be adapted
+// returns []ssh.CommandLineOption.
+func HostModelToOptionsAdaptor(host model.Host) []ssh.CommandLineOption {
+	return []ssh.CommandLineOption{
+		ssh.OptionPrivateKey{Value: host.PrivateKeyPath},
+		ssh.OptionRemotePort{Value: host.RemotePort},
+		ssh.OptionLoginName{Value: host.LoginName},
+		ssh.OptionAddress{Value: host.Address},
+	}
+}
+
 // BuildConnectSSH - builds ssh command which is based on host.Model.
 func BuildConnectSSH(host model.Host, errorWriter io.Writer) *exec.Cmd {
 	command := ssh.ConstructCMD(ssh.BaseCMD(), HostModelToOptionsAdaptor(host)...)
@@ -152,11 +154,14 @@ func BuildConnectSSH(host model.Host, errorWriter io.Writer) *exec.Cmd {
 	return process
 }
 
-// BuildQuerySSHConfig - builds query ssh options command, which returns ssh_config options associated with the hostname
-func BuildQuerySSHConfig(hostname string, errorWriter io.Writer) *exec.Cmd {
+// BuildLoadSSHConfig - builds ssh command, which runs ssh -G <hostname> command
+// to get a list of options associated with the hostname.
+func BuildLoadSSHConfig(hostname string, outputWriter, errorWriter io.Writer) *exec.Cmd {
+	// Usecase 1: User edits host
+	// Usecase 2: User is going to copy his ssh key using <t> command from the hostlist
 	command := ssh.ConstructCMD(ssh.BaseCMD(), ssh.OptionReadConfig{Value: hostname})
 	process := BuildProcess(command)
-	process.Stdout = os.Stdout
+	process.Stdout = outputWriter
 	process.Stderr = errorWriter
 
 	return process
