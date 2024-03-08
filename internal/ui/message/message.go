@@ -22,8 +22,8 @@ type (
 	HostListSelectItem struct{ HostID int }
 	// RunProcessConnectSSH is dispatched when user wants to connect to a host.
 	RunProcessConnectSSH struct{ Host model.Host }
-	// RunProcessLoadHostConfig is dispatched it's required to read .ssh/config file for a certain host.
-	RunProcessLoadHostConfig struct{ Hostname string }
+	// RunProcessLoadSSHConfig is dispatched it's required to read .ssh/config file for a certain host.
+	RunProcessLoadSSHConfig struct{ SSHConfigHostname string }
 )
 
 var terminalSizePollingInterval = time.Second / 2

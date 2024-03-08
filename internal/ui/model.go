@@ -94,9 +94,9 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Close host edit form")
 		m.appState.CurrentView = state.ViewHostList
 	case message.RunProcessConnectSSH:
-		return m, m.dispatchProcessConnect(msg)
-	case message.RunProcessLoadHostConfig:
-		return m, m.dispatchProcessLoadConfig(msg)
+		return m, m.dispatchProcessSSHConnect(msg)
+	case message.RunProcessLoadSSHConfig:
+		return m, m.dispatchProcessSSHLoadConfig(msg)
 	case message.RunProcessErrorOccurred:
 		// We use m.logger.Debug method to report about the error,
 		// because the error was already reported by run process module.
@@ -173,11 +173,12 @@ func (m *mainModel) updateViewPort(w, h int) tea.Model {
 	return m
 }
 
-func (m *mainModel) dispatchProcess(process *exec.Cmd, errorWriter *stdErrorWriter) tea.Cmd {
+func (m *mainModel) dispatchProcess(process *exec.Cmd) tea.Cmd {
 	onProcessExitCallback := func(err error) tea.Msg {
 		// This callback triggers when external process exits
 		if err != nil {
-			errorMessage := strings.TrimSpace(string(errorWriter.err))
+			readableErrOutput := process.Stderr.(*stdErrorWriter)
+			errorMessage := strings.TrimSpace(string(readableErrOutput.err))
 			if utils.StringEmpty(errorMessage) {
 				errorMessage = err.Error()
 			}
@@ -197,23 +198,24 @@ func (m *mainModel) dispatchProcess(process *exec.Cmd, errorWriter *stdErrorWrit
 	return tea.ExecProcess(process, onProcessExitCallback)
 }
 
-func (m *mainModel) dispatchProcessConnect(msg message.RunProcessConnectSSH) tea.Cmd {
+func (m *mainModel) dispatchProcessSSHConnect(msg message.RunProcessConnectSSH) tea.Cmd {
 	var process *exec.Cmd
 	errorWriter := stdErrorWriter{}
-	m.logger.Debug("[EXEC] Build ssh connect command for hostname: %v, title: ", msg.Host.Address, msg.Host.Title)
+	m.logger.Debug("[EXEC] Build ssh connect command for hostname: %v, title: %v", msg.Host.Address, msg.Host.Title)
 	process = utils.BuildConnectSSH(msg.Host, &errorWriter)
 	m.logger.Info("[EXEC] Run process: %s", process.String())
 
-	return m.dispatchProcess(process, &errorWriter)
+	return m.dispatchProcess(process)
 }
 
-func (m *mainModel) dispatchProcessLoadConfig(msg message.RunProcessLoadHostConfig) tea.Cmd {
+func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessLoadSSHConfig) tea.Cmd {
 	var process *exec.Cmd
 	errorWriter := stdErrorWriter{}
-	m.logger.Debug("[EXEC] Read ssh configuration for hostname: %v, title: ", msg.Hostname)
-	process = utils.BuildLoadSSHConfig(msg.Hostname, os.Stdout, &errorWriter)
+	m.logger.Debug("[EXEC] Read ssh configuration for host: %v", msg.SSHConfigHostname)
+	process = utils.BuildLoadSSHConfig(msg.SSHConfigHostname, os.Stdout, &errorWriter)
+	m.logger.Info("[EXEC] Run process: %s", process.String())
 
-	return m.dispatchProcess(process, &errorWriter)
+	return m.dispatchProcess(process)
 }
 
 // stdErrorWriter - is an object which pretends to be a writer, however it saves all data into 'err' variable

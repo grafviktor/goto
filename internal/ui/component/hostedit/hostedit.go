@@ -86,6 +86,20 @@ func getKeyMap(focusedInput int) keyMap {
 	return keys
 }
 
+type sshConfig struct {
+	// Values which should be extracted from 'ssh -G <hostname>' command:
+	// 1. 'identityfile'
+	// 2. 'user'
+	// 3. 'port'
+	// user roman
+	// hostname localhost
+	// port 22
+	// identityfile ~/.ssh/id_rsa
+	sshConfigIdentityFile string
+	sshConfigUser         string
+	sshConfigPort         string
+}
+
 type editModel struct {
 	appState     *state.ApplicationState
 	focusedInput int
@@ -99,18 +113,7 @@ type editModel struct {
 	ready        bool
 	title        string
 	viewport     viewport.Model
-
-	// Values which should be extracted from 'ssh -G <hostname>' command:
-	// 1. 'identityfile'
-	// 2. 'user'
-	// 3. 'port'
-	// user roman
-	// hostname localhost
-	// port 22
-	// identityfile ~/.ssh/id_rsa
-	sshConfigIdentityFile string
-	sshConfigUser         string
-	sshConfigPort         string
+	sshConfig
 }
 
 // New - returns new edit host form.
@@ -358,7 +361,7 @@ func (m *editModel) updateViewPort(msg tea.Msg) {
 }
 
 func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
-	var cmd tea.Cmd
+	var cmds []tea.Cmd
 	keyMsg := msg.(tea.KeyMsg)
 
 	minFocusIndex := 0
@@ -384,6 +387,14 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 		return nil
 	}
 
+	// When leave address input field load host config from ssh/config to
+	// populate placeholders which display default values.
+	if m.focusedInput == inputAddress {
+		sshConfigHostname := m.inputs[inputAddress].Value()
+		cmdLoadConfig := message.TeaCmd(message.RunProcessLoadSSHConfig{SSHConfigHostname: sshConfigHostname})
+		cmds = append(cmds, cmdLoadConfig)
+	}
+
 	// Should be extracted to "Validate" function
 	for i := 0; i <= len(m.inputs)-1; i++ {
 		if m.inputs[i].Validate != nil {
@@ -398,14 +409,14 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 			m.logger.Debug("[UI] Focus input: '%s'", m.inputs[i].Label)
 
 			// Set focused state
-			cmd = m.inputs[i].Focus()
+			cmds = append(cmds, m.inputs[i].Focus())
 		} else {
 			// Remove focused state
 			m.inputs[i].Blur()
 		}
 	}
 
-	return cmd
+	return tea.Batch(cmds...)
 }
 
 func (m *editModel) handleCopyInputValueShortcut() {
