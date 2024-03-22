@@ -86,20 +86,6 @@ func getKeyMap(focusedInput int) keyMap {
 	return keys
 }
 
-type sshConfig struct {
-	// Values which should be extracted from 'ssh -G <hostname>' command:
-	// 1. 'identityfile'
-	// 2. 'user'
-	// 3. 'port'
-	// user roman
-	// hostname localhost
-	// port 22
-	// identityfile ~/.ssh/id_rsa
-	sshConfigIdentityFile string
-	sshConfigUser         string
-	sshConfigPort         string
-}
-
 type editModel struct {
 	appState     *state.ApplicationState
 	focusedInput int
@@ -113,7 +99,6 @@ type editModel struct {
 	ready        bool
 	title        string
 	viewport     viewport.Model
-	sshConfig
 }
 
 // New - returns new edit host form.
@@ -376,6 +361,15 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 		inputHeight = lipgloss.Height(m.inputsView()) / len(m.inputs)
 	}
 
+	// When leave address input field load host config from ssh/config to
+	// populate placeholders which display default values.
+	leavingAddressInput := m.focusedInput == inputAddress
+	if leavingAddressInput {
+		sshConfigHostname := m.inputs[inputAddress].Value()
+		cmdLoadConfig := message.TeaCmd(message.RunProcessLoadSSHConfig{SSHConfigHostname: sshConfigHostname})
+		cmds = append(cmds, cmdLoadConfig)
+	}
+
 	// Update index of the focused element
 	if key.Matches(keyMsg, m.keyMap.Up) && m.focusedInput > minFocusIndex { //nolint:gocritic // it's better without switch
 		m.focusedInput--
@@ -385,14 +379,6 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 		m.viewport.LineDown(inputHeight)
 	} else {
 		return nil
-	}
-
-	// When leave address input field load host config from ssh/config to
-	// populate placeholders which display default values.
-	if m.focusedInput == inputAddress {
-		sshConfigHostname := m.inputs[inputAddress].Value()
-		cmdLoadConfig := message.TeaCmd(message.RunProcessLoadSSHConfig{SSHConfigHostname: sshConfigHostname})
-		cmds = append(cmds, cmdLoadConfig)
 	}
 
 	// Should be extracted to "Validate" function

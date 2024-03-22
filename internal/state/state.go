@@ -32,15 +32,30 @@ type iLogger interface {
 	Error(format string, args ...any)
 }
 
+type sshConfig struct {
+	// Values which should be extracted from 'ssh -G <hostname>' command:
+	// 1. 'identityfile'
+	// 2. 'user'
+	// 3. 'port'
+	// user roman
+	// hostname localhost
+	// port 22
+	// identityfile ~/.ssh/id_rsa
+	SSHConfigIdentityFile string
+	SSHConfigUser         string
+	SSHConfigPort         string
+}
+
 // ApplicationState stores application state.
 type ApplicationState struct {
 	Selected         int `yaml:"selected"`
 	appStateFilePath string
 	logger           iLogger
-	CurrentView      view  `yaml:"-"`
-	Err              error `yaml:"-"`
-	Width            int   `yaml:"-"`
-	Height           int   `yaml:"-"`
+	CurrentView      view      `yaml:"-"`
+	Err              error     `yaml:"-"`
+	Width            int       `yaml:"-"`
+	Height           int       `yaml:"-"`
+	SSHConfig        sshConfig `yaml:"-"`
 }
 
 // Get - reads application state from disk.

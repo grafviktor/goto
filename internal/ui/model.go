@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 
@@ -97,6 +96,10 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.dispatchProcessSSHConnect(msg)
 	case message.RunProcessLoadSSHConfig:
 		return m, m.dispatchProcessSSHLoadConfig(msg)
+	case message.RunProcessSuccess:
+		if msg.Name == "ssh_load_config" {
+			fmt.Printf("%v", msg.Process.Stdout)
+		}
 	case message.RunProcessErrorOccurred:
 		// We use m.logger.Debug method to report about the error,
 		// because the error was already reported by run process module.
@@ -173,12 +176,12 @@ func (m *mainModel) updateViewPort(w, h int) tea.Model {
 	return m
 }
 
-func (m *mainModel) dispatchProcess(process *exec.Cmd) tea.Cmd {
+func (m *mainModel) dispatchProcess(name string, process *exec.Cmd) tea.Cmd {
 	onProcessExitCallback := func(err error) tea.Msg {
 		// This callback triggers when external process exits
 		if err != nil {
-			readableErrOutput := process.Stderr.(*stdErrorWriter)
-			errorMessage := strings.TrimSpace(string(readableErrOutput.err))
+			readableErrOutput := process.Stderr.(*utils.ProcessErrorWriter)
+			errorMessage := strings.TrimSpace(string(readableErrOutput.Err))
 			if utils.StringEmpty(errorMessage) {
 				errorMessage = err.Error()
 			}
@@ -191,7 +194,10 @@ func (m *mainModel) dispatchProcess(process *exec.Cmd) tea.Cmd {
 		}
 
 		m.logger.Info("[EXEC] Terminate process gracefully: %s", process.String())
-		return nil
+		return message.RunProcessSuccess{
+			Name:    name,
+			Process: process,
+		}
 	}
 
 	// Return value is 'tea.Cmd' struct
@@ -199,39 +205,18 @@ func (m *mainModel) dispatchProcess(process *exec.Cmd) tea.Cmd {
 }
 
 func (m *mainModel) dispatchProcessSSHConnect(msg message.RunProcessConnectSSH) tea.Cmd {
-	var process *exec.Cmd
-	errorWriter := stdErrorWriter{}
 	m.logger.Debug("[EXEC] Build ssh connect command for hostname: %v, title: %v", msg.Host.Address, msg.Host.Title)
-	process = utils.BuildConnectSSH(msg.Host, &errorWriter)
+	process := utils.BuildConnectSSH(msg.Host)
 	m.logger.Info("[EXEC] Run process: %s", process.String())
 
-	return m.dispatchProcess(process)
+	return m.dispatchProcess("ssh_connect_host", process)
 }
 
 func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessLoadSSHConfig) tea.Cmd {
-	var process *exec.Cmd
-	errorWriter := stdErrorWriter{}
 	m.logger.Debug("[EXEC] Read ssh configuration for host: %v", msg.SSHConfigHostname)
-	process = utils.BuildLoadSSHConfig(msg.SSHConfigHostname, os.Stdout, &errorWriter)
+	process := utils.BuildLoadSSHConfig(msg.SSHConfigHostname)
 	m.logger.Info("[EXEC] Run process: %s", process.String())
 
-	return m.dispatchProcess(process)
-}
-
-// stdErrorWriter - is an object which pretends to be a writer, however it saves all data into 'err' variable
-// for future reading and do not write anything in terminal. We need it to display a formatted error in the console
-// when it's required, but not when it's done by default.
-type stdErrorWriter struct {
-	err []byte
-}
-
-// Write - doesn't write anything, it saves all data in err variable, which can ve read later.
-func (writer *stdErrorWriter) Write(p []byte) (n int, err error) {
-	writer.err = append(writer.err, p...)
-
-	// Hide error from the console, otherwise it will be seen in a subsequent ssh calls
-	// To return to default behavior use: return os.Stderr.Write(p)
-	// We must return the number of bytes which were written using `len(p)`,
-	// otherwise exec.go will throw 'short write' error.
-	return len(p), nil
+	// Should run in non-blocking fashion for ssh load config
+	return m.dispatchProcess("ssh_load_config", process /*, blocking = false*/)
 }

@@ -2,8 +2,8 @@
 package utils
 
 import (
+	"bytes"
 	"errors"
-	"io"
 	"os"
 	"os/exec"
 	"os/user"
@@ -145,24 +145,44 @@ func HostModelToOptionsAdaptor(host model.Host) []ssh.CommandLineOption {
 }
 
 // BuildConnectSSH - builds ssh command which is based on host.Model.
-func BuildConnectSSH(host model.Host, errorWriter io.Writer) *exec.Cmd {
+func BuildConnectSSH(host model.Host) *exec.Cmd {
 	command := ssh.ConstructCMD(ssh.BaseCMD(), HostModelToOptionsAdaptor(host)...)
 	process := BuildProcess(command)
 	process.Stdout = os.Stdout
-	process.Stderr = errorWriter
+	process.Stderr = &ProcessErrorWriter{}
 
 	return process
 }
 
 // BuildLoadSSHConfig - builds ssh command, which runs ssh -G <hostname> command
 // to get a list of options associated with the hostname.
-func BuildLoadSSHConfig(hostname string, outputWriter, errorWriter io.Writer) *exec.Cmd {
+func BuildLoadSSHConfig(hostname string) *exec.Cmd {
 	// Usecase 1: User edits host
 	// Usecase 2: User is going to copy his ssh key using <t> command from the hostlist
+
+	var buf bytes.Buffer
 	command := ssh.ConstructCMD(ssh.BaseCMD(), ssh.OptionReadConfig{Value: hostname})
 	process := BuildProcess(command)
-	process.Stdout = outputWriter
-	process.Stderr = errorWriter
+	process.Stdout = &buf
+	process.Stderr = &ProcessErrorWriter{}
 
 	return process
+}
+
+// ProcessErrorWriter - is an object which pretends to be a writer, however it saves all data into 'err' variable
+// for future reading and do not write anything in terminal. We need it to display a formatted error in the console
+// when it's required, but not when it's done by default.
+type ProcessErrorWriter struct {
+	Err []byte
+}
+
+// Write - doesn't write anything, it saves all data in err variable, which can ve read later.
+func (writer *ProcessErrorWriter) Write(p []byte) (n int, err error) {
+	writer.Err = append(writer.Err, p...)
+
+	// Hide error from the console, otherwise it will be seen in a subsequent ssh calls
+	// To return to default behavior use: return os.Stderr.Write(p)
+	// We must return the number of bytes which were written using `len(p)`,
+	// otherwise exec.go will throw 'short write' error.
+	return len(p), nil
 }
