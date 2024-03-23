@@ -65,3 +65,29 @@ func ConstructCMD(cmd string, options ...CommandLineOption) string {
 
 	return sb.String()
 }
+
+// Config struct contains values loaded from ~/.ssh_config file. Supported values:
+//
+// IdentityFile string
+// User         string
+// Port         string
+type Config struct {
+	// Values which should be extracted from 'ssh -G <hostname>' command:
+	// 1. 'identityfile'
+	// 2. 'user'
+	// 3. 'port'
+	// user roman
+	// hostname localhost
+	// port 22
+	// identity file ~/.ssh/id_rsa
+	IdentityFile string
+	User         string
+	Port         string
+}
+
+// ParseConfig - parses 'ssh -G <hostname> command' output and returns Config struct.
+func ParseConfig(config string) *Config {
+	fmt.Println(config)
+
+	return &Config{}
+}

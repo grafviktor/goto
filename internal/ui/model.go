@@ -17,6 +17,7 @@ import (
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
 	"github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
+	"github.com/grafviktor/goto/internal/utils/ssh"
 )
 
 type logger interface {
@@ -98,8 +99,9 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.dispatchProcessSSHLoadConfig(msg)
 	case message.RunProcessSuccess:
 		if msg.Name == "ssh_load_config" {
-			fmt.Printf("%v", msg.Process.Stdout)
+			m.appState.SSHConfig = ssh.ParseConfig(*msg.Output)
 		}
+		return m, nil
 	case message.RunProcessErrorOccurred:
 		// We use m.logger.Debug method to report about the error,
 		// because the error was already reported by run process module.
@@ -176,12 +178,12 @@ func (m *mainModel) updateViewPort(w, h int) tea.Model {
 	return m
 }
 
-func (m *mainModel) dispatchProcess(name string, process *exec.Cmd) tea.Cmd {
+func (m *mainModel) dispatchProcess(name string, process *exec.Cmd, inBackground bool) tea.Cmd {
 	onProcessExitCallback := func(err error) tea.Msg {
 		// This callback triggers when external process exits
 		if err != nil {
-			readableErrOutput := process.Stderr.(*utils.ProcessErrorWriter)
-			errorMessage := strings.TrimSpace(string(readableErrOutput.Err))
+			readableErrOutput := process.Stderr.(*utils.ProcessBufferWriter)
+			errorMessage := strings.TrimSpace(string(readableErrOutput.Output))
 			if utils.StringEmpty(errorMessage) {
 				errorMessage = err.Error()
 			}
@@ -194,9 +196,26 @@ func (m *mainModel) dispatchProcess(name string, process *exec.Cmd) tea.Cmd {
 		}
 
 		m.logger.Info("[EXEC] Terminate process gracefully: %s", process.String())
+
+		// If process runs in background we have to run read its output and store in msg.
+		var output *string
+		if inBackground {
+			readableStdOutput := process.Stdout.(*utils.ProcessBufferWriter)
+			tmp := strings.TrimSpace(string(readableStdOutput.Output))
+			output = &tmp
+		}
+
 		return message.RunProcessSuccess{
-			Name:    name,
-			Process: process,
+			Name:   name,
+			Output: output,
+		}
+	}
+
+	if inBackground {
+		return func() tea.Msg {
+			err := process.Run()
+
+			return onProcessExitCallback(err)
 		}
 	}
 
@@ -209,7 +228,7 @@ func (m *mainModel) dispatchProcessSSHConnect(msg message.RunProcessConnectSSH) 
 	process := utils.BuildConnectSSH(msg.Host)
 	m.logger.Info("[EXEC] Run process: %s", process.String())
 
-	return m.dispatchProcess("ssh_connect_host", process)
+	return m.dispatchProcess("ssh_connect_host", process, false)
 }
 
 func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessLoadSSHConfig) tea.Cmd {
@@ -218,5 +237,5 @@ func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessLoadSSHCo
 	m.logger.Info("[EXEC] Run process: %s", process.String())
 
 	// Should run in non-blocking fashion for ssh load config
-	return m.dispatchProcess("ssh_load_config", process /*, blocking = false*/)
+	return m.dispatchProcess("ssh_load_config", process, true)
 }

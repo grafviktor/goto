@@ -3,7 +3,6 @@ package message
 
 import (
 	"os"
-	"os/exec"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -30,8 +29,8 @@ type (
 	}
 	// RunProcessSuccess fires when external process exits normally.
 	RunProcessSuccess struct {
-		Name    string
-		Process *exec.Cmd
+		Name   string
+		Output *string
 	}
 )
 
