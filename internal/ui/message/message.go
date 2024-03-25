@@ -18,6 +18,9 @@ type (
 	TerminalSizePolling struct{ Width, Height int }
 	// HostListSelectItem is required to let host list know that it's time to update title.
 	HostListSelectItem struct{ HostID int }
+	// HostSSHConfigLoaded triggers when app loads a host config using ssh -G <hostname>.
+	// The config is stored in main model: m.appState.HostSSHConfig.
+	HostSSHConfigLoaded struct{}
 	// RunProcessConnectSSH is dispatched when user wants to connect to a host.
 	RunProcessConnectSSH struct{ Host model.Host }
 	// RunProcessLoadSSHConfig is dispatched it's required to read .ssh/config file for a certain host.
@@ -29,8 +32,8 @@ type (
 	}
 	// RunProcessSuccess fires when external process exits normally.
 	RunProcessSuccess struct {
-		Name   string
-		Output *string
+		ProcessName string
+		Output      *string
 	}
 )
 

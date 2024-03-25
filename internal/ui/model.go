@@ -90,6 +90,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case message.HostListSelectItem:
 		m.logger.Debug("[UI] Update app state. Active host id: %d", msg.HostID)
 		m.appState.Selected = msg.HostID
+		// TODO: Should load ssh config when change host selection
 	case hostedit.MsgClose:
 		m.logger.Debug("[UI] Close host edit form")
 		m.appState.CurrentView = state.ViewHostList
@@ -98,10 +99,10 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case message.RunProcessLoadSSHConfig:
 		return m, m.dispatchProcessSSHLoadConfig(msg)
 	case message.RunProcessSuccess:
-		if msg.Name == "ssh_load_config" {
-			m.appState.SSHConfig = ssh.ParseConfig(*msg.Output)
+		if msg.ProcessName == "ssh_load_config" {
+			m.appState.HostSSHConfig = ssh.ParseConfig(*msg.Output)
 		}
-		return m, nil
+		cmds = append(cmds, message.TeaCmd(message.HostSSHConfigLoaded{}))
 	case message.RunProcessErrorOccurred:
 		// We use m.logger.Debug method to report about the error,
 		// because the error was already reported by run process module.
@@ -152,7 +153,7 @@ func (m *mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Only current view receives key messages
 	switch m.appState.CurrentView {
 	case state.ViewErrorMessage:
-		// When display external process's output and receieve any keyboard event, we:
+		// When display external process's output and receive any keyboard event, we:
 		// 1. Reset the error message
 		// 2. Switch to HostList view
 		m.appState.Err = nil
@@ -206,8 +207,8 @@ func (m *mainModel) dispatchProcess(name string, process *exec.Cmd, inBackground
 		}
 
 		return message.RunProcessSuccess{
-			Name:   name,
-			Output: output,
+			ProcessName: name,
+			Output:      output, // Equals to null if process runs in a foreground.
 		}
 	}
 

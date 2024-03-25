@@ -154,17 +154,20 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		case inputLogin:
 			t.Label = "Login"
 			t.CharLimit = 128
+			// t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.User)
 			t.Placeholder = fmt.Sprintf("default: %s", utils.CurrentUsername())
 			t.SetValue(host.LoginName)
 		case inputNetworkPort:
 			t.Label = "Network port"
 			t.CharLimit = 5
+			// t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.Port)
 			t.Placeholder = "default: 22"
 			t.SetValue(host.RemotePort)
 			t.Validate = networkPortValidator
 		case inputIdentityFile:
 			t.Label = "Identity file path"
 			t.CharLimit = 512
+			// t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.IdentityFile)
 			t.Placeholder = "default: $HOME/.ssh/id_rsa"
 			t.SetValue(host.PrivateKeyPath)
 		}
@@ -189,6 +192,8 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		cmd = m.handleKeyboardEvent(msg)
 		m.viewport.SetContent(m.inputsView())
+	case message.HostSSHConfigLoaded:
+		m.handleHostSSHConfigLoaded()
 	}
 
 	return m, cmd
@@ -414,6 +419,12 @@ func (m *editModel) handleCopyInputValueShortcut() {
 	} else if m.focusedInput == inputAddress {
 		m.copyInputValueFromTo(m.focusedInput, inputTitle)
 	}
+}
+
+func (m *editModel) handleHostSSHConfigLoaded() {
+	m.inputs[inputLogin].Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.User)
+	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.Port)
+	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.IdentityFile)
 }
 
 func (m *editModel) inputsView() string {

@@ -3,6 +3,7 @@ package ssh
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -66,11 +67,7 @@ func ConstructCMD(cmd string, options ...CommandLineOption) string {
 	return sb.String()
 }
 
-// Config struct contains values loaded from ~/.ssh_config file. Supported values:
-//
-// IdentityFile string
-// User         string
-// Port         string
+// Config struct contains values loaded from ~/.ssh_config file.
 type Config struct {
 	// Values which should be extracted from 'ssh -G <hostname>' command:
 	// 1. 'identityfile'
@@ -85,9 +82,25 @@ type Config struct {
 	Port         string
 }
 
+var (
+	sshConfigUserRe         = regexp.MustCompile(`(?i)user\s+(.*)`)
+	sshConfigPortRe         = regexp.MustCompile(`(?i)port\s+(.*)`)
+	sshConfigIdentityFileRe = regexp.MustCompile(`(?i)identityfile\s+(.*)`)
+)
+
+func getRegexFirstMatchingGroup(groups []string) string {
+	if len(groups) > 1 {
+		return groups[1]
+	}
+
+	return ""
+}
+
 // ParseConfig - parses 'ssh -G <hostname> command' output and returns Config struct.
 func ParseConfig(config string) *Config {
-	fmt.Println(config)
-
-	return &Config{}
+	return &Config{
+		IdentityFile: getRegexFirstMatchingGroup(sshConfigIdentityFileRe.FindStringSubmatch(config)),
+		Port:         getRegexFirstMatchingGroup(sshConfigPortRe.FindStringSubmatch(config)),
+		User:         getRegexFirstMatchingGroup(sshConfigUserRe.FindStringSubmatch(config)),
+	}
 }
