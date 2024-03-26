@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -194,6 +195,7 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.SetContent(m.inputsView())
 	case message.HostSSHConfigLoaded:
 		m.handleHostSSHConfigLoaded()
+		m.viewport.SetContent(m.inputsView())
 	}
 
 	return m, cmd
@@ -308,7 +310,6 @@ func (m *editModel) copyInputValueFromTo(sourceInput, destinationInput int) {
 }
 
 func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
-	var cmd tea.Cmd
 	var shouldUpdateTitle bool
 
 	// Decide if we need to propagate hostname to title.
@@ -332,7 +333,18 @@ func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 		m.copyInputValueFromTo(inputTitle, inputAddress)
 	}
 
-	return cmd
+	if m.focusedInput == inputAddress {
+		hostname := m.inputs[inputAddress].Value()
+
+		// TODO: Runs like a normal function, but with delay.
+		return tea.Tick(time.Second*2, func(t time.Time) tea.Msg {
+			m.logger.Debug("%v", t)
+			// ...and include a copy of that tag value in the message.
+			return message.RunProcessLoadSSHConfig{SSHConfigHostname: hostname}
+		})
+	}
+
+	return nil
 }
 
 func (m *editModel) updateViewPort(msg tea.Msg) {
@@ -364,15 +376,6 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 		// Normally we don't need to handle scroll events, other than forward app messages to
 		// the viewport: m.viewport, cmd = m.viewport.Update(msg)
 		inputHeight = lipgloss.Height(m.inputsView()) / len(m.inputs)
-	}
-
-	// When leave address input field load host config from ssh/config to
-	// populate placeholders which display default values.
-	leavingAddressInput := m.focusedInput == inputAddress
-	if leavingAddressInput {
-		sshConfigHostname := m.inputs[inputAddress].Value()
-		cmdLoadConfig := message.TeaCmd(message.RunProcessLoadSSHConfig{SSHConfigHostname: sshConfigHostname})
-		cmds = append(cmds, cmdLoadConfig)
 	}
 
 	// Update index of the focused element

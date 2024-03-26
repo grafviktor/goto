@@ -179,7 +179,7 @@ func (m *mainModel) updateViewPort(w, h int) tea.Model {
 	return m
 }
 
-func (m *mainModel) dispatchProcess(name string, process *exec.Cmd, inBackground bool) tea.Cmd {
+func (m *mainModel) dispatchProcess(name string, process *exec.Cmd, inBackground bool, ignoreError bool) tea.Cmd {
 	onProcessExitCallback := func(err error) tea.Msg {
 		// This callback triggers when external process exits
 		if err != nil {
@@ -187,6 +187,12 @@ func (m *mainModel) dispatchProcess(name string, process *exec.Cmd, inBackground
 			errorMessage := strings.TrimSpace(string(readableErrOutput.Output))
 			if utils.StringEmpty(errorMessage) {
 				errorMessage = err.Error()
+			}
+
+			// Sometimes we don't care when external process ends with an error.
+			if ignoreError {
+				m.logger.Debug("[EXEC] Terminate process with reason %v. Error ignored.", errorMessage)
+				return nil
 			}
 
 			m.logger.Error("[EXEC] Terminate process with reason %v", errorMessage)
@@ -198,7 +204,7 @@ func (m *mainModel) dispatchProcess(name string, process *exec.Cmd, inBackground
 
 		m.logger.Info("[EXEC] Terminate process gracefully: %s", process.String())
 
-		// If process runs in background we have to run read its output and store in msg.
+		// If process runs in background we have to read its output and store in msg.
 		var output *string
 		if inBackground {
 			readableStdOutput := process.Stdout.(*utils.ProcessBufferWriter)
@@ -229,7 +235,7 @@ func (m *mainModel) dispatchProcessSSHConnect(msg message.RunProcessConnectSSH) 
 	process := utils.BuildConnectSSH(msg.Host)
 	m.logger.Info("[EXEC] Run process: %s", process.String())
 
-	return m.dispatchProcess("ssh_connect_host", process, false)
+	return m.dispatchProcess("ssh_connect_host", process, false, false)
 }
 
 func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessLoadSSHConfig) tea.Cmd {
@@ -238,5 +244,5 @@ func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessLoadSSHCo
 	m.logger.Info("[EXEC] Run process: %s", process.String())
 
 	// Should run in non-blocking fashion for ssh load config
-	return m.dispatchProcess("ssh_load_config", process, true)
+	return m.dispatchProcess("ssh_load_config", process, true, true)
 }
