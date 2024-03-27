@@ -3,6 +3,7 @@ package ssh
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -18,6 +19,8 @@ type (
 	OptionLoginName struct{ Value string }
 	// OptionAddress - is a remote host address. Example: somehost.com.
 	OptionAddress struct{ Value string }
+	// OptionReadConfig - is used to read config file from ssh_config. Cannot be combined with other options.
+	OptionReadConfig struct{ Value string }
 )
 
 func constructKeyValueOption(optionFlag, optionValue string) string {
@@ -37,6 +40,8 @@ func addOption(sb *strings.Builder, rawParameter CommandLineOption) {
 		option = constructKeyValueOption("-p", p.Value)
 	case OptionLoginName:
 		option = constructKeyValueOption("-l", p.Value)
+	case OptionReadConfig:
+		option = constructKeyValueOption("-G", p.Value)
 	case OptionAddress:
 		if p.Value != "" {
 			option = fmt.Sprintf(" %s", p.Value)
@@ -60,4 +65,42 @@ func ConstructCMD(cmd string, options ...CommandLineOption) string {
 	}
 
 	return sb.String()
+}
+
+// Config struct contains values loaded from ~/.ssh_config file.
+type Config struct {
+	// Values which should be extracted from 'ssh -G <hostname>' command:
+	// 1. 'identityfile'
+	// 2. 'user'
+	// 3. 'port'
+	// user roman
+	// hostname localhost
+	// port 22
+	// identity file ~/.ssh/id_rsa
+	IdentityFile string
+	User         string
+	Port         string
+}
+
+var (
+	sshConfigUserRe         = regexp.MustCompile(`(?i)user\s+(.*)`)
+	sshConfigPortRe         = regexp.MustCompile(`(?i)port\s+(.*)`)
+	sshConfigIdentityFileRe = regexp.MustCompile(`(?i)identityfile\s+(.*)`)
+)
+
+func getRegexFirstMatchingGroup(groups []string) string {
+	if len(groups) > 1 {
+		return groups[1]
+	}
+
+	return ""
+}
+
+// ParseConfig - parses 'ssh -G <hostname> command' output and returns Config struct.
+func ParseConfig(config string) *Config {
+	return &Config{
+		IdentityFile: getRegexFirstMatchingGroup(sshConfigIdentityFileRe.FindStringSubmatch(config)),
+		Port:         getRegexFirstMatchingGroup(sshConfigPortRe.FindStringSubmatch(config)),
+		User:         getRegexFirstMatchingGroup(sshConfigUserRe.FindStringSubmatch(config)),
+	}
 }

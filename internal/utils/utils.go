@@ -81,6 +81,24 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 
 // CurrentUsername - returns current OS username or "n/a" if it can't be determined.
 func CurrentUsername() string {
+	// Read from 'ssh -G hostname' output:
+	// 1. 'identityfile'
+	// 2. 'user'
+	// 3. 'port'
+	// Example:
+	// ssh -G localhost
+	//
+	// user roman
+	// hostname localhost
+	// port 22
+	// identityfile ~/.ssh/id_rsa
+	// identityfile ~/.ssh/id_dsa
+	// identityfile ~/.ssh/id_ecdsa
+	// identityfile ~/.ssh/id_ecdsa_sk
+	// identityfile ~/.ssh/id_ed25519
+	// identityfile ~/.ssh/id_ed25519_sk
+	// identityfile ~/.ssh/id_xmss
+
 	// That's a naive implementation. ssh [-vvv] -G <hostname> should be used to request settings for a hostname.
 	user, err := user.Current()
 	if err != nil {
@@ -98,6 +116,21 @@ func CheckAppInstalled(appName string) error {
 	return err
 }
 
+// BuildProcess - builds exec.Cmd object from command string.
+func BuildProcess(cmd string) *exec.Cmd {
+	if strings.TrimSpace(cmd) == "" {
+		return nil
+	}
+
+	commandWithArguments := strings.Split(cmd, " ")
+	command := commandWithArguments[0]
+	arguments := commandWithArguments[1:]
+
+	return exec.Command(command, arguments...)
+}
+
+// =============================== Move to SSH module:
+
 // HostModelToOptionsAdaptor - extract values from model.Host into a set of ssh.CommandLineOption
 // host - model.Host to be adapted
 // returns []ssh.CommandLineOption.
@@ -110,15 +143,43 @@ func HostModelToOptionsAdaptor(host model.Host) []ssh.CommandLineOption {
 	}
 }
 
-// BuildProcess - builds exec.Cmd object from command string.
-func BuildProcess(cmd string) *exec.Cmd {
-	if strings.TrimSpace(cmd) == "" {
-		return nil
-	}
+// BuildConnectSSH - builds ssh command which is based on host.Model.
+func BuildConnectSSH(host model.Host) *exec.Cmd {
+	command := ssh.ConstructCMD(ssh.BaseCMD(), HostModelToOptionsAdaptor(host)...)
+	process := BuildProcess(command)
+	process.Stdout = os.Stdout
+	process.Stderr = &ProcessBufferWriter{}
 
-	commandWithArguments := strings.Split(cmd, " ")
-	command := commandWithArguments[0]
-	arguments := commandWithArguments[1:]
+	return process
+}
 
-	return exec.Command(command, arguments...)
+// BuildLoadSSHConfig - builds ssh command, which runs ssh -G <hostname> command
+// to get a list of options associated with the hostname.
+func BuildLoadSSHConfig(hostname string) *exec.Cmd {
+	// Use case 1: User edits host
+	// Use case 2: User is going to copy his ssh key using <t> command from the hostlist
+
+	command := ssh.ConstructCMD(ssh.BaseCMD(), ssh.OptionReadConfig{Value: hostname})
+	process := BuildProcess(command)
+	process.Stdout = &ProcessBufferWriter{}
+	process.Stderr = &ProcessBufferWriter{}
+
+	return process
+}
+
+// ProcessBufferWriter - is an object which pretends to be a writer, however it saves all data into 'Output' variable
+// for future reading and do not write anything in terminal. We need it to display or parse process output or error.
+type ProcessBufferWriter struct {
+	Output []byte
+}
+
+// Write - doesn't write anything, it saves all data in err variable, which can ve read later.
+func (writer *ProcessBufferWriter) Write(p []byte) (n int, err error) {
+	writer.Output = append(writer.Output, p...)
+
+	// Hide output from the console, otherwise it will be seen in a subsequent ssh calls
+	// To return to default behavior use: return os.{Stderr|Stdout}.Write(p)
+	// We must return the number of bytes which were written using `len(p)`,
+	// otherwise exec.go will throw 'short write' error.
+	return len(p), nil
 }
