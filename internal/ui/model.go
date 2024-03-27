@@ -90,7 +90,6 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case message.HostListSelectItem:
 		m.logger.Debug("[UI] Update app state. Active host id: %d", msg.HostID)
 		m.appState.Selected = msg.HostID
-		// TODO: Should load ssh config when change host selection
 	case hostedit.MsgClose:
 		m.logger.Debug("[UI] Close host edit form")
 		m.appState.CurrentView = state.ViewHostList
@@ -179,7 +178,7 @@ func (m *mainModel) updateViewPort(w, h int) tea.Model {
 	return m
 }
 
-func (m *mainModel) dispatchProcess(name string, process *exec.Cmd, inBackground bool, ignoreError bool) tea.Cmd {
+func (m *mainModel) dispatchProcess(name string, process *exec.Cmd, inBackground, ignoreError bool) tea.Cmd {
 	onProcessExitCallback := func(err error) tea.Msg {
 		// This callback triggers when external process exits
 		if err != nil {

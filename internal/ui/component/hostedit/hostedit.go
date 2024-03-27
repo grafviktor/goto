@@ -33,6 +33,12 @@ type (
 	MsgClose struct{}
 	// MsgSave triggers when users saves results.
 	MsgSave struct{}
+	// debouncedMessage is used to trigger side-effects. For instance dispatch RunProcessLoadSSHConfig
+	// which reads host config from ~/.ssh/config file.
+	debouncedMessage struct {
+		wrappedMsg  tea.Msg
+		debounceTag int
+	}
 )
 
 const (
@@ -44,10 +50,11 @@ const (
 	inputIdentityFile
 )
 
-// ItemID is a key to extract item id from application context.
 var (
+	// ItemID is a key to extract item id from application context.
 	ItemID       = struct{}{}
 	defaultTitle = "host details"
+	debounceTime = time.Second * 1
 )
 
 type logger interface {
@@ -100,6 +107,7 @@ type editModel struct {
 	ready        bool
 	title        string
 	viewport     viewport.Model
+	debounceTag  int
 }
 
 // New - returns new edit host form.
@@ -193,6 +201,8 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		cmd = m.handleKeyboardEvent(msg)
 		m.viewport.SetContent(m.inputsView())
+	case debouncedMessage:
+		cmd = m.handleDebouncedMessage(msg)
 	case message.HostSSHConfigLoaded:
 		m.handleHostSSHConfigLoaded()
 		m.viewport.SetContent(m.inputsView())
@@ -233,6 +243,24 @@ func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		// Handle all other key events
 		return m.focusedInputProcessKeyEvent(msg)
 	}
+}
+
+func (m *editModel) handleDebouncedMessage(msg debouncedMessage) tea.Cmd {
+	// This function debounces a tea.Message. In order to find the last message from a list of duplicate messages
+	// debounceTag is used. Every time a tea.Tick message is dispatched, debounceTag is incremented. Then, when
+	// tea.Tick message triggers by timer (by debounceTime) it compares its own debounceTag with the model's
+	// debounceTag and only triggers when they're equal. That guarantees that only last message will be handled.
+	m.debounceTag++
+
+	return tea.Tick(debounceTime, func(_ time.Time) tea.Msg {
+		// Need to decrement the model's debounce tag before comparing. This simply relates to order of operations.
+		if msg.debounceTag == m.debounceTag-1 {
+			// Only the last message from messages dispatched within a certain interval will be handled.
+			return msg.wrappedMsg
+		}
+
+		return nil
+	})
 }
 
 func (m *editModel) save(_ tea.Msg) tea.Cmd {
@@ -311,6 +339,7 @@ func (m *editModel) copyInputValueFromTo(sourceInput, destinationInput int) {
 
 func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 	var shouldUpdateTitle bool
+	previousValue := m.inputs[m.focusedInput].Value()
 
 	// Decide if we need to propagate hostname to title.
 	// Note, that we should make this decision BEFORE updating focused input
@@ -333,15 +362,18 @@ func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 		m.copyInputValueFromTo(inputTitle, inputAddress)
 	}
 
+	// If type in address field
 	if m.focusedInput == inputAddress {
-		hostname := m.inputs[inputAddress].Value()
+		currentValue := m.inputs[inputAddress].Value()
 
-		// TODO: Runs like a normal function, but with delay.
-		return tea.Tick(time.Second*2, func(t time.Time) tea.Msg {
-			m.logger.Debug("%v", t)
-			// ...and include a copy of that tag value in the message.
-			return message.RunProcessLoadSSHConfig{SSHConfigHostname: hostname}
-		})
+		// And value changed
+		if previousValue != currentValue {
+			// Load SSH config for the specified hostname
+			return message.TeaCmd(debouncedMessage{
+				wrappedMsg:  message.RunProcessLoadSSHConfig{SSHConfigHostname: currentValue},
+				debounceTag: m.debounceTag,
+			})
+		}
 	}
 
 	return nil

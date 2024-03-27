@@ -156,8 +156,8 @@ func BuildConnectSSH(host model.Host) *exec.Cmd {
 // BuildLoadSSHConfig - builds ssh command, which runs ssh -G <hostname> command
 // to get a list of options associated with the hostname.
 func BuildLoadSSHConfig(hostname string) *exec.Cmd {
-	// Usecase 1: User edits host
-	// Usecase 2: User is going to copy his ssh key using <t> command from the hostlist
+	// Use case 1: User edits host
+	// Use case 2: User is going to copy his ssh key using <t> command from the hostlist
 
 	command := ssh.ConstructCMD(ssh.BaseCMD(), ssh.OptionReadConfig{Value: hostname})
 	process := BuildProcess(command)
