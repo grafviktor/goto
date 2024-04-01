@@ -62,11 +62,6 @@ func Test_GetAppDir(t *testing.T) {
 	require.Error(t, err, "App home folder should not be empty 2")
 }
 
-func Test_GetCurrentOSUser(t *testing.T) {
-	username := CurrentUsername()
-	require.NotEmpty(t, username, "GetCurrentOSUser should return a non-empty string")
-}
-
 func Test_CheckAppInstalled(t *testing.T) {
 	tests := []struct {
 		name          string

@@ -94,14 +94,18 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Close host edit form")
 		m.appState.CurrentView = state.ViewHostList
 	case message.RunProcessConnectSSH:
+		m.logger.Debug("[UI] Connect to focused SSH host")
 		return m, m.dispatchProcessSSHConnect(msg)
 	case message.RunProcessLoadSSHConfig:
+		m.logger.Debug("[UI] Load SSH config for focused SSH host")
 		return m, m.dispatchProcessSSHLoadConfig(msg)
 	case message.RunProcessSuccess:
 		if msg.ProcessName == "ssh_load_config" {
-			m.appState.HostSSHConfig = ssh.ParseConfig(*msg.Output)
+			parsedSSHConfig := ssh.ParseConfig(*msg.Output)
+			m.appState.HostSSHConfig = parsedSSHConfig
+			m.logger.Debug("[UI] Update app state with host SSH config: %+v", *parsedSSHConfig)
+			cmds = append(cmds, message.TeaCmd(message.HostSSHConfigLoaded{}))
 		}
-		cmds = append(cmds, message.TeaCmd(message.HostSSHConfigLoaded{}))
 	case message.RunProcessErrorOccurred:
 		// We use m.logger.Debug method to report about the error,
 		// because the error was already reported by run process module.

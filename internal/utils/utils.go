@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 	"os/exec"
-	"os/user"
 	"path"
 	"path/filepath"
 	"strings"
@@ -77,35 +76,6 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 	}
 
 	return path.Join(userConfigDir, appName), nil
-}
-
-// CurrentUsername - returns current OS username or "n/a" if it can't be determined.
-func CurrentUsername() string {
-	// Read from 'ssh -G hostname' output:
-	// 1. 'identityfile'
-	// 2. 'user'
-	// 3. 'port'
-	// Example:
-	// ssh -G localhost
-	//
-	// user roman
-	// hostname localhost
-	// port 22
-	// identityfile ~/.ssh/id_rsa
-	// identityfile ~/.ssh/id_dsa
-	// identityfile ~/.ssh/id_ecdsa
-	// identityfile ~/.ssh/id_ecdsa_sk
-	// identityfile ~/.ssh/id_ed25519
-	// identityfile ~/.ssh/id_ed25519_sk
-	// identityfile ~/.ssh/id_xmss
-
-	// That's a naive implementation. ssh [-vvv] -G <hostname> should be used to request settings for a hostname.
-	user, err := user.Current()
-	if err != nil {
-		return "n/a"
-	}
-
-	return user.Username
 }
 
 // CheckAppInstalled - checks if application is installed and can be found in executable path

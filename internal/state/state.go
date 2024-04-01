@@ -53,6 +53,7 @@ func Get(appHomePath string, lg iLogger) *ApplicationState {
 		appState = &ApplicationState{
 			appStateFilePath: path.Join(appHomePath, stateFile),
 			logger:           lg,
+			HostSSHConfig:    ssh.DefaultConfig(),
 		}
 
 		// If we cannot read previously created application state, that's fine - we can continue execution.

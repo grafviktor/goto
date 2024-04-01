@@ -355,7 +355,10 @@ func (m *listModel) onFocusChanged(_ tea.Msg) tea.Cmd {
 
 	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
 		m.logger.Debug("[UI] Select host id: %v, title: %s", hostItem.ID, hostItem.Title())
-		return message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID})
+		return tea.Batch(
+			message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
+			message.TeaCmd(message.RunProcessLoadSSHConfig{SSHConfigHostname: hostItem.Address}),
+		)
 	}
 
 	m.logger.Error("[UI] Select unknown item type from the list")

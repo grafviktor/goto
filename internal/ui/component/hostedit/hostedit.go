@@ -163,21 +163,18 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		case inputLogin:
 			t.Label = "Login"
 			t.CharLimit = 128
-			// t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.User)
-			t.Placeholder = fmt.Sprintf("default: %s", utils.CurrentUsername())
+			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.User)
 			t.SetValue(host.LoginName)
 		case inputNetworkPort:
 			t.Label = "Network port"
 			t.CharLimit = 5
-			// t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.Port)
-			t.Placeholder = "default: 22"
+			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.Port)
 			t.SetValue(host.RemotePort)
 			t.Validate = networkPortValidator
 		case inputIdentityFile:
 			t.Label = "Identity file path"
 			t.CharLimit = 512
-			// t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.IdentityFile)
-			t.Placeholder = "default: $HOME/.ssh/id_rsa"
+			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.IdentityFile)
 			t.SetValue(host.PrivateKeyPath)
 		}
 
@@ -204,7 +201,7 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case debouncedMessage:
 		cmd = m.handleDebouncedMessage(msg)
 	case message.HostSSHConfigLoaded:
-		m.handleHostSSHConfigLoaded()
+		m.updateInputPlaceholders()
 		m.viewport.SetContent(m.inputsView())
 	}
 
@@ -371,7 +368,7 @@ func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 			// Load SSH config for the specified hostname
 			return message.TeaCmd(debouncedMessage{
 				wrappedMsg:  message.RunProcessLoadSSHConfig{SSHConfigHostname: currentValue},
-				debounceTag: m.debounceTag,
+				debounceTag: m.debounceTag, // See the comments in debouncedMessage definition.
 			})
 		}
 	}
@@ -456,7 +453,8 @@ func (m *editModel) handleCopyInputValueShortcut() {
 	}
 }
 
-func (m *editModel) handleHostSSHConfigLoaded() {
+func (m *editModel) updateInputPlaceholders() {
+	m.logger.Debug("[UI] Take input placeholders from selected host SSH config")
 	m.inputs[inputLogin].Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.User)
 	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.Port)
 	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.IdentityFile)

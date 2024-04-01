@@ -12,6 +12,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/mock"
 	"github.com/grafviktor/goto/internal/state"
+	"github.com/grafviktor/goto/internal/utils/ssh"
 )
 
 func TestNotEmptyValidator(t *testing.T) {
@@ -112,9 +113,7 @@ func TestGetKeyMap(t *testing.T) {
 // }
 
 func TestSave(t *testing.T) {
-	state := state.ApplicationState{}
-
-	hostEditModel := New(context.TODO(), mock.NewMockStorage(true), &state, &mock.MockLogger{})
+	hostEditModel := New(context.TODO(), mock.NewMockStorage(true), MockAppState(), &mock.MockLogger{})
 	require.Equal(t, inputTitle, hostEditModel.focusedInput)
 
 	hostEditModel.inputs[inputDescription].SetValue("test")
@@ -154,10 +153,8 @@ func TestSave(t *testing.T) {
 
 func TestCopyInputValueFromTo(t *testing.T) {
 	// Test copy values from title to hostname when create a new record in hosts database
-	state := state.ApplicationState{}
-
 	storageHostNoFound := mock.NewMockStorage(true)
-	hostEditModel := New(context.TODO(), storageHostNoFound, &state, &mock.MockLogger{})
+	hostEditModel := New(context.TODO(), storageHostNoFound, MockAppState(), &mock.MockLogger{})
 	// Check that selected input is title
 	assert.Equal(t, hostEditModel.focusedInput, inputTitle)
 
@@ -204,12 +201,12 @@ func TestCopyInputValueFromTo(t *testing.T) {
 func TestHandleCopyInputValueShortcut(t *testing.T) {
 	// Test that we can copy values from Title to Address and vice-versa
 	// using keyMap.CopyInputValue keyboard shortcut
-	state := state.ApplicationState{}
-	// That is important in this test. We should make sure that the host which we edit exists
+
+	// That is important in this test - we should make sure that the host which we edit exists
 	// in the storage. Otherwise, everything what we type in title will automatically be
 	// propagated to address field.
 	storageShouldFail := false
-	model := New(context.TODO(), mock.NewMockStorage(storageShouldFail), &state, &mock.MockLogger{})
+	model := New(context.TODO(), mock.NewMockStorage(storageShouldFail), MockAppState(), &mock.MockLogger{})
 	// Override mock values which we received from mock database and set fields values to 'test'
 	model.inputs[inputTitle].SetValue("test")
 	model.inputs[inputAddress].SetValue("test")
@@ -255,7 +252,7 @@ func TestHandleCopyInputValueShortcut(t *testing.T) {
 
 func TestUpdate_TeaSizeMsg(t *testing.T) {
 	// Test that if model is ready, WindowSizeMsg message will update viewport
-	model := New(context.TODO(), mock.NewMockStorage(false), &state.ApplicationState{}, &mock.MockLogger{})
+	model := New(context.TODO(), mock.NewMockStorage(false), MockAppState(), &mock.MockLogger{})
 	model.ready = true
 	model.Update(tea.WindowSizeMsg{Width: 100, Height: 100})
 
@@ -266,7 +263,7 @@ func TestUpdate_TeaSizeMsg(t *testing.T) {
 func TestView(t *testing.T) {
 	// Test that by calling View() function first time, we set ready flag to true
 	// and view() returns non-empty string which will be used to build terminal user interface
-	model := New(context.TODO(), mock.NewMockStorage(false), &state.ApplicationState{}, &mock.MockLogger{})
+	model := New(context.TODO(), mock.NewMockStorage(false), MockAppState(), &mock.MockLogger{})
 	assert.False(t, model.ready)
 	var ui string = model.View()
 
@@ -276,12 +273,18 @@ func TestView(t *testing.T) {
 
 func TestHelpView(t *testing.T) {
 	// Test that help view is not empty
-	model := New(context.TODO(), mock.NewMockStorage(false), &state.ApplicationState{}, &mock.MockLogger{})
+	model := New(context.TODO(), mock.NewMockStorage(false), MockAppState(), &mock.MockLogger{})
 	require.NotEmpty(t, model.helpView())
 }
 
 func TestHeaderView(t *testing.T) {
 	// Test that header view is not empty
-	model := New(context.TODO(), mock.NewMockStorage(false), &state.ApplicationState{}, &mock.MockLogger{})
+	model := New(context.TODO(), mock.NewMockStorage(false), MockAppState(), &mock.MockLogger{})
 	require.NotEmpty(t, model.headerView())
+}
+
+func MockAppState() *state.ApplicationState {
+	return &state.ApplicationState{
+		HostSSHConfig: &ssh.Config{},
+	}
 }
