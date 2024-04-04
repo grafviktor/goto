@@ -4,7 +4,7 @@ package ssh
 
 import "testing"
 
-func Test_BaseCMD(t *testing.T) {
+func TestBaseCMD(t *testing.T) {
 	expected := "cmd /c ssh"
 	result := BaseCMD()
 

@@ -39,7 +39,6 @@ func Test_listModel_Change_Selection(t *testing.T) {
 		{
 			"Select next using 'j' key",
 			2,
-
 			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		},
 		{
@@ -288,7 +287,7 @@ func Test_exitRemoveItemMode(t *testing.T) {
 
 	// Reject the action by pressing 'n' (it can be any key apart from 'y')
 	_, cmd := model.Update(tea.KeyMsg{
-		Type:  -1,
+		Type:  -1, // Type '-1' should be equal to 'KeyRunes'
 		Runes: []rune{'n'},
 	})
 

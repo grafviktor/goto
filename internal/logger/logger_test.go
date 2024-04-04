@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func Test_LoggerConstructor(t *testing.T) {
+func TestLoggerConstructor(t *testing.T) {
 	// Create a temporary directory for testing
 	tmpDir, err := os.MkdirTemp("", "testlog")
 	if err != nil {
@@ -66,7 +66,7 @@ func Test_LoggerConstructor(t *testing.T) {
 	}
 }
 
-func Test_LoggerMethods(t *testing.T) {
+func TestLoggerMethods(t *testing.T) {
 	// Create a temporary directory for testing
 	tmpDir, err := os.MkdirTemp("", "testlog")
 	if err != nil {

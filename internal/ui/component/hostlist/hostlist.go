@@ -28,7 +28,7 @@ var (
 	defaultListTitle       = "press 'n' to add a new host"
 )
 
-type logger interface {
+type iLogger interface {
 	Debug(format string, args ...any)
 	Info(format string, args ...any)
 	Error(format string, args ...any)
@@ -50,7 +50,7 @@ type listModel struct {
 	repo       storage.HostStorage
 	keyMap     *keyMap
 	appState   *state.ApplicationState
-	logger     logger
+	logger     iLogger
 	mode       string
 }
 
@@ -60,7 +60,7 @@ type listModel struct {
 // appState - is the application state, usually we want to restore previous state when application restarts,
 // for instance focus previously selected host.
 // log - application logger.
-func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log logger) *listModel {
+func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *listModel {
 	delegate := list.NewDefaultDelegate()
 	delegateKeys := newDelegateKeyMap()
 

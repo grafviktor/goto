@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_NewHost(t *testing.T) {
+func TestNewHost(t *testing.T) {
 	// Create a new host using the NewHost function
 	expectedHost := Host{
 		ID:             1,
@@ -28,7 +28,7 @@ func Test_NewHost(t *testing.T) {
 	}
 }
 
-func Test_CloneHost(t *testing.T) {
+func TestCloneHost(t *testing.T) {
 	// Create a host to clone
 	originalHost := Host{
 		ID:             1,

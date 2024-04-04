@@ -20,7 +20,7 @@ import (
 	"github.com/grafviktor/goto/internal/utils/ssh"
 )
 
-type logger interface {
+type iLogger interface {
 	Debug(format string, args ...any)
 	Info(format string, args ...any)
 	Error(format string, args ...any)
@@ -32,7 +32,7 @@ func New(
 	ctx context.Context,
 	storage storage.HostStorage,
 	appState *state.ApplicationState,
-	log logger,
+	log iLogger,
 ) mainModel {
 	m := mainModel{
 		modelHostList: hostlist.New(ctx, storage, appState, log),
@@ -51,7 +51,7 @@ type mainModel struct {
 	modelHostList tea.Model
 	modelHostEdit tea.Model
 	appState      *state.ApplicationState
-	logger        logger
+	logger        iLogger
 	viewport      viewport.Model
 	ready         bool
 }

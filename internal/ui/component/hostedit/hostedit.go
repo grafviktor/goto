@@ -57,7 +57,7 @@ var (
 	debounceTime = time.Second * 1
 )
 
-type logger interface {
+type iLogger interface {
 	Debug(format string, args ...any)
 	Info(format string, args ...any)
 }
@@ -103,7 +103,7 @@ type editModel struct {
 	inputs       []labeledInput
 	isNewHost    bool
 	keyMap       keyMap
-	logger       logger
+	logger       iLogger
 	ready        bool
 	title        string
 	viewport     viewport.Model
@@ -111,7 +111,7 @@ type editModel struct {
 }
 
 // New - returns new edit host form.
-func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState, log logger) *editModel {
+func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState, log iLogger) *editModel {
 	initialFocusedInput := inputTitle
 
 	// If we can't cast host id to int, that means we're adding a new host. Ignore the error
