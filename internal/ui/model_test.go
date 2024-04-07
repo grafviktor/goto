@@ -5,12 +5,14 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/grafviktor/goto/internal/mock"
-	"github.com/grafviktor/goto/internal/state"
-	"github.com/grafviktor/goto/internal/ui/message"
-	"github.com/grafviktor/goto/internal/utils/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/grafviktor/goto/internal/mock"
+	"github.com/grafviktor/goto/internal/state"
+	"github.com/grafviktor/goto/internal/test"
+	"github.com/grafviktor/goto/internal/ui/message"
+	"github.com/grafviktor/goto/internal/utils/ssh"
 )
 
 func TestNew(t *testing.T) {
@@ -41,7 +43,7 @@ func TestUpdate_TerminalSizePolling(t *testing.T) {
 	})
 
 	var dst []tea.Msg
-	cmdToMessage(cmds, &dst)
+	test.CmdToMessage(cmds, &dst)
 
 	require.Contains(t, dst, tea.WindowSizeMsg{
 		Width:  10,
@@ -52,17 +54,5 @@ func TestUpdate_TerminalSizePolling(t *testing.T) {
 func MockAppState() *state.ApplicationState {
 	return &state.ApplicationState{
 		HostSSHConfig: &ssh.Config{},
-	}
-}
-
-func cmdToMessage(cmd tea.Cmd, messages *[]tea.Msg) {
-	result := cmd()
-
-	if batchMsg, ok := result.(tea.BatchMsg); ok {
-		for _, msg := range batchMsg {
-			cmdToMessage(msg, messages)
-		}
-	} else {
-		*messages = append(*messages, result)
 	}
 }

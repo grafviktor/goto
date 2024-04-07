@@ -13,6 +13,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/mock"
 	"github.com/grafviktor/goto/internal/state"
+	"github.com/grafviktor/goto/internal/test"
 )
 
 func Test_ListTitleUpdate(t *testing.T) {
@@ -533,7 +534,7 @@ func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
 
 	// Extract batch messages from cmd
 	msgs := []tea.Msg{}
-	cmdToMessage(cmds, &msgs)
+	test.CmdToMessage(cmds, &msgs)
 
 	// Feed all messages one by one to the model
 	for _, msg := range msgs {
@@ -564,16 +565,4 @@ func NewMockListModel(storageShouldFail bool) *listModel {
 	lm.innerModel.SetItems(items)
 
 	return lm
-}
-
-func cmdToMessage(cmd tea.Cmd, messages *[]tea.Msg) {
-	result := cmd()
-
-	if batchMsg, ok := result.(tea.BatchMsg); ok {
-		for _, msg := range batchMsg {
-			cmdToMessage(msg, messages)
-		}
-	} else {
-		*messages = append(*messages, result)
-	}
 }
