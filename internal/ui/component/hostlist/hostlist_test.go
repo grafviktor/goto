@@ -3,6 +3,7 @@ package hostlist
 
 import (
 	"context"
+	"os"
 	"reflect"
 	"testing"
 
@@ -12,8 +13,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/grafviktor/goto/internal/mock"
+	"github.com/grafviktor/goto/internal/model"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/test"
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 func Test_ListTitleUpdate(t *testing.T) {
@@ -86,83 +89,28 @@ func Test_listModel_Change_Selection(t *testing.T) {
 }
 
 func Test_StdErrorWriter_Write(t *testing.T) {
-	t.Skip("This is broken!")
-	/*
-		// Test the Write method of stdErrorWriter
-		writer := stdErrorWriter{}
-		data := []byte("test error")
-		// 'n' should be equal to zero, as we're not writing errors to the terminal
-		n, err := writer.Write(data)
+	// Test the Write method of ProcessBufferWriter
+	writer := utils.ProcessBufferWriter{}
+	data := []byte("test error")
+	n, err := writer.Write(data)
 
-		assert.NoError(t, err)
-		// Make sure that 'n' is zero, because we don't want to see errors in the console
-		assert.Equal(t, len(data), n)
-		// However we can read the error text from writer.err variable when we need
-		assert.Equal(t, data, writer.err)
-	*/
+	assert.NoError(t, err)
+	// Make sure that 'n' is equal to the data length which we sent to the writer
+	assert.Equal(t, len(data), n)
+	// However we can read the error text from writer.err variable when we need
+	assert.Equal(t, data, writer.Output)
 }
 
 func TestBuildConnectSSH(t *testing.T) {
-	t.Skip("This is broken!")
+	// Test case: Build SSH sanity check
+	listModel := NewMockListModel(false)
+	listModel.logger = &mock.MockLogger{}
+	cmd := utils.BuildConnectSSH(model.Host{})
 
-	/*
-		// Test case: Item is not selected
-		listModelEmpty := listModel{
-			innerModel: list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0),
-			logger:     &mock.MockLogger{},
-		}
-
-		_, err := utils.BuildConnectSSH(nil, &stdErrorWriter{})
-		require.Error(t, err)
-
-		// Test case: Item is selected
-		listModel := NewMockListModel(false)
-		listModel.logger = &mock.MockLogger{}
-		cmd, err := utils.BuildConnectSSH(nil, &stdErrorWriter{})
-		require.NoError(t, err)
-
-		// Check that cmd is created and stdErr is re-defined
-		require.NotNil(t, cmd)
-		require.Equal(t, os.Stdout, cmd.Stdout)
-		require.Equal(t, &stdErrorWriter{}, cmd.Stderr)
-	*/
-}
-
-func TestDispatchProcess(t *testing.T) {
-	t.Skip("This is broken!")
-	// Mock data for listModel
-	/*
-		listModel := NewMockListModel(false)
-		listModel.logger = &mock.MockLogger{}
-
-		errorWriter := stdErrorWriter{}
-
-		validProcess := utils.BuildProcess("echo test") // cross-platform command
-		validProcess.Stdout = os.Stdout
-		validProcess.Stderr = &errorWriter
-
-		// Test case: Successful process execution
-		resultCmd := listModel.dispatchProcess(validProcess, &errorWriter)
-
-		// Perform assertions
-		require.NotNil(t, listModel)
-		require.NotNil(t, resultCmd)
-	*/
-	// require.Equal(t, "", string(errorWriter.err)) useless, as the process doesn't start
-
-	/**
-	 * We should run the event loop to run the process, otherwise the process won't start.
-	 * NewProgram invocation is failing, need to invest more time.
-	 */
-	// p := tea.NewProgram(resultListModel)
-	// if _, err := p.Run(); err != nil {
-	// 	require.NoError(t, err)
-	// }
-
-	// // Perform assertions
-	// require.NotNil(t, resultListModel)
-	// require.NotNil(t, resultCmd)
-	// require.Equal(t, "", string(errorWriter.err))
+	// Check that cmd is created and stdErr is re-defined
+	require.NotNil(t, cmd)
+	require.Equal(t, os.Stdout, cmd.Stdout)
+	require.Equal(t, &utils.ProcessBufferWriter{}, cmd.Stderr)
 }
 
 // When remove mode is enabled, test confirm action event.

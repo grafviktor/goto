@@ -26,6 +26,10 @@ lint:
 ## audit: tidy dependencies and format, vet and test all code
 .PHONY: audit
 audit:
+	@echo 'If something is not right, make sure these utilities are installed:'
+	@echo '  * If gofumpt is not installed, then: go install mvdan.cc/gofumpt@latest'
+	@echo '  * If goimports is not installed, then: go install golang.org/x/tools/cmd/goimports@latest'
+	@echo '  * For golangci-lint: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.57.2'
 	@echo 'Tidying and verifying module dependencies...'
 	go mod tidy
 	go mod verify

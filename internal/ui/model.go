@@ -229,6 +229,7 @@ func (m *mainModel) dispatchProcess(name string, process *exec.Cmd, inBackground
 		}
 	}
 
+	// tea.ExecProcess always runs in a foreground.
 	// Return value is 'tea.Cmd' struct
 	return tea.ExecProcess(process, onProcessExitCallback)
 }
