@@ -185,3 +185,23 @@ func TestBuildProcess(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildConnectSSH(t *testing.T) {
+	// Test case: Build SSH sanity check
+	cmd := BuildConnectSSH(model.Host{})
+
+	// Check that cmd is created and stdErr is re-defined
+	require.NotNil(t, cmd)
+	require.Equal(t, os.Stdout, cmd.Stdout)
+	require.Equal(t, &ProcessBufferWriter{}, cmd.Stderr)
+}
+
+func TestBuildLoadSSHConfig(t *testing.T) {
+	// Test case: Load SSH config sanity check
+	cmd := BuildLoadSSHConfig("Mock Host")
+
+	// Check that cmd is created and stdErr and stdOut are re-defined
+	require.NotNil(t, cmd)
+	require.Equal(t, &ProcessBufferWriter{}, cmd.Stderr)
+	require.Equal(t, &ProcessBufferWriter{}, cmd.Stdout)
+}

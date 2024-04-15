@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/grafviktor/goto/internal/mock"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/test"
 	"github.com/grafviktor/goto/internal/ui/message"
@@ -18,13 +17,13 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	model := New(context.TODO(), mock.NewMockStorage(true), MockAppState(), &mock.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
 	require.NotNil(t, model)
 }
 
 func TestUpdate_KeyMsg(t *testing.T) {
 	// Random key test - make sure that the app reacts on Ctrl+C
-	model := New(context.TODO(), mock.NewMockStorage(true), MockAppState(), &mock.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
 	_, cmd := model.Update(tea.KeyMsg{
 		Type: tea.KeyCtrlC,
 	})
@@ -35,7 +34,7 @@ func TestUpdate_KeyMsg(t *testing.T) {
 
 func TestUpdate_TerminalSizePolling(t *testing.T) {
 	// Ensure that when the model receives TerminalSizePolling it autogenerates 'WindowSizeMsg'
-	model := New(context.TODO(), mock.NewMockStorage(true), MockAppState(), &mock.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
 	assert.Equal(t, 0, model.appState.Width)
 	assert.Equal(t, 0, model.appState.Height)
 
@@ -55,7 +54,7 @@ func TestUpdate_TerminalSizePolling(t *testing.T) {
 
 func TestDispatchProcess(t *testing.T) {
 	// Create a model
-	model := New(context.TODO(), mock.NewMockStorage(true), MockAppState(), &mock.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
 
 	validProcess := utils.BuildProcess("echo test") // "echo test" is a cross-platform command
 	validProcess.Stdout = os.Stdout

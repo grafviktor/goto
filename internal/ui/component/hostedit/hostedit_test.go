@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/grafviktor/goto/internal/mock"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/test"
 	"github.com/grafviktor/goto/internal/utils/ssh"
@@ -79,7 +78,7 @@ func TestGetKeyMap(t *testing.T) {
 }
 
 func TestSave(t *testing.T) {
-	hostEditModel := New(context.TODO(), mock.NewMockStorage(true), MockAppState(), &mock.MockLogger{})
+	hostEditModel := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
 	require.Equal(t, inputTitle, hostEditModel.focusedInput)
 
 	hostEditModel.inputs[inputDescription].SetValue("test")
@@ -109,8 +108,8 @@ func TestSave(t *testing.T) {
 
 func TestCopyInputValueFromTo(t *testing.T) {
 	// Test copy values from title to hostname when create a new record in hosts database
-	storageHostNoFound := mock.NewMockStorage(true)
-	hostEditModel := New(context.TODO(), storageHostNoFound, MockAppState(), &mock.MockLogger{})
+	storageHostNoFound := test.NewMockStorage(true)
+	hostEditModel := New(context.TODO(), storageHostNoFound, MockAppState(), &test.MockLogger{})
 	// Check that selected input is title
 	assert.Equal(t, hostEditModel.focusedInput, inputTitle)
 
@@ -162,7 +161,7 @@ func TestHandleCopyInputValueShortcut(t *testing.T) {
 	// in the storage. Otherwise, everything what we type in title will automatically be
 	// propagated to address field.
 	storageShouldFail := false
-	model := New(context.TODO(), mock.NewMockStorage(storageShouldFail), MockAppState(), &mock.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(storageShouldFail), MockAppState(), &test.MockLogger{})
 	// Override mock values which we received from mock database and set fields values to 'test'
 	model.inputs[inputTitle].SetValue("test")
 	model.inputs[inputAddress].SetValue("test")
@@ -208,7 +207,7 @@ func TestHandleCopyInputValueShortcut(t *testing.T) {
 
 func TestUpdate_TeaSizeMsg(t *testing.T) {
 	// Test that if model is ready, WindowSizeMsg message will update viewport
-	model := New(context.TODO(), mock.NewMockStorage(false), MockAppState(), &mock.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
 	model.ready = true
 	model.Update(tea.WindowSizeMsg{Width: 100, Height: 100})
 
@@ -219,7 +218,7 @@ func TestUpdate_TeaSizeMsg(t *testing.T) {
 func TestView(t *testing.T) {
 	// Test that by calling View() function first time, we set ready flag to true
 	// and view() returns non-empty string which will be used to build terminal user interface
-	model := New(context.TODO(), mock.NewMockStorage(false), MockAppState(), &mock.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
 	assert.False(t, model.ready)
 	var ui string = model.View()
 
@@ -229,19 +228,19 @@ func TestView(t *testing.T) {
 
 func TestHelpView(t *testing.T) {
 	// Test that help view is not empty
-	model := New(context.TODO(), mock.NewMockStorage(false), MockAppState(), &mock.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
 	require.NotEmpty(t, model.helpView())
 }
 
 func TestHeaderView(t *testing.T) {
 	// Test that header view is not empty
-	model := New(context.TODO(), mock.NewMockStorage(false), MockAppState(), &mock.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
 	require.NotEmpty(t, model.headerView())
 }
 
 func TestHandleDebounceMessage(t *testing.T) {
 	// Test that only last message is executed when wrap message in the debounce container
-	model := New(context.TODO(), mock.NewMockStorage(false), MockAppState(), &mock.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
 	_, returned1 := model.Update(debouncedMessage{
 		wrappedMsg:  struct{}{},
 		debounceTag: 0,
@@ -269,7 +268,7 @@ func TestHandleDebounceMessage(t *testing.T) {
 func TestUpdateInputPlaceHolders(t *testing.T) {
 	// Make sure that placeholders have correct values once ssh config is changed.
 	appState := MockAppState()
-	model := New(context.TODO(), mock.NewMockStorage(false), appState, &mock.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(false), appState, &test.MockLogger{})
 
 	defaultPlaceholderPrefix := "default:"
 	appState.HostSSHConfig.User = "Mock User"
