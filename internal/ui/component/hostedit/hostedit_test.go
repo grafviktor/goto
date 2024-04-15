@@ -239,6 +239,64 @@ func TestHeaderView(t *testing.T) {
 	require.NotEmpty(t, model.headerView())
 }
 
+func TestHandleDebounceMessage(t *testing.T) {
+	// Test that only last message is executed when wrap message in the debounce container
+	model := New(context.TODO(), mock.NewMockStorage(false), MockAppState(), &mock.MockLogger{})
+	_, returned1 := model.Update(debouncedMessage{
+		wrappedMsg:  struct{}{},
+		debounceTag: 0,
+	})
+
+	_, returned2 := model.Update(debouncedMessage{
+		wrappedMsg:  struct{}{},
+		debounceTag: 1,
+	})
+
+	_, returned3 := model.Update(debouncedMessage{
+		wrappedMsg:  struct{}{},
+		debounceTag: 2,
+	})
+
+	result1 := returned1()
+	result2 := returned2()
+	result3 := returned3()
+
+	require.Nil(t, result1)
+	require.Nil(t, result2)
+	require.NotNil(t, result3)
+}
+
+func TestUpdateInputPlaceHolders(t *testing.T) {
+	// Make sure that placeholders have correct values once ssh config is changed.
+	appState := MockAppState()
+	model := New(context.TODO(), mock.NewMockStorage(false), appState, &mock.MockLogger{})
+
+	defaultPlaceholderPrefix := "default:"
+	appState.HostSSHConfig.User = "Mock User"
+	appState.HostSSHConfig.Port = "Mock Port"
+	appState.HostSSHConfig.IdentityFile = "Mock Identity File"
+
+	model.updateInputPlaceholders()
+
+	require.Equal(t, model.inputs[inputLogin].Placeholder, fmt.Sprintf(
+		"%s %s",
+		defaultPlaceholderPrefix,
+		"Mock User",
+	))
+
+	require.Equal(t, model.inputs[inputNetworkPort].Placeholder, fmt.Sprintf(
+		"%s %s",
+		defaultPlaceholderPrefix,
+		"Mock Port",
+	))
+
+	require.Equal(t, model.inputs[inputIdentityFile].Placeholder, fmt.Sprintf(
+		"%s %s",
+		defaultPlaceholderPrefix,
+		"Mock Identity File",
+	))
+}
+
 func MockAppState() *state.ApplicationState {
 	return &state.ApplicationState{
 		HostSSHConfig: &ssh.Config{},
