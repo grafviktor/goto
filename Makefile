@@ -96,3 +96,10 @@ dist:
 	@cp $(DIST_PATH)/gg-mac $(DIST_PATH)/gg-lin $(DIST_PATH)/gg-win.exe $(DIST_PATH)/goto-$(BUILD_VERSION)
 	@cd $(DIST_PATH) && zip -r goto-$(BUILD_VERSION).zip goto-$(BUILD_VERSION)
 	@rm -r $(DIST_PATH)/goto-$(BUILD_VERSION)
+
+## clean: remove ./dist folder and all its contents.
+.PHONY: clean
+clean:
+	@echo 'Cleaning'	
+	@-rm -r $(DIST_PATH) 2>/dev/null
+	@echo 'Done'
