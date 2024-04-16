@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -17,6 +18,7 @@ import (
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
+	"github.com/grafviktor/goto/internal/ui/component/input"
 	"github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
 )
@@ -32,6 +34,12 @@ type (
 	MsgClose struct{}
 	// MsgSave triggers when users saves results.
 	MsgSave struct{}
+	// debouncedMessage is used to trigger side-effects. For instance dispatch RunProcessLoadSSHConfig
+	// which reads host config from ~/.ssh/config file.
+	debouncedMessage struct {
+		wrappedMsg  tea.Msg
+		debounceTag int
+	}
 )
 
 const (
@@ -43,13 +51,14 @@ const (
 	inputIdentityFile
 )
 
-// ItemID is a key to extract item id from application context.
 var (
+	// ItemID is a key to extract item id from application context.
 	ItemID       = struct{}{}
 	defaultTitle = "host details"
+	debounceTime = time.Second * 1
 )
 
-type logger interface {
+type iLogger interface {
 	Debug(format string, args ...any)
 	Info(format string, args ...any)
 }
@@ -92,17 +101,18 @@ type editModel struct {
 	help         help.Model
 	host         model.Host
 	hostStorage  storage.HostStorage
-	inputs       []labeledInput
+	inputs       []input.Input
 	isNewHost    bool
 	keyMap       keyMap
-	logger       logger
+	logger       iLogger
 	ready        bool
 	title        string
 	viewport     viewport.Model
+	debounceTag  int
 }
 
 // New - returns new edit host form.
-func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState, log logger) *editModel {
+func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState, log iLogger) *editModel {
 	initialFocusedInput := inputTitle
 
 	// If we can't cast host id to int, that means we're adding a new host. Ignore the error
@@ -114,7 +124,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	}
 
 	m := editModel{
-		inputs:       make([]labeledInput, 6),
+		inputs:       make([]input.Input, 6),
 		hostStorage:  storage,
 		host:         host,
 		help:         help.New(),
@@ -125,12 +135,13 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		title:        defaultTitle,
 		// This variable is for optimization. By introducing it, we can avoid unnecessary database reads
 		// every time we change values which depend on each other, for instance: "Title" and "Address".
+		// Use text search and see where 'isNewHost' is used.
 		isNewHost: hostNotFoundErr != nil,
 	}
 
-	var t labeledInput
+	var t input.Input
 	for i := range m.inputs {
-		t = *NewLabeledInput()
+		t = *input.New()
 		t.Cursor.Style = cursorStyle
 
 		switch i {
@@ -153,18 +164,18 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		case inputLogin:
 			t.Label = "Login"
 			t.CharLimit = 128
-			t.Placeholder = fmt.Sprintf("default: %s", utils.CurrentUsername())
+			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.User)
 			t.SetValue(host.LoginName)
 		case inputNetworkPort:
 			t.Label = "Network port"
 			t.CharLimit = 5
-			t.Placeholder = "default: 22"
+			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.Port)
 			t.SetValue(host.RemotePort)
 			t.Validate = networkPortValidator
 		case inputIdentityFile:
 			t.Label = "Identity file path"
 			t.CharLimit = 512
-			t.Placeholder = "default: $HOME/.ssh/id_rsa"
+			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.IdentityFile)
 			t.SetValue(host.PrivateKeyPath)
 		}
 
@@ -187,6 +198,11 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateViewPort(msg)
 	case tea.KeyMsg:
 		cmd = m.handleKeyboardEvent(msg)
+		m.viewport.SetContent(m.inputsView())
+	case debouncedMessage:
+		cmd = m.handleDebouncedMessage(msg)
+	case message.HostSSHConfigLoaded:
+		m.updateInputPlaceholders()
 		m.viewport.SetContent(m.inputsView())
 	}
 
@@ -225,6 +241,24 @@ func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		// Handle all other key events
 		return m.focusedInputProcessKeyEvent(msg)
 	}
+}
+
+func (m *editModel) handleDebouncedMessage(msg debouncedMessage) tea.Cmd {
+	// This function debounces a tea.Message. In order to find the last message from a list of duplicate messages
+	// debounceTag is used. Every time a tea.Tick message is dispatched, debounceTag is incremented. Then, when
+	// tea.Tick message triggers by timer (by debounceTime) it compares its own debounceTag with the model's
+	// debounceTag and only triggers when they're equal. That guarantees that only last message will be handled.
+	m.debounceTag++
+
+	return tea.Tick(debounceTime, func(_ time.Time) tea.Msg {
+		// Need to decrement the model's debounce tag before comparing. This simply relates to order of operations.
+		if msg.debounceTag == m.debounceTag-1 {
+			// Only the last message from messages dispatched within a certain interval will be handled.
+			return msg.wrappedMsg
+		}
+
+		return nil
+	})
 }
 
 func (m *editModel) save(_ tea.Msg) tea.Cmd {
@@ -270,8 +304,8 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 		message.TeaCmd(MsgClose{}),
 		// Order matters here! That's why we use tea.Sequence instead of tea.Batch.
 		// 'HostListSelectItem' message should be dispatched
-		// before 'MsgRepoUpdated'. The reasons of that is because
-		// 'MsgRepoUpdated' handler automatically sets focus on previously selected item.
+		// before 'MsgRefreshRepo'. The reasons of that is because
+		// 'MsgRefreshRepo' handler automatically sets focus on previously selected item.
 		message.TeaCmd(message.HostListSelectItem{HostID: host.ID}),
 		message.TeaCmd(hostlist.MsgRefreshRepo{}),
 	)
@@ -302,14 +336,15 @@ func (m *editModel) copyInputValueFromTo(sourceInput, destinationInput int) {
 }
 
 func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
-	var cmd tea.Cmd
 	var shouldUpdateTitle bool
+	previousValue := m.inputs[m.focusedInput].Value()
 
 	// Decide if we need to propagate hostname to title.
 	// Note, that we should make this decision BEFORE updating focused input
 	if m.focusedInput == inputTitle {
 		addressEqualsTitle := m.inputs[inputTitle].Value() == m.inputs[inputAddress].Value()
 
+		// If there wouldn't be 'm.isNewHost' variable we would have to query database for every key event
 		if m.isNewHost && addressEqualsTitle {
 			// If host doesn't exist in the repo and title equals address
 			// we should copy text from address to title.
@@ -325,7 +360,21 @@ func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 		m.copyInputValueFromTo(inputTitle, inputAddress)
 	}
 
-	return cmd
+	// If type in address field
+	if m.focusedInput == inputAddress {
+		currentValue := m.inputs[inputAddress].Value()
+
+		// And value changed
+		if previousValue != currentValue {
+			// Load SSH config for the specified hostname
+			return message.TeaCmd(debouncedMessage{
+				wrappedMsg:  message.RunProcessLoadSSHConfig{SSHConfigHostname: currentValue},
+				debounceTag: m.debounceTag, // See the comments in debouncedMessage definition.
+			})
+		}
+	}
+
+	return nil
 }
 
 func (m *editModel) updateViewPort(msg tea.Msg) {
@@ -344,7 +393,7 @@ func (m *editModel) updateViewPort(msg tea.Msg) {
 }
 
 func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
-	var cmd tea.Cmd
+	var cmds []tea.Cmd
 	keyMsg := msg.(tea.KeyMsg)
 
 	minFocusIndex := 0
@@ -384,14 +433,14 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 			m.logger.Debug("[UI] Focus input: '%s'", m.inputs[i].Label)
 
 			// Set focused state
-			cmd = m.inputs[i].Focus()
+			cmds = append(cmds, m.inputs[i].Focus())
 		} else {
 			// Remove focused state
 			m.inputs[i].Blur()
 		}
 	}
 
-	return cmd
+	return tea.Batch(cmds...)
 }
 
 func (m *editModel) handleCopyInputValueShortcut() {
@@ -403,6 +452,13 @@ func (m *editModel) handleCopyInputValueShortcut() {
 	} else if m.focusedInput == inputAddress {
 		m.copyInputValueFromTo(m.focusedInput, inputTitle)
 	}
+}
+
+func (m *editModel) updateInputPlaceholders() {
+	m.logger.Debug("[UI] Take input placeholders from selected host SSH config")
+	m.inputs[inputLogin].Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.User)
+	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.Port)
+	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.IdentityFile)
 }
 
 func (m *editModel) inputsView() string {

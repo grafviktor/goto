@@ -3,18 +3,12 @@ package hostedit
 import "github.com/charmbracelet/lipgloss"
 
 var (
-	docStyle     = lipgloss.NewStyle().Margin(1, 2)
-	focusedStyle = lipgloss.NewStyle().
+	docStyle    = lipgloss.NewStyle().Margin(1, 2)
+	cursorStyle = lipgloss.NewStyle().
 			BorderForeground(lipgloss.AdaptiveColor{Light: "#F793FF", Dark: "#AD58B4"}).
 			Foreground(lipgloss.AdaptiveColor{Light: "#EE6FF8", Dark: "#EE6FF8"})
-	errorStyle = lipgloss.NewStyle().
-			BorderForeground(lipgloss.AdaptiveColor{Light: "#F793FF", Dark: "#AD58B4"}).
-			Foreground(lipgloss.AdaptiveColor{Light: "#FF7783", Dark: "#FF7783"})
-	cursorStyle      = focusedStyle.Copy()
-	focusedInputText = lipgloss.NewStyle().Foreground(lipgloss.Color("#AD58B4"))
-	noStyle          = lipgloss.NewStyle()
 
-	titleStyle = lipgloss.NewStyle().
+	titleStyle = lipgloss.NewStyle(). //
 			Background(lipgloss.Color("62")).
 			Foreground(lipgloss.Color("230")).
 			Padding(0, 1).
@@ -22,7 +16,7 @@ var (
 		// I use '\n' in the code base. That is to a rendering artifacts
 		Margin(1, 4, 0)
 
-	menuStyle = lipgloss.NewStyle().Margin(3, 4, 0)
+	menuStyle = lipgloss.NewStyle().Margin(3, 4, 0) //
 )
 
 //nolint:dupword

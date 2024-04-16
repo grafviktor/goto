@@ -7,6 +7,8 @@ import (
 	"sync"
 
 	"gopkg.in/yaml.v2"
+
+	"github.com/grafviktor/goto/internal/utils/ssh"
 )
 
 type view int
@@ -16,7 +18,7 @@ const (
 	ViewHostList view = iota
 	// ViewEditItem mode is active when we edit existing or add a new host.
 	ViewEditItem
-	// ViewErrorMessage mode is active when there was an error when attenpted to connect to a remote host.
+	// ViewErrorMessage mode is active when there was an error when attempted to connect to a remote host.
 	ViewErrorMessage
 )
 
@@ -37,10 +39,11 @@ type ApplicationState struct {
 	Selected         int `yaml:"selected"`
 	appStateFilePath string
 	logger           iLogger
-	CurrentView      view  `yaml:"-"`
-	Err              error `yaml:"-"`
-	Width            int   `yaml:"-"`
-	Height           int   `yaml:"-"`
+	CurrentView      view        `yaml:"-"`
+	Err              error       `yaml:"-"`
+	Width            int         `yaml:"-"`
+	Height           int         `yaml:"-"`
+	HostSSHConfig    *ssh.Config `yaml:"-"`
 }
 
 // Get - reads application state from disk.
@@ -50,6 +53,7 @@ func Get(appHomePath string, lg iLogger) *ApplicationState {
 		appState = &ApplicationState{
 			appStateFilePath: path.Join(appHomePath, stateFile),
 			logger:           lg,
+			HostSSHConfig:    ssh.DefaultConfig(),
 		}
 
 		// If we cannot read previously created application state, that's fine - we can continue execution.

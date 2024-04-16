@@ -9,11 +9,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 
-	"github.com/grafviktor/goto/internal/mock"
+	"github.com/grafviktor/goto/internal/test"
 )
 
 // That's a wrapper function for state.Get which is required to overcome sync.Once restrictions
-func stateGet(tempDir string, mockLogger *mock.MockLogger) *ApplicationState {
+func stateGet(tempDir string, mockLogger *test.MockLogger) *ApplicationState {
 	appState := Get(tempDir, mockLogger)
 
 	// We need this hack because state.Get function utilizes `sync.once`. That means, if all unit tests
@@ -34,7 +34,7 @@ func Test_GetApplicationState(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// Create a mock logger for testing
-	mockLogger := &mock.MockLogger{}
+	mockLogger := &test.MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
 	appState := stateGet(tempDir, mockLogger)
@@ -57,7 +57,7 @@ func Test_PersistApplicationState(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// Create a mock logger for testing
-	mockLogger := &mock.MockLogger{}
+	mockLogger := &test.MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
 	appState := stateGet(tempDir, mockLogger)

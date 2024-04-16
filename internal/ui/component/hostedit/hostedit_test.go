@@ -6,12 +6,16 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/grafviktor/goto/internal/ui/component/hostlist"
+	"github.com/grafviktor/goto/internal/ui/message"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/grafviktor/goto/internal/mock"
 	"github.com/grafviktor/goto/internal/state"
+	"github.com/grafviktor/goto/internal/test"
+	"github.com/grafviktor/goto/internal/utils/ssh"
 )
 
 func TestNotEmptyValidator(t *testing.T) {
@@ -73,48 +77,8 @@ func TestGetKeyMap(t *testing.T) {
 	require.False(t, keyMap.CopyInputValue.Enabled())
 }
 
-// func (m editModel) save(_ tea.Msg) (editModel, tea.Cmd) {
-// 	for i := range m.inputs {
-// 		if m.inputs[i].Validate != nil {
-// 			if err := m.inputs[i].Validate(m.inputs[i].Value()); err != nil {
-// 				m.inputs[i].Err = err
-// 				m.title = fmt.Sprintf("%s is not valid", m.inputs[i].Label)
-
-// 				return m, nil
-// 			}
-// 		}
-
-// 		switch i {
-// 		case inputTitle:
-// 			m.host.Title = m.inputs[i].Value()
-// 		case inputAddress:
-// 			m.host.Address = m.inputs[i].Value()
-// 		case inputDescription:
-// 			m.host.Description = m.inputs[i].Value()
-// 		case inputLogin:
-// 			m.host.LoginName = m.inputs[i].Value()
-// 		case inputNetworkPort:
-// 			m.host.RemotePort = m.inputs[i].Value()
-// 		case inputIdentityFile:
-// 			m.host.PrivateKeyPath = m.inputs[i].Value()
-// 		}
-// 	}
-
-// 	host, _ := m.hostStorage.Save(m.host)
-// 	return m, tea.Batch(
-// 		message.TeaCmd(MsgClose{}),
-// 		// Order matters here! 'HostListSelectItem' message should be dispatched
-// 		// before 'MsgRepoUpdated'. The reasons of that is because
-// 		// 'MsgRepoUpdated' handler automatically sets focus on previously selected item.
-// 		message.TeaCmd(message.HostListSelectItem{HostID: host.ID}),
-// 		message.TeaCmd(hostlist.MsgRepoUpdated{}),
-// 	)
-// }
-
 func TestSave(t *testing.T) {
-	state := state.ApplicationState{}
-
-	hostEditModel := New(context.TODO(), mock.NewMockStorage(true), &state, &mock.MockLogger{})
+	hostEditModel := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
 	require.Equal(t, inputTitle, hostEditModel.focusedInput)
 
 	hostEditModel.inputs[inputDescription].SetValue("test")
@@ -128,8 +92,6 @@ func TestSave(t *testing.T) {
 	require.Nil(t, messageSequence)
 	require.Contains(t, hostEditModel.title, "not valid")
 
-	// model, messageSequence := hostEditModel.save(nil)
-
 	hostEditModel.inputs[inputTitle].SetValue("test")
 	hostEditModel.inputs[inputAddress].SetValue("localhost")
 
@@ -137,27 +99,17 @@ func TestSave(t *testing.T) {
 
 	require.NotNil(t, messageSequence)
 
-	/*
-		// Cannot test return values because the function returns an array-like structure of private objects
-		expectedSequence := tea.Sequence(
-			message.TeaCmd(MsgClose{}),
-			message.TeaCmd(message.HostListSelectItem{HostID: model.host.ID}),
-			message.TeaCmd(hostlist.MsgRepoUpdated{}),
-		)
-
-		one := expectedSequence()
-		two := messageSequence() // returns []tea.sequenceMsg, which is private. Cannot test.
-
-		require.Equal(t, one, two)
-	*/
+	var dst []tea.Msg
+	test.CmdToMessage(messageSequence, &dst)
+	require.Contains(t, dst, MsgClose{})
+	require.Contains(t, dst, hostlist.MsgRefreshRepo{})
+	require.Contains(t, dst, message.HostListSelectItem{HostID: 0})
 }
 
 func TestCopyInputValueFromTo(t *testing.T) {
 	// Test copy values from title to hostname when create a new record in hosts database
-	state := state.ApplicationState{}
-
-	storageHostNoFound := mock.NewMockStorage(true)
-	hostEditModel := New(context.TODO(), storageHostNoFound, &state, &mock.MockLogger{})
+	storageHostNoFound := test.NewMockStorage(true)
+	hostEditModel := New(context.TODO(), storageHostNoFound, MockAppState(), &test.MockLogger{})
 	// Check that selected input is title
 	assert.Equal(t, hostEditModel.focusedInput, inputTitle)
 
@@ -204,12 +156,12 @@ func TestCopyInputValueFromTo(t *testing.T) {
 func TestHandleCopyInputValueShortcut(t *testing.T) {
 	// Test that we can copy values from Title to Address and vice-versa
 	// using keyMap.CopyInputValue keyboard shortcut
-	state := state.ApplicationState{}
-	// That is important in this test. We should make sure that the host which we edit exists
+
+	// That is important in this test - we should make sure that the host which we edit exists
 	// in the storage. Otherwise, everything what we type in title will automatically be
 	// propagated to address field.
 	storageShouldFail := false
-	model := New(context.TODO(), mock.NewMockStorage(storageShouldFail), &state, &mock.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(storageShouldFail), MockAppState(), &test.MockLogger{})
 	// Override mock values which we received from mock database and set fields values to 'test'
 	model.inputs[inputTitle].SetValue("test")
 	model.inputs[inputAddress].SetValue("test")
@@ -255,7 +207,7 @@ func TestHandleCopyInputValueShortcut(t *testing.T) {
 
 func TestUpdate_TeaSizeMsg(t *testing.T) {
 	// Test that if model is ready, WindowSizeMsg message will update viewport
-	model := New(context.TODO(), mock.NewMockStorage(false), &state.ApplicationState{}, &mock.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
 	model.ready = true
 	model.Update(tea.WindowSizeMsg{Width: 100, Height: 100})
 
@@ -266,7 +218,7 @@ func TestUpdate_TeaSizeMsg(t *testing.T) {
 func TestView(t *testing.T) {
 	// Test that by calling View() function first time, we set ready flag to true
 	// and view() returns non-empty string which will be used to build terminal user interface
-	model := New(context.TODO(), mock.NewMockStorage(false), &state.ApplicationState{}, &mock.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
 	assert.False(t, model.ready)
 	var ui string = model.View()
 
@@ -276,12 +228,76 @@ func TestView(t *testing.T) {
 
 func TestHelpView(t *testing.T) {
 	// Test that help view is not empty
-	model := New(context.TODO(), mock.NewMockStorage(false), &state.ApplicationState{}, &mock.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
 	require.NotEmpty(t, model.helpView())
 }
 
 func TestHeaderView(t *testing.T) {
 	// Test that header view is not empty
-	model := New(context.TODO(), mock.NewMockStorage(false), &state.ApplicationState{}, &mock.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
 	require.NotEmpty(t, model.headerView())
+}
+
+func TestHandleDebounceMessage(t *testing.T) {
+	// Test that only last message is executed when wrap message in the debounce container
+	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
+	_, returned1 := model.Update(debouncedMessage{
+		wrappedMsg:  struct{}{},
+		debounceTag: 0,
+	})
+
+	_, returned2 := model.Update(debouncedMessage{
+		wrappedMsg:  struct{}{},
+		debounceTag: 1,
+	})
+
+	_, returned3 := model.Update(debouncedMessage{
+		wrappedMsg:  struct{}{},
+		debounceTag: 2,
+	})
+
+	result1 := returned1()
+	result2 := returned2()
+	result3 := returned3()
+
+	require.Nil(t, result1)
+	require.Nil(t, result2)
+	require.NotNil(t, result3)
+}
+
+func TestUpdateInputPlaceHolders(t *testing.T) {
+	// Make sure that placeholders have correct values once ssh config is changed.
+	appState := MockAppState()
+	model := New(context.TODO(), test.NewMockStorage(false), appState, &test.MockLogger{})
+
+	defaultPlaceholderPrefix := "default:"
+	appState.HostSSHConfig.User = "Mock User"
+	appState.HostSSHConfig.Port = "Mock Port"
+	appState.HostSSHConfig.IdentityFile = "Mock Identity File"
+
+	model.updateInputPlaceholders()
+
+	require.Equal(t, model.inputs[inputLogin].Placeholder, fmt.Sprintf(
+		"%s %s",
+		defaultPlaceholderPrefix,
+		"Mock User",
+	))
+
+	require.Equal(t, model.inputs[inputNetworkPort].Placeholder, fmt.Sprintf(
+		"%s %s",
+		defaultPlaceholderPrefix,
+		"Mock Port",
+	))
+
+	require.Equal(t, model.inputs[inputIdentityFile].Placeholder, fmt.Sprintf(
+		"%s %s",
+		defaultPlaceholderPrefix,
+		"Mock Identity File",
+	))
+}
+
+func MockAppState() *state.ApplicationState {
+	return &state.ApplicationState{
+		HostSSHConfig: &ssh.Config{},
+	}
 }

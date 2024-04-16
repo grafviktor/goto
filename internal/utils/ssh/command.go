@@ -18,6 +18,8 @@ type (
 	OptionLoginName struct{ Value string }
 	// OptionAddress - is a remote host address. Example: somehost.com.
 	OptionAddress struct{ Value string }
+	// OptionReadConfig - is used to read config file from ssh_config. Cannot be combined with other options.
+	OptionReadConfig struct{ Value string }
 )
 
 func constructKeyValueOption(optionFlag, optionValue string) string {
@@ -37,6 +39,8 @@ func addOption(sb *strings.Builder, rawParameter CommandLineOption) {
 		option = constructKeyValueOption("-p", p.Value)
 	case OptionLoginName:
 		option = constructKeyValueOption("-l", p.Value)
+	case OptionReadConfig:
+		option = constructKeyValueOption("-G", p.Value)
 	case OptionAddress:
 		if p.Value != "" {
 			option = fmt.Sprintf(" %s", p.Value)

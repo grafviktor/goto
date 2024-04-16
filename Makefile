@@ -26,6 +26,10 @@ lint:
 ## audit: tidy dependencies and format, vet and test all code
 .PHONY: audit
 audit:
+	@echo 'If something is not right, make sure these utilities are installed:'
+	@echo '  * If gofumpt is not installed, then: go install mvdan.cc/gofumpt@latest'
+	@echo '  * If goimports is not installed, then: go install golang.org/x/tools/cmd/goimports@latest'
+	@echo '  * For golangci-lint: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.57.2'
 	@echo 'Tidying and verifying module dependencies...'
 	go mod tidy
 	go mod verify
@@ -92,3 +96,10 @@ dist:
 	@cp $(DIST_PATH)/gg-mac $(DIST_PATH)/gg-lin $(DIST_PATH)/gg-win.exe $(DIST_PATH)/goto-$(BUILD_VERSION)
 	@cd $(DIST_PATH) && zip -r goto-$(BUILD_VERSION).zip goto-$(BUILD_VERSION)
 	@rm -r $(DIST_PATH)/goto-$(BUILD_VERSION)
+
+## clean: remove ./dist folder with all its contents.
+.PHONY: clean
+clean:
+	@echo 'Cleaning'
+	@-rm -r $(DIST_PATH) 2>/dev/null
+	@echo 'Done'

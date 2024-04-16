@@ -34,3 +34,4 @@ jobs:
           file: ./unit.txt
           flags: unit,${{ matrix.os }},go-${{ matrix.go-version }}
           name: unit
+          token: ${{ secrets.CODECOV_TOKEN }}

@@ -5,9 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -31,7 +28,7 @@ var (
 	defaultListTitle       = "press 'n' to add a new host"
 )
 
-type logger interface {
+type iLogger interface {
 	Debug(format string, args ...any)
 	Info(format string, args ...any)
 	Error(format string, args ...any)
@@ -53,7 +50,7 @@ type listModel struct {
 	repo       storage.HostStorage
 	keyMap     *keyMap
 	appState   *state.ApplicationState
-	logger     logger
+	logger     iLogger
 	mode       string
 }
 
@@ -63,7 +60,7 @@ type listModel struct {
 // appState - is the application state, usually we want to restore previous state when application restarts,
 // for instance focus previously selected host.
 // log - application logger.
-func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log logger) *listModel {
+func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *listModel {
 	delegate := list.NewDefaultDelegate()
 	delegateKeys := newDelegateKeyMap()
 
@@ -146,7 +143,7 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		// Handle key event when some mode is enabled. For instance "removeMode".
 		return m.handleKeyEventWhenModeEnabled(msg)
 	case key.Matches(msg, m.keyMap.connect):
-		return m.executeCmd(msg)
+		return m.constructProcessCmd(msg)
 	case key.Matches(msg, m.keyMap.remove):
 		return m.enterRemoveItemMode()
 	case key.Matches(msg, m.keyMap.edit):
@@ -321,55 +318,14 @@ func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
 	)
 }
 
-func (m *listModel) buildProcess(errorWriter *stdErrorWriter) (*exec.Cmd, error) {
-	m.logger.Debug("[UI] Build external command")
+func (m *listModel) constructProcessCmd(_ tea.KeyMsg) tea.Cmd {
 	item, ok := m.innerModel.SelectedItem().(ListItemHost)
 	if !ok {
-		return nil, errors.New(itemNotSelectedMessage)
-	}
-
-	host := *item.Unwrap()
-	command := ssh.ConstructCMD(ssh.BaseCMD(), utils.HostModelToOptionsAdaptor(host)...)
-	process := utils.BuildProcess(command)
-	process.Stdout = os.Stdout
-	process.Stderr = errorWriter
-
-	return process, nil
-}
-
-func (m *listModel) runProcess(process *exec.Cmd, errorWriter *stdErrorWriter) tea.Cmd {
-	execCmd := tea.ExecProcess(process, func(err error) tea.Msg {
-		// This callback triggers when external process exits
-		if err != nil {
-			errorMessage := strings.TrimSpace(string(errorWriter.err))
-			if utils.StringEmpty(errorMessage) {
-				errorMessage = err.Error()
-			}
-
-			m.logger.Error("[EXEC] Terminate process with reason %v", errorMessage)
-			commandWhichFailed := strings.Join(process.Args, " ")
-			// errorDetails contains command which was executed and the error text.
-			errorDetails := fmt.Sprintf("Command: %s\nError:   %s", commandWhichFailed, errorMessage)
-			return message.RunProcessErrorOccurred{Err: errors.New(errorDetails)}
-		}
-
-		m.logger.Info("[EXEC] Terminate process gracefully: %s", process.String())
-		return nil
-	})
-
-	return execCmd
-}
-
-func (m *listModel) executeCmd(_ tea.Msg) tea.Cmd {
-	errorWriter := stdErrorWriter{}
-	process, err := m.buildProcess(&errorWriter)
-	if err != nil {
-		m.logger.Error("[EXEC] Build process error. %v", err)
+		m.logger.Error("[UI] Cannot cast selected item to host model")
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
-	m.logger.Info("[EXEC] Run process: %s", process.String())
-	return m.runProcess(process, &errorWriter)
+	return message.TeaCmd(message.RunProcessConnectSSH{Host: *item.Unwrap()})
 }
 
 func (m *listModel) listTitleUpdate() {
@@ -399,27 +355,12 @@ func (m *listModel) onFocusChanged(_ tea.Msg) tea.Cmd {
 
 	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
 		m.logger.Debug("[UI] Select host id: %v, title: %s", hostItem.ID, hostItem.Title())
-		return message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID})
+		return tea.Batch(
+			message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
+			message.TeaCmd(message.RunProcessLoadSSHConfig{SSHConfigHostname: hostItem.Address}),
+		)
 	}
 
 	m.logger.Error("[UI] Select unknown item type from the list")
 	return nil
-}
-
-// stdErrorWriter - is an object which pretends to be a writer, however it saves all data into 'err' variable
-// for future reading and do not write anything in terminal. We need it to display a formatted error in the console
-// when it's required, but not when it's done by default.
-type stdErrorWriter struct {
-	err []byte
-}
-
-// Write - doesn't write anything, it saves all data in err variable, which can ve read later.
-func (writer *stdErrorWriter) Write(p []byte) (n int, err error) {
-	writer.err = append(writer.err, p...)
-
-	// Hide error from the console, otherwise it will be seen in a subsequent ssh calls
-	// To return to default behavior use: return os.Stderr.Write(p)
-	// We must return the number of bytes which were written using `len(p)`,
-	// otherwise exec.go will throw 'short write' error.
-	return len(p), nil
 }

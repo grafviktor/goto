@@ -31,7 +31,7 @@ run:
   #    - ".*\\.my\\.go$"
   #    - lib/bad.go
   skip-dirs:
-    - internal/mock
+    - internal/test
 
 # output configuration options
 output:

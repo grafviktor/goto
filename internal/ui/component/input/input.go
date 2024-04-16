@@ -1,4 +1,5 @@
-package hostedit
+// Package input implements generic UI input component.
+package input
 
 import (
 	"fmt"
@@ -9,27 +10,30 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// NewLabeledInput - component which consists from input and label.
-func NewLabeledInput() *labeledInput {
+// New - component which consists from input and label.
+func New() *Input {
 	inputModel := textinput.New()
 	inputModel.Prompt = ""
 
-	return &labeledInput{
+	return &Input{
 		Model:         inputModel,
 		FocusedPrompt: "│ ",
 	}
 }
 
-type labeledInput struct {
+// Input - input UI component.
+type Input struct {
 	textinput.Model
 	Label         string
 	FocusedPrompt string
 	Err           error
 }
 
-func (l *labeledInput) Init() tea.Cmd { return nil }
+//nolint:revive // Init function is a part of tea component interface
+func (l *Input) Init() tea.Cmd { return nil }
 
-func (l *labeledInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+//nolint:revive // Update function is a part of tea component interface
+func (l *Input) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	l.Model, cmd = l.Model.Update(msg)
@@ -41,7 +45,8 @@ func (l *labeledInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return l, cmd
 }
 
-func (l *labeledInput) View() string {
+//nolint:revive // View function is a part of tea component interface
+func (l *Input) View() string {
 	var view string
 	if l.Focused() {
 		view = focusedInputText.Render(l.Model.View())
@@ -52,7 +57,7 @@ func (l *labeledInput) View() string {
 	return fmt.Sprintf("%s\n%s%s", l.labelView(), l.prompt(), view)
 }
 
-func (l *labeledInput) prompt() string {
+func (l *Input) prompt() string {
 	if l.Focused() {
 		return focusedStyle.Render(l.FocusedPrompt)
 	}
@@ -60,7 +65,7 @@ func (l *labeledInput) prompt() string {
 	return strings.Repeat(" ", utf8.RuneCountInString(l.FocusedPrompt))
 }
 
-func (l *labeledInput) labelView() string {
+func (l *Input) labelView() string {
 	if l.Err != nil {
 		return l.prompt() + errorStyle.Render(l.Label)
 	} else if l.Focused() {
