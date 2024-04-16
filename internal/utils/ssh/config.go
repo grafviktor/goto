@@ -38,9 +38,9 @@ func DefaultConfig() *Config {
 }
 
 var (
-	sshConfigUserRe         = regexp.MustCompile(`(?i)user\s+(.*)`)
-	sshConfigPortRe         = regexp.MustCompile(`(?i)port\s+(.*)`)
-	sshConfigIdentityFileRe = regexp.MustCompile(`(?i)identityfile\s+(.*)`)
+	sshConfigUserRe         = regexp.MustCompile(`(?i)user\s+(.*[^\r\n])`)
+	sshConfigPortRe         = regexp.MustCompile(`(?i)port\s+(.*[^\r\n])`)
+	sshConfigIdentityFileRe = regexp.MustCompile(`(?i)identityfile\s+(.*[^\r\n])`)
 )
 
 func getRegexFirstMatchingGroup(groups []string) string {

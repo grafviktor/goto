@@ -97,9 +97,9 @@ dist:
 	@cd $(DIST_PATH) && zip -r goto-$(BUILD_VERSION).zip goto-$(BUILD_VERSION)
 	@rm -r $(DIST_PATH)/goto-$(BUILD_VERSION)
 
-## clean: remove ./dist folder and all its contents.
+## clean: remove ./dist folder with all its contents.
 .PHONY: clean
 clean:
-	@echo 'Cleaning'	
+	@echo 'Cleaning'
 	@-rm -r $(DIST_PATH) 2>/dev/null
 	@echo 'Done'
