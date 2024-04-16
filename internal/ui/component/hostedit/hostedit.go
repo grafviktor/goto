@@ -18,6 +18,7 @@ import (
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
+	"github.com/grafviktor/goto/internal/ui/component/input"
 	"github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
 )
@@ -100,7 +101,7 @@ type editModel struct {
 	help         help.Model
 	host         model.Host
 	hostStorage  storage.HostStorage
-	inputs       []labeledInput
+	inputs       []input.Input
 	isNewHost    bool
 	keyMap       keyMap
 	logger       iLogger
@@ -123,7 +124,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	}
 
 	m := editModel{
-		inputs:       make([]labeledInput, 6),
+		inputs:       make([]input.Input, 6),
 		hostStorage:  storage,
 		host:         host,
 		help:         help.New(),
@@ -138,9 +139,9 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		isNewHost: hostNotFoundErr != nil,
 	}
 
-	var t labeledInput
+	var t input.Input
 	for i := range m.inputs {
-		t = *NewLabeledInput()
+		t = *input.New()
 		t.Cursor.Style = cursorStyle
 
 		switch i {
