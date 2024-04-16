@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/model"
 	"github.com/grafviktor/goto/internal/state"
@@ -55,7 +56,7 @@ var (
 	// ItemID is a key to extract item id from application context.
 	ItemID       = struct{}{}
 	defaultTitle = "host details"
-	debounceTime = time.Second * 1
+	debounceTime = time.Millisecond * 500
 )
 
 type iLogger interface {
@@ -203,6 +204,7 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd = m.handleDebouncedMessage(msg)
 	case message.HostSSHConfigLoaded:
 		m.updateInputPlaceholders()
+		m.updateInputTitles()
 		m.viewport.SetContent(m.inputsView())
 	}
 
@@ -454,11 +456,30 @@ func (m *editModel) handleCopyInputValueShortcut() {
 	}
 }
 
+// This function should probably be moved to model
+func (m *editModel) isCustomConnectString() bool {
+	rawValue := strings.TrimSpace(m.inputs[inputAddress].Value())
+	containsSpace := strings.Contains(rawValue, " ")
+	containsAtSymbol := strings.Contains(rawValue, "@")
+
+	return containsSpace || containsAtSymbol
+}
+
 func (m *editModel) updateInputPlaceholders() {
 	m.logger.Debug("[UI] Take input placeholders from selected host SSH config")
-	m.inputs[inputLogin].Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.User)
-	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.Port)
-	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.IdentityFile)
+	prefix := lo.Ternary(m.isCustomConnectString(), "disabled", "default")
+	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.appState.HostSSHConfig.User)
+	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.appState.HostSSHConfig.Port)
+	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s: %s", prefix, m.appState.HostSSHConfig.IdentityFile)
+}
+
+func (m *editModel) updateInputTitles() {
+	m.logger.Debug("[UI] Update input titles")
+	if m.isCustomConnectString() {
+		m.inputs[inputAddress].Label = "SSH"
+	} else {
+		m.inputs[inputAddress].Label = "Host"
+	}
 }
 
 func (m *editModel) inputsView() string {
