@@ -1,3 +1,4 @@
+// Package input implements generic UI input component.
 package input
 
 import (
@@ -20,6 +21,7 @@ func New() *Input {
 	}
 }
 
+// Input - input UI component.
 type Input struct {
 	textinput.Model
 	Label         string
@@ -27,8 +29,10 @@ type Input struct {
 	Err           error
 }
 
+//nolint:revive // Init function is a part of tea component interface
 func (l *Input) Init() tea.Cmd { return nil }
 
+//nolint:revive // Update function is a part of tea component interface
 func (l *Input) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
@@ -41,6 +45,7 @@ func (l *Input) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return l, cmd
 }
 
+//nolint:revive // View function is a part of tea component interface
 func (l *Input) View() string {
 	var view string
 	if l.Focused() {
