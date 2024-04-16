@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"os"
+	"reflect"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -52,36 +53,72 @@ func TestUpdate_TerminalSizePolling(t *testing.T) {
 	})
 }
 
-func TestDispatchProcess(t *testing.T) {
+func TestDispatchProcess_Foreground(t *testing.T) {
 	// Create a model
 	model := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
 
 	validProcess := utils.BuildProcess("echo test") // "echo test" is a cross-platform command
 	validProcess.Stdout = os.Stdout
 	validProcess.Stderr = &utils.ProcessBufferWriter{}
-
-	// Test case: Successful process execution
 	teaCmd := model.dispatchProcess("test", validProcess, false, false)
 
 	// Perform assertions
-	require.NotNil(t, teaCmd)
-	t.Skip()
-	// tea.execMsg is private, need to use reflection
-	// require.IsType(t, tea.execMsg{}, teaCmd())
+	assert.Equal(t, reflect.Func, reflect.ValueOf(teaCmd).Kind())
 
-	/**
-	 * We should run the event loop to run the process, otherwise the process won't start.
-	 * NewProgram invocation is failing, need to invest more time.
-	 */
-	// p := tea.NewProgram(resultListModel)
-	// if _, err := p.Run(); err != nil {
-	// 	require.NoError(t, err)
+	// Unwrap tea.execMsg
+	execMsg := teaCmd()
+	assert.Equal(t, "tea.execMsg", reflect.TypeOf(execMsg).String())
+
+	// Get access to callback function from tea.execMsg
+	callbackFn := reflect.ValueOf(execMsg).FieldByName("fn")
+	assert.Equal(t, reflect.Func, callbackFn.Kind())
+
+	// This is the dead end because reflection does not allow us to call private methods
+	// ```
+	// type execMsg struct {
+	// 	cmd ExecCommand  // private
+	// 	fn  ExecCallback // private
 	// }
+	// ```
+	// argVals := make([]reflect.Value, 1)
+	// argVals[0] = reflect.ValueOf(errors.New("Mock Error"))
+	// callbackFn.Call(argVals)
+}
 
-	// // Perform assertions
-	// require.NotNil(t, resultListModel)
-	// require.NotNil(t, resultCmd)
-	// require.Equal(t, "", string(errorWriter.err))
+func TestDispatchProcess_Background_OK(t *testing.T) {
+	// Create a model
+	model := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
+
+	// Test case: Successful process execution
+	validProcess := utils.BuildProcess("echo test")
+	validProcess.Stdout = &utils.ProcessBufferWriter{}
+	validProcess.Stderr = &utils.ProcessBufferWriter{}
+
+	callbackFnResult := model.dispatchProcess("test", validProcess, true, false)
+
+	// Perform assertions
+	assert.Equal(t, reflect.Func, reflect.ValueOf(callbackFnResult).Kind())
+
+	result := callbackFnResult()
+	require.IsType(t, message.RunProcessSuccess{}, result)
+}
+
+func TestDispatchProcess_Background_Fail(t *testing.T) {
+	// Create a model
+	model := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
+
+	// Test case: Unsuccessful process execution
+	validProcess := utils.BuildProcess("nonexistent command")
+	validProcess.Stdout = &utils.ProcessBufferWriter{}
+	validProcess.Stderr = &utils.ProcessBufferWriter{}
+
+	callbackFnResult := model.dispatchProcess("test", validProcess, true, false)
+
+	// Perform assertions
+	assert.Equal(t, reflect.Func, reflect.ValueOf(callbackFnResult).Kind())
+
+	result := callbackFnResult()
+	require.IsType(t, message.RunProcessErrorOccurred{}, result)
 }
 
 // ---------------------------------
