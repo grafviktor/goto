@@ -147,34 +147,34 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 
 		switch i {
 		case inputTitle:
-			t.Label = "Title"
+			t.SetLabel("Title")
 			t.SetValue(host.Title)
 			t.Placeholder = "*required*" //nolint:goconst
 			t.Validate = notEmptyValidator
 		case inputAddress:
-			t.Label = "Host"
+			t.SetLabel("Host")
 			t.CharLimit = 128
 			t.SetValue(host.Address)
 			t.Placeholder = "*required*"
 			t.Validate = notEmptyValidator
 		case inputDescription:
-			t.Label = "Description"
+			t.SetLabel("Description")
 			t.CharLimit = 512
 			t.Placeholder = "n/a"
 			t.SetValue(host.Description)
 		case inputLogin:
-			t.Label = "Login"
+			t.SetLabel("Login")
 			t.CharLimit = 128
 			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.User)
 			t.SetValue(host.LoginName)
 		case inputNetworkPort:
-			t.Label = "Network port"
+			t.SetLabel("Network port")
 			t.CharLimit = 5
 			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.Port)
 			t.SetValue(host.RemotePort)
 			t.Validate = networkPortValidator
 		case inputIdentityFile:
-			t.Label = "Identity file path"
+			t.SetLabel("Identity file")
 			t.CharLimit = 512
 			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.IdentityFile)
 			t.SetValue(host.PrivateKeyPath)
@@ -456,7 +456,7 @@ func (m *editModel) handleCopyInputValueShortcut() {
 	}
 }
 
-// This function should probably be moved to model
+// This function should probably be moved to model.
 func (m *editModel) isCustomConnectString() bool {
 	rawValue := strings.TrimSpace(m.inputs[inputAddress].Value())
 	containsSpace := strings.Contains(rawValue, " ")
@@ -465,20 +465,37 @@ func (m *editModel) isCustomConnectString() bool {
 	return containsSpace || containsAtSymbol
 }
 
+// func (m *editModel) updateInputPlaceholders() {
+// 	m.logger.Debug("[UI] Take input placeholders from selected host SSH config")
+// 	prefix := lo.Ternary(m.isCustomConnectString(), "disabled", "default")
+// 	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.appState.HostSSHConfig.User)
+// 	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.appState.HostSSHConfig.Port)
+// 	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s: %s", prefix, m.appState.HostSSHConfig.IdentityFile)
+// }
+
 func (m *editModel) updateInputPlaceholders() {
 	m.logger.Debug("[UI] Take input placeholders from selected host SSH config")
-	prefix := lo.Ternary(m.isCustomConnectString(), "disabled", "default")
-	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.appState.HostSSHConfig.User)
-	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.appState.HostSSHConfig.Port)
-	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s: %s", prefix, m.appState.HostSSHConfig.IdentityFile)
+	// prefix := "default: "
+	prefix := lo.Ternary(m.isCustomConnectString(), "readonly: ", "default: ")
+	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s%s", prefix, m.appState.HostSSHConfig.User)
+	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s%s", prefix, m.appState.HostSSHConfig.Port)
+	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s%s", prefix, m.appState.HostSSHConfig.IdentityFile)
 }
 
 func (m *editModel) updateInputTitles() {
 	m.logger.Debug("[UI] Update input titles")
+	shouldDisableSSHArguments := !m.isCustomConnectString()
+
+	inputsToProcess := []*input.Input{
+		&m.inputs[inputLogin],
+		&m.inputs[inputNetworkPort],
+		&m.inputs[inputIdentityFile],
+	}
+
 	if m.isCustomConnectString() {
-		m.inputs[inputAddress].Label = "SSH"
-	} else {
-		m.inputs[inputAddress].Label = "Host"
+		lo.ForEach(inputsToProcess, func(i *input.Input, n int) {
+			i.SetEnabled(shouldDisableSSHArguments)
+		})
 	}
 }
 
