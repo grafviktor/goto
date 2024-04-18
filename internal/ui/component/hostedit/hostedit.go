@@ -56,7 +56,7 @@ var (
 	// ItemID is a key to extract item id from application context.
 	ItemID       = struct{}{}
 	defaultTitle = "host details"
-	debounceTime = time.Millisecond * 500
+	debounceTime = time.Millisecond * 300
 )
 
 type iLogger interface {
@@ -168,13 +168,13 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.User)
 			t.SetValue(host.LoginName)
 		case inputNetworkPort:
-			t.SetLabel("Network port")
+			t.SetLabel("Network Port")
 			t.CharLimit = 5
 			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.Port)
 			t.SetValue(host.RemotePort)
 			t.Validate = networkPortValidator
 		case inputIdentityFile:
-			t.SetLabel("Identity file")
+			t.SetLabel("Identity File")
 			t.CharLimit = 512
 			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.IdentityFile)
 			t.SetValue(host.PrivateKeyPath)
@@ -199,12 +199,14 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateViewPort(msg)
 	case tea.KeyMsg:
 		cmd = m.handleKeyboardEvent(msg)
+		m.updateInputPlaceholders()
+		m.updateInputAccess()
 		m.viewport.SetContent(m.inputsView())
 	case debouncedMessage:
 		cmd = m.handleDebouncedMessage(msg)
 	case message.HostSSHConfigLoaded:
 		m.updateInputPlaceholders()
-		m.updateInputTitles()
+		m.updateInputAccess()
 		m.viewport.SetContent(m.inputsView())
 	}
 
@@ -398,8 +400,15 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 	keyMsg := msg.(tea.KeyMsg)
 
+	enabledInputs := lo.Filter(m.inputs, func(i input.Input, n int) bool {
+		return i.Enabled()
+	})
+
 	minFocusIndex := 0
-	maxFocusIndex := len(m.inputs) - 1
+	// maxFocusIndex is equal to number of inputs minus the number
+	// of disabled inputs. This works based on an assumption that
+	// all disabled inputs will be in the bottom of the hostlist.
+	maxFocusIndex := len(enabledInputs) - 1
 	inputHeight := 0
 
 	if len(m.inputs) > 0 {
@@ -418,6 +427,7 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 		m.focusedInput++
 		m.viewport.LineDown(inputHeight)
 	} else {
+		m.logger.Debug("[UI] Reached first or last selectable input field: %d", m.focusedInput)
 		return nil
 	}
 
@@ -475,26 +485,26 @@ func (m *editModel) isCustomConnectString() bool {
 
 func (m *editModel) updateInputPlaceholders() {
 	m.logger.Debug("[UI] Take input placeholders from selected host SSH config")
-	// prefix := "default: "
-	prefix := lo.Ternary(m.isCustomConnectString(), "readonly: ", "default: ")
-	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s%s", prefix, m.appState.HostSSHConfig.User)
-	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s%s", prefix, m.appState.HostSSHConfig.Port)
-	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s%s", prefix, m.appState.HostSSHConfig.IdentityFile)
+	prefix := lo.Ternary(m.isCustomConnectString(), "readonly", "default")
+	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.appState.HostSSHConfig.User)
+	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.appState.HostSSHConfig.Port)
+	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s: %s", prefix, m.appState.HostSSHConfig.IdentityFile)
 }
 
-func (m *editModel) updateInputTitles() {
+func (m *editModel) updateInputAccess() {
+	// Doesn't work properly!
 	m.logger.Debug("[UI] Update input titles")
-	shouldDisableSSHArguments := !m.isCustomConnectString()
+	shouldDisableSSHParamsInputFields := m.isCustomConnectString()
 
-	inputsToProcess := []*input.Input{
+	sshParamsInputFields := []*input.Input{
 		&m.inputs[inputLogin],
 		&m.inputs[inputNetworkPort],
 		&m.inputs[inputIdentityFile],
 	}
 
 	if m.isCustomConnectString() {
-		lo.ForEach(inputsToProcess, func(i *input.Input, n int) {
-			i.SetEnabled(shouldDisableSSHArguments)
+		lo.ForEach(sshParamsInputFields, func(i *input.Input, n int) {
+			i.SetEnabled(shouldDisableSSHParamsInputFields)
 		})
 	}
 }
