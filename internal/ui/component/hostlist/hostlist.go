@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -16,8 +17,6 @@ import (
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/message"
-	"github.com/grafviktor/goto/internal/utils"
-	"github.com/grafviktor/goto/internal/utils/ssh"
 )
 
 var (
@@ -339,7 +338,8 @@ func (m *listModel) listTitleUpdate() {
 	case m.mode == modeRemoveItem:
 		newTitle = fmt.Sprintf("delete \"%s\" ? (y/N)", item.Title())
 	default:
-		newTitle = ssh.ConstructCMD("ssh", utils.HostModelToOptionsAdaptor(*item.Unwrap())...)
+		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
+		newTitle = strings.Replace(item.Unwrap().CmdSSHConnect(), "cmd /c ", "", 1)
 	}
 
 	if m.innerModel.Title != newTitle {
@@ -357,7 +357,7 @@ func (m *listModel) onFocusChanged(_ tea.Msg) tea.Cmd {
 		m.logger.Debug("[UI] Select host id: %v, title: %s", hostItem.ID, hostItem.Title())
 		return tea.Batch(
 			message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
-			message.TeaCmd(message.RunProcessLoadSSHConfig{SSHConfigHostname: hostItem.Address}),
+			message.TeaCmd(message.RunProcessLoadSSHConfig{Host: *hostItem.Unwrap()}),
 		)
 	}
 

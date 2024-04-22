@@ -1,8 +1,8 @@
-//go:build !windows
+//go:build windows
 
-package ssh
+package model
 
 // BaseCMD return OS specific 'ssh' command.
 func BaseCMD() string {
-	return "ssh"
+	return "cmd /c ssh"
 }

@@ -275,7 +275,7 @@ func TestUpdateInputPlaceHolders(t *testing.T) {
 	appState.HostSSHConfig.Port = "Mock Port"
 	appState.HostSSHConfig.IdentityFile = "Mock Identity File"
 
-	model.updateInputPlaceholders()
+	model.updateInputFields()
 
 	require.Equal(t, model.inputs[inputLogin].Placeholder, fmt.Sprintf(
 		"%s %s",

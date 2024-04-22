@@ -14,6 +14,6 @@ var (
 			Foreground(lipgloss.AdaptiveColor{Light: "#FF7783", Dark: "#FF7783"})
 
 	focusedInputText = lipgloss.NewStyle().Foreground(lipgloss.Color("#AD58B4"))
+	greyedOutStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#585858"))
 	noStyle          = lipgloss.NewStyle()
-	disabledStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#585858"))
 )
