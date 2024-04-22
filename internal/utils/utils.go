@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/grafviktor/goto/internal/model"
-	"github.com/grafviktor/goto/internal/utils/ssh"
 )
 
 // StringEmpty - checks if string is empty or contains only spaces.
@@ -101,21 +100,9 @@ func BuildProcess(cmd string) *exec.Cmd {
 
 // =============================== Move to SSH module:
 
-// HostModelToOptionsAdaptor - extract values from model.Host into a set of ssh.CommandLineOption
-// host - model.Host to be adapted
-// returns []ssh.CommandLineOption.
-func HostModelToOptionsAdaptor(host model.Host) []ssh.CommandLineOption {
-	return []ssh.CommandLineOption{
-		ssh.OptionPrivateKey{Value: host.PrivateKeyPath},
-		ssh.OptionRemotePort{Value: host.RemotePort},
-		ssh.OptionLoginName{Value: host.LoginName},
-		ssh.OptionAddress{Value: host.Address},
-	}
-}
-
 // BuildConnectSSH - builds ssh command which is based on host.Model.
-func BuildConnectSSH(host model.Host) *exec.Cmd {
-	command := ssh.ConstructCMD(ssh.BaseCMD(), HostModelToOptionsAdaptor(host)...)
+func BuildConnectSSH(host *model.Host) *exec.Cmd {
+	command := host.CmdSSHConnect()
 	process := BuildProcess(command)
 	process.Stdout = os.Stdout
 	process.Stderr = &ProcessBufferWriter{}
@@ -125,11 +112,11 @@ func BuildConnectSSH(host model.Host) *exec.Cmd {
 
 // BuildLoadSSHConfig - builds ssh command, which runs ssh -G <hostname> command
 // to get a list of options associated with the hostname.
-func BuildLoadSSHConfig(hostname string) *exec.Cmd {
+func BuildLoadSSHConfig(host *model.Host) *exec.Cmd {
 	// Use case 1: User edits host
 	// Use case 2: User is going to copy his ssh key using <t> command from the hostlist
 
-	command := ssh.ConstructCMD(ssh.BaseCMD(), ssh.OptionReadConfig{Value: hostname})
+	command := host.CmdSSHConfig()
 	process := BuildProcess(command)
 	process.Stdout = &ProcessBufferWriter{}
 	process.Stderr = &ProcessBufferWriter{}

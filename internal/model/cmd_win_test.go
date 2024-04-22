@@ -1,6 +1,6 @@
 //go:build windows
 
-package ssh
+package model
 
 import "testing"
 

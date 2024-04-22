@@ -11,16 +11,16 @@ import (
 func TestNewHost(t *testing.T) {
 	// Create a new host using the NewHost function
 	expectedHost := Host{
-		ID:             1,
-		Title:          "TestTitle",
-		Description:    "TestDescription",
-		Address:        "TestAddress",
-		RemotePort:     "1234",
-		LoginName:      "TestUser",
-		PrivateKeyPath: "/path/to/private/key",
+		ID:               1,
+		Title:            "TestTitle",
+		Description:      "TestDescription",
+		Address:          "TestAddress",
+		RemotePort:       "1234",
+		LoginName:        "TestUser",
+		IdentityFilePath: "/path/to/private/key",
 	}
 
-	newHost := NewHost(expectedHost.ID, expectedHost.Title, expectedHost.Description, expectedHost.Address, expectedHost.LoginName, expectedHost.PrivateKeyPath, expectedHost.RemotePort)
+	newHost := NewHost(expectedHost.ID, expectedHost.Title, expectedHost.Description, expectedHost.Address, expectedHost.LoginName, expectedHost.IdentityFilePath, expectedHost.RemotePort)
 
 	// Check if the new host matches the expected host
 	if !reflect.DeepEqual(newHost, expectedHost) {
@@ -31,13 +31,13 @@ func TestNewHost(t *testing.T) {
 func TestCloneHost(t *testing.T) {
 	// Create a host to clone
 	originalHost := Host{
-		ID:             1,
-		Title:          "TestTitle",
-		Description:    "TestDescription",
-		Address:        "TestAddress",
-		RemotePort:     "1234",
-		LoginName:      "TestUser",
-		PrivateKeyPath: "/path/to/private/key",
+		ID:               1,
+		Title:            "TestTitle",
+		Description:      "TestDescription",
+		Address:          "TestAddress",
+		RemotePort:       "1234",
+		LoginName:        "TestUser",
+		IdentityFilePath: "/path/to/private/key",
 	}
 
 	// Clone the host

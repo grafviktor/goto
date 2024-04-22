@@ -236,15 +236,15 @@ func (m *mainModel) dispatchProcess(name string, process *exec.Cmd, inBackground
 
 func (m *mainModel) dispatchProcessSSHConnect(msg message.RunProcessConnectSSH) tea.Cmd {
 	m.logger.Debug("[EXEC] Build ssh connect command for hostname: %v, title: %v", msg.Host.Address, msg.Host.Title)
-	process := utils.BuildConnectSSH(msg.Host)
+	process := utils.BuildConnectSSH(&msg.Host)
 	m.logger.Info("[EXEC] Run process: %s", process.String())
 
 	return m.dispatchProcess("ssh_connect_host", process, false, false)
 }
 
 func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessLoadSSHConfig) tea.Cmd {
-	m.logger.Debug("[EXEC] Read ssh configuration for host: %v", msg.SSHConfigHostname)
-	process := utils.BuildLoadSSHConfig(msg.SSHConfigHostname)
+	m.logger.Debug("[EXEC] Read ssh configuration for host: %v", msg.Host)
+	process := utils.BuildLoadSSHConfig(&msg.Host)
 	m.logger.Info("[EXEC] Run process: %s", process.String())
 
 	// Should run in non-blocking fashion for ssh load config

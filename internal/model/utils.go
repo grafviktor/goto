@@ -1,5 +1,4 @@
-// Package ssh - contains functions to construct ssh command for using when connecting to a remote host
-package ssh
+package model
 
 import (
 	"fmt"
@@ -52,16 +51,14 @@ func addOption(sb *strings.Builder, rawParameter CommandLineOption) {
 	sb.WriteString(option)
 }
 
-// ConstructCMD - build connect command from main app and its arguments
-// cmd - main executable
-// options - set of command line options. See Option... public variables.
-func ConstructCMD(cmd string, options ...CommandLineOption) string {
-	sb := strings.Builder{}
-	sb.WriteString(cmd)
-
-	for _, argument := range options {
-		addOption(&sb, argument)
+// hostModelToOptionsAdaptor - extract values from model.Host into a set of ssh.CommandLineOption
+// host - model.Host to be adapted
+// returns []ssh.CommandLineOption.
+func hostModelToOptionsAdaptor(host Host) []CommandLineOption {
+	return []CommandLineOption{
+		OptionPrivateKey{Value: host.IdentityFilePath},
+		OptionRemotePort{Value: host.RemotePort},
+		OptionLoginName{Value: host.LoginName},
+		OptionAddress{Value: host.Address},
 	}
-
-	return sb.String()
 }

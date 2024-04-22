@@ -24,7 +24,7 @@ type (
 	// RunProcessConnectSSH is dispatched when user wants to connect to a host.
 	RunProcessConnectSSH struct{ Host model.Host }
 	// RunProcessLoadSSHConfig is dispatched it's required to read .ssh/config file for a certain host.
-	RunProcessLoadSSHConfig struct{ SSHConfigHostname string }
+	RunProcessLoadSSHConfig struct{ Host model.Host }
 	// RunProcessErrorOccurred fires when there is an error executing an external process.
 	RunProcessErrorOccurred struct {
 		Name string

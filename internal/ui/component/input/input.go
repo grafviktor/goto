@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/samber/lo"
 )
 
 // New - component which consists from input and label.
@@ -25,10 +26,12 @@ func New() *Input {
 // Input - input UI component.
 type Input struct {
 	textinput.Model
-	label         string
-	FocusedPrompt string
-	Err           error
-	enabled       bool
+	label          string
+	FocusedPrompt  string
+	Tooltip        string
+	Err            error
+	enabled        bool
+	displayTooltip bool
 }
 
 //nolint:revive // Init function is a part of tea component interface
@@ -55,11 +58,17 @@ func (l *Input) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 //nolint:revive // View function is a part of tea component interface
 func (l *Input) View() string {
-	var view string
+	view := l.Model.View()
+
 	if l.Focused() {
-		view = focusedInputText.Render(l.Model.View())
-	} else {
-		view = l.Model.View()
+		view = focusedInputText.Render(view)
+	} else if !l.Enabled() {
+		view = greyedOutStyle.Render(view)
+	}
+
+	if l.displayTooltip && strings.TrimSpace(l.Tooltip) != "" {
+		tooltip := lo.Ternary(l.Focused(), focusedStyle.Render(l.Tooltip), l.Tooltip)
+		view = fmt.Sprintf("%s %s", tooltip, view)
 	}
 
 	return fmt.Sprintf("%s\n%s%s", l.labelView(), l.prompt(), view)
@@ -89,7 +98,7 @@ func (l *Input) labelView() string {
 	case l.Focused():
 		return l.prompt() + focusedStyle.Render(l.Label())
 	case !l.Enabled():
-		return l.prompt() + disabledStyle.Render(l.Label())
+		return l.prompt() + greyedOutStyle.Render(l.Label())
 	default:
 		return l.prompt() + noStyle.Render(l.Label())
 	}
@@ -111,9 +120,8 @@ func (l *Input) SetLabel(label string) {
 
 func (l *Input) Label() string {
 	return l.label
-	// 	if l.Enabled() {
-	// 		return l.label
-	// 	}
+}
 
-	// return fmt.Sprintf("( %s )", l.label)
+func (l *Input) SetDisplayTooltip(isDisplayed bool) {
+	l.displayTooltip = isDisplayed
 }
