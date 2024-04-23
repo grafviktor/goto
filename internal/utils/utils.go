@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"github.com/grafviktor/goto/internal/model"
 )
 
 // StringEmpty - checks if string is empty or contains only spaces.
@@ -101,32 +99,6 @@ func BuildProcess(cmd string) *exec.Cmd {
 	return exec.Command(command, arguments...)
 }
 
-// =============================== Move to SSH module:
-
-// BuildConnectSSH - builds ssh command which is based on host.Model.
-func BuildConnectSSH(host *model.Host) *exec.Cmd {
-	command := host.CmdSSHConnect()
-	process := BuildProcess(command)
-	process.Stdout = os.Stdout
-	process.Stderr = &ProcessBufferWriter{}
-
-	return process
-}
-
-// BuildLoadSSHConfig - builds ssh command, which runs ssh -G <hostname> command
-// to get a list of options associated with the hostname.
-func BuildLoadSSHConfig(host *model.Host) *exec.Cmd {
-	// Use case 1: User edits host
-	// Use case 2: User is going to copy his ssh key using <t> command from the hostlist
-
-	command := host.CmdSSHConfig()
-	process := BuildProcess(command)
-	process.Stdout = &ProcessBufferWriter{}
-	process.Stderr = &ProcessBufferWriter{}
-
-	return process
-}
-
 // ProcessBufferWriter - is an object which pretends to be a writer, however it saves all data into 'Output' variable
 // for future reading and do not write anything in terminal. We need it to display or parse process output or error.
 type ProcessBufferWriter struct {
@@ -142,4 +114,10 @@ func (writer *ProcessBufferWriter) Write(p []byte) (n int, err error) {
 	// We must return the number of bytes which were written using `len(p)`,
 	// otherwise exec.go will throw 'short write' error.
 	return len(p), nil
+}
+
+var twoOrMoreSpacesRegexp = regexp.MustCompile(`\s{2,}`)
+
+func RemoveDuplicateSpaces(arguments string) string {
+	return twoOrMoreSpacesRegexp.ReplaceAllLiteralString(arguments, " ")
 }

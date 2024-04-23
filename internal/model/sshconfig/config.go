@@ -1,4 +1,4 @@
-package ssh
+package sshconfig
 
 import (
 	"os/user"

@@ -3,10 +3,15 @@ package model
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 	"strings"
+
+	"github.com/grafviktor/goto/internal/model/sshconfig"
+	"github.com/grafviktor/goto/internal/utils"
 )
 
-var baseCmd = BaseCMD()
+var baseCmd = sshconfig.BaseCMD()
 
 // NewHost - constructs new Host model.
 func NewHost(id int, title, description, address, loginName, identityFilePath, remotePort string) Host {
@@ -78,4 +83,28 @@ func (h *Host) CmdSSHConfig() string {
 	addOption(&sb, OptionReadConfig{Value: h.Address})
 
 	return sb.String()
+}
+
+// BuildConnectSSH - builds ssh command which is based on host.Model.
+func BuildConnectSSH(host *Host) *exec.Cmd {
+	command := host.CmdSSHConnect()
+	process := utils.BuildProcess(command)
+	process.Stdout = os.Stdout
+	process.Stderr = &utils.ProcessBufferWriter{}
+
+	return process
+}
+
+// BuildLoadSSHConfig - builds ssh command, which runs ssh -G <hostname> command
+// to get a list of options associated with the hostname.
+func BuildLoadSSHConfig(host *Host) *exec.Cmd {
+	// Use case 1: User edits host
+	// Use case 2: User is going to copy his ssh key using <t> command from the hostlist
+
+	command := host.CmdSSHConfig()
+	process := utils.BuildProcess(command)
+	process.Stdout = &utils.ProcessBufferWriter{}
+	process.Stderr = &utils.ProcessBufferWriter{}
+
+	return process
 }
