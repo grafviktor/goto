@@ -340,6 +340,7 @@ func (m *listModel) listTitleUpdate() {
 	default:
 		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
 		newTitle = strings.Replace(item.Unwrap().CmdSSHConnect(), "cmd /c ", "", 1)
+		// newTitle = utils.RemoveDuplicateSpaces(newTitle)
 	}
 
 	if m.innerModel.Title != newTitle {

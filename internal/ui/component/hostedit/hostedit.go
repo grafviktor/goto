@@ -323,8 +323,8 @@ func (m *editModel) copyInputValueFromTo(sourceInput, destinationInput int) {
 	m.inputs[destinationInput].Err = m.inputs[destinationInput].Validate(newValue)
 	m.logger.Debug(
 		"[UI] Copy '%s' value to '%s', new value = %s",
-		m.inputs[sourceInput].Label,
-		m.inputs[destinationInput].Label,
+		m.inputs[sourceInput].Label(),
+		m.inputs[destinationInput].Label(),
 		newValue,
 	)
 }
@@ -428,14 +428,14 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 	for i := 0; i <= len(m.inputs)-1; i++ {
 		if m.inputs[i].Validate != nil {
 			m.inputs[i].Err = m.inputs[i].Validate(m.inputs[i].Value())
-			m.logger.Debug("[UI] Input '%s' is valid: %t", m.inputs[i].Label, m.inputs[i].Err == nil)
+			m.logger.Debug("[UI] Input '%v' is valid: %v", m.inputs[i].Label(), m.inputs[i].Err == nil)
 		}
 
 		if i == m.focusedInput {
 			// KeyMap depends on focused input - when address is focused, we allow
 			// a user to copy address value to title.
 			m.keyMap = getKeyMap(i)
-			m.logger.Debug("[UI] Focus input: '%s'", m.inputs[i].Label)
+			m.logger.Debug("[UI] Focus input: '%s'", m.inputs[i].Label())
 
 			// Set focused state
 			cmds = append(cmds, m.inputs[i].Focus())
@@ -469,7 +469,7 @@ func (m *editModel) isCustomConnectString() bool {
 }
 
 func (m *editModel) updateInputFields() {
-	m.logger.Debug("[UI] Take input placeholders from selected host SSH config")
+	m.logger.Debug("[UI] Update input components")
 	prefix := lo.Ternary(m.isCustomConnectString(), "readonly", "default")
 
 	m.inputs[inputTitle].Placeholder = "*required*" //nolint:goconst
@@ -484,7 +484,6 @@ func (m *editModel) updateInputFields() {
 	m.inputs[inputAddress].SetLabel(hostInputLabel)
 	m.inputs[inputAddress].SetDisplayTooltip(customConnectString)
 
-	m.logger.Debug("[UI] Update input titles")
 	shouldDisableSSHParamsInputFields := m.host.IsUserDefinedSSHCommand()
 
 	// Get input fields by pointer to update their state

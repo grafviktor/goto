@@ -62,7 +62,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		m.logger.Debug("[UI] Keyboard event: %v", msg)
+		m.logger.Debug("[UI] Keyboard event: '%v'", msg)
 		return m.handleKeyEvent(msg)
 	case message.TerminalSizePolling:
 		// That is Windows OS specific. Windows cmd.exe does not trigger terminal

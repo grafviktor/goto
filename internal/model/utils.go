@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -29,6 +30,12 @@ func constructKeyValueOption(optionFlag, optionValue string) string {
 	return ""
 }
 
+var twoOrMoreSpacesRegexp = regexp.MustCompile(`\s{2,}`)
+
+func removeDuplicateSpaces(arguments string) string {
+	return twoOrMoreSpacesRegexp.ReplaceAllLiteralString(arguments, " ")
+}
+
 func addOption(sb *strings.Builder, rawParameter CommandLineOption) {
 	var option string
 	switch p := rawParameter.(type) {
@@ -39,10 +46,10 @@ func addOption(sb *strings.Builder, rawParameter CommandLineOption) {
 	case OptionLoginName:
 		option = constructKeyValueOption("-l", p.Value)
 	case OptionReadConfig:
-		option = constructKeyValueOption("-G", p.Value)
+		option = constructKeyValueOption("-G", removeDuplicateSpaces(p.Value))
 	case OptionAddress:
 		if p.Value != "" {
-			option = fmt.Sprintf(" %s", p.Value)
+			option = fmt.Sprintf(" %s", removeDuplicateSpaces(p.Value))
 		}
 	default:
 		return

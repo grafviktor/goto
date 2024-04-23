@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/grafviktor/goto/internal/model"
@@ -85,13 +86,15 @@ func CheckAppInstalled(appName string) error {
 	return err
 }
 
+var argumentsRegexp = regexp.MustCompile(`\s+`)
+
 // BuildProcess - builds exec.Cmd object from command string.
 func BuildProcess(cmd string) *exec.Cmd {
 	if strings.TrimSpace(cmd) == "" {
 		return nil
 	}
 
-	commandWithArguments := strings.Split(cmd, " ")
+	commandWithArguments := argumentsRegexp.Split(cmd, -1)
 	command := commandWithArguments[0]
 	arguments := commandWithArguments[1:]
 
