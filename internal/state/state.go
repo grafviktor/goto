@@ -7,8 +7,6 @@ import (
 	"sync"
 
 	"gopkg.in/yaml.v2"
-
-	"github.com/grafviktor/goto/internal/model/sshconfig"
 )
 
 type view int
@@ -43,7 +41,6 @@ type ApplicationState struct {
 	Err              error             `yaml:"-"`
 	Width            int               `yaml:"-"`
 	Height           int               `yaml:"-"`
-	HostSSHConfig    *sshconfig.Config `yaml:"-"`
 }
 
 // Get - reads application state from disk.
@@ -53,7 +50,6 @@ func Get(appHomePath string, lg iLogger) *ApplicationState {
 		appState = &ApplicationState{
 			appStateFilePath: path.Join(appHomePath, stateFile),
 			logger:           lg,
-			HostSSHConfig:    sshconfig.DefaultConfig(),
 		}
 
 		// If we cannot read previously created application state, that's fine - we can continue execution.

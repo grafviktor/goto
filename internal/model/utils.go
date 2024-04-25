@@ -53,14 +53,3 @@ func addOption(sb *strings.Builder, rawParameter CommandLineOption) {
 	sb.WriteString(option)
 }
 
-// hostModelToOptionsAdaptor - extract values from model.Host into a set of ssh.CommandLineOption
-// host - model.Host to be adapted
-// returns []ssh.CommandLineOption.
-func hostModelToOptionsAdaptor(host Host) []CommandLineOption {
-	return []CommandLineOption{
-		OptionPrivateKey{Value: host.IdentityFilePath},
-		OptionRemotePort{Value: host.RemotePort},
-		OptionLoginName{Value: host.LoginName},
-		OptionAddress{Value: host.Address},
-	}
-}

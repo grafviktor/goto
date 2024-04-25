@@ -163,18 +163,18 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		case inputLogin:
 			t.SetLabel("Login")
 			t.CharLimit = 128
-			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.User)
+			t.Placeholder = fmt.Sprintf("default: %s", m.host.DefaultSSHConfig.User)
 			t.SetValue(host.LoginName)
 		case inputNetworkPort:
 			t.SetLabel("Network Port")
 			t.CharLimit = 5
-			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.Port)
+			t.Placeholder = fmt.Sprintf("default: %s", m.host.DefaultSSHConfig.Port)
 			t.SetValue(host.RemotePort)
 			t.Validate = networkPortValidator
 		case inputIdentityFile:
 			t.SetLabel("Identity File")
 			t.CharLimit = 512
-			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.IdentityFile)
+			t.Placeholder = fmt.Sprintf("default: %s", m.host.DefaultSSHConfig.IdentityFile)
 			t.SetValue(host.IdentityFilePath)
 		}
 
@@ -478,9 +478,9 @@ func (m *editModel) updateInputFields() {
 	m.inputs[inputTitle].Placeholder = "*required*" //nolint:goconst
 	m.inputs[inputAddress].Placeholder = "*required*"
 	m.inputs[inputDescription].Placeholder = "n/a"
-	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.appState.HostSSHConfig.User)
-	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.appState.HostSSHConfig.Port)
-	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s: %s", prefix, m.appState.HostSSHConfig.IdentityFile)
+	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.DefaultSSHConfig.User)
+	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.DefaultSSHConfig.Port)
+	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.DefaultSSHConfig.IdentityFile)
 
 	customConnectString := m.isCustomConnectString()
 	hostInputLabel := lo.Ternary(customConnectString, "Command", "Host")

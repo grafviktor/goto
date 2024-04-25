@@ -24,7 +24,7 @@ func TestParseConfig(t *testing.T) {
 		Port:         "22",
 	}
 
-	actual := ParseConfig(windowsMockSSHConfig)
+	actual := Parse(windowsMockSSHConfig)
 	require.Equal(t, expected, actual)
 
 	// UNIX uses '\n' for lines ending.
@@ -34,6 +34,6 @@ func TestParseConfig(t *testing.T) {
 		Port:         "22",
 	}
 
-	actual = ParseConfig(unixMockSSHConfig)
+	actual = Parse(unixMockSSHConfig)
 	require.Equal(t, expected, actual)
 }

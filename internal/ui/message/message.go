@@ -9,6 +9,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/grafviktor/goto/internal/model"
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 )
 
 type (
@@ -20,7 +21,7 @@ type (
 	HostListSelectItem struct{ HostID int }
 	// HostSSHConfigLoaded triggers when app loads a host config using ssh -G <hostname>.
 	// The config is stored in main model: m.appState.HostSSHConfig.
-	HostSSHConfigLoaded struct{}
+	HostSSHConfigLoaded struct{Config sshconfig.Config}
 	// RunProcessConnectSSH is dispatched when user wants to connect to a host.
 	RunProcessConnectSSH struct{ Host model.Host }
 	// RunProcessLoadSSHConfig is dispatched it's required to read .ssh/config file for a certain host.
