@@ -327,6 +327,9 @@ func (m *editModel) copyInputValueFromTo(sourceInput, destinationInput int) {
 		m.inputs[destinationInput].Label(),
 		newValue,
 	)
+
+	// Update the model as well
+	m.host.setHostAttributeByIndex(destinationInput, newValue)
 }
 
 func (m *editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
