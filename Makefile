@@ -59,14 +59,13 @@ unit-test-report:
 .PHONY: run
 run:
 	@echo 'Run debug build'
-	@-rm debug.log 2>/dev/null
 	@echo 'To pass app arguments use: make run ARGS="-h"'
 	go run cmd/goto/* $(ARGS)
 
 ## build: create binary in ./dist folder for your current platform. Use this option if you build it for personal use.
 .PHONY: build
 build:
-	@-rm -r $(DIST_PATH)/gg 2>/dev/null
+	@-rm -f $(DIST_PATH)/gg 2>/dev/null
 	@echo 'Build'
 	go build $(LD_FLAGS) -o $(DIST_PATH)/gg ./cmd/goto/*.go
 
@@ -86,10 +85,11 @@ package:
 ## dist: create binaries for all supported platforms in ./dist folder. Archive all binaries with zip.
 .PHONY: dist
 dist:
-	@echo 'Generate icon resource for windows binary. Do not forget to install github.com/akavel/rsrc@latest.'
-	@cd build/win && rsrc -arch amd64 -ico icon.ico -o icon_windows_amd64.syso && mv icon_windows_amd64.syso ../../cmd/goto
-	@-rm -r $(DIST_PATH)/gg-* 2>/dev/null
-	@-rm -r $(DIST_PATH)/*.zip 2>/dev/null
+	@echo 'Generate icon resource for windows binary.'
+	@echo 'Do not forget to: "go install github.com/akavel/rsrc@latest"'
+	@cd build/exe && rsrc -arch amd64 -ico icon.ico -o icon_windows_amd64.syso && mv icon_windows_amd64.syso ../../cmd/goto
+	@-rm -f $(DIST_PATH)/gg-* 2>/dev/null
+	@-rm -f $(DIST_PATH)/*.zip 2>/dev/null
 	@echo 'Create binary files'
 	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(LD_FLAGS) -o $(DIST_PATH)/gg-mac-x86 ./cmd/goto/
 	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build $(LD_FLAGS) -o $(DIST_PATH)/gg-mac-arm ./cmd/goto/
@@ -99,11 +99,11 @@ dist:
 	@mkdir $(DIST_PATH)/goto-$(BUILD_VERSION)/
 	@cp $(DIST_PATH)/gg-mac-arm $(DIST_PATH)/gg-mac-x86 $(DIST_PATH)/gg-lin $(DIST_PATH)/gg-win.exe $(DIST_PATH)/goto-$(BUILD_VERSION)
 	@cd $(DIST_PATH) && zip -r goto-$(BUILD_VERSION).zip goto-$(BUILD_VERSION)
-	@rm -r $(DIST_PATH)/goto-$(BUILD_VERSION)
+	@rm -rf $(DIST_PATH)/goto-$(BUILD_VERSION)
 
 ## clean: remove ./dist folder with all its contents.
 .PHONY: clean
 clean:
 	@echo 'Clean'
-	@-rm -r $(DIST_PATH) 2>/dev/null
+	@-rm -rf $(DIST_PATH) 2>/dev/null
 	@echo 'Done'
