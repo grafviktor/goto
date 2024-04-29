@@ -7,13 +7,14 @@ import (
 	"fmt"
 	"strings"
 
+	hostModel "github.com/grafviktor/goto/internal/model/host"
+
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/exp/slices"
 
-	"github.com/grafviktor/goto/internal/model"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/message"
@@ -246,7 +247,7 @@ func (m *listModel) refreshRepo(_ tea.Msg) tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err})
 	}
 
-	slices.SortFunc(hosts, func(a, b model.Host) int {
+	slices.SortFunc(hosts, func(a, b hostModel.Host) int {
 		if a.Title < b.Title {
 			return -1
 		}
@@ -280,9 +281,12 @@ func (m *listModel) editItem(_ tea.Msg) tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
-	host := *item.Unwrap()
-	m.logger.Info("[UI] Edit item id: %d, title: %s", host.ID, host.Title)
-	return message.TeaCmd(OpenEditForm{HostID: host.ID})
+	m.logger.Info("[UI] Edit item id: %d, title: %s", item.ID, item.Title)
+	return tea.Sequence(
+		message.TeaCmd(OpenEditForm{HostID: item.ID}),
+		// Load SSH config for the selected host
+		message.TeaCmd(message.RunProcessLoadSSHConfig{Host: item.Host}),
+	)
 }
 
 func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
@@ -292,7 +296,7 @@ func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
-	originalHost := item.Unwrap()
+	originalHost := item.Host
 	m.logger.Info("[UI] Copy host item id: %d, title: %s", originalHost.ID, originalHost.Title)
 	clonedHost := originalHost.Clone()
 	for i := 1; ok; i++ {
@@ -325,7 +329,7 @@ func (m *listModel) constructProcessCmd(_ tea.KeyMsg) tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
-	return message.TeaCmd(message.RunProcessConnectSSH{Host: *item.Unwrap()})
+	return message.TeaCmd(message.RunProcessConnectSSH{Host: item.Host})
 }
 
 func (m *listModel) listTitleUpdate() {
@@ -340,7 +344,7 @@ func (m *listModel) listTitleUpdate() {
 		newTitle = fmt.Sprintf("delete \"%s\" ? (y/N)", item.Title())
 	default:
 		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
-		newTitle = strings.Replace(item.Unwrap().CmdSSHConnect(), "cmd /c ", "", 1)
+		newTitle = strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
 		newTitle = utils.RemoveDuplicateSpaces(newTitle)
 	}
 
@@ -359,7 +363,7 @@ func (m *listModel) onFocusChanged(_ tea.Msg) tea.Cmd {
 		m.logger.Debug("[UI] Select host id: %v, title: %s", hostItem.ID, hostItem.Title())
 		return tea.Batch(
 			message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
-			message.TeaCmd(message.RunProcessLoadSSHConfig{Host: *hostItem.Unwrap()}),
+			message.TeaCmd(message.RunProcessLoadSSHConfig{Host: hostItem.Host}),
 		)
 	}
 
