@@ -1,11 +1,11 @@
-//go:build windows
+//go:build !windows
 
-package sshconfig
+package ssh
 
 import "testing"
 
 func TestBaseCMD(t *testing.T) {
-	expected := "cmd /c ssh"
+	expected := "ssh"
 	result := BaseCMD()
 
 	if result != expected {

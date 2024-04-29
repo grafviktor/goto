@@ -1,18 +1,9 @@
-package sshconfig
+package ssh
 
 import (
 	"os/user"
 	"regexp"
 )
-
-// Parse - parses 'ssh -G <hostname> command' output and returns Config struct.
-func Parse(config string) *Config {
-	return &Config{
-		IdentityFile: getRegexFirstMatchingGroup(sshConfigIdentityFileRe.FindStringSubmatch(config)),
-		Port:         getRegexFirstMatchingGroup(sshConfigPortRe.FindStringSubmatch(config)),
-		User:         getRegexFirstMatchingGroup(sshConfigUserRe.FindStringSubmatch(config)),
-	}
-}
 
 // Config struct contains values loaded from ~/.ssh_config file.
 type Config struct {
@@ -25,9 +16,18 @@ type Config struct {
 	Port         string
 }
 
-// Stub - returns a stub SSH config. It is used on application startup when build application state and
+// Parse - parses 'ssh -G <hostname> command' output and returns Config struct.
+func Parse(config string) *Config {
+	return &Config{
+		IdentityFile: getRegexFirstMatchingGroup(sshConfigIdentityFileRe.FindStringSubmatch(config)),
+		Port:         getRegexFirstMatchingGroup(sshConfigPortRe.FindStringSubmatch(config)),
+		User:         getRegexFirstMatchingGroup(sshConfigUserRe.FindStringSubmatch(config)),
+	}
+}
+
+// StubConfig - returns a stub SSH config. It is used on application startup when build application state and
 // no hosts yet available. Consider to run real ssh process to request a config. See 'message.RunProcessLoadSSHConfig'.
-func (c *Config) Stub() *Config {
+func StubConfig() *Config {
 	return &Config{
 		IdentityFile: "$HOME/.ssh/id_rsa",
 		Port:         "22",

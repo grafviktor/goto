@@ -1,4 +1,4 @@
-package model
+package ssh
 
 import (
 	"strings"
@@ -46,7 +46,7 @@ func Test_ConstructKeyValueOption(t *testing.T) {
 func Test_AddOption(t *testing.T) {
 	tests := []struct {
 		name           string
-		rawParameter   CommandLineOption
+		rawParameter   Option
 		expectedResult string
 	}{
 		{

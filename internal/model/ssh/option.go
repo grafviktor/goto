@@ -1,4 +1,4 @@
-package model
+package ssh
 
 import (
 	"fmt"
@@ -7,8 +7,8 @@ import (
 	"github.com/grafviktor/goto/internal/utils"
 )
 
-// CommandLineOption - parent interface for command line option.
-type CommandLineOption interface{}
+// Option - parent interface for command line option.
+type Option interface{}
 
 type (
 	// OptionPrivateKey - ssh private key path in file system.
@@ -31,7 +31,7 @@ func constructKeyValueOption(optionFlag, optionValue string) string {
 	return ""
 }
 
-func addOption(sb *strings.Builder, rawParameter CommandLineOption) {
+func addOption(sb *strings.Builder, rawParameter Option) {
 	var option string
 	switch p := rawParameter.(type) {
 	case OptionPrivateKey:
@@ -53,3 +53,24 @@ func addOption(sb *strings.Builder, rawParameter CommandLineOption) {
 	sb.WriteString(option)
 }
 
+var baseCmd = BaseCMD()
+
+func ConnectCommand(options ...Option) string {
+	sb := strings.Builder{}
+	sb.WriteString(baseCmd)
+
+	for _, option := range options {
+		addOption(&sb, option)
+	}
+
+	return sb.String()
+}
+
+func LoadConfigCommand(option OptionReadConfig) string {
+	sb := strings.Builder{}
+	sb.WriteString(baseCmd)
+
+	addOption(&sb, option)
+
+	return sb.String()
+}
