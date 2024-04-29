@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/grafviktor/goto/internal/constant"
-	"github.com/grafviktor/goto/internal/model"
+	model "github.com/grafviktor/goto/internal/model/host"
 )
 
 var _ HostStorage = &yamlStorage{}

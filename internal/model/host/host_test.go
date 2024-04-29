@@ -1,5 +1,5 @@
 // Package model contains description of data models. For now there is only 'Host' model
-package model
+package host
 
 import (
 	"reflect"
