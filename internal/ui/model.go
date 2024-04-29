@@ -5,13 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/grafviktor/goto/internal/model/ssh"
 	"os/exec"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/hostedit"
@@ -101,7 +101,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.dispatchProcessSSHLoadConfig(msg)
 	case message.RunProcessSuccess:
 		if msg.ProcessName == "ssh_load_config" {
-			parsedSSHConfig := sshconfig.Parse(*msg.Output)
+			parsedSSHConfig := ssh.Parse(*msg.Output)
 			m.logger.Debug("[UI] Update app state with host SSH config: %+v", *parsedSSHConfig)
 			cmds = append(cmds, message.TeaCmd(message.HostSSHConfigLoaded{Config: *parsedSSHConfig}))
 		}
@@ -235,7 +235,7 @@ func (m *mainModel) dispatchProcess(name string, process *exec.Cmd, inBackground
 
 func (m *mainModel) dispatchProcessSSHConnect(msg message.RunProcessConnectSSH) tea.Cmd {
 	m.logger.Debug("[EXEC] Build ssh connect command for hostname: %v, title: %v", msg.Host.Address, msg.Host.Title)
-	process := msg.Host.BuildConnectSSH()
+	process := utils.BuildConnectSSH(msg.Host.CmdSSHConnect())
 	m.logger.Info("[EXEC] Run process: %s", process.String())
 
 	return m.dispatchProcess("ssh_connect_host", process, false, false)
@@ -243,7 +243,7 @@ func (m *mainModel) dispatchProcessSSHConnect(msg message.RunProcessConnectSSH) 
 
 func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessLoadSSHConfig) tea.Cmd {
 	m.logger.Debug("[EXEC] Read ssh configuration for host: %v", msg.Host)
-	process := msg.Host.BuildLoadSSHConfig()
+	process := utils.BuildLoadSSHConfig(msg.Host.CmdSSHConfig())
 	m.logger.Info("[EXEC] Run process: %s", process.String())
 
 	// Should run in non-blocking fashion for ssh load config
