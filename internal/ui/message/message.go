@@ -2,13 +2,14 @@
 package message
 
 import (
-	"github.com/grafviktor/goto/internal/model/host"
-	"github.com/grafviktor/goto/internal/model/ssh"
 	"os"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"golang.org/x/term"
+
+	"github.com/grafviktor/goto/internal/model/host"
+	"github.com/grafviktor/goto/internal/model/ssh"
 )
 
 type (

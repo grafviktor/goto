@@ -2,9 +2,10 @@ package test
 
 import (
 	"errors"
-	"github.com/grafviktor/goto/internal/model/host"
 
 	"github.com/samber/lo"
+
+	"github.com/grafviktor/goto/internal/model/host"
 )
 
 // =============================================== Storage

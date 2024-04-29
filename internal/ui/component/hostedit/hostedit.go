@@ -4,12 +4,9 @@ package hostedit
 import (
 	"context"
 	"fmt"
-	"github.com/grafviktor/goto/internal/model/ssh"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/grafviktor/goto/internal/storage"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -19,7 +16,9 @@ import (
 	"github.com/samber/lo"
 
 	hostModel "github.com/grafviktor/goto/internal/model/host"
+	"github.com/grafviktor/goto/internal/model/ssh"
 	"github.com/grafviktor/goto/internal/state"
+	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
 	"github.com/grafviktor/goto/internal/ui/component/input"
 	"github.com/grafviktor/goto/internal/ui/message"
@@ -406,7 +405,8 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 
 	minFocusIndex := 0
 	// maxFocusIndex is equal to number of inputs minus the number
-	// of disabled inputs. This works based on an assumption that	// all disabled inputs will be in the bottom of the hostlist.
+	// of disabled inputs. This works based on an assumption that
+	// all disabled inputs will be in the bottom of the hostlist.
 	maxFocusIndex := len(enabledInputs) - 1
 	inputHeight := 0
 

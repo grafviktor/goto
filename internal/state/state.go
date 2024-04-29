@@ -37,10 +37,10 @@ type ApplicationState struct {
 	Selected         int `yaml:"selected"`
 	appStateFilePath string
 	logger           iLogger
-	CurrentView      view              `yaml:"-"`
-	Err              error             `yaml:"-"`
-	Width            int               `yaml:"-"`
-	Height           int               `yaml:"-"`
+	CurrentView      view  `yaml:"-"`
+	Err              error `yaml:"-"`
+	Width            int   `yaml:"-"`
+	Height           int   `yaml:"-"`
 }
 
 // Get - reads application state from disk.

@@ -1,3 +1,4 @@
+// Package ssh contains SSH related models and methods.
 package ssh
 
 import (

@@ -118,6 +118,7 @@ func (writer *ProcessBufferWriter) Write(p []byte) (n int, err error) {
 
 var twoOrMoreSpacesRegexp = regexp.MustCompile(`\s{2,}`)
 
+// RemoveDuplicateSpaces - removes two or more spaces from the string.
 func RemoveDuplicateSpaces(arguments string) string {
 	return twoOrMoreSpacesRegexp.ReplaceAllLiteralString(arguments, " ")
 }

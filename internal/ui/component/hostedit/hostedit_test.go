@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/grafviktor/goto/internal/state"
-	"github.com/grafviktor/goto/internal/ui/component/hostlist"
-	"github.com/grafviktor/goto/internal/ui/message"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/test"
+	"github.com/grafviktor/goto/internal/ui/component/hostlist"
+	"github.com/grafviktor/goto/internal/ui/message"
 )
 
 func TestNotEmptyValidator(t *testing.T) {
@@ -296,7 +295,6 @@ func TestUpdateInputPlaceHolders(t *testing.T) {
 	))
 }
 */
-
 
 func MockAppState() *state.ApplicationState {
 	return &state.ApplicationState{}

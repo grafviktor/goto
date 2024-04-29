@@ -5,13 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/grafviktor/goto/internal/model/ssh"
 	"os/exec"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/grafviktor/goto/internal/model/ssh"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/hostedit"

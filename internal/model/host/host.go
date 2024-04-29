@@ -46,6 +46,9 @@ func (h *Host) Clone() Host {
 	return newHost
 }
 
+// IsUserDefinedSSHCommand returns true if the address contains spaces or "@" symbol,
+// true means that user uses a custom config and not relying on LoginName, IdentityFilePath
+// and RemotePort.
 func (h *Host) IsUserDefinedSSHCommand() bool {
 	rawValue := strings.TrimSpace(h.Address)
 	containsSpace := strings.Contains(rawValue, " ")
@@ -66,7 +69,7 @@ func (h *Host) toSSHOptions() []ssh.Option {
 	}
 }
 
-// CmdSSHConnect - returns SSH command for connecting to a remote host
+// CmdSSHConnect - returns SSH command for connecting to a remote host.
 func (h *Host) CmdSSHConnect() string {
 	if h.IsUserDefinedSSHCommand() {
 		return ssh.ConnectCommand(ssh.OptionAddress{Value: h.Address})
@@ -75,7 +78,7 @@ func (h *Host) CmdSSHConnect() string {
 	return ssh.ConnectCommand(h.toSSHOptions()...)
 }
 
-// CmdSSHConfig - returns SSH command for loading host default configuration
+// CmdSSHConfig - returns SSH command for loading host default configuration.
 func (h *Host) CmdSSHConfig() string {
 	return ssh.LoadConfigCommand(ssh.OptionReadConfig{Value: h.Address})
 }

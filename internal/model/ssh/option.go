@@ -55,6 +55,7 @@ func addOption(sb *strings.Builder, rawParameter Option) {
 
 var baseCmd = BaseCMD()
 
+// ConnectCommand - builds ssh command to connect to a remote host.
 func ConnectCommand(options ...Option) string {
 	sb := strings.Builder{}
 	sb.WriteString(baseCmd)
@@ -66,6 +67,7 @@ func ConnectCommand(options ...Option) string {
 	return sb.String()
 }
 
+// LoadConfigCommand - builds ssh command to load config from ssh_config file.
 func LoadConfigCommand(option OptionReadConfig) string {
 	sb := strings.Builder{}
 	sb.WriteString(baseCmd)

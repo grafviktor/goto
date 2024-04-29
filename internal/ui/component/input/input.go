@@ -114,14 +114,20 @@ func (l *Input) Enabled() bool {
 	return l.enabled
 }
 
+// SetLabel sets the label of the Input.
 func (l *Input) SetLabel(label string) {
 	l.label = label
 }
 
+// Label returns the label value of the Input field.
 func (l *Input) Label() string {
 	return l.label
 }
 
+// SetDisplayTooltip manages tooltip text which is displayed in the beginning of the input field.
+//
+// Parameters:
+// isDisplayed bool: a boolean value indicating whether the tooltip should be displayed.
 func (l *Input) SetDisplayTooltip(isDisplayed bool) {
 	l.displayTooltip = isDisplayed
 }
