@@ -121,3 +121,25 @@ var twoOrMoreSpacesRegexp = regexp.MustCompile(`\s{2,}`)
 func RemoveDuplicateSpaces(arguments string) string {
 	return twoOrMoreSpacesRegexp.ReplaceAllLiteralString(arguments, " ")
 }
+
+// BuildConnectSSH - builds ssh command which is based on host.Model.
+func BuildConnectSSH(command string) *exec.Cmd {
+	process := BuildProcess(command)
+	process.Stdout = os.Stdout
+	process.Stderr = &ProcessBufferWriter{}
+
+	return process
+}
+
+// BuildLoadSSHConfig - builds ssh command, which runs ssh -G <hostname> command
+// to get a list of options associated with the hostname.
+func BuildLoadSSHConfig(command string) *exec.Cmd {
+	// Use case 1: User edits host
+	// Use case 2: User is going to copy his ssh key using <t> command from the hostlist
+
+	process := BuildProcess(command)
+	process.Stdout = &ProcessBufferWriter{}
+	process.Stderr = &ProcessBufferWriter{}
+
+	return process
+}
