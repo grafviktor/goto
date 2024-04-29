@@ -4,9 +4,12 @@ package hostedit
 import (
 	"context"
 	"fmt"
+	"github.com/grafviktor/goto/internal/model/ssh"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/grafviktor/goto/internal/storage"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -15,9 +18,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
 
-	"github.com/grafviktor/goto/internal/model"
+	hostModel "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/state"
-	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
 	"github.com/grafviktor/goto/internal/ui/component/input"
 	"github.com/grafviktor/goto/internal/ui/message"
@@ -121,13 +123,14 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	host, hostNotFoundErr := storage.Get(hostID)
 	if hostNotFoundErr != nil {
 		// Logger should notify that this is a new host
-		host = model.Host{}
+		host = hostModel.Host{}
 	}
+	host.DefaultSSHConfig = ssh.StubConfig()
 
 	m := editModel{
 		inputs:       make([]input.Input, 6),
 		hostStorage:  storage,
-		host:         wrap(host),
+		host:         wrap(&host),
 		help:         help.New(),
 		keyMap:       getKeyMap(initialFocusedInput),
 		appState:     state,
@@ -163,24 +166,23 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		case inputLogin:
 			t.SetLabel("Login")
 			t.CharLimit = 128
-			t.Placeholder = fmt.Sprintf("default: %s", m.host.DefaultSSHConfig.User)
 			t.SetValue(host.LoginName)
 		case inputNetworkPort:
 			t.SetLabel("Network Port")
 			t.CharLimit = 5
-			t.Placeholder = fmt.Sprintf("default: %s", m.host.DefaultSSHConfig.Port)
 			t.SetValue(host.RemotePort)
 			t.Validate = networkPortValidator
 		case inputIdentityFile:
 			t.SetLabel("Identity File")
 			t.CharLimit = 512
-			t.Placeholder = fmt.Sprintf("default: %s", m.host.DefaultSSHConfig.IdentityFile)
 			t.SetValue(host.IdentityFilePath)
 		}
 
 		m.inputs[i] = t
 	}
 
+	// Though updateInputFields will automatically be called once ssh config is loaded,
+	// that will not happen when we create a new host. Thus calling it manually.
 	m.updateInputFields()
 	m.inputs[m.focusedInput].Focus()
 
@@ -203,6 +205,7 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case debouncedMessage:
 		cmd = m.handleDebouncedMessage(msg)
 	case message.HostSSHConfigLoaded:
+		m.host.DefaultSSHConfig = &msg.Config
 		m.updateInputFields()
 		m.viewport.SetContent(m.inputsView())
 	}
@@ -242,7 +245,7 @@ func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		// Handle all other key events
 		cmd := m.focusedInputProcessKeyEvent(msg)
 		if m.focusedInput == inputAddress || m.focusedInput == inputTitle {
-			// This statement is require as user may want to copy title to address,
+			// This statement is required as user may want to copy title to address,
 			// if Host field contains a custom command, ssh options inputs
 			// should be disabled.
 			m.updateInputFields()
@@ -369,7 +372,7 @@ func (m *editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 		if previousValue != currentValue {
 			// Load SSH config for the specified hostname
 			cmd = message.TeaCmd(debouncedMessage{
-				wrappedMsg:  message.RunProcessLoadSSHConfig{Host: m.host.Host},
+				wrappedMsg:  message.RunProcessLoadSSHConfig{Host: *m.host.Host},
 				debounceTag: m.debounceTag, // See the comments in debouncedMessage definition.
 			})
 		}
