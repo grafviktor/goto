@@ -160,12 +160,14 @@ func TestHandleCopyInputValueShortcut(t *testing.T) {
 	// propagated to address field.
 	storageShouldFail := false
 	model := New(context.TODO(), test.NewMockStorage(storageShouldFail), MockAppState(), &test.MockLogger{})
-	// Override mock values which we received from mock database and set fields values to 'test'
-	model.inputs[inputTitle].SetValue("test")
-	model.inputs[inputAddress].SetValue("test")
+	// Override mock values which we received from mock database and set model values to 'test'
+	model.host.Title = "test"
+	model.host.Address = "test"
+	// Update input fields to reflect the model's values
+	model.updateInputFields()
 	// Ensure that selected input is 'Title'
 	assert.Equal(t, inputTitle, model.focusedInput)
-	// Confirm that 'Title' and 'Host' values are empty strings
+	// Confirm that 'Title' and 'Host' values are equal to 'test'
 	assert.Equal(t, "test", model.inputs[inputTitle].Value())
 	assert.Equal(t, "test", model.inputs[inputAddress].Value())
 	// Append '123' to title, so it will become 'test123'
