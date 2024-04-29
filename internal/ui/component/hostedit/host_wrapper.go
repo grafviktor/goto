@@ -1,12 +1,14 @@
 package hostedit
 
-import "github.com/grafviktor/goto/internal/model"
+import (
+	model "github.com/grafviktor/goto/internal/model/host"
+)
 
-func wrap(host model.Host) hostModelWrapper {
+func wrap(host *model.Host) hostModelWrapper {
 	return hostModelWrapper{Host: host}
 }
 
-type hostModelWrapper struct{ model.Host }
+type hostModelWrapper struct{ *model.Host }
 
 func (m *hostModelWrapper) getHostAttributeValueByIndex(inputType int) string {
 	switch inputType {
@@ -45,5 +47,5 @@ func (m *hostModelWrapper) setHostAttributeByIndex(inputType int, value string) 
 }
 
 func (m *hostModelWrapper) unwrap() model.Host {
-	return m.Host
+	return *m.Host
 }
