@@ -52,11 +52,12 @@ func getRegexFirstMatchingGroup(groups []string) string {
 
 // currentUsername - returns current OS username or "n/a" if it can't be determined.
 func currentUsername() string {
-	// ssh [-vvv] -G <hostname> should be used to request settings for a hostname.
-	user, err := user.Current()
+	// ssh [-vvv] -G <hostname> is used to request settings for a hostname.
+	// for a stub config use u.Current()
+	u, err := user.Current()
 	if err != nil {
 		return "n/a"
 	}
 
-	return user.Username
+	return u.Username
 }

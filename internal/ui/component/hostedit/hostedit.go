@@ -199,7 +199,6 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateViewPort(msg)
 	case tea.KeyMsg:
 		cmd = m.handleKeyboardEvent(msg)
-		// m.updateInputs()
 		m.viewport.SetContent(m.inputsView())
 	case debouncedMessage:
 		cmd = m.handleDebouncedMessage(msg)
@@ -506,9 +505,7 @@ func (m *editModel) updateInputFields() {
 func (m *editModel) inputsView() string {
 	var b strings.Builder
 	for i := range m.inputs {
-		input := m.inputs[i]
-
-		b.WriteString(input.View())
+		b.WriteString(m.inputs[i].View())
 		if i < len(m.inputs) {
 			b.WriteString("\n\n")
 		}

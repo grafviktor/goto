@@ -1,4 +1,3 @@
-// Package model contains description of data models. For now there is only 'Host' model
 package host
 
 import (
@@ -11,7 +10,6 @@ import (
 )
 
 func TestNewHost(t *testing.T) {
-	// Create a new host using the NewHost function
 	expectedHost := Host{
 		ID:               1,
 		Title:            "TestTitle",
@@ -22,6 +20,7 @@ func TestNewHost(t *testing.T) {
 		IdentityFilePath: "/path/to/private/key",
 	}
 
+	// Create a new host using the NewHost function
 	newHost := NewHost(expectedHost.ID, expectedHost.Title, expectedHost.Description, expectedHost.Address, expectedHost.LoginName, expectedHost.IdentityFilePath, expectedHost.RemotePort)
 
 	// Check if the new host matches the expected host

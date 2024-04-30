@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 )
@@ -110,11 +111,10 @@ func Test_ConstructCMD(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ConnectCommand(tt.options...)
-
-			if result != tt.expectedResult {
-				t.Errorf("Expected result %s, but got %s", tt.expectedResult, result)
-			}
+			actual := ConnectCommand(tt.options...)
+			// Use Contains in order to pass Windows tests. On Windows,
+			// the command starts from 'cmd /c ssh' instead of just 'ssh'
+			require.Contains(t, tt.expectedResult, actual)
 		})
 	}
 }
