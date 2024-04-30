@@ -35,7 +35,7 @@ audit:
 	go mod verify
 	@echo 'Format code...'
 	gofumpt -l -w -extra ./
-	goimports -w -local github.com/grafviktor/goto .
+	goimports -local "github.com/grafviktor/goto" -w .
 	@echo 'Vet code...'
 	go vet ./...
 	staticcheck ./...
