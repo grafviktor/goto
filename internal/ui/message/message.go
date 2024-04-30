@@ -5,8 +5,9 @@ import (
 	"os"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"golang.org/x/term"
+
+	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/model/ssh"

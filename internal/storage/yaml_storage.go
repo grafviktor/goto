@@ -6,8 +6,9 @@ import (
 	"os"
 	"path"
 
-	"github.com/samber/lo"
 	"golang.org/x/exp/slices"
+
+	"github.com/samber/lo"
 	"gopkg.in/yaml.v2"
 
 	"github.com/grafviktor/goto/internal/constant"

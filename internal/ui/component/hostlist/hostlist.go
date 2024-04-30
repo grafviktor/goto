@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"strings"
 
-	hostModel "github.com/grafviktor/goto/internal/model/host"
+	"golang.org/x/exp/slices"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"golang.org/x/exp/slices"
 
+	hostModel "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/message"
