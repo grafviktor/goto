@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/grafviktor/goto/internal/model/ssh"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -265,38 +267,60 @@ func TestHandleDebounceMessage(t *testing.T) {
 	require.NotNil(t, result3)
 }
 
-/*
 func TestUpdateInputPlaceHolders(t *testing.T) {
 	// Make sure that placeholders have correct values once ssh config is changed.
 	appState := MockAppState()
 	model := New(context.TODO(), test.NewMockStorage(false), appState, &test.MockLogger{})
-
-	defaultPlaceholderPrefix := "default:"
-	appState.HostSSHConfig.User = "Mock User"
-	appState.HostSSHConfig.Port = "Mock Port"
-	appState.HostSSHConfig.IdentityFile = "Mock Identity File"
-
+	model.host.DefaultSSHConfig = &ssh.Config{
+		IdentityFile: "Mock Identity File",
+		User:         "Mock User",
+		Port:         "Mock Port",
+	}
 	model.updateInputFields()
 
-	require.Equal(t, model.inputs[inputLogin].Placeholder, fmt.Sprintf(
+	defaultPlaceholderPrefix := "default:"
+	require.Equal(t, fmt.Sprintf(
 		"%s %s",
 		defaultPlaceholderPrefix,
 		"Mock User",
-	))
+	), model.inputs[inputLogin].Placeholder)
 
-	require.Equal(t, model.inputs[inputNetworkPort].Placeholder, fmt.Sprintf(
+	require.Equal(t, fmt.Sprintf(
 		"%s %s",
 		defaultPlaceholderPrefix,
 		"Mock Port",
-	))
+	), model.inputs[inputNetworkPort].Placeholder)
 
-	require.Equal(t, model.inputs[inputIdentityFile].Placeholder, fmt.Sprintf(
+	require.Equal(t, fmt.Sprintf(
 		"%s %s",
 		defaultPlaceholderPrefix,
 		"Mock Identity File",
-	))
+	), model.inputs[inputIdentityFile].Placeholder)
+
+	// Now use custom connection settings and make sure that ssh parameters input fields
+	// are disabled and placeholders are prefixed with 'readonly:' keyword.
+	model.host.Address = "localhost -l root -p 9999 -i ~/.id_rsa"
+	model.updateInputFields()
+
+	defaultPlaceholderPrefix = "readonly:"
+	require.Equal(t, fmt.Sprintf(
+		"%s %s",
+		defaultPlaceholderPrefix,
+		"Mock User",
+	), model.inputs[inputLogin].Placeholder)
+
+	require.Equal(t, fmt.Sprintf(
+		"%s %s",
+		defaultPlaceholderPrefix,
+		"Mock Port",
+	), model.inputs[inputNetworkPort].Placeholder)
+
+	require.Equal(t, fmt.Sprintf(
+		"%s %s",
+		defaultPlaceholderPrefix,
+		"Mock Identity File",
+	), model.inputs[inputIdentityFile].Placeholder)
 }
-*/
 
 func MockAppState() *state.ApplicationState {
 	return &state.ApplicationState{}

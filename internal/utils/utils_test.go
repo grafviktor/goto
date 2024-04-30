@@ -92,47 +92,6 @@ func Test_CheckAppInstalled(t *testing.T) {
 	}
 }
 
-/*
-	func Test_HostModelToOptionsAdaptor(t *testing.T) {
-		tests := []struct {
-			name            string
-			host            model.Host
-			expectedOptions []ssh.CommandLineOption
-		}{
-			{
-				name: "Valid Host",
-				host: model.Host{
-					Address:          "example.com",
-					LoginName:        "user",
-					RemotePort:       "22",
-					IdentityFilePath: "/path/to/private_key",
-				},
-				expectedOptions: []ssh.CommandLineOption{
-					ssh.OptionPrivateKey{Value: "/path/to/private_key"},
-					ssh.OptionRemotePort{Value: "22"},
-					ssh.OptionLoginName{Value: "user"},
-					ssh.OptionAddress{Value: "example.com"},
-				},
-			},
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				result := HostModelToOptionsAdaptor(tt.host)
-
-				if len(result) != len(tt.expectedOptions) {
-					t.Errorf("Expected %d options, but got %d", len(tt.expectedOptions), len(result))
-				}
-
-				for i := range result {
-					if result[i] != tt.expectedOptions[i] {
-						t.Errorf("Expected option %v, but got %v", tt.expectedOptions[i], result[i])
-					}
-				}
-			})
-		}
-	}
-*/
 func TestBuildProcess(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -184,26 +143,23 @@ func TestBuildProcess(t *testing.T) {
 	}
 }
 
-/*
-func TestBuildConnectSSH(t *testing.T) {
-	// Test case: Build SSH sanity check
-	cmd := BuildConnectSSH(model.Host{})
-
-	// Check that cmd is created and stdErr is re-defined
-	require.NotNil(t, cmd)
-	require.Equal(t, os.Stdout, cmd.Stdout)
-	require.Equal(t, &ProcessBufferWriter{}, cmd.Stderr)
-}
-*/
-
-/*
-func TestBuildLoadSSHConfig(t *testing.T) {
-	// Test case: Load SSH config sanity check
-	cmd := BuildLoadSSHConfig("Mock Host")
-
-	// Check that cmd is created and stdErr and stdOut are re-defined
-	require.NotNil(t, cmd)
-	require.Equal(t, &ProcessBufferWriter{}, cmd.Stderr)
-	require.Equal(t, &ProcessBufferWriter{}, cmd.Stdout)
-}
-*/
+// func TestBuildConnectSSH(t *testing.T) {
+// 	// Test case: Build SSH sanity check
+// 	m := model.Host{}
+// 	cmd := BuildConnectSSH(m.CmdSSHConnect())
+//
+// 	// Check that cmd is created and stdErr is re-defined
+// 	require.NotNil(t, cmd)
+// 	require.Equal(t, os.Stdout, cmd.Stdout)
+// 	require.Equal(t, &ProcessBufferWriter{}, cmd.Stderr)
+// }
+//
+// func TestBuildLoadSSHConfig(t *testing.T) {
+// 	// Test case: Load SSH config sanity check
+// 	cmd := BuildLoadSSHConfig("Mock Host")
+//
+// 	// Check that cmd is created and stdErr and stdOut are re-defined
+// 	require.NotNil(t, cmd)
+// 	require.Equal(t, &ProcessBufferWriter{}, cmd.Stderr)
+// 	require.Equal(t, &ProcessBufferWriter{}, cmd.Stdout)
+// }

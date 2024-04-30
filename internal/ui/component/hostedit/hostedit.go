@@ -465,18 +465,10 @@ func (m *editModel) handleCopyInputValueShortcut() {
 	}
 }
 
-// This function should probably be moved to model.
-func (m *editModel) isCustomConnectString() bool {
-	rawValue := strings.TrimSpace(m.inputs[inputAddress].Value())
-	containsSpace := strings.Contains(rawValue, " ")
-	containsAtSymbol := strings.Contains(rawValue, "@")
-
-	return containsSpace || containsAtSymbol
-}
-
 func (m *editModel) updateInputFields() {
 	m.logger.Debug("[UI] Update input components")
-	prefix := lo.Ternary(m.isCustomConnectString(), "readonly", "default")
+	customConnectString := m.host.IsUserDefinedSSHCommand()
+	prefix := lo.Ternary(customConnectString, "readonly", "default")
 
 	m.inputs[inputTitle].Placeholder = "*required*" //nolint:goconst
 	m.inputs[inputAddress].Placeholder = "*required*"
@@ -485,7 +477,6 @@ func (m *editModel) updateInputFields() {
 	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.DefaultSSHConfig.Port)
 	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.DefaultSSHConfig.IdentityFile)
 
-	customConnectString := m.isCustomConnectString()
 	hostInputLabel := lo.Ternary(customConnectString, "Command", "Host")
 	m.inputs[inputAddress].SetLabel(hostInputLabel)
 	m.inputs[inputAddress].SetDisplayTooltip(customConnectString)
