@@ -115,7 +115,7 @@ func Test_ConstructCMD(t *testing.T) {
 			actual := ConnectCommand(tt.options...)
 			// Use Contains in order to pass Windows tests. On Windows,
 			// the command starts from 'cmd /c ssh' instead of just 'ssh'
-			require.Contains(t, tt.expectedResult, actual)
+			require.Contains(t, actual, tt.expectedResult)
 		})
 	}
 }
