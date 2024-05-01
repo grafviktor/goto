@@ -3,6 +3,8 @@ package ssh
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func Test_ConstructKeyValueOption(t *testing.T) {
@@ -46,7 +48,7 @@ func Test_ConstructKeyValueOption(t *testing.T) {
 func Test_AddOption(t *testing.T) {
 	tests := []struct {
 		name           string
-		rawParameter   CommandLineOption
+		rawParameter   Option
 		expectedResult string
 	}{
 		{
@@ -84,40 +86,64 @@ func Test_AddOption(t *testing.T) {
 	}
 }
 
-func Test_ConstructCMD(t *testing.T) {
+func Test_ConnectCommand(t *testing.T) {
 	tests := []struct {
 		name           string
 		cmd            string
-		options        []CommandLineOption
+		options        []Option
 		expectedResult string
 	}{
 		{
 			name:           "Command with Options",
-			cmd:            "ssh",
-			options:        []CommandLineOption{OptionPrivateKey{Value: "private_key"}, OptionRemotePort{Value: "22"}},
+			options:        []Option{OptionPrivateKey{Value: "private_key"}, OptionRemotePort{Value: "22"}},
 			expectedResult: "ssh -i private_key -p 22",
 		},
 		{
 			name:           "Command without Options",
-			cmd:            "ls",
-			options:        []CommandLineOption{},
-			expectedResult: "ls",
+			options:        []Option{},
+			expectedResult: "ssh",
 		},
 		{
 			name:           "Command with Address Option",
-			cmd:            "ping",
-			options:        []CommandLineOption{OptionAddress{Value: "example.com"}},
-			expectedResult: "ping example.com",
+			options:        []Option{OptionAddress{Value: "example.com"}},
+			expectedResult: "ssh example.com",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ConstructCMD(tt.cmd, tt.options...)
+			actual := ConnectCommand(tt.options...)
+			// Use Contains in order to pass Windows tests. On Windows,
+			// the command starts from 'cmd /c ssh' instead of just 'ssh'
+			require.Contains(t, actual, tt.expectedResult)
+		})
+	}
+}
 
-			if result != tt.expectedResult {
-				t.Errorf("Expected result %s, but got %s", tt.expectedResult, result)
-			}
+func Test_LoadConfigCommand(t *testing.T) {
+	tests := []struct {
+		name           string
+		option         OptionReadConfig
+		expectedResult string
+	}{
+		{
+			name:           "Command with ReadConfig Option",
+			option:         OptionReadConfig{Value: "example.com"},
+			expectedResult: "ssh -G example.com",
+		},
+		{
+			name:           "Command with empty ReadConfig Option",
+			option:         OptionReadConfig{Value: ""},
+			expectedResult: "ssh",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := LoadConfigCommand(tt.option)
+			// Use Contains in order to pass Windows tests. On Windows,
+			// the command starts from 'cmd /c ssh' instead of just 'ssh'
+			require.Contains(t, actual, tt.expectedResult)
 		})
 	}
 }

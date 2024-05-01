@@ -14,7 +14,6 @@ import (
 	"github.com/grafviktor/goto/internal/test"
 	"github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
-	"github.com/grafviktor/goto/internal/utils/ssh"
 )
 
 func TestNew(t *testing.T) {
@@ -124,7 +123,5 @@ func TestDispatchProcess_Background_Fail(t *testing.T) {
 // ---------------------------------
 
 func MockAppState() *state.ApplicationState {
-	return &state.ApplicationState{
-		HostSSHConfig: &ssh.Config{},
-	}
+	return &state.ApplicationState{}
 }

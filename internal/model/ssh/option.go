@@ -1,13 +1,14 @@
-// Package ssh - contains functions to construct ssh command for using when connecting to a remote host
 package ssh
 
 import (
 	"fmt"
 	"strings"
+
+	"github.com/grafviktor/goto/internal/utils"
 )
 
-// CommandLineOption - parent interface for command line option.
-type CommandLineOption interface{}
+// Option - parent interface for command line option.
+type Option interface{}
 
 type (
 	// OptionPrivateKey - ssh private key path in file system.
@@ -30,7 +31,7 @@ func constructKeyValueOption(optionFlag, optionValue string) string {
 	return ""
 }
 
-func addOption(sb *strings.Builder, rawParameter CommandLineOption) {
+func addOption(sb *strings.Builder, rawParameter Option) {
 	var option string
 	switch p := rawParameter.(type) {
 	case OptionPrivateKey:
@@ -40,10 +41,10 @@ func addOption(sb *strings.Builder, rawParameter CommandLineOption) {
 	case OptionLoginName:
 		option = constructKeyValueOption("-l", p.Value)
 	case OptionReadConfig:
-		option = constructKeyValueOption("-G", p.Value)
+		option = constructKeyValueOption("-G", utils.RemoveDuplicateSpaces(p.Value))
 	case OptionAddress:
 		if p.Value != "" {
-			option = fmt.Sprintf(" %s", p.Value)
+			option = fmt.Sprintf(" %s", utils.RemoveDuplicateSpaces(p.Value))
 		}
 	default:
 		return
@@ -52,16 +53,26 @@ func addOption(sb *strings.Builder, rawParameter CommandLineOption) {
 	sb.WriteString(option)
 }
 
-// ConstructCMD - build connect command from main app and its arguments
-// cmd - main executable
-// options - set of command line options. See Option... public variables.
-func ConstructCMD(cmd string, options ...CommandLineOption) string {
-	sb := strings.Builder{}
-	sb.WriteString(cmd)
+var baseCmd = BaseCMD()
 
-	for _, argument := range options {
-		addOption(&sb, argument)
+// ConnectCommand - builds ssh command to connect to a remote host.
+func ConnectCommand(options ...Option) string {
+	sb := strings.Builder{}
+	sb.WriteString(baseCmd)
+
+	for _, option := range options {
+		addOption(&sb, option)
 	}
+
+	return sb.String()
+}
+
+// LoadConfigCommand - builds ssh command to load config from ssh_config file.
+func LoadConfigCommand(option OptionReadConfig) string {
+	sb := strings.Builder{}
+	sb.WriteString(baseCmd)
+
+	addOption(&sb, option)
 
 	return sb.String()
 }

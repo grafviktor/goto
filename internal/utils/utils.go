@@ -7,10 +7,8 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
-
-	"github.com/grafviktor/goto/internal/model"
-	"github.com/grafviktor/goto/internal/utils/ssh"
 )
 
 // StringEmpty - checks if string is empty or contains only spaces.
@@ -86,55 +84,19 @@ func CheckAppInstalled(appName string) error {
 	return err
 }
 
+var argumentsRegexp = regexp.MustCompile(`\s+`)
+
 // BuildProcess - builds exec.Cmd object from command string.
 func BuildProcess(cmd string) *exec.Cmd {
 	if strings.TrimSpace(cmd) == "" {
 		return nil
 	}
 
-	commandWithArguments := strings.Split(cmd, " ")
+	commandWithArguments := argumentsRegexp.Split(cmd, -1)
 	command := commandWithArguments[0]
 	arguments := commandWithArguments[1:]
 
 	return exec.Command(command, arguments...)
-}
-
-// =============================== Move to SSH module:
-
-// HostModelToOptionsAdaptor - extract values from model.Host into a set of ssh.CommandLineOption
-// host - model.Host to be adapted
-// returns []ssh.CommandLineOption.
-func HostModelToOptionsAdaptor(host model.Host) []ssh.CommandLineOption {
-	return []ssh.CommandLineOption{
-		ssh.OptionPrivateKey{Value: host.PrivateKeyPath},
-		ssh.OptionRemotePort{Value: host.RemotePort},
-		ssh.OptionLoginName{Value: host.LoginName},
-		ssh.OptionAddress{Value: host.Address},
-	}
-}
-
-// BuildConnectSSH - builds ssh command which is based on host.Model.
-func BuildConnectSSH(host model.Host) *exec.Cmd {
-	command := ssh.ConstructCMD(ssh.BaseCMD(), HostModelToOptionsAdaptor(host)...)
-	process := BuildProcess(command)
-	process.Stdout = os.Stdout
-	process.Stderr = &ProcessBufferWriter{}
-
-	return process
-}
-
-// BuildLoadSSHConfig - builds ssh command, which runs ssh -G <hostname> command
-// to get a list of options associated with the hostname.
-func BuildLoadSSHConfig(hostname string) *exec.Cmd {
-	// Use case 1: User edits host
-	// Use case 2: User is going to copy his ssh key using <t> command from the hostlist
-
-	command := ssh.ConstructCMD(ssh.BaseCMD(), ssh.OptionReadConfig{Value: hostname})
-	process := BuildProcess(command)
-	process.Stdout = &ProcessBufferWriter{}
-	process.Stderr = &ProcessBufferWriter{}
-
-	return process
 }
 
 // ProcessBufferWriter - is an object which pretends to be a writer, however it saves all data into 'Output' variable
@@ -152,4 +114,33 @@ func (writer *ProcessBufferWriter) Write(p []byte) (n int, err error) {
 	// We must return the number of bytes which were written using `len(p)`,
 	// otherwise exec.go will throw 'short write' error.
 	return len(p), nil
+}
+
+var twoOrMoreSpacesRegexp = regexp.MustCompile(`\s{2,}`)
+
+// RemoveDuplicateSpaces - removes two or more spaces from the string.
+func RemoveDuplicateSpaces(arguments string) string {
+	return twoOrMoreSpacesRegexp.ReplaceAllLiteralString(arguments, " ")
+}
+
+// BuildConnectSSH - builds ssh command which is based on host.Model.
+func BuildConnectSSH(command string) *exec.Cmd {
+	process := BuildProcess(command)
+	process.Stdout = os.Stdout
+	process.Stderr = &ProcessBufferWriter{}
+
+	return process
+}
+
+// BuildLoadSSHConfig - builds ssh command, which runs ssh -G <hostname> command
+// to get a list of options associated with the hostname.
+func BuildLoadSSHConfig(command string) *exec.Cmd {
+	// Use case 1: User edits host
+	// Use case 2: User is going to copy his ssh key using <t> command from the hostlist
+
+	process := BuildProcess(command)
+	process.Stdout = &ProcessBufferWriter{}
+	process.Stderr = &ProcessBufferWriter{}
+
+	return process
 }

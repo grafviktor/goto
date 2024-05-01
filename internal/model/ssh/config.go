@@ -1,3 +1,4 @@
+// Package ssh contains SSH related models and methods.
 package ssh
 
 import (
@@ -16,20 +17,18 @@ type Config struct {
 	Port         string
 }
 
-// currentUsername - returns current OS username or "n/a" if it can't be determined.
-func currentUsername() string {
-	// ssh [-vvv] -G <hostname> should be used to request settings for a hostname.
-	user, err := user.Current()
-	if err != nil {
-		return "n/a"
+// Parse - parses 'ssh -G <hostname> command' output and returns Config struct.
+func Parse(config string) *Config {
+	return &Config{
+		IdentityFile: getRegexFirstMatchingGroup(sshConfigIdentityFileRe.FindStringSubmatch(config)),
+		Port:         getRegexFirstMatchingGroup(sshConfigPortRe.FindStringSubmatch(config)),
+		User:         getRegexFirstMatchingGroup(sshConfigUserRe.FindStringSubmatch(config)),
 	}
-
-	return user.Username
 }
 
-// DefaultConfig - returns a stub SSH config. It is used on application startup when build application state and
+// StubConfig - returns a stub SSH config. It is used on application startup when build application state and
 // no hosts yet available. Consider to run real ssh process to request a config. See 'message.RunProcessLoadSSHConfig'.
-func DefaultConfig() *Config {
+func StubConfig() *Config {
 	return &Config{
 		IdentityFile: "$HOME/.ssh/id_rsa",
 		Port:         "22",
@@ -51,11 +50,14 @@ func getRegexFirstMatchingGroup(groups []string) string {
 	return ""
 }
 
-// ParseConfig - parses 'ssh -G <hostname> command' output and returns Config struct.
-func ParseConfig(config string) *Config {
-	return &Config{
-		IdentityFile: getRegexFirstMatchingGroup(sshConfigIdentityFileRe.FindStringSubmatch(config)),
-		Port:         getRegexFirstMatchingGroup(sshConfigPortRe.FindStringSubmatch(config)),
-		User:         getRegexFirstMatchingGroup(sshConfigUserRe.FindStringSubmatch(config)),
+// currentUsername - returns current OS username or "n/a" if it can't be determined.
+func currentUsername() string {
+	// ssh [-vvv] -G <hostname> is used to request settings for a hostname.
+	// for a stub config use u.Current()
+	u, err := user.Current()
+	if err != nil {
+		return "n/a"
 	}
+
+	return u.Username
 }

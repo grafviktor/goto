@@ -13,8 +13,10 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/samber/lo"
 
-	"github.com/grafviktor/goto/internal/model"
+	hostModel "github.com/grafviktor/goto/internal/model/host"
+	"github.com/grafviktor/goto/internal/model/ssh"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
@@ -34,7 +36,7 @@ type (
 	MsgClose struct{}
 	// MsgSave triggers when users saves results.
 	MsgSave struct{}
-	// debouncedMessage is used to trigger side-effects. For instance dispatch RunProcessLoadSSHConfig
+	// debouncedMessage is used to trigger side effects. For instance dispatch RunProcessLoadSSHConfig
 	// which reads host config from ~/.ssh/config file.
 	debouncedMessage struct {
 		wrappedMsg  tea.Msg
@@ -55,7 +57,7 @@ var (
 	// ItemID is a key to extract item id from application context.
 	ItemID       = struct{}{}
 	defaultTitle = "host details"
-	debounceTime = time.Second * 1
+	debounceTime = time.Millisecond * 300
 )
 
 type iLogger interface {
@@ -99,7 +101,7 @@ type editModel struct {
 	appState     *state.ApplicationState
 	focusedInput int
 	help         help.Model
-	host         model.Host
+	host         hostModelWrapper
 	hostStorage  storage.HostStorage
 	inputs       []input.Input
 	isNewHost    bool
@@ -120,13 +122,14 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	host, hostNotFoundErr := storage.Get(hostID)
 	if hostNotFoundErr != nil {
 		// Logger should notify that this is a new host
-		host = model.Host{}
+		host = hostModel.Host{}
 	}
+	host.DefaultSSHConfig = ssh.StubConfig()
 
 	m := editModel{
 		inputs:       make([]input.Input, 6),
 		hostStorage:  storage,
-		host:         host,
+		host:         wrap(&host),
 		help:         help.New(),
 		keyMap:       getKeyMap(initialFocusedInput),
 		appState:     state,
@@ -146,42 +149,40 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 
 		switch i {
 		case inputTitle:
-			t.Label = "Title"
+			t.SetLabel("Title")
 			t.SetValue(host.Title)
-			t.Placeholder = "*required*" //nolint:goconst
 			t.Validate = notEmptyValidator
 		case inputAddress:
-			t.Label = "Host"
+			t.SetLabel("Host")
 			t.CharLimit = 128
 			t.SetValue(host.Address)
-			t.Placeholder = "*required*"
 			t.Validate = notEmptyValidator
+			t.Tooltip = "ssh"
 		case inputDescription:
-			t.Label = "Description"
+			t.SetLabel("Description")
 			t.CharLimit = 512
-			t.Placeholder = "n/a"
 			t.SetValue(host.Description)
 		case inputLogin:
-			t.Label = "Login"
+			t.SetLabel("Login")
 			t.CharLimit = 128
-			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.User)
 			t.SetValue(host.LoginName)
 		case inputNetworkPort:
-			t.Label = "Network port"
+			t.SetLabel("Network Port")
 			t.CharLimit = 5
-			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.Port)
 			t.SetValue(host.RemotePort)
 			t.Validate = networkPortValidator
 		case inputIdentityFile:
-			t.Label = "Identity file path"
+			t.SetLabel("Identity File")
 			t.CharLimit = 512
-			t.Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.IdentityFile)
-			t.SetValue(host.PrivateKeyPath)
+			t.SetValue(host.IdentityFilePath)
 		}
 
 		m.inputs[i] = t
 	}
 
+	// Though updateInputFields will automatically be called once ssh config is loaded,
+	// that will not happen when we create a new host. Thus calling it manually.
+	m.updateInputFields()
 	m.inputs[m.focusedInput].Focus()
 
 	return &m
@@ -202,7 +203,8 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case debouncedMessage:
 		cmd = m.handleDebouncedMessage(msg)
 	case message.HostSSHConfigLoaded:
-		m.updateInputPlaceholders()
+		m.host.DefaultSSHConfig = &msg.Config
+		m.updateInputFields()
 		m.viewport.SetContent(m.inputsView())
 	}
 
@@ -239,7 +241,15 @@ func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		return message.TeaCmd(MsgClose{})
 	default:
 		// Handle all other key events
-		return m.focusedInputProcessKeyEvent(msg)
+		cmd := m.focusedInputProcessKeyEvent(msg)
+		if m.focusedInput == inputAddress || m.focusedInput == inputTitle {
+			// This statement is required as user may want to copy title to address,
+			// if Host field contains a custom command, ssh options inputs
+			// should be disabled.
+			m.updateInputFields()
+		}
+
+		return cmd
 	}
 }
 
@@ -268,33 +278,18 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 				m.logger.Info(
 					"[UI] Cannot save host with id %v. Reason: '%s' is not valid, %s",
 					m.host.ID,
-					m.inputs[i].Label,
+					m.inputs[i].Label(),
 					err.Error(),
 				)
 				m.inputs[i].Err = err
-				m.title = fmt.Sprintf("%s is not valid", m.inputs[i].Label)
+				m.title = fmt.Sprintf("%s is not valid", m.inputs[i].Label())
 
 				return nil
 			}
 		}
-
-		switch i {
-		case inputTitle:
-			m.host.Title = m.inputs[i].Value()
-		case inputAddress:
-			m.host.Address = m.inputs[i].Value()
-		case inputDescription:
-			m.host.Description = m.inputs[i].Value()
-		case inputLogin:
-			m.host.LoginName = m.inputs[i].Value()
-		case inputNetworkPort:
-			m.host.RemotePort = m.inputs[i].Value()
-		case inputIdentityFile:
-			m.host.PrivateKeyPath = m.inputs[i].Value()
-		}
 	}
 
-	host, _ := m.hostStorage.Save(m.host)
+	host, _ := m.hostStorage.Save(m.host.unwrap())
 	// Need to check storage error and update application status:
 	// if err !=nil { return message.TeaCmd(message.Error{Err: err}) }
 	// or
@@ -329,13 +324,17 @@ func (m *editModel) copyInputValueFromTo(sourceInput, destinationInput int) {
 	m.inputs[destinationInput].Err = m.inputs[destinationInput].Validate(newValue)
 	m.logger.Debug(
 		"[UI] Copy '%s' value to '%s', new value = %s",
-		m.inputs[sourceInput].Label,
-		m.inputs[destinationInput].Label,
+		m.inputs[sourceInput].Label(),
+		m.inputs[destinationInput].Label(),
 		newValue,
 	)
+
+	// Update the model as well
+	m.host.setHostAttributeByIndex(destinationInput, newValue)
 }
 
-func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
+func (m *editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
+	var cmd tea.Cmd
 	var shouldUpdateTitle bool
 	previousValue := m.inputs[m.focusedInput].Value()
 
@@ -360,6 +359,9 @@ func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 		m.copyInputValueFromTo(inputTitle, inputAddress)
 	}
 
+	// When change UI field, update the model as well
+	m.host.setHostAttributeByIndex(m.focusedInput, m.inputs[m.focusedInput].Value())
+
 	// If type in address field
 	if m.focusedInput == inputAddress {
 		currentValue := m.inputs[inputAddress].Value()
@@ -367,14 +369,14 @@ func (m editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 		// And value changed
 		if previousValue != currentValue {
 			// Load SSH config for the specified hostname
-			return message.TeaCmd(debouncedMessage{
-				wrappedMsg:  message.RunProcessLoadSSHConfig{SSHConfigHostname: currentValue},
+			cmd = message.TeaCmd(debouncedMessage{
+				wrappedMsg:  message.RunProcessLoadSSHConfig{Host: *m.host.Host},
 				debounceTag: m.debounceTag, // See the comments in debouncedMessage definition.
 			})
 		}
 	}
 
-	return nil
+	return cmd
 }
 
 func (m *editModel) updateViewPort(msg tea.Msg) {
@@ -396,8 +398,15 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 	keyMsg := msg.(tea.KeyMsg)
 
+	enabledInputs := lo.Filter(m.inputs, func(i input.Input, n int) bool {
+		return i.Enabled()
+	})
+
 	minFocusIndex := 0
-	maxFocusIndex := len(m.inputs) - 1
+	// maxFocusIndex is equal to number of inputs minus the number
+	// of disabled inputs. This works based on an assumption that
+	// all disabled inputs will be in the bottom of the hostlist.
+	maxFocusIndex := len(enabledInputs) - 1
 	inputHeight := 0
 
 	if len(m.inputs) > 0 {
@@ -416,6 +425,7 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 		m.focusedInput++
 		m.viewport.LineDown(inputHeight)
 	} else {
+		m.logger.Debug("[UI] Reached first or last selectable input field: %d", m.focusedInput)
 		return nil
 	}
 
@@ -423,14 +433,14 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 	for i := 0; i <= len(m.inputs)-1; i++ {
 		if m.inputs[i].Validate != nil {
 			m.inputs[i].Err = m.inputs[i].Validate(m.inputs[i].Value())
-			m.logger.Debug("[UI] Input '%s' is valid: %t", m.inputs[i].Label, m.inputs[i].Err == nil)
+			m.logger.Debug("[UI] Input '%v' is valid: %v", m.inputs[i].Label(), m.inputs[i].Err == nil)
 		}
 
 		if i == m.focusedInput {
 			// KeyMap depends on focused input - when address is focused, we allow
 			// a user to copy address value to title.
 			m.keyMap = getKeyMap(i)
-			m.logger.Debug("[UI] Focus input: '%s'", m.inputs[i].Label)
+			m.logger.Debug("[UI] Focus input: '%s'", m.inputs[i].Label())
 
 			// Set focused state
 			cmds = append(cmds, m.inputs[i].Focus())
@@ -454,19 +464,46 @@ func (m *editModel) handleCopyInputValueShortcut() {
 	}
 }
 
-func (m *editModel) updateInputPlaceholders() {
-	m.logger.Debug("[UI] Take input placeholders from selected host SSH config")
-	m.inputs[inputLogin].Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.User)
-	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.Port)
-	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("default: %s", m.appState.HostSSHConfig.IdentityFile)
+func (m *editModel) updateInputFields() {
+	customConnectString := m.host.IsUserDefinedSSHCommand()
+	m.logger.Debug("[UI] Update input components. Additional SSH parameters disabled: %v", customConnectString)
+
+	prefix := lo.Ternary(customConnectString, "readonly", "default")
+	m.inputs[inputTitle].Placeholder = "*required*" //nolint:goconst
+	m.inputs[inputAddress].Placeholder = "*required*"
+	m.inputs[inputDescription].Placeholder = "n/a"
+	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.DefaultSSHConfig.User)
+	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.DefaultSSHConfig.Port)
+	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.DefaultSSHConfig.IdentityFile)
+
+	hostInputLabel := lo.Ternary(customConnectString, "Command", "Host")
+	m.inputs[inputAddress].SetLabel(hostInputLabel)
+	m.inputs[inputAddress].SetDisplayTooltip(customConnectString)
+
+	// Get input fields by pointer to update their state
+	sshParamsInputFields := []*input.Input{
+		&m.inputs[inputLogin],
+		&m.inputs[inputNetworkPort],
+		&m.inputs[inputIdentityFile],
+	}
+
+	lo.ForEach(sshParamsInputFields, func(i *input.Input, n int) {
+		i.SetEnabled(!customConnectString)
+	})
+
+	lo.ForEach(m.inputs, func(i input.Input, n int) {
+		if m.inputs[n].Enabled() {
+			m.inputs[n].SetValue(m.host.getHostAttributeValueByIndex(n))
+		} else {
+			m.inputs[n].SetValue("")
+		}
+	})
 }
 
 func (m *editModel) inputsView() string {
 	var b strings.Builder
 	for i := range m.inputs {
-		input := m.inputs[i]
-
-		b.WriteString(input.View())
+		b.WriteString(m.inputs[i].View())
 		if i < len(m.inputs) {
 			b.WriteString("\n\n")
 		}

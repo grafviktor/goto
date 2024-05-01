@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/grafviktor/goto/internal/ui/component/hostlist"
-	"github.com/grafviktor/goto/internal/ui/message"
+	"github.com/grafviktor/goto/internal/model/ssh"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
@@ -15,7 +14,8 @@ import (
 
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/test"
-	"github.com/grafviktor/goto/internal/utils/ssh"
+	"github.com/grafviktor/goto/internal/ui/component/hostlist"
+	"github.com/grafviktor/goto/internal/ui/message"
 )
 
 func TestNotEmptyValidator(t *testing.T) {
@@ -162,12 +162,14 @@ func TestHandleCopyInputValueShortcut(t *testing.T) {
 	// propagated to address field.
 	storageShouldFail := false
 	model := New(context.TODO(), test.NewMockStorage(storageShouldFail), MockAppState(), &test.MockLogger{})
-	// Override mock values which we received from mock database and set fields values to 'test'
-	model.inputs[inputTitle].SetValue("test")
-	model.inputs[inputAddress].SetValue("test")
+	// Override mock values which we received from mock database and set model values to 'test'
+	model.host.Title = "test"
+	model.host.Address = "test"
+	// Update input fields to reflect the model's values
+	model.updateInputFields()
 	// Ensure that selected input is 'Title'
 	assert.Equal(t, inputTitle, model.focusedInput)
-	// Confirm that 'Title' and 'Host' values are empty strings
+	// Confirm that 'Title' and 'Host' values are equal to 'test'
 	assert.Equal(t, "test", model.inputs[inputTitle].Value())
 	assert.Equal(t, "test", model.inputs[inputAddress].Value())
 	// Append '123' to title, so it will become 'test123'
@@ -269,35 +271,57 @@ func TestUpdateInputPlaceHolders(t *testing.T) {
 	// Make sure that placeholders have correct values once ssh config is changed.
 	appState := MockAppState()
 	model := New(context.TODO(), test.NewMockStorage(false), appState, &test.MockLogger{})
+	model.host.DefaultSSHConfig = &ssh.Config{
+		IdentityFile: "Mock Identity File",
+		User:         "Mock User",
+		Port:         "Mock Port",
+	}
+	model.updateInputFields()
 
 	defaultPlaceholderPrefix := "default:"
-	appState.HostSSHConfig.User = "Mock User"
-	appState.HostSSHConfig.Port = "Mock Port"
-	appState.HostSSHConfig.IdentityFile = "Mock Identity File"
-
-	model.updateInputPlaceholders()
-
-	require.Equal(t, model.inputs[inputLogin].Placeholder, fmt.Sprintf(
+	require.Equal(t, fmt.Sprintf(
 		"%s %s",
 		defaultPlaceholderPrefix,
 		"Mock User",
-	))
+	), model.inputs[inputLogin].Placeholder)
 
-	require.Equal(t, model.inputs[inputNetworkPort].Placeholder, fmt.Sprintf(
+	require.Equal(t, fmt.Sprintf(
 		"%s %s",
 		defaultPlaceholderPrefix,
 		"Mock Port",
-	))
+	), model.inputs[inputNetworkPort].Placeholder)
 
-	require.Equal(t, model.inputs[inputIdentityFile].Placeholder, fmt.Sprintf(
+	require.Equal(t, fmt.Sprintf(
 		"%s %s",
 		defaultPlaceholderPrefix,
 		"Mock Identity File",
-	))
+	), model.inputs[inputIdentityFile].Placeholder)
+
+	// Now use custom connection settings and make sure that ssh parameters input fields
+	// are disabled and placeholders are prefixed with 'readonly:' keyword.
+	model.host.Address = "localhost -l root -p 9999 -i ~/.id_rsa"
+	model.updateInputFields()
+
+	defaultPlaceholderPrefix = "readonly:"
+	require.Equal(t, fmt.Sprintf(
+		"%s %s",
+		defaultPlaceholderPrefix,
+		"Mock User",
+	), model.inputs[inputLogin].Placeholder)
+
+	require.Equal(t, fmt.Sprintf(
+		"%s %s",
+		defaultPlaceholderPrefix,
+		"Mock Port",
+	), model.inputs[inputNetworkPort].Placeholder)
+
+	require.Equal(t, fmt.Sprintf(
+		"%s %s",
+		defaultPlaceholderPrefix,
+		"Mock Identity File",
+	), model.inputs[inputIdentityFile].Placeholder)
 }
 
 func MockAppState() *state.ApplicationState {
-	return &state.ApplicationState{
-		HostSSHConfig: &ssh.Config{},
-	}
+	return &state.ApplicationState{}
 }

@@ -9,14 +9,16 @@ var (
 			Foreground(lipgloss.AdaptiveColor{Light: "#EE6FF8", Dark: "#EE6FF8"})
 
 	titleStyle = lipgloss.NewStyle(). //
-			Background(lipgloss.Color("62")).
-			Foreground(lipgloss.Color("230")).
-			Padding(0, 1).
+			Background(lipgloss.Color("#5f5fd7")).
+			Foreground(lipgloss.Color("#ffffd7	")).
+		// Background(lipgloss.Color("62")).
+		// Foreground(lipgloss.Color("230")).
+		Padding(0, 1).
 		// Instead of placing "1" to have a padding at the bottom,
 		// I use '\n' in the code base. That is to a rendering artifacts
 		Margin(1, 4, 0)
 
-	menuStyle = lipgloss.NewStyle().Margin(3, 4, 0) //
+	menuStyle = lipgloss.NewStyle().Margin(3, 4, 0)
 )
 
 //nolint:dupword

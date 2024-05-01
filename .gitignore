@@ -32,5 +32,3 @@ unit.txt
 # Application temporary files and configs
 /goto/
 
-# Temporary project files
-*.svg

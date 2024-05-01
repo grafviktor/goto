@@ -5,7 +5,7 @@ import (
 	"context"
 
 	"github.com/grafviktor/goto/internal/config"
-	"github.com/grafviktor/goto/internal/model"
+	model "github.com/grafviktor/goto/internal/model/host"
 )
 
 // HostStorage defines CRUD operations for Host model.

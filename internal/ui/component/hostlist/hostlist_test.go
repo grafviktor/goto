@@ -13,6 +13,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/test"
+	"github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
 )
 
@@ -361,7 +362,12 @@ func TestListModel_editItem(t *testing.T) {
 	lm.logger = &test.MockLogger{}
 
 	teaCmd = lm.editItem(nil)
-	require.Equal(t, 1, teaCmd().(OpenEditForm).HostID)
+
+	var dst []tea.Msg
+	test.CmdToMessage(teaCmd, &dst)
+
+	require.Contains(t, dst, OpenEditForm{HostID: 1})
+	require.Contains(t, dst, message.RunProcessLoadSSHConfig{Host: lm.innerModel.SelectedItem().(ListItemHost).Host})
 }
 
 func TestListModel_copyItem(t *testing.T) {

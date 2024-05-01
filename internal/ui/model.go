@@ -11,13 +11,13 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/grafviktor/goto/internal/model/ssh"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/hostedit"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
 	"github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
-	"github.com/grafviktor/goto/internal/utils/ssh"
 )
 
 type iLogger interface {
@@ -62,7 +62,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		m.logger.Debug("[UI] Keyboard event: %v", msg)
+		m.logger.Debug("[UI] Keyboard event: '%v'", msg)
 		return m.handleKeyEvent(msg)
 	case message.TerminalSizePolling:
 		// That is Windows OS specific. Windows cmd.exe does not trigger terminal
@@ -97,14 +97,13 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Connect to focused SSH host")
 		return m, m.dispatchProcessSSHConnect(msg)
 	case message.RunProcessLoadSSHConfig:
-		m.logger.Debug("[UI] Load SSH config for focused SSH host")
+		m.logger.Debug("[UI] Load SSH config for focused host")
 		return m, m.dispatchProcessSSHLoadConfig(msg)
 	case message.RunProcessSuccess:
 		if msg.ProcessName == "ssh_load_config" {
-			parsedSSHConfig := ssh.ParseConfig(*msg.Output)
-			m.appState.HostSSHConfig = parsedSSHConfig
-			m.logger.Debug("[UI] Update app state with host SSH config: %+v", *parsedSSHConfig)
-			cmds = append(cmds, message.TeaCmd(message.HostSSHConfigLoaded{}))
+			parsedSSHConfig := ssh.Parse(*msg.Output)
+			m.logger.Debug("[UI] Host SSH config loaded: %+v", *parsedSSHConfig)
+			cmds = append(cmds, message.TeaCmd(message.HostSSHConfigLoaded{Config: *parsedSSHConfig}))
 		}
 	case message.RunProcessErrorOccurred:
 		// We use m.logger.Debug method to report about the error,
@@ -236,16 +235,16 @@ func (m *mainModel) dispatchProcess(name string, process *exec.Cmd, inBackground
 
 func (m *mainModel) dispatchProcessSSHConnect(msg message.RunProcessConnectSSH) tea.Cmd {
 	m.logger.Debug("[EXEC] Build ssh connect command for hostname: %v, title: %v", msg.Host.Address, msg.Host.Title)
-	process := utils.BuildConnectSSH(msg.Host)
-	m.logger.Info("[EXEC] Run process: %s", process.String())
+	process := utils.BuildConnectSSH(msg.Host.CmdSSHConnect())
+	m.logger.Info("[EXEC] Run process: '%s'", process.String())
 
 	return m.dispatchProcess("ssh_connect_host", process, false, false)
 }
 
 func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessLoadSSHConfig) tea.Cmd {
-	m.logger.Debug("[EXEC] Read ssh configuration for host: %v", msg.SSHConfigHostname)
-	process := utils.BuildLoadSSHConfig(msg.SSHConfigHostname)
-	m.logger.Info("[EXEC] Run process: %s", process.String())
+	m.logger.Debug("[EXEC] Read ssh configuration for host: %+v", msg.Host)
+	process := utils.BuildLoadSSHConfig(msg.Host.CmdSSHConfig())
+	m.logger.Info("[EXEC] Run process: '%s'", process.String())
 
 	// Should run in non-blocking fashion for ssh load config
 	return m.dispatchProcess("ssh_load_config", process, true, true)

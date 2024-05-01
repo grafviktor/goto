@@ -5,19 +5,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"golang.org/x/exp/slices"
 
-	"github.com/grafviktor/goto/internal/model"
+	hostModel "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
-	"github.com/grafviktor/goto/internal/utils/ssh"
 )
 
 var (
@@ -52,6 +53,9 @@ type listModel struct {
 	appState   *state.ApplicationState
 	logger     iLogger
 	mode       string
+	// That is a small optimisation, as we do not want to re-read host configuration
+	// every time when we dispatch msgRefreshUI{} message.
+	prevSelectedItemID int
 }
 
 // New - creates new host list model.
@@ -233,6 +237,15 @@ func (m *listModel) removeItem() tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err})
 	}
 
+	// That's a hack! When we delete an item, the inner model automatically changes focus to an existing item
+	// without sending any notification. If we do not reset the prevSelectedItemID, the onFocusChanged function
+	// will not be triggered, and we will not load the SSH configuration for the new selected item.
+	// Probably it's worth to explicitly focus a new item after deletion.
+	m.prevSelectedItemID = -1
+
+	// This should be replaced with tea.Sequence as msgRefreshUI completes before MsgRefreshRepo, as a result,
+	// the application reads a configuration of a host which was just deleted. This bug only appears when there is
+	// only one host left in the database and we delete it.
 	return tea.Batch(
 		message.TeaCmd(MsgRefreshRepo{}),
 		message.TeaCmd(msgRefreshUI{}),
@@ -246,7 +259,7 @@ func (m *listModel) refreshRepo(_ tea.Msg) tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err})
 	}
 
-	slices.SortFunc(hosts, func(a, b model.Host) int {
+	slices.SortFunc(hosts, func(a, b hostModel.Host) int {
 		if a.Title < b.Title {
 			return -1
 		}
@@ -280,9 +293,12 @@ func (m *listModel) editItem(_ tea.Msg) tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
-	host := *item.Unwrap()
-	m.logger.Info("[UI] Edit item id: %d, title: %s", host.ID, host.Title)
-	return message.TeaCmd(OpenEditForm{HostID: host.ID})
+	m.logger.Info("[UI] Edit item id: %d, title: %s", item.ID, item.Title)
+	return tea.Sequence(
+		message.TeaCmd(OpenEditForm{HostID: item.ID}),
+		// Load SSH config for the selected host
+		message.TeaCmd(message.RunProcessLoadSSHConfig{Host: item.Host}),
+	)
 }
 
 func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
@@ -292,7 +308,7 @@ func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
-	originalHost := item.Unwrap()
+	originalHost := item.Host
 	m.logger.Info("[UI] Copy host item id: %d, title: %s", originalHost.ID, originalHost.Title)
 	clonedHost := originalHost.Clone()
 	for i := 1; ok; i++ {
@@ -312,10 +328,8 @@ func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err})
 	}
 
-	return tea.Batch(
-		message.TeaCmd(MsgRefreshRepo{}),
-		message.TeaCmd(msgRefreshUI{}),
-	)
+	// Do not need to dispatch msgRefreshUI{} here as onFocus change event will trigger anyway
+	return message.TeaCmd(MsgRefreshRepo{})
 }
 
 func (m *listModel) constructProcessCmd(_ tea.KeyMsg) tea.Cmd {
@@ -325,7 +339,7 @@ func (m *listModel) constructProcessCmd(_ tea.KeyMsg) tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
-	return message.TeaCmd(message.RunProcessConnectSSH{Host: *item.Unwrap()})
+	return message.TeaCmd(message.RunProcessConnectSSH{Host: item.Host})
 }
 
 func (m *listModel) listTitleUpdate() {
@@ -339,7 +353,9 @@ func (m *listModel) listTitleUpdate() {
 	case m.mode == modeRemoveItem:
 		newTitle = fmt.Sprintf("delete \"%s\" ? (y/N)", item.Title())
 	default:
-		newTitle = ssh.ConstructCMD("ssh", utils.HostModelToOptionsAdaptor(*item.Unwrap())...)
+		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
+		newTitle = strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
+		newTitle = utils.RemoveDuplicateSpaces(newTitle)
 	}
 
 	if m.innerModel.Title != newTitle {
@@ -350,17 +366,24 @@ func (m *listModel) listTitleUpdate() {
 
 func (m *listModel) onFocusChanged(_ tea.Msg) tea.Cmd {
 	if m.innerModel.SelectedItem() == nil {
+		m.logger.Debug("[UI] Focus is not set to any item in the list")
+		// Here we can set the default focus to the first item in the list.
 		return nil
 	}
 
 	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
-		m.logger.Debug("[UI] Select host id: %v, title: %s", hostItem.ID, hostItem.Title())
-		return tea.Batch(
-			message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
-			message.TeaCmd(message.RunProcessLoadSSHConfig{SSHConfigHostname: hostItem.Address}),
-		)
+		m.logger.Debug("[UI] Prev item: %v, Curr item: %v", m.prevSelectedItemID, hostItem.ID)
+		if m.prevSelectedItemID != hostItem.ID {
+			m.prevSelectedItemID = hostItem.ID
+			m.logger.Debug("[UI] Focus changed to host id: %v, title: %s", hostItem.ID, hostItem.Title())
+			return tea.Batch(
+				message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
+				message.TeaCmd(message.RunProcessLoadSSHConfig{Host: hostItem.Host}),
+			)
+		}
+	} else {
+		m.logger.Error("[UI] Select unknown item type from the list")
 	}
 
-	m.logger.Error("[UI] Select unknown item type from the list")
 	return nil
 }

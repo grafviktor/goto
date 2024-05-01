@@ -1,6 +1,6 @@
 BUILD_BRANCH  = $(shell git rev-parse --abbrev-ref HEAD)
 BUILD_COMMIT  = $(shell git rev-parse --short=8 HEAD)
-BUILD_VERSION = v1.0.0
+BUILD_VERSION = v1.1.0
 BUILD_DATE    = $(shell date +%Y-%m-%d)
 NO_DEBUG_FLAGS = -s -w
 # Check if there is no associated tag with this commit, that means that it is a dev build.
@@ -20,7 +20,7 @@ help:
 ## lint: run linter
 .PHONY: lint
 lint:
-	@echo 'Running linter'
+	@echo 'Run linter'
 	@golangci-lint run
 
 ## audit: tidy dependencies and format, vet and test all code
@@ -30,23 +30,23 @@ audit:
 	@echo '  * If gofumpt is not installed, then: go install mvdan.cc/gofumpt@latest'
 	@echo '  * If goimports is not installed, then: go install golang.org/x/tools/cmd/goimports@latest'
 	@echo '  * For golangci-lint: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.57.2'
-	@echo 'Tidying and verifying module dependencies...'
+	@echo 'Tidy and verify module dependencies...'
 	go mod tidy
 	go mod verify
-	@echo 'Formatting code...'
+	@echo 'Format code...'
 	gofumpt -l -w -extra ./
-	goimports -w -local github.com/grafviktor/goto .
-	@echo 'Vetting code...'
+	goimports -local "github.com/grafviktor/goto" -w .
+	@echo 'Vet code...'
 	go vet ./...
 	staticcheck ./...
-	@echo 'Linting code...'
+	@echo 'Lint code...'
 	golangci-lint run
 	@$(MAKE) test
 
 ## test: run unit tests
 .PHONY: test
 test:
-	@echo 'Running unit tests'
+	@echo 'Run unit tests'
 	go test -coverpkg=./internal/... -race -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
 
 # unit-test-report: display unit coverage report in html format. This option is hidden from make help menu.
@@ -58,16 +58,15 @@ unit-test-report:
 ## run: delete logs and run debug
 .PHONY: run
 run:
-	@echo 'Running debug build'
-	@-rm debug.log 2>/dev/null
+	@echo 'Run debug build'
 	@echo 'To pass app arguments use: make run ARGS="-h"'
 	go run cmd/goto/* $(ARGS)
 
 ## build: create binary in ./dist folder for your current platform. Use this option if you build it for personal use.
 .PHONY: build
 build:
-	@-rm -r $(DIST_PATH)/gg 2>/dev/null
-	@echo 'Building'
+	@-rm -f $(DIST_PATH)/gg 2>/dev/null
+	@echo 'Build'
 	go build $(LD_FLAGS) -o $(DIST_PATH)/gg ./cmd/goto/*.go
 
 ## package: create rpm and deb packages and place them into ./dist folder.
@@ -86,20 +85,25 @@ package:
 ## dist: create binaries for all supported platforms in ./dist folder. Archive all binaries with zip.
 .PHONY: dist
 dist:
-	@-rm -r $(DIST_PATH)/gg-* 2>/dev/null
-	@-rm -r $(DIST_PATH)/*.zip 2>/dev/null
-	@echo 'Creating binary files'
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(LD_FLAGS) -o $(DIST_PATH)/gg-mac     ./cmd/goto/*.go
-	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(LD_FLAGS) -o $(DIST_PATH)/gg-lin     ./cmd/goto/*.go
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(LD_FLAGS) -o $(DIST_PATH)/gg-win.exe ./cmd/goto/*.go
+	@echo 'Generate icon resource for windows binary.'
+	@echo 'Do not forget to: "go install github.com/akavel/rsrc@latest"'
+	@cd build/exe && rsrc -arch amd64 -ico icon.ico -o icon_windows_amd64.syso && mv icon_windows_amd64.syso ../../cmd/goto
+	@-rm -f $(DIST_PATH)/gg-* 2>/dev/null
+	@-rm -f $(DIST_PATH)/*.zip 2>/dev/null
+	@echo 'Create binary files'
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(LD_FLAGS) -o $(DIST_PATH)/gg-mac-x86 ./cmd/goto/
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build $(LD_FLAGS) -o $(DIST_PATH)/gg-mac-arm ./cmd/goto/
+	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(LD_FLAGS) -o $(DIST_PATH)/gg-lin     ./cmd/goto/
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(LD_FLAGS) -o $(DIST_PATH)/gg-win.exe ./cmd/goto/
+	@rm cmd/goto/icon_windows_amd64.syso
 	@mkdir $(DIST_PATH)/goto-$(BUILD_VERSION)/
-	@cp $(DIST_PATH)/gg-mac $(DIST_PATH)/gg-lin $(DIST_PATH)/gg-win.exe $(DIST_PATH)/goto-$(BUILD_VERSION)
+	@cp $(DIST_PATH)/gg-mac-arm $(DIST_PATH)/gg-mac-x86 $(DIST_PATH)/gg-lin $(DIST_PATH)/gg-win.exe $(DIST_PATH)/goto-$(BUILD_VERSION)
 	@cd $(DIST_PATH) && zip -r goto-$(BUILD_VERSION).zip goto-$(BUILD_VERSION)
-	@rm -r $(DIST_PATH)/goto-$(BUILD_VERSION)
+	@rm -rf $(DIST_PATH)/goto-$(BUILD_VERSION)
 
 ## clean: remove ./dist folder with all its contents.
 .PHONY: clean
 clean:
-	@echo 'Cleaning'
-	@-rm -r $(DIST_PATH) 2>/dev/null
+	@echo 'Clean'
+	@-rm -rf $(DIST_PATH) 2>/dev/null
 	@echo 'Done'
