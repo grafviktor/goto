@@ -28,7 +28,7 @@ Supported platforms: macOS, Linux, Windows.
 
 ![Small demo where duplicate an existing record in goto database](demo/duplicate_existing_record.gif)
 
-### 2.3. Find a requried host easily among all your records ###
+### 2.3. Find a required host easily among all your records ###
 
 ![Small demo where we open ssh session using goto](demo/search_through_database.gif)
 
