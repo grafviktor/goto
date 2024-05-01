@@ -36,7 +36,7 @@ type (
 	MsgClose struct{}
 	// MsgSave triggers when users saves results.
 	MsgSave struct{}
-	// debouncedMessage is used to trigger side-effects. For instance dispatch RunProcessLoadSSHConfig
+	// debouncedMessage is used to trigger side effects. For instance dispatch RunProcessLoadSSHConfig
 	// which reads host config from ~/.ssh/config file.
 	debouncedMessage struct {
 		wrappedMsg  tea.Msg

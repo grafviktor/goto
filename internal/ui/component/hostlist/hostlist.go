@@ -243,6 +243,9 @@ func (m *listModel) removeItem() tea.Cmd {
 	// Probably it's worth to explicitly focus a new item after deletion.
 	m.prevSelectedItemID = -1
 
+	// This should be replaced with tea.Sequence as msgRefreshUI completes before MsgRefreshRepo, as a result,
+	// the application reads a configuration of a host which was just deleted. This bug only appears when there is
+	// only one host left in the database and we delete it.
 	return tea.Batch(
 		message.TeaCmd(MsgRefreshRepo{}),
 		message.TeaCmd(msgRefreshUI{}),
