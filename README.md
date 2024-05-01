@@ -12,8 +12,11 @@ Supported platforms: macOS, Linux, Windows.
 * Download the latest version from the [Releases](https://github.com/grafviktor/goto/releases) section;
 * Choose a binary file which matches your platform;
 * Place the binary into your user's binary path;
-* If you're on Linux or macOS, ensure that the binary has execution permissions (use `chmod +x gg-${YOUR_PLATFORM_TYPE}`);
 * Optionally: rename `gg-${YOUR_PLATFORM_TYPE}` to `gg`.
+* If you're on Linux or macOS, ensure that the binary has execution permissions:
+  ```bash
+  chmod +x gg
+  ```
 
 ## 2. Functional demo ##
 
