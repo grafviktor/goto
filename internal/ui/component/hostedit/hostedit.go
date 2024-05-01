@@ -465,10 +465,10 @@ func (m *editModel) handleCopyInputValueShortcut() {
 }
 
 func (m *editModel) updateInputFields() {
-	m.logger.Debug("[UI] Update input components")
 	customConnectString := m.host.IsUserDefinedSSHCommand()
-	prefix := lo.Ternary(customConnectString, "readonly", "default")
+	m.logger.Debug("[UI] Update input components. Additional SSH parameters disabled: %v", customConnectString)
 
+	prefix := lo.Ternary(customConnectString, "readonly", "default")
 	m.inputs[inputTitle].Placeholder = "*required*" //nolint:goconst
 	m.inputs[inputAddress].Placeholder = "*required*"
 	m.inputs[inputDescription].Placeholder = "n/a"
@@ -480,8 +480,6 @@ func (m *editModel) updateInputFields() {
 	m.inputs[inputAddress].SetLabel(hostInputLabel)
 	m.inputs[inputAddress].SetDisplayTooltip(customConnectString)
 
-	shouldDisableSSHParamsInputFields := m.host.IsUserDefinedSSHCommand()
-
 	// Get input fields by pointer to update their state
 	sshParamsInputFields := []*input.Input{
 		&m.inputs[inputLogin],
@@ -490,7 +488,7 @@ func (m *editModel) updateInputFields() {
 	}
 
 	lo.ForEach(sshParamsInputFields, func(i *input.Input, n int) {
-		i.SetEnabled(!shouldDisableSSHParamsInputFields)
+		i.SetEnabled(!customConnectString)
 	})
 
 	lo.ForEach(m.inputs, func(i input.Input, n int) {
