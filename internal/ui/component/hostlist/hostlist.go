@@ -53,6 +53,9 @@ type listModel struct {
 	appState   *state.ApplicationState
 	logger     iLogger
 	mode       string
+	// That is a small optimisation, as we do not want to re-read host configuration
+	// every time when we dispatch msgRefreshUI{} message.
+	prevSelectedItemID int
 }
 
 // New - creates new host list model.
@@ -234,6 +237,12 @@ func (m *listModel) removeItem() tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err})
 	}
 
+	// That's a hack! When we delete an item, the inner model automatically changes focus to an existing item
+	// without sending any notification. If we do not reset the prevSelectedItemID, the onFocusChanged function
+	// will not be triggered, and we will not load the SSH configuration for the new selected item.
+	// Probably it's worth to explicitly focus a new item after deletion.
+	m.prevSelectedItemID = -1
+
 	return tea.Batch(
 		message.TeaCmd(MsgRefreshRepo{}),
 		message.TeaCmd(msgRefreshUI{}),
@@ -316,10 +325,8 @@ func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err})
 	}
 
-	return tea.Batch(
-		message.TeaCmd(MsgRefreshRepo{}),
-		message.TeaCmd(msgRefreshUI{}),
-	)
+	// Do not need to dispatch msgRefreshUI{} here as onFocus change event will trigger anyway
+	return message.TeaCmd(MsgRefreshRepo{})
 }
 
 func (m *listModel) constructProcessCmd(_ tea.KeyMsg) tea.Cmd {
@@ -356,17 +363,24 @@ func (m *listModel) listTitleUpdate() {
 
 func (m *listModel) onFocusChanged(_ tea.Msg) tea.Cmd {
 	if m.innerModel.SelectedItem() == nil {
+		m.logger.Debug("[UI] Focus is not set to any item in the list")
+		// Here we can set the default focus to the first item in the list.
 		return nil
 	}
 
 	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
-		m.logger.Debug("[UI] Select host id: %v, title: %s", hostItem.ID, hostItem.Title())
-		return tea.Batch(
-			message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
-			message.TeaCmd(message.RunProcessLoadSSHConfig{Host: hostItem.Host}),
-		)
+		m.logger.Debug("[UI] Prev item: %v, Curr item: %v", m.prevSelectedItemID, hostItem.ID)
+		if m.prevSelectedItemID != hostItem.ID {
+			m.prevSelectedItemID = hostItem.ID
+			m.logger.Debug("[UI] Focus changed to host id: %v, title: %s", hostItem.ID, hostItem.Title())
+			return tea.Batch(
+				message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
+				message.TeaCmd(message.RunProcessLoadSSHConfig{Host: hostItem.Host}),
+			)
+		}
+	} else {
+		m.logger.Error("[UI] Select unknown item type from the list")
 	}
 
-	m.logger.Error("[UI] Select unknown item type from the list")
 	return nil
 }
