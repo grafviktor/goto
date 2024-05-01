@@ -12,6 +12,7 @@ Supported platforms: macOS, Linux, Windows.
 * Download the latest version from the [Releases](https://github.com/grafviktor/goto/releases) section;
 * Choose a binary file which matches your platform;
 * Place the binary into your user's binary path;
+* If you're on Linux or macOS, ensure that the binary has execution permissions (use `chmod +x gg-${YOUR_PLATFORM_TYPE}`);
 * Optionally: rename `gg-${YOUR_PLATFORM_TYPE}` to `gg`.
 
 ## 2. Functional demo ##
@@ -65,12 +66,8 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
     identity_file_path: /home/user/.ssh/id_rsa_microsoft
 ```
 
-## 5. Known issues ##
+## 5. [Contributing guidelines](CONTRIBUTING.md) ##
 
-Occasional input errors on Windows platform when running `goto` within `cmd.exe`. As a workaround run the application using `powershell`, see the [details](https://github.com/grafviktor/goto/issues/55).
+## 6. [Changelog](CHANGELOG.md) ##
 
-## 6. [Contributing guidelines](CONTRIBUTING.md) ##
-
-## 7. [Changelog](CHANGELOG.md) ##
-
-## 8. [License](LICENSE) ##
+## 7. [License](LICENSE) ##
