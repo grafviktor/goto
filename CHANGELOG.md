@@ -1,5 +1,12 @@
 # Changelog #
 
+**[v1.1.0](https://github.com/grafviktor/goto/compare/v1.0.0...v1.1.0) - 2024-05-01**
+
+* Support custom SSH parameters [[details](https://github.com/grafviktor/goto/issues/39)].
+* Preserve host order when filter is enabled [[details](https://github.com/grafviktor/goto/issues/58)].
+* Take default SSH parameters from system SSH configuration [[details](https://github.com/grafviktor/goto/issues/60)].
+* Various minor improvements.
+
 **[v1.0.0](https://github.com/grafviktor/goto/compare/v0.4.1...v1.0.0) - 2024-02-08**
 
 * Adjust help menu, disable certain shortcuts when the operation is not available in current context [[details](https://github.com/grafviktor/goto/issues/43)].
