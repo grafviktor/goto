@@ -78,12 +78,12 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
 ## 8. Thanks ##
 
 * To people who find time to contribute whether it is a bug report, a feature or a pull request.
-* To [charmbracelet project](https://charm.sh/) for the glamorous [bubbletea library](https://github.com/charmbracelet/bubbletea).
+* To [Charmbracelet project](https://charm.sh/) for the glamorous [Bubbletea](https://github.com/charmbracelet/bubbletea) library.
 * To [JetBrains Team](https://www.jetbrains.com/) for their [support of Open-Source community](https://www.jetbrains.com/community/opensource/) and for the amazing products they make. That is a great boost indeed. I'm proudly placing their logo here as a humble "thank you" gesture.
 
 <div align="center">
   <a href="https://www.jetbrains.com/">
-    <img 
+    <img
       height="40px"
       src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg"
       alt="JetBrains logo."
