@@ -324,7 +324,7 @@ func TestListModel_refreshRepo(t *testing.T) {
 	lm = New(
 		context.TODO(),
 		storage,
-		nil, // we don't need app state, as error should be reported before we can even use it
+		&state.ApplicationState{}, // we don't need app state, as error should be reported before we can even use it
 		nil,
 	)
 	lm.logger = &test.MockLogger{}
@@ -344,7 +344,7 @@ func TestListModel_editItem(t *testing.T) {
 	lm := New(
 		context.TODO(),
 		storage,
-		nil, // we don't need app state, as error should be reported before we can even use it
+		&state.ApplicationState{}, // we don't need app state, as error should be reported before we can even use it
 		nil,
 	)
 	lm.logger = &test.MockLogger{}
@@ -374,7 +374,7 @@ func TestListModel_copyItem(t *testing.T) {
 	// First case - test that we receive an error when item is not selected
 	storageShouldFail := true
 	storage := test.NewMockStorage(storageShouldFail)
-	lm := New(context.TODO(), storage, nil, nil)
+	lm := New(context.TODO(), storage, &state.ApplicationState{}, nil)
 	lm.logger = &test.MockLogger{}
 	teaCmd := lm.copyItem(nil)
 	require.Equal(t, itemNotSelectedMessage, teaCmd().(msgErrorOccurred).err.Error())
@@ -492,7 +492,7 @@ func NewMockListModel(storageShouldFail bool) *listModel {
 	storage := test.NewMockStorage(storageShouldFail)
 
 	// Create listModel using constructor function (using 'New' is important to preserve hotkeys)
-	lm := New(context.TODO(), storage, nil, nil)
+	lm := New(context.TODO(), storage, &state.ApplicationState{}, nil)
 
 	items := make([]list.Item, 0)
 	// Wrap hosts into List items

@@ -7,6 +7,8 @@ import (
 	"sync"
 
 	"gopkg.in/yaml.v2"
+
+	"github.com/grafviktor/goto/internal/constant"
 )
 
 type view int
@@ -37,10 +39,11 @@ type ApplicationState struct {
 	Selected         int `yaml:"selected"`
 	appStateFilePath string
 	logger           iLogger
-	CurrentView      view  `yaml:"-"`
-	Err              error `yaml:"-"`
-	Width            int   `yaml:"-"`
-	Height           int   `yaml:"-"`
+	CurrentView      view                  `yaml:"-"`
+	Err              error                 `yaml:"-"`
+	Width            int                   `yaml:"-"`
+	Height           int                   `yaml:"-"`
+	ScreenLayout     constant.ScreenLayout `yaml:"screenLayout,omitempty"` // tight, normal
 }
 
 // Get - reads application state from disk.
