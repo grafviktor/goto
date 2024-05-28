@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/test"
 	"github.com/grafviktor/goto/internal/ui/message"
@@ -428,7 +429,7 @@ func TestListModel_updateKeyMap(t *testing.T) {
 }
 
 func TestUpdate_TeaSizeMsg(t *testing.T) {
-	// Test that if model is ready, WindowSizeMsg message will inner model size
+	// Test that if model is ready, WindowSizeMsg message will update inner model size
 	model := *NewMockListModel(false)
 	model.logger = &test.MockLogger{}
 	model.Update(tea.WindowSizeMsg{Width: 100, Height: 100})
@@ -457,8 +458,9 @@ func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
 
 	// Enable filtering mode
 	model.Update(tea.KeyMsg{
-		// -1 means that key type is KeyRune. See github.com/charmbracelet/bubbletea@v0.25.0/key.go#(k Key) String()
-		Type:  -1,
+		// KeyRunes equals to "-1". See
+		// https://github.com/charmbracelet/bubbletea/blob/2ac3642f644d1c4ea67642910e77f7f56c58d2e9/key.go#L205
+		Type:  tea.KeyRunes,
 		Runes: []rune{'/'},
 	})
 
@@ -467,7 +469,7 @@ func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
 
 	// Now press "1" button. Only one item should left in the host list - with title: "Mock Host 1"
 	_, cmds := model.Update(tea.KeyMsg{
-		Type:  -1,
+		Type:  tea.KeyRunes,
 		Runes: []rune{'1'},
 	})
 
@@ -482,6 +484,54 @@ func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
 
 	// Ensure, that only one item left in the list (which is "Mock Host 1")
 	require.Len(t, model.innerModel.VisibleItems(), 1)
+}
+
+func TestUpdate_ToggleBetweenNormalAndCompactLayout(t *testing.T) {
+	// Create mock storage which contains hosts:
+	// "Mock Host 1"
+	// "Mock Host 2"
+	// "Mock Host 3"
+	storage := test.NewMockStorage(false)
+	fakeAppState := state.ApplicationState{Selected: 1}
+
+	// Create model
+	model := New(context.TODO(), storage, &fakeAppState, nil)
+	model.logger = &test.MockLogger{}
+	model.refreshRepo(nil)
+
+	// Make sure there are 3 items in the collection
+	assert.Len(t, model.innerModel.VisibleItems(), 3)
+	// Ensure that screen layout is not set
+	layoutNotSet := constant.ScreenLayout("")
+	assert.Equal(t, fakeAppState.ScreenLayout, layoutNotSet)
+
+	// Toggle layout
+	model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune{'v'},
+	})
+
+	fakeAppState.ScreenLayout = constant.LayoutTight
+	// Ensure that screen layout is equal to
+	require.Equal(t, constant.LayoutTight, fakeAppState.ScreenLayout)
+
+	// Toggle layout again and check that it's now set to "normal"
+	model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune{'v'},
+	})
+
+	require.Equal(t, constant.LayoutNormal, fakeAppState.ScreenLayout)
+}
+
+func TestBuildScreenLayout(t *testing.T) {
+	screenLayoutDelegate := buildScreenLayout(constant.LayoutNormal)
+	require.Equal(t, 1, screenLayoutDelegate.Spacing())
+	require.True(t, screenLayoutDelegate.ShowDescription)
+
+	screenLayoutDelegate = buildScreenLayout(constant.LayoutTight)
+	require.Equal(t, 0, screenLayoutDelegate.Spacing())
+	require.False(t, screenLayoutDelegate.ShowDescription)
 }
 
 // ==============================================

@@ -43,7 +43,7 @@ type ApplicationState struct {
 	Err              error                 `yaml:"-"`
 	Width            int                   `yaml:"-"`
 	Height           int                   `yaml:"-"`
-	ScreenLayout     constant.ScreenLayout `yaml:"screenLayout,omitempty"` // tight, normal
+	ScreenLayout     constant.ScreenLayout `yaml:"screenLayout,omitempty"`
 }
 
 // Get - reads application state from disk.

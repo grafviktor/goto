@@ -33,7 +33,7 @@ func main() {
 	version.Set(buildVersion, buildCommit, buildBranch, buildDate)
 
 	environmentParams := config.User{}
-	// Command line parameters have higher precedence than other parameters, but lower than command line
+	// Parse environment parameters. These parameters have lower precedence than command line flags
 	if err := env.Parse(&environmentParams); err != nil {
 		fmt.Printf("%+v\n", err)
 	}
@@ -90,6 +90,7 @@ func main() {
 	lg.Info("[MAIN] Branch:     %s", version.BuildBranch())
 	lg.Info("[MAIN] Build date: %s", version.BuildDate())
 
+	// Create application state
 	ctx := context.Background()
 	application := config.NewApplication(ctx, appConfig, &lg)
 	appState := state.Get(application.Config.AppHome, &lg)

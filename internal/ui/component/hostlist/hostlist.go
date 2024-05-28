@@ -393,11 +393,11 @@ func (m *listModel) onFocusChanged(_ tea.Msg) tea.Cmd {
 }
 
 func (m *listModel) handleChangeLayout() {
-	if m.appState.ScreenLayout == constant.LayoutNormal {
-		m.appState.ScreenLayout = constant.LayoutTight
+	if m.appState.ScreenLayout == constant.LayoutTight {
+		m.appState.ScreenLayout = constant.LayoutNormal
 	} else {
 		// If layout is not set or "Normal", switch to "tight" layout.
-		m.appState.ScreenLayout = constant.LayoutNormal
+		m.appState.ScreenLayout = constant.LayoutTight
 	}
 
 	delegate := buildScreenLayout(m.appState.ScreenLayout)
