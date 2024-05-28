@@ -79,7 +79,7 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
 
 * To people who find time to contribute whether it is a bug report, a feature or a pull request.
 * To [Charmbracelet project](https://charm.sh/) for the glamorous [Bubbletea](https://github.com/charmbracelet/bubbletea) library.
-* To [JetBrains Team](https://www.jetbrains.com/) for their [support of Open-Source community](https://www.jetbrains.com/community/opensource/) and for the amazing products they make. That is a great boost indeed. I'm proudly placing their logo here as a humble "thank you" gesture.
+* To [JetBrains Team](https://www.jetbrains.com/) for their [support for Open-Source community](https://www.jetbrains.com/community/opensource/) and for the amazing products they make. That is a great boost indeed. I'm proudly placing their logo here as a humble "Thank You" gesture.
 
 <div align="center">
   <a href="https://www.jetbrains.com/">

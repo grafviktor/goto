@@ -13,6 +13,7 @@ type keyMap struct {
 	clone                 key.Binding
 	edit                  key.Binding
 	remove                key.Binding
+	toggleLayout          key.Binding
 	confirm               key.Binding
 	shouldShowEditButtons bool
 }
@@ -41,7 +42,7 @@ func (k *keyMap) ShortHelp() []key.Binding {
 	}
 
 	// Hide all disabled key shortcuts from the screen
-	return lo.Filter[key.Binding](tmp, func(k key.Binding, _ int) bool {
+	return lo.Filter(tmp, func(k key.Binding, _ int) bool {
 		return k.Enabled()
 	})
 }
@@ -53,6 +54,7 @@ func (k *keyMap) FullHelp() []key.Binding {
 		k.clone,
 		k.edit,
 		k.remove,
+		k.toggleLayout,
 	}
 }
 
@@ -68,7 +70,7 @@ func newDelegateKeyMap() *keyMap {
 		),
 		connect: key.NewBinding(
 			key.WithKeys("enter"),
-			key.WithHelp("enter", "connect"),
+			key.WithHelp("↩", "connect"),
 		),
 		append: key.NewBinding(
 			key.WithKeys("n"),
@@ -85,6 +87,10 @@ func newDelegateKeyMap() *keyMap {
 		remove: key.NewBinding(
 			key.WithKeys("d"),
 			key.WithHelp("d", "delete"),
+		),
+		toggleLayout: key.NewBinding(
+			key.WithKeys("v"),
+			key.WithHelp("v", "view"),
 		),
 		confirm: key.NewBinding(
 			key.WithKeys("y", "Y"),

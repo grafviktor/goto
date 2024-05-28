@@ -7,6 +7,8 @@ import (
 	"sync"
 
 	"gopkg.in/yaml.v2"
+
+	"github.com/grafviktor/goto/internal/constant"
 )
 
 type view int
@@ -37,10 +39,11 @@ type ApplicationState struct {
 	Selected         int `yaml:"selected"`
 	appStateFilePath string
 	logger           iLogger
-	CurrentView      view  `yaml:"-"`
-	Err              error `yaml:"-"`
-	Width            int   `yaml:"-"`
-	Height           int   `yaml:"-"`
+	CurrentView      view                  `yaml:"-"`
+	Err              error                 `yaml:"-"`
+	Width            int                   `yaml:"-"`
+	Height           int                   `yaml:"-"`
+	ScreenLayout     constant.ScreenLayout `yaml:"screenLayout,omitempty"`
 }
 
 // Get - reads application state from disk.
@@ -61,18 +64,20 @@ func Get(appHomePath string, lg iLogger) *ApplicationState {
 }
 
 func (as *ApplicationState) readFromFile() error {
-	as.logger.Debug("[APPSTATE] Read application state from: %s", as.appStateFilePath)
+	as.logger.Debug("[APPSTATE] Read application state from: '%s'", as.appStateFilePath)
 	fileData, err := os.ReadFile(as.appStateFilePath)
 	if err != nil {
-		as.logger.Info("[APPSTATE] Can't read application state loaded from file %v", err)
+		as.logger.Info("[APPSTATE] Can't read application state from file '%v'", err)
 		return err
 	}
 
 	err = yaml.Unmarshal(fileData, as)
 	if err != nil {
-		as.logger.Error("[APPSTATE] Can't parse application state loaded from file %v", err)
+		as.logger.Error("[APPSTATE] Can't parse application state loaded from file '%v'", err)
 		return err
 	}
+
+	as.logger.Debug("[APPSTATE] Screen layout: '%v'. Focused host: '%v'", as.ScreenLayout, as.Selected)
 
 	return nil
 }
