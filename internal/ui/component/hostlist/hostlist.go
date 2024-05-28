@@ -54,7 +54,7 @@ type listModel struct {
 	appState   *state.ApplicationState
 	logger     iLogger
 	mode       string
-	// That is a small optimisation, as we do not want to re-read host configuration
+	// That is a small optimization, as we do not want to re-read host configuration
 	// every time when we dispatch msgRefreshUI{} message.
 	prevSelectedItemID int
 }
