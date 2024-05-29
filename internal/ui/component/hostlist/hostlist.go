@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"golang.org/x/exp/slices"
@@ -406,8 +407,16 @@ func (m *listModel) handleChangeLayout() {
 	m.innerModel.SetDelegate(delegate)
 }
 
-func buildScreenLayout(screenLayout constant.ScreenLayout) list.DefaultDelegate {
-	delegate := list.NewDefaultDelegate()
+type HostDelegate struct {
+	list.DefaultDelegate
+}
+
+func (hd HostDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+	hd.DefaultDelegate.Render(w, m, index, item)
+}
+
+func buildScreenLayout(screenLayout constant.ScreenLayout) HostDelegate {
+	delegate := HostDelegate{}
 	if screenLayout == constant.LayoutTight {
 		delegate.SetSpacing(0)
 		delegate.ShowDescription = false
