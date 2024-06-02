@@ -88,6 +88,7 @@ func (l *Input) prompt() string {
 		return focusedStyle.Render(l.FocusedPrompt)
 	}
 
+	// Padding from right side to match the length of "l.FocusedPrompt"
 	return strings.Repeat(" ", utf8.RuneCountInString(l.FocusedPrompt))
 }
 
