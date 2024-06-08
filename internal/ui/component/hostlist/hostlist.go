@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/exp/slices"
 
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -55,6 +56,7 @@ type listModel struct {
 	appState *state.ApplicationState
 	logger   iLogger
 	mode     string
+	delegate HostDelegate
 	// That is a small optimization, as we do not want to re-read host configuration
 	// every time when we dispatch msgRefreshUI{} message.
 	prevSelectedItemID int
@@ -67,8 +69,15 @@ type listModel struct {
 // for instance focus previously selected host.
 // log - application logger.
 func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *listModel {
-	delegate := buildScreenLayout(appState.ScreenLayout)
-	delegateKeys := newDelegateKeyMap()
+	// ISSUES:
+	// 1. Having a second keymap for the delegate breaks shortcut keys order in the help view.
+	// 2. Delegate keymap is now split into two parts:
+	//   a. delete, edit, clone, connect should belong to delegate keymap.
+	//   b. append, cursorUp, cursorDown, confirm, toggleLayout should belong to the list keymap.
+	// 2. Inccreases complexity of the code.
+	hostKeyMap := newHostDelegateKeyMap()
+	delegate := NewHostDelegate(hostKeyMap)
+	listKeyMap := newListKeyMap()
 
 	var listItems []list.Item
 	model := list.New(listItems, delegate, 0, 0)
@@ -79,22 +88,23 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 
 	m := listModel{
 		Model:    model,
-		keyMap:   delegateKeys,
+		keyMap:   listKeyMap,
 		repo:     storage,
 		appState: appState,
 		logger:   log,
+		delegate: *delegate,
 	}
-
-	m.KeyMap.CursorUp.Unbind()
-	m.KeyMap.CursorUp = delegateKeys.cursorUp
-	m.KeyMap.CursorDown.Unbind()
-	m.KeyMap.CursorDown = delegateKeys.cursorDown
 
 	// Additional key mappings for the short and full help views. This allows
 	// you to add additional key mappings to the help menu without
 	// re-implementing the help component.
-	m.AdditionalShortHelpKeys = delegateKeys.ShortHelp
-	m.AdditionalFullHelpKeys = delegateKeys.FullHelp
+	m.AdditionalShortHelpKeys = listKeyMap.ShortHelp
+	m.AdditionalFullHelpKeys = listKeyMap.FullHelp
+
+	m.KeyMap.CursorUp.Unbind()
+	m.KeyMap.CursorUp = listKeyMap.cursorUp
+	m.KeyMap.CursorDown.Unbind()
+	m.KeyMap.CursorDown = listKeyMap.cursorDown
 
 	m.Title = defaultListTitle
 	m.SetShowStatusBar(false)
@@ -148,15 +158,15 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	case m.mode != modeDefault:
 		// Handle key event when some mode is enabled. For instance "removeMode".
 		return m.handleKeyEventWhenModeEnabled(msg)
-	case key.Matches(msg, m.keyMap.connect):
+	case key.Matches(msg, m.delegate.keyMap.connect):
 		return m.constructProcessCmd(msg)
-	case key.Matches(msg, m.keyMap.remove):
+	case key.Matches(msg, m.delegate.keyMap.remove):
 		return m.enterRemoveItemMode()
-	case key.Matches(msg, m.keyMap.edit):
+	case key.Matches(msg, m.delegate.keyMap.edit):
 		return m.editItem(msg)
 	case key.Matches(msg, m.keyMap.append):
 		return message.TeaCmd(OpenEditForm{}) // When create a new item, jump to edit mode.
-	case key.Matches(msg, m.keyMap.clone):
+	case key.Matches(msg, m.delegate.keyMap.clone):
 		return m.copyItem(msg)
 	case key.Matches(msg, m.keyMap.toggleLayout):
 		m.handleChangeLayout()
@@ -184,13 +194,13 @@ func (m *listModel) updateModel(msg tea.Msg) tea.Cmd {
 }
 
 func (m *listModel) updateKeyMap() {
-	shouldShowEditButtons := m.SelectedItem() != nil
+	// shouldShowEditButtons := m.SelectedItem() != nil
 
 	// BUG: when app starts shouldShowEditButtons is false, therefore the keyMap is not updated.
-	if shouldShowEditButtons != m.keyMap.ShouldShowEditButtons() {
-		m.logger.Debug("[UI] Show edit keyboard shortcuts: %v", shouldShowEditButtons)
-		m.keyMap.SetShouldShowEditButtons(shouldShowEditButtons)
-	}
+	// if m.keyMap != nil && shouldShowEditButtons != m.keyMap.ShouldShowEditButtons() {
+	// 	m.logger.Debug("[UI] Show edit keyboard shortcuts: %v", shouldShowEditButtons)
+	// 	m.keyMap.SetShouldShowEditButtons(shouldShowEditButtons)
+	// }
 }
 
 func (m *listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
@@ -248,6 +258,7 @@ func (m *listModel) removeItem() tea.Cmd {
 	// will not be triggered, and we will not load the SSH configuration for the new selected item.
 	// Probably it's worth to explicitly focus a new item after deletion.
 	m.prevSelectedItemID = -1
+	m.Select(-1)
 
 	// This should be replaced with tea.Sequence as msgRefreshUI completes before MsgRefreshRepo, as a result,
 	// the application reads a configuration of a host which was just deleted. This bug only appears when there is
@@ -255,6 +266,7 @@ func (m *listModel) removeItem() tea.Cmd {
 	return tea.Batch(
 		message.TeaCmd(MsgRefreshRepo{}),
 		message.TeaCmd(msgRefreshUI{}),
+		message.TeaCmd(message.HostListSelectItem{HostID: -1}),
 	)
 }
 
@@ -402,30 +414,49 @@ func (m *listModel) handleChangeLayout() {
 		m.appState.ScreenLayout = constant.LayoutTight
 	}
 
-	delegate := buildScreenLayout(m.appState.ScreenLayout)
+	// delegate := buildScreenLayout(m.appState.ScreenLayout)
 
 	m.logger.Debug("[UI] Change screen layout to: %s", m.appState.ScreenLayout)
-	m.SetDelegate(delegate)
+	// m.SetDelegate(delegate)
 }
 
-func NewHostDelegate() HostDelegate {
-	delegate := HostDelegate{
+// Note from list.list.go:
+// ...if the delegate also implements help.KeyMap delegate-related
+// help items will be added to the help view.
+// Putting interface guard to make sure that HostDelegate implements help.KeyMap.
+var _ help.KeyMap = (*HostDelegate)(nil)
+
+type HostDelegate struct {
+	list.DefaultDelegate
+	isFocused bool
+	keyMap    *HostDelegateKeyMap
+}
+
+func NewHostDelegate(keyMap *HostDelegateKeyMap) *HostDelegate {
+	delegate := &HostDelegate{
 		DefaultDelegate: list.NewDefaultDelegate(),
+		keyMap:          keyMap,
 	}
-	// delegate.ShortHelpFunc = newDelegateKeyMap().ShortHelp
+
+	delegate.UpdateFunc = func(msg tea.Msg, m *list.Model) tea.Cmd {
+		if _, ok := msg.(message.HostListSelectItem); ok {
+			if m.SelectedItem() == nil {
+				delegate.isFocused = false
+			} else {
+				delegate.isFocused = true
+			}
+		}
+
+		return nil
+	}
 
 	return delegate
 }
 
-type HostDelegate struct {
-	list.DefaultDelegate
-}
-
-func (hd HostDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+func (hd *HostDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 	if m.SettingFilter() {
 		var b strings.Builder
 
-		// hd.Styles.DimmedTitle = hd.Styles.DimmedTitle.Copy().Padding(0)
 		hd.DefaultDelegate.Render(&b, m, index, item)
 		fmt.Fprintf(w, "%2d %s", index+1, &b)
 
@@ -435,15 +466,39 @@ func (hd HostDelegate) Render(w io.Writer, m list.Model, index int, item list.It
 	hd.DefaultDelegate.Render(w, m, index, item)
 }
 
-func buildScreenLayout(screenLayout constant.ScreenLayout) HostDelegate {
-	delegate := NewHostDelegate()
-	if screenLayout == constant.LayoutTight {
-		delegate.SetSpacing(0)
-		delegate.ShowDescription = false
-	} else {
-		delegate.SetSpacing(1)
-		delegate.ShowDescription = true
+func (hd HostDelegate) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{
+			hd.keyMap.connect,
+			hd.keyMap.clone,
+			hd.keyMap.edit,
+			hd.keyMap.remove,
+		},
+	}
+}
+
+func (hd HostDelegate) ShortHelp() []key.Binding {
+	if hd.isFocused {
+		return []key.Binding{
+			hd.keyMap.connect,
+			hd.keyMap.clone,
+			hd.keyMap.edit,
+			hd.keyMap.remove,
+		}
 	}
 
-	return delegate
+	return []key.Binding{}
 }
+
+// func buildScreenLayout(screenLayout constant.ScreenLayout) *HostDelegate {
+// 	delegate := NewHostDelegate()
+// 	if screenLayout == constant.LayoutTight {
+// 		delegate.SetSpacing(0)
+// 		delegate.ShowDescription = false
+// 	} else {
+// 		delegate.SetSpacing(1)
+// 		delegate.ShowDescription = true
+// 	}
+
+// 	return delegate
+// }

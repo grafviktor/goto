@@ -399,7 +399,7 @@ func TestListModel_updateKeyMap(t *testing.T) {
 	// Actually "displayedKeys" will also contain cursor up and cursor down and help keybindings,
 	// but we're ignoring them in this test
 	displayedKeys := lm.keyMap.ShortHelp()
-	availableKeys := newDelegateKeyMap()
+	availableKeys := newListKeyMap()
 
 	require.Equal(t, 5, len(displayedKeys))
 	require.Contains(t, displayedKeys, availableKeys.append)
