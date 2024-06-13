@@ -66,7 +66,8 @@ type listModel struct {
 // for instance focus previously selected host.
 // log - application logger.
 func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *listModel {
-	delegate := buildScreenLayout(appState.ScreenLayout)
+	// delegate := buildScreenLayout(appState.ScreenLayout)
+	delegate := NewHostDelegate()
 	delegateKeys := newDelegateKeyMap()
 
 	var listItems []list.Item
@@ -157,9 +158,10 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		return message.TeaCmd(OpenEditForm{}) // When create a new item, jump to edit mode.
 	case key.Matches(msg, m.keyMap.clone):
 		return m.copyItem(msg)
-	case key.Matches(msg, m.keyMap.toggleLayout):
-		m.handleChangeLayout()
-		return nil
+	// case key.Matches(msg, m.keyMap.toggleLayout):
+	// 	m
+	// 	m.handleChangeLayout()
+	// 	return nil
 	default:
 		// If we could not find our own update handler, we pass message to the child model
 		// otherwise we would have to implement all key handlers and other stuff by ourselves
@@ -392,29 +394,67 @@ func (m *listModel) onFocusChanged(_ tea.Msg) tea.Cmd {
 	return nil
 }
 
-func (m *listModel) handleChangeLayout() {
-	if m.appState.ScreenLayout == constant.LayoutTight {
-		m.appState.ScreenLayout = constant.LayoutNormal
-	} else {
-		// If layout is not set or "Normal", switch to "tight" layout.
-		m.appState.ScreenLayout = constant.LayoutTight
-	}
+// func (m *listModel) handleChangeLayout() {
+// 	if m.appState.ScreenLayout == constant.LayoutTight {
+// 		m.appState.ScreenLayout = constant.LayoutNormal
+// 	} else {
+// 		// If layout is not set or "Normal", switch to "tight" layout.
+// 		m.appState.ScreenLayout = constant.LayoutTight
+// 	}
 
-	delegate := buildScreenLayout(m.appState.ScreenLayout)
+// 	delegate := buildScreenLayout(m.appState.ScreenLayout)
 
-	m.logger.Debug("[UI] Change screen layout to: %s", m.appState.ScreenLayout)
-	m.innerModel.SetDelegate(delegate)
+// 	m.logger.Debug("[UI] Change screen layout to: %s", m.appState.ScreenLayout)
+// 	m.innerModel.SetDelegate(delegate)
+// }
+
+type hostDelegate struct {
+	list.DefaultDelegate
+	appState *state.ApplicationState
 }
 
-func buildScreenLayout(screenLayout constant.ScreenLayout) list.DefaultDelegate {
-	delegate := list.NewDefaultDelegate()
-	if screenLayout == constant.LayoutTight {
-		delegate.SetSpacing(0)
-		delegate.ShowDescription = false
-	} else {
-		delegate.SetSpacing(1)
-		delegate.ShowDescription = true
+func NewHostDelegate() *hostDelegate {
+	delegate := &hostDelegate{
+		DefaultDelegate: list.NewDefaultDelegate(),
+	}
+
+	delegate.UpdateFunc = func(msg tea.Msg, m *list.Model) tea.Cmd {
+		if delegate.appState.ScreenLayout == constant.LayoutTight {
+			delegate.SetSpacing(0)
+			delegate.ShowDescription = false
+		} else {
+			delegate.SetSpacing(1)
+			delegate.ShowDescription = true
+		}
+
+		return nil
 	}
 
 	return delegate
 }
+
+// func (hd *HostDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+// 	if m.SettingFilter() {
+// 		var b strings.Builder
+
+// 		hd.DefaultDelegate.Render(&b, m, index, item)
+// 		fmt.Fprintf(w, "%2d %s", index+1, &b)
+
+// 		return
+// 	}
+
+// 	hd.DefaultDelegate.Render(w, m, index, item)
+// }
+
+// func buildScreenLayout(screenLayout constant.ScreenLayout) list.DefaultDelegate {
+// 	delegate := list.NewDefaultDelegate()
+// 	if screenLayout == constant.LayoutTight {
+// 		delegate.SetSpacing(0)
+// 		delegate.ShowDescription = false
+// 	} else {
+// 		delegate.SetSpacing(1)
+// 		delegate.ShowDescription = true
+// 	}
+
+// 	return delegate
+// }
