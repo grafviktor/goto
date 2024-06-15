@@ -297,7 +297,7 @@ func TestListModel_refreshRepo(t *testing.T) {
 	storageShouldFail := false
 	storage := test.NewMockStorage(storageShouldFail)
 	fakeAppState := state.ApplicationState{Selected: 1}
-	lm := New(context.TODO(), storage, &fakeAppState, nil)
+	lm := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
 	teaCmd := lm.refreshRepo(nil)
 	result := teaCmd().(tea.BatchMsg)
 	receivedMsgRefresh := false
@@ -326,7 +326,7 @@ func TestListModel_refreshRepo(t *testing.T) {
 		context.TODO(),
 		storage,
 		&state.ApplicationState{}, // we don't need app state, as error should be reported before we can even use it
-		nil,
+		&test.MockLogger{},
 	)
 	lm.logger = &test.MockLogger{}
 	teaCmd = lm.refreshRepo(nil)
@@ -346,7 +346,7 @@ func TestListModel_editItem(t *testing.T) {
 		context.TODO(),
 		storage,
 		&state.ApplicationState{}, // we don't need app state, as error should be reported before we can even use it
-		nil,
+		&test.MockLogger{},
 	)
 	lm.logger = &test.MockLogger{}
 	teaCmd := lm.editItem(nil)
@@ -375,8 +375,7 @@ func TestListModel_copyItem(t *testing.T) {
 	// First case - test that we receive an error when item is not selected
 	storageShouldFail := true
 	storage := test.NewMockStorage(storageShouldFail)
-	lm := New(context.TODO(), storage, &state.ApplicationState{}, nil)
-	lm.logger = &test.MockLogger{}
+	lm := New(context.TODO(), storage, &state.ApplicationState{}, &test.MockLogger{})
 	teaCmd := lm.copyItem(nil)
 	require.Equal(t, itemNotSelectedMessage, teaCmd().(msgErrorOccurred).err.Error())
 
@@ -449,7 +448,7 @@ func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
 	fakeAppState := state.ApplicationState{Selected: 1}
 
 	// Create model
-	model := New(context.TODO(), storage, &fakeAppState, nil)
+	model := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
 	model.logger = &test.MockLogger{}
 	model.refreshRepo(nil)
 
@@ -495,7 +494,7 @@ func TestUpdate_ToggleBetweenNormalAndCompactLayout(t *testing.T) {
 	fakeAppState := state.ApplicationState{Selected: 1}
 
 	// Create model
-	model := New(context.TODO(), storage, &fakeAppState, nil)
+	model := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
 	model.logger = &test.MockLogger{}
 	model.refreshRepo(nil)
 
@@ -525,11 +524,13 @@ func TestUpdate_ToggleBetweenNormalAndCompactLayout(t *testing.T) {
 }
 
 func TestBuildScreenLayout(t *testing.T) {
-	screenLayoutDelegate := buildScreenLayout(constant.LayoutNormal)
+	layout := constant.LayoutNormal
+	screenLayoutDelegate := NewHostDelegate(&layout, &test.MockLogger{})
 	require.Equal(t, 1, screenLayoutDelegate.Spacing())
 	require.True(t, screenLayoutDelegate.ShowDescription)
 
-	screenLayoutDelegate = buildScreenLayout(constant.LayoutTight)
+	layout = constant.LayoutTight
+	screenLayoutDelegate = NewHostDelegate(&layout, &test.MockLogger{})
 	require.Equal(t, 0, screenLayoutDelegate.Spacing())
 	require.False(t, screenLayoutDelegate.ShowDescription)
 }
@@ -542,7 +543,7 @@ func NewMockListModel(storageShouldFail bool) *listModel {
 	storage := test.NewMockStorage(storageShouldFail)
 
 	// Create listModel using constructor function (using 'New' is important to preserve hotkeys)
-	lm := New(context.TODO(), storage, &state.ApplicationState{}, nil)
+	lm := New(context.TODO(), storage, &state.ApplicationState{}, &test.MockLogger{})
 
 	items := make([]list.Item, 0)
 	// Wrap hosts into List items
