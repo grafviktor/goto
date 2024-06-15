@@ -14,7 +14,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/grafviktor/goto/internal/constant"
 	hostModel "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
@@ -43,8 +42,9 @@ type (
 	MsgCopyItem      struct{ HostID int }
 	msgErrorOccurred struct{ err error }
 	// MsgRefreshRepo - fires when data layer updated, and it's required to reload the host list.
-	MsgRefreshRepo struct{}
-	msgRefreshUI   struct{}
+	MsgRefreshRepo  struct{}
+	msgRefreshUI    struct{}
+	msgToggleLayout struct{}
 )
 
 type listModel struct {
@@ -66,7 +66,8 @@ type listModel struct {
 // for instance focus previously selected host.
 // log - application logger.
 func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *listModel {
-	delegate := buildScreenLayout(appState.ScreenLayout)
+	// delegate := buildScreenLayout(appState.ScreenLayout)
+	delegate := NewHostDelegate(&appState.ScreenLayout, log)
 	delegateKeys := newDelegateKeyMap()
 
 	var listItems []list.Item
@@ -158,8 +159,7 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, m.keyMap.clone):
 		return m.copyItem(msg)
 	case key.Matches(msg, m.keyMap.toggleLayout):
-		m.handleChangeLayout()
-		return nil
+		return m.updateChildModel(msgToggleLayout{})
 	default:
 		// If we could not find our own update handler, we pass message to the child model
 		// otherwise we would have to implement all key handlers and other stuff by ourselves
@@ -390,31 +390,4 @@ func (m *listModel) onFocusChanged(_ tea.Msg) tea.Cmd {
 	}
 
 	return nil
-}
-
-func (m *listModel) handleChangeLayout() {
-	if m.appState.ScreenLayout == constant.LayoutTight {
-		m.appState.ScreenLayout = constant.LayoutNormal
-	} else {
-		// If layout is not set or "Normal", switch to "tight" layout.
-		m.appState.ScreenLayout = constant.LayoutTight
-	}
-
-	delegate := buildScreenLayout(m.appState.ScreenLayout)
-
-	m.logger.Debug("[UI] Change screen layout to: %s", m.appState.ScreenLayout)
-	m.innerModel.SetDelegate(delegate)
-}
-
-func buildScreenLayout(screenLayout constant.ScreenLayout) list.DefaultDelegate {
-	delegate := list.NewDefaultDelegate()
-	if screenLayout == constant.LayoutTight {
-		delegate.SetSpacing(0)
-		delegate.ShowDescription = false
-	} else {
-		delegate.SetSpacing(1)
-		delegate.ShowDescription = true
-	}
-
-	return delegate
 }
