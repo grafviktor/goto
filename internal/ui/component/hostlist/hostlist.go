@@ -121,8 +121,6 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Load hostnames from the database")
 		return m, m.refreshRepo(msg)
 	case msgRefreshUI:
-		m.listTitleUpdate()
-		m.updateKeyMap()
 		return m, m.onFocusChanged(msg)
 	default:
 		return m, m.updateChildModel(msg)
@@ -139,16 +137,14 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 
 		// However, there is one special case, which should be taken into account:
 		// When user filters out values and exits filter mode
-		// we need to ensure that the title displays proper value and.
-		// that's why we need to invoke title update function.
+		// we need to ensure that the focus is set to the correct item.
 		// See https://github.com/grafviktor/goto/issues/37
 		exitFilterMode := key.Matches(msg, m.innerModel.KeyMap.AcceptWhileFiltering) ||
-			key.Matches(msg, m.innerModel.KeyMap.CancelWhileFiltering)
+			key.Matches(msg, m.innerModel.KeyMap.CancelWhileFiltering) ||
+			key.Matches(msg, m.innerModel.KeyMap.ClearFilter)
 
 		if exitFilterMode {
-			m.listTitleUpdate()
-			onFocusChangeCmd := m.onFocusChanged(msg)
-			cmds = append(cmds, onFocusChangeCmd)
+			cmds = append(cmds, message.TeaCmd(msgRefreshUI{}))
 		}
 
 		onModelUpdateCmd := m.updateChildModel(msg)
@@ -193,15 +189,6 @@ func (m *listModel) updateChildModel(msg tea.Msg) tea.Cmd {
 	m.innerModel, cmd = m.innerModel.Update(msg)
 
 	return cmd
-}
-
-func (m *listModel) updateKeyMap() {
-	shouldShowEditButtons := m.innerModel.SelectedItem() != nil
-
-	if shouldShowEditButtons != m.keyMap.ShouldShowEditButtons() {
-		m.logger.Debug("[UI] Show edit keyboard shortcuts: %v", shouldShowEditButtons)
-		m.keyMap.SetShouldShowEditButtons(shouldShowEditButtons)
-	}
 }
 
 func (m *listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
@@ -359,6 +346,33 @@ func (m *listModel) constructProcessCmd(_ tea.KeyMsg) tea.Cmd {
 	return message.TeaCmd(message.RunProcessConnectSSH{Host: item.Host})
 }
 
+func (m *listModel) onFocusChanged(_ tea.Msg) tea.Cmd {
+	m.listTitleUpdate()
+	m.updateKeyMap()
+
+	if m.innerModel.SelectedItem() == nil {
+		m.logger.Debug("[UI] Focus is not set to any item in the list")
+		// Here we can set the default focus to the first item in the list.
+		return nil
+	}
+
+	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
+		m.logger.Debug("[UI] Prev item: %v, Curr item: %v", m.prevSelectedItemID, hostItem.ID)
+		if m.prevSelectedItemID != hostItem.ID {
+			m.prevSelectedItemID = hostItem.ID
+			m.logger.Debug("[UI] Focus changed to host id: %v, title: %s", hostItem.ID, hostItem.Title())
+			return tea.Batch(
+				message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
+				message.TeaCmd(message.RunProcessLoadSSHConfig{Host: hostItem.Host}),
+			)
+		}
+	} else {
+		m.logger.Error("[UI] Select unknown item type from the list")
+	}
+
+	return nil
+}
+
 func (m *listModel) listTitleUpdate() {
 	var newTitle string
 
@@ -381,26 +395,11 @@ func (m *listModel) listTitleUpdate() {
 	}
 }
 
-func (m *listModel) onFocusChanged(_ tea.Msg) tea.Cmd {
-	if m.innerModel.SelectedItem() == nil {
-		m.logger.Debug("[UI] Focus is not set to any item in the list")
-		// Here we can set the default focus to the first item in the list.
-		return nil
-	}
+func (m *listModel) updateKeyMap() {
+	shouldShowEditButtons := m.innerModel.SelectedItem() != nil
 
-	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
-		m.logger.Debug("[UI] Prev item: %v, Curr item: %v", m.prevSelectedItemID, hostItem.ID)
-		if m.prevSelectedItemID != hostItem.ID {
-			m.prevSelectedItemID = hostItem.ID
-			m.logger.Debug("[UI] Focus changed to host id: %v, title: %s", hostItem.ID, hostItem.Title())
-			return tea.Batch(
-				message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
-				message.TeaCmd(message.RunProcessLoadSSHConfig{Host: hostItem.Host}),
-			)
-		}
-	} else {
-		m.logger.Error("[UI] Select unknown item type from the list")
+	if shouldShowEditButtons != m.keyMap.ShouldShowEditButtons() {
+		m.logger.Debug("[UI] Show edit keyboard shortcuts: %v", shouldShowEditButtons)
+		m.keyMap.SetShouldShowEditButtons(shouldShowEditButtons)
 	}
-
-	return nil
 }
