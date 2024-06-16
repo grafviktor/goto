@@ -121,10 +121,9 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Load hostnames from the database")
 		return m, m.refreshRepo(msg)
 	case msgRefreshUI:
-		cmd := m.onFocusChanged(msg)
 		m.listTitleUpdate()
 		m.updateKeyMap()
-		return m, cmd
+		return m, m.onFocusChanged(msg)
 	default:
 		return m, m.updateChildModel(msg)
 	}
@@ -134,17 +133,28 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	switch {
 	case m.innerModel.SettingFilter():
 		m.logger.Debug("[UI] Process key message when in filter mode")
+		var cmds []tea.Cmd
 		// If filter is enabled, we should not handle any keyboard messages,
 		// as it should be done by filter component.
 
 		// However, there is one special case, which should be taken into account:
-		// When user filters out values and presses down key on her keyboard
-		// we need to ensure that the title contains proper selection.
+		// When user filters out values and exits filter mode
+		// we need to ensure that the title displays proper value and.
 		// that's why we need to invoke title update function.
 		// See https://github.com/grafviktor/goto/issues/37
-		m.listTitleUpdate()
+		exitFilterMode := key.Matches(msg, m.innerModel.KeyMap.AcceptWhileFiltering) ||
+			key.Matches(msg, m.innerModel.KeyMap.CancelWhileFiltering)
 
-		return m.updateChildModel(msg)
+		if exitFilterMode {
+			m.listTitleUpdate()
+			onFocusChangeCmd := m.onFocusChanged(msg)
+			cmds = append(cmds, onFocusChangeCmd)
+		}
+
+		onModelUpdateCmd := m.updateChildModel(msg)
+		cmds = append(cmds, onModelUpdateCmd)
+
+		return tea.Batch(cmds...)
 	case m.mode != modeDefault:
 		// Handle key event when some mode is enabled. For instance "removeMode".
 		return m.handleKeyEventWhenModeEnabled(msg)
