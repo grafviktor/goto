@@ -172,6 +172,9 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 }
 
 func (m *listModel) View() string {
+	// BUG: On a certain screen width 'docStyle.Render(...)' adds an extra line
+	// break symbol when a host item title contains '-' symbol. That's most
+	// probably the bubbletea library bug, but still requires analysis.
 	return docStyle.Render(m.innerModel.View())
 }
 
@@ -297,7 +300,7 @@ func (m *listModel) editItem(_ tea.Msg) tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
-	m.logger.Info("[UI] Edit item id: %d, title: %s", item.ID, item.Title)
+	m.logger.Info("[UI] Edit item id: %d, title: %s", item.ID, item.Title())
 	return tea.Sequence(
 		message.TeaCmd(OpenEditForm{HostID: item.ID}),
 		// Load SSH config for the selected host

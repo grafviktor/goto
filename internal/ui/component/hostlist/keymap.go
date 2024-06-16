@@ -18,6 +18,50 @@ type keyMap struct {
 	shouldShowEditButtons bool
 }
 
+func newDelegateKeyMap() *keyMap {
+	km := keyMap{
+		cursorUp: key.NewBinding(
+			key.WithKeys("up", "k", "shift+tab"),
+			key.WithHelp("↑/k", "up"),
+		),
+		cursorDown: key.NewBinding(
+			key.WithKeys("down", "j", "tab"),
+			key.WithHelp("↓/j", "down"),
+		),
+		connect: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp("↩", "connect"),
+		),
+		append: key.NewBinding(
+			key.WithKeys("n"),
+			key.WithHelp("n", "new"),
+		),
+		edit: key.NewBinding(
+			key.WithKeys("e"),
+			key.WithHelp("e", "edit"),
+		),
+		clone: key.NewBinding(
+			key.WithKeys("c"),
+			key.WithHelp("c", "clone"),
+		),
+		remove: key.NewBinding(
+			key.WithKeys("d"),
+			key.WithHelp("d", "delete"),
+		),
+		toggleLayout: key.NewBinding(
+			key.WithKeys("v"),
+			key.WithHelp("v", "view"),
+		),
+		confirm: key.NewBinding(
+			key.WithKeys("y", "Y"),
+			key.WithHelp("y", "confirm"),
+		),
+	}
+
+	km.shouldShowEditButtons = true
+	return &km
+}
+
 func (k *keyMap) SetShouldShowEditButtons(val bool) {
 	k.shouldShowEditButtons = val
 	k.clone.SetEnabled(val)
@@ -55,46 +99,5 @@ func (k *keyMap) FullHelp() []key.Binding {
 		k.edit,
 		k.remove,
 		k.toggleLayout,
-	}
-}
-
-func newDelegateKeyMap() *keyMap {
-	return &keyMap{
-		cursorUp: key.NewBinding(
-			key.WithKeys("up", "k", "shift+tab"),
-			key.WithHelp("↑/k", "up"),
-		),
-		cursorDown: key.NewBinding(
-			key.WithKeys("down", "j", "tab"),
-			key.WithHelp("↓/j", "down"),
-		),
-		connect: key.NewBinding(
-			key.WithKeys("enter"),
-			key.WithHelp("↩", "connect"),
-		),
-		append: key.NewBinding(
-			key.WithKeys("n"),
-			key.WithHelp("n", "new"),
-		),
-		edit: key.NewBinding(
-			key.WithKeys("e"),
-			key.WithHelp("e", "edit"),
-		),
-		clone: key.NewBinding(
-			key.WithKeys("c"),
-			key.WithHelp("c", "clone"),
-		),
-		remove: key.NewBinding(
-			key.WithKeys("d"),
-			key.WithHelp("d", "delete"),
-		),
-		toggleLayout: key.NewBinding(
-			key.WithKeys("v"),
-			key.WithHelp("v", "view"),
-		),
-		confirm: key.NewBinding(
-			key.WithKeys("y", "Y"),
-			key.WithHelp("y", "confirm"),
-		),
 	}
 }
