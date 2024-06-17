@@ -360,7 +360,7 @@ func (m *listModel) onFocusChanged() tea.Cmd {
 	}
 
 	if hostItem, ok := m.SelectedItem().(ListItemHost); ok {
-		m.logger.Debug("[UI] Prev item: %v, Curr item: %v", m.prevSelectedItemID, hostItem.ID)
+		m.logger.Debug("[UI] Check if selection changed. Prev item: %v, Curr item: %v", m.prevSelectedItemID, hostItem.ID)
 		if m.prevSelectedItemID != hostItem.ID {
 			m.prevSelectedItemID = hostItem.ID
 			m.logger.Debug("[UI] Focus changed to host id: %v, title: %s", hostItem.ID, hostItem.Title())
