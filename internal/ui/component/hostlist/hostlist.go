@@ -128,7 +128,11 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
-	// var cmds []tea.Cmd
+	// exitFilterMode :=
+	// 	key.Matches(msg, m.KeyMap.AcceptWhileFiltering) ||
+	// 		key.Matches(msg, m.KeyMap.CancelWhileFiltering) ||
+	// 		key.Matches(msg, m.KeyMap.ClearFilter)
+
 	switch {
 	case m.SettingFilter():
 		m.logger.Debug("[UI] Process key message when in filter mode")
@@ -139,15 +143,21 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		// When user filters out values and exits filter mode
 		// we need to ensure that the focus is set to the correct item.
 		// See https://github.com/grafviktor/goto/issues/37
-		exitFilterMode := key.Matches(msg, m.KeyMap.AcceptWhileFiltering) ||
-			key.Matches(msg, m.KeyMap.CancelWhileFiltering) ||
-			key.Matches(msg, m.KeyMap.ClearFilter)
+
+		var cmds []tea.Cmd
+		exitFilterMode :=
+			key.Matches(msg, m.KeyMap.AcceptWhileFiltering) ||
+				key.Matches(msg, m.KeyMap.CancelWhileFiltering) ||
+				key.Matches(msg, m.KeyMap.ClearFilter)
 
 		if exitFilterMode {
-			m.onFocusChanged()
+			// Triggers when change filter text and press 'Enter' or 'Esc'
+			// Updates title, invokes ssh-config query
+			cmds = append(cmds, message.TeaCmd(msgRefreshUI{}))
 		}
 
-		return m.updateChildModel(msg)
+		cmds = append(cmds, m.updateChildModel(msg))
+		return tea.Batch(cmds...)
 	case m.mode != modeDefault:
 		// Handle key event when some mode is enabled. For instance "removeMode".
 		return m.handleKeyEventWhenModeEnabled(msg)
@@ -169,6 +179,16 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		m.Model.SetSize(m.Width(), m.Height())
 
 		return nil
+	// case m.FilterState() == list.FilterApplied:
+	// 	cmd := m.updateChildModel(msg)
+	// 	cmd = m.onFocusChanged()
+
+	// 	When filter is applied and press 'Esc' we should reset the filter, but not the focused host.
+	// 	if msg.Type == tea.KeyEsc {
+	// 		m.selectItemByModelId(m.prevSelectedItemID)
+	// 	}
+
+	// 	return cmd
 	default:
 		// If we could not find our own update handler, we pass message to the child model
 		// otherwise we would have to implement all key handlers and other stuff by ourselves
@@ -404,5 +424,16 @@ func (m *listModel) updateKeyMap() {
 	if shouldShowEditButtons != m.keyMap.ShouldShowEditButtons() {
 		m.logger.Debug("[UI] Show edit keyboard shortcuts: %v", shouldShowEditButtons)
 		m.keyMap.SetShouldShowEditButtons(shouldShowEditButtons)
+	}
+}
+
+func (m *listModel) selectItemByModelId(id int) {
+	for i, item := range m.VisibleItems() {
+		if hostItem, ok := item.(ListItemHost); ok {
+			if hostItem.ID == id {
+				m.Select(i)
+				break
+			}
+		}
 	}
 }
