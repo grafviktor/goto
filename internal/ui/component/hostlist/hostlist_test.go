@@ -3,7 +3,6 @@ package hostlist
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -117,7 +116,7 @@ func TestRemoveItem(t *testing.T) {
 			name:          "Remove item success",
 			model:         *NewMockListModel(false),
 			mode:          modeRemoveItem,
-			want:          tea.BatchMsg{},
+			want:          MsgRefreshRepo{},
 			expectedItems: 2,
 		},
 		{
@@ -303,25 +302,16 @@ func TestListModel_refreshRepo(t *testing.T) {
 	fakeAppState := state.ApplicationState{Selected: 1}
 	lm := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
 	teaCmd := lm.refreshRepo(nil)
-	result := teaCmd().(tea.BatchMsg)
-	receivedMsgRefresh := false
 
-	for _, v := range result {
-		if reflect.TypeOf(v).Kind() == reflect.Func {
-			msg := v()
-			if reflect.TypeOf(msg).String() == "hostlist.msgRefreshUI" {
-				receivedMsgRefresh = true
-			}
-		}
-	}
+	var dst []tea.Msg
+	test.CmdToMessage(teaCmd, &dst)
+	require.Contains(t, dst, msgRefreshUI{})
 
 	// Check that hosts are filtered by Title
 	require.Equal(t, "Mock Host 1", lm.Items()[0].(ListItemHost).Title())
 	require.Equal(t, "Mock Host 2", lm.Items()[1].(ListItemHost).Title())
 	// Check that currently selected item is "1", as it is set in the fakeAppState object
 	require.Equal(t, 1, lm.SelectedItem().(ListItemHost).ID)
-	// Check that msgRefreshUI{} was found among returned messages, which indicate normal function return
-	require.True(t, receivedMsgRefresh)
 
 	// Now test refreshRepo function simulating a broken storage
 	storageShouldFail = true
