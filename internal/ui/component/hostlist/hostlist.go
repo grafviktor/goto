@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/samber/lo"
 
 	hostModel "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/state"
@@ -121,6 +122,7 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Load hostnames from the database")
 		return m, m.refreshRepo(msg)
 	case msgRefreshUI:
+		m.selectItemByModelID(m.appState.Selected)
 		return m, m.onFocusChanged()
 	default:
 		return m, m.updateChildModel(msg)
@@ -161,7 +163,7 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, m.Model.KeyMap.ClearFilter):
 		// When user clears the host filter, keep the focus on the selected item.
 		cmd := m.updateChildModel(msg)
-		m.selectItemByModelId(m.prevSelectedItemID)
+		m.selectItemByModelID(m.prevSelectedItemID)
 		return cmd
 	default:
 		// If we could not find our own update handler, we pass message to the child model
@@ -175,9 +177,6 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 }
 
 func (m *listModel) View() string {
-	// BUG: On a certain screen width 'docStyle.Render(...)' adds an extra line
-	// break symbol when a host item title contains '-' symbol. That's most
-	// probably the bubbletea library bug, but still requires analysis.
 	return docStyle.Render(m.Model.View())
 }
 
@@ -221,6 +220,8 @@ func (m *listModel) enterRemoveItemMode() tea.Cmd {
 	m.mode = modeRemoveItem
 	m.logger.Debug("[UI] Enter %s mode. Ask user for confirmation", m.mode)
 
+	// Ideally, we should not return msgRefreshUI{} from this function,
+	// but title is not getting updated. Requires investigation.
 	return message.TeaCmd(msgRefreshUI{})
 }
 
@@ -228,6 +229,8 @@ func (m *listModel) removeItem() tea.Cmd {
 	m.logger.Debug("[UI] Remove host from the database")
 	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
+		// We should not be here at all, because delete
+		// button isn't available when a host is not selected.
 		m.logger.Error("[UI] Cannot cast selected item to host model")
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
@@ -238,19 +241,7 @@ func (m *listModel) removeItem() tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err})
 	}
 
-	// That's a hack! When we delete an item, the inner model automatically changes focus to an existing item
-	// without sending any notification. If we do not reset the prevSelectedItemID, the onFocusChanged function
-	// will not be triggered, and we will not load the SSH configuration for the new selected item.
-	// Probably it's worth to explicitly focus a new item after deletion.
-	m.prevSelectedItemID = -1
-
-	// This should be replaced with tea.Sequence as msgRefreshUI completes before MsgRefreshRepo, as a result,
-	// the application reads a configuration of a host which was just deleted. This bug only appears when there is
-	// only one host left in the database and we delete it.
-	return tea.Batch(
-		message.TeaCmd(MsgRefreshRepo{}),
-		message.TeaCmd(msgRefreshUI{}),
-	)
+	return message.TeaCmd(MsgRefreshRepo{})
 }
 
 func (m *listModel) refreshRepo(_ tea.Msg) tea.Cmd {
@@ -319,7 +310,6 @@ func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err})
 	}
 
-	// Do not need to dispatch msgRefreshUI{} here as onFocus change event will trigger anyway
 	return message.TeaCmd(MsgRefreshRepo{})
 }
 
@@ -334,14 +324,11 @@ func (m *listModel) constructProcessCmd(_ tea.KeyMsg) tea.Cmd {
 }
 
 func (m *listModel) onFocusChanged() tea.Cmd {
-	// BUG: when create a new host, the focus is not set to the new item.
-	// because onFocusChanged() redefines the focus to the previous item.
 	m.listTitleUpdate()
 	m.updateKeyMap()
 
 	if m.SelectedItem() == nil {
 		m.logger.Debug("[UI] Focus is not set to any item in the list")
-		// Here we can set the default focus to the first item in the list.
 		return nil
 	}
 
@@ -393,13 +380,13 @@ func (m *listModel) updateKeyMap() {
 	}
 }
 
-func (m *listModel) selectItemByModelId(id int) {
-	for i, item := range m.VisibleItems() {
-		if hostItem, ok := item.(ListItemHost); ok {
-			if hostItem.ID == id {
-				m.Select(i)
-				break
-			}
-		}
+func (m *listModel) selectItemByModelID(id int) {
+	_, index, found := lo.FindIndexOf(m.VisibleItems(), func(item list.Item) bool {
+		hostItem, ok := item.(ListItemHost)
+		return ok && hostItem.ID == id
+	})
+
+	if found {
+		m.Select(index)
 	}
 }
