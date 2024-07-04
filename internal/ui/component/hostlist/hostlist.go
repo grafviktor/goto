@@ -128,25 +128,14 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
-	// var cmds []tea.Cmd
 	switch {
+	case key.Matches(msg, m.KeyMap.AcceptWhileFiltering):
+		m.logger.Debug("[UI] Focus item while in filter mode")
+		return tea.Batch(m.updateChildModel(msg), m.onFocusChanged())
 	case m.SettingFilter():
 		m.logger.Debug("[UI] Process key message when in filter mode")
 		// If filter is enabled, we should not handle any keyboard messages,
 		// as it should be done by filter component.
-
-		// However, there is one special case, which should be taken into account:
-		// When user filters out values and exits filter mode
-		// we need to ensure that the focus is set to the correct item.
-		// See https://github.com/grafviktor/goto/issues/37
-		exitFilterMode := key.Matches(msg, m.KeyMap.AcceptWhileFiltering) ||
-			key.Matches(msg, m.KeyMap.CancelWhileFiltering) ||
-			key.Matches(msg, m.KeyMap.ClearFilter)
-
-		if exitFilterMode {
-			m.onFocusChanged()
-		}
-
 		return m.updateChildModel(msg)
 	case m.mode != modeDefault:
 		// Handle key event when some mode is enabled. For instance "removeMode".
@@ -169,14 +158,19 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		m.Model.SetSize(m.Width(), m.Height())
 
 		return nil
+	case key.Matches(msg, m.Model.KeyMap.ClearFilter):
+		// When user clears the host filter, keep the focus on the selected item.
+		cmd := m.updateChildModel(msg)
+		m.selectItemByModelId(m.prevSelectedItemID)
+		return cmd
 	default:
 		// If we could not find our own update handler, we pass message to the child model
 		// otherwise we would have to implement all key handlers and other stuff by ourselves
 
-		// Dispatch 2 messages:
+		// Dispatch several messages:
 		// 1 - message which was returned from the inner model.
-		// 2 - msgRefreshUI message to update list title. We only need to dispatch it when we switch between list items.
-		return tea.Batch(m.updateChildModel(msg), message.TeaCmd(msgRefreshUI{}))
+		// 2 - messages which returned by onFocusChanged, which will trigger the SSH configuration load.
+		return tea.Sequence(m.updateChildModel(msg), m.onFocusChanged())
 	}
 }
 
@@ -281,17 +275,7 @@ func (m *listModel) refreshRepo(_ tea.Msg) tea.Cmd {
 
 	setItemsCmd := m.SetItems(items)
 
-	// we restore selected item from application configuration
-	for uiIndex, listItem := range m.VisibleItems() {
-		if hostItem, ok := listItem.(ListItemHost); ok {
-			if m.appState.Selected == hostItem.ID {
-				m.Select(uiIndex)
-				break
-			}
-		}
-	}
-
-	return tea.Batch(setItemsCmd, message.TeaCmd(msgRefreshUI{}))
+	return tea.Sequence(setItemsCmd, message.TeaCmd(msgRefreshUI{}))
 }
 
 func (m *listModel) editItem(_ tea.Msg) tea.Cmd {
@@ -350,6 +334,8 @@ func (m *listModel) constructProcessCmd(_ tea.KeyMsg) tea.Cmd {
 }
 
 func (m *listModel) onFocusChanged() tea.Cmd {
+	// BUG: when create a new host, the focus is not set to the new item.
+	// because onFocusChanged() redefines the focus to the previous item.
 	m.listTitleUpdate()
 	m.updateKeyMap()
 
@@ -404,5 +390,16 @@ func (m *listModel) updateKeyMap() {
 	if shouldShowEditButtons != m.keyMap.ShouldShowEditButtons() {
 		m.logger.Debug("[UI] Show edit keyboard shortcuts: %v", shouldShowEditButtons)
 		m.keyMap.SetShouldShowEditButtons(shouldShowEditButtons)
+	}
+}
+
+func (m *listModel) selectItemByModelId(id int) {
+	for i, item := range m.VisibleItems() {
+		if hostItem, ok := item.(ListItemHost); ok {
+			if hostItem.ID == id {
+				m.Select(i)
+				break
+			}
+		}
 	}
 }
