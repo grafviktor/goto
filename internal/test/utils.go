@@ -9,6 +9,11 @@ import (
 
 // CmdToMessage - should only be used in unit tests.
 func CmdToMessage(cmd tea.Cmd, messages *[]tea.Msg) {
+	if cmd == nil {
+		// Probably, there is "nil" instead of a real message. Returning.
+		return
+	}
+
 	message := cmd()
 	valueOf := reflect.ValueOf(message)
 
