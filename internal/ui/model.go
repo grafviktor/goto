@@ -97,7 +97,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Connect to focused SSH host")
 		return m, m.dispatchProcessSSHConnect(msg)
 	case message.RunProcessLoadSSHConfig:
-		m.logger.Debug("[UI] Load SSH config for focused host")
+		m.logger.Debug("[UI] Load SSH config for focused host id: %d", msg.Host.ID)
 		return m, m.dispatchProcessSSHLoadConfig(msg)
 	case message.RunProcessSuccess:
 		if msg.ProcessName == "ssh_load_config" {
