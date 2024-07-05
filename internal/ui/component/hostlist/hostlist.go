@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/samber/lo"
 
 	hostModel "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/state"
@@ -48,12 +49,12 @@ type (
 )
 
 type listModel struct {
-	innerModel list.Model
-	repo       storage.HostStorage
-	keyMap     *keyMap
-	appState   *state.ApplicationState
-	logger     iLogger
-	mode       string
+	list.Model
+	repo     storage.HostStorage
+	keyMap   *keyMap
+	appState *state.ApplicationState
+	logger   iLogger
+	mode     string
 	// That is a small optimization, as we do not want to re-read host configuration
 	// every time when we dispatch msgRefreshUI{} message.
 	prevSelectedItemID int
@@ -71,33 +72,33 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	delegateKeys := newDelegateKeyMap()
 
 	var listItems []list.Item
-	innerModel := list.New(listItems, delegate, 0, 0)
+	model := list.New(listItems, delegate, 0, 0)
 	// This line affects sorting when filtering enabled. What UnsortedFilter
 	// does - it filters the collection, but leaves initial items order unchanged.
 	// Default filter on the contrary - filters the collection based on the match rank.
-	innerModel.Filter = list.UnsortedFilter
+	model.Filter = list.UnsortedFilter
 
 	m := listModel{
-		innerModel: innerModel,
-		keyMap:     delegateKeys,
-		repo:       storage,
-		appState:   appState,
-		logger:     log,
+		Model:    model,
+		keyMap:   delegateKeys,
+		repo:     storage,
+		appState: appState,
+		logger:   log,
 	}
 
-	m.innerModel.KeyMap.CursorUp.Unbind()
-	m.innerModel.KeyMap.CursorUp = delegateKeys.cursorUp
-	m.innerModel.KeyMap.CursorDown.Unbind()
-	m.innerModel.KeyMap.CursorDown = delegateKeys.cursorDown
+	m.KeyMap.CursorUp.Unbind()
+	m.KeyMap.CursorUp = delegateKeys.cursorUp
+	m.KeyMap.CursorDown.Unbind()
+	m.KeyMap.CursorDown = delegateKeys.cursorDown
 
 	// Additional key mappings for the short and full help views. This allows
 	// you to add additional key mappings to the help menu without
 	// re-implementing the help component.
-	m.innerModel.AdditionalShortHelpKeys = delegateKeys.ShortHelp
-	m.innerModel.AdditionalFullHelpKeys = delegateKeys.FullHelp
+	m.AdditionalShortHelpKeys = delegateKeys.ShortHelp
+	m.AdditionalFullHelpKeys = delegateKeys.FullHelp
 
-	m.innerModel.Title = defaultListTitle
-	m.innerModel.SetShowStatusBar(false)
+	m.Title = defaultListTitle
+	m.SetShowStatusBar(false)
 
 	return &m
 }
@@ -114,17 +115,15 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		// Triggers immediately after app start because we render this component by default
 		h, v := docStyle.GetFrameSize()
-		m.innerModel.SetSize(msg.Width-h, msg.Height-v)
-		m.logger.Debug("[UI] Set host list size: %d %d", m.innerModel.Width(), m.innerModel.Height())
+		m.SetSize(msg.Width-h, msg.Height-v)
+		m.logger.Debug("[UI] Set host list size: %d %d", m.Width(), m.Height())
 		return m, nil
 	case MsgRefreshRepo:
 		m.logger.Debug("[UI] Load hostnames from the database")
 		return m, m.refreshRepo(msg)
 	case msgRefreshUI:
-		cmd := m.onFocusChanged(msg)
-		m.listTitleUpdate()
-		m.updateKeyMap()
-		return m, cmd
+		m.selectItemByModelID(m.appState.Selected)
+		return m, m.onFocusChanged()
 	default:
 		return m, m.updateChildModel(msg)
 	}
@@ -132,18 +131,13 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	switch {
-	case m.innerModel.SettingFilter():
+	case key.Matches(msg, m.KeyMap.AcceptWhileFiltering):
+		m.logger.Debug("[UI] Focus item while in filter mode")
+		return tea.Batch(m.updateChildModel(msg), m.onFocusChanged())
+	case m.SettingFilter():
 		m.logger.Debug("[UI] Process key message when in filter mode")
 		// If filter is enabled, we should not handle any keyboard messages,
 		// as it should be done by filter component.
-
-		// However, there is one special case, which should be taken into account:
-		// When user filters out values and presses down key on her keyboard
-		// we need to ensure that the title contains proper selection.
-		// that's why we need to invoke title update function.
-		// See https://github.com/grafviktor/goto/issues/37
-		m.listTitleUpdate()
-
 		return m.updateChildModel(msg)
 	case m.mode != modeDefault:
 		// Handle key event when some mode is enabled. For instance "removeMode".
@@ -159,36 +153,38 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, m.keyMap.clone):
 		return m.copyItem(msg)
 	case key.Matches(msg, m.keyMap.toggleLayout):
-		return m.updateChildModel(msgToggleLayout{})
+		m.updateChildModel(msgToggleLayout{})
+		// When switch between screen layouts, it's required to update pagination.
+		// ListModel's updatePagination method is private and cannot be called from
+		// here. One of the ways to trigger it is to invoke model.SetSize method.
+		m.Model.SetSize(m.Width(), m.Height())
+
+		return nil
+	case key.Matches(msg, m.Model.KeyMap.ClearFilter):
+		// When user clears the host filter, keep the focus on the selected item.
+		cmd := m.updateChildModel(msg)
+		m.selectItemByModelID(m.prevSelectedItemID)
+		return cmd
 	default:
 		// If we could not find our own update handler, we pass message to the child model
 		// otherwise we would have to implement all key handlers and other stuff by ourselves
 
-		// Dispatch 2 messages:
+		// Dispatch several messages:
 		// 1 - message which was returned from the inner model.
-		// 2 - msgRefreshUI message to update list title. We only need to dispatch it when we switch between list items.
-		return tea.Batch(m.updateChildModel(msg), message.TeaCmd(msgRefreshUI{}))
+		// 2 - messages which returned by onFocusChanged, which will trigger the SSH configuration load.
+		return tea.Sequence(m.updateChildModel(msg), m.onFocusChanged())
 	}
 }
 
 func (m *listModel) View() string {
-	return docStyle.Render(m.innerModel.View())
+	return docStyle.Render(m.Model.View())
 }
 
 func (m *listModel) updateChildModel(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
-	m.innerModel, cmd = m.innerModel.Update(msg)
+	m.Model, cmd = m.Model.Update(msg)
 
 	return cmd
-}
-
-func (m *listModel) updateKeyMap() {
-	shouldShowEditButtons := m.innerModel.SelectedItem() != nil
-
-	if shouldShowEditButtons != m.keyMap.ShouldShowEditButtons() {
-		m.logger.Debug("[UI] Show edit keyboard shortcuts: %v", shouldShowEditButtons)
-		m.keyMap.SetShouldShowEditButtons(shouldShowEditButtons)
-	}
 }
 
 func (m *listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
@@ -215,7 +211,7 @@ func (m *listModel) confirmAction() tea.Cmd {
 
 func (m *listModel) enterRemoveItemMode() tea.Cmd {
 	// Check if item is selected.
-	_, ok := m.innerModel.SelectedItem().(ListItemHost)
+	_, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Debug("[UI] Cannot remove. Item is not selected")
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
@@ -224,13 +220,17 @@ func (m *listModel) enterRemoveItemMode() tea.Cmd {
 	m.mode = modeRemoveItem
 	m.logger.Debug("[UI] Enter %s mode. Ask user for confirmation", m.mode)
 
+	// Ideally, we should not return msgRefreshUI{} from this function,
+	// but title is not getting updated. Requires investigation.
 	return message.TeaCmd(msgRefreshUI{})
 }
 
 func (m *listModel) removeItem() tea.Cmd {
 	m.logger.Debug("[UI] Remove host from the database")
-	item, ok := m.innerModel.SelectedItem().(ListItemHost)
+	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
+		// We should not be here at all, because delete
+		// button isn't available when a host is not selected.
 		m.logger.Error("[UI] Cannot cast selected item to host model")
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
@@ -241,19 +241,7 @@ func (m *listModel) removeItem() tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err})
 	}
 
-	// That's a hack! When we delete an item, the inner model automatically changes focus to an existing item
-	// without sending any notification. If we do not reset the prevSelectedItemID, the onFocusChanged function
-	// will not be triggered, and we will not load the SSH configuration for the new selected item.
-	// Probably it's worth to explicitly focus a new item after deletion.
-	m.prevSelectedItemID = -1
-
-	// This should be replaced with tea.Sequence as msgRefreshUI completes before MsgRefreshRepo, as a result,
-	// the application reads a configuration of a host which was just deleted. This bug only appears when there is
-	// only one host left in the database and we delete it.
-	return tea.Batch(
-		message.TeaCmd(MsgRefreshRepo{}),
-		message.TeaCmd(msgRefreshUI{}),
-	)
+	return message.TeaCmd(MsgRefreshRepo{})
 }
 
 func (m *listModel) refreshRepo(_ tea.Msg) tea.Cmd {
@@ -276,28 +264,18 @@ func (m *listModel) refreshRepo(_ tea.Msg) tea.Cmd {
 		items = append(items, ListItemHost{Host: h})
 	}
 
-	setItemsCmd := m.innerModel.SetItems(items)
+	setItemsCmd := m.SetItems(items)
 
-	// we restore selected item from application configuration
-	for uiIndex, listItem := range m.innerModel.VisibleItems() {
-		if hostItem, ok := listItem.(ListItemHost); ok {
-			if m.appState.Selected == hostItem.ID {
-				m.innerModel.Select(uiIndex)
-				break
-			}
-		}
-	}
-
-	return tea.Batch(setItemsCmd, message.TeaCmd(msgRefreshUI{}))
+	return tea.Sequence(setItemsCmd, message.TeaCmd(msgRefreshUI{}))
 }
 
 func (m *listModel) editItem(_ tea.Msg) tea.Cmd {
-	item, ok := m.innerModel.SelectedItem().(ListItemHost)
+	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
-	m.logger.Info("[UI] Edit item id: %d, title: %s", item.ID, item.Title)
+	m.logger.Info("[UI] Edit item id: %d, title: %s", item.ID, item.Title())
 	return tea.Sequence(
 		message.TeaCmd(OpenEditForm{HostID: item.ID}),
 		// Load SSH config for the selected host
@@ -306,7 +284,7 @@ func (m *listModel) editItem(_ tea.Msg) tea.Cmd {
 }
 
 func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
-	item, ok := m.innerModel.SelectedItem().(ListItemHost)
+	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Error("[UI] Cannot cast selected item to host model")
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
@@ -317,7 +295,7 @@ func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
 	clonedHost := originalHost.Clone()
 	for i := 1; ok; i++ {
 		clonedHostTitle := fmt.Sprintf("%s (%d)", originalHost.Title, i)
-		listItems := m.innerModel.Items()
+		listItems := m.Items()
 		idx := slices.IndexFunc(listItems, func(li list.Item) bool {
 			return li.(ListItemHost).Title() == clonedHostTitle
 		})
@@ -332,12 +310,11 @@ func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err})
 	}
 
-	// Do not need to dispatch msgRefreshUI{} here as onFocus change event will trigger anyway
 	return message.TeaCmd(MsgRefreshRepo{})
 }
 
 func (m *listModel) constructProcessCmd(_ tea.KeyMsg) tea.Cmd {
-	item, ok := m.innerModel.SelectedItem().(ListItemHost)
+	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Error("[UI] Cannot cast selected item to host model")
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
@@ -346,37 +323,17 @@ func (m *listModel) constructProcessCmd(_ tea.KeyMsg) tea.Cmd {
 	return message.TeaCmd(message.RunProcessConnectSSH{Host: item.Host})
 }
 
-func (m *listModel) listTitleUpdate() {
-	var newTitle string
+func (m *listModel) onFocusChanged() tea.Cmd {
+	m.listTitleUpdate()
+	m.updateKeyMap()
 
-	item, ok := m.innerModel.SelectedItem().(ListItemHost)
-
-	switch {
-	case !ok:
-		newTitle = defaultListTitle
-	case m.mode == modeRemoveItem:
-		newTitle = fmt.Sprintf("delete \"%s\" ? (y/N)", item.Title())
-	default:
-		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
-		newTitle = strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
-		newTitle = utils.RemoveDuplicateSpaces(newTitle)
-	}
-
-	if m.innerModel.Title != newTitle {
-		m.innerModel.Title = newTitle
-		m.logger.Debug("[UI] New list title: %s", m.innerModel.Title)
-	}
-}
-
-func (m *listModel) onFocusChanged(_ tea.Msg) tea.Cmd {
-	if m.innerModel.SelectedItem() == nil {
+	if m.SelectedItem() == nil {
 		m.logger.Debug("[UI] Focus is not set to any item in the list")
-		// Here we can set the default focus to the first item in the list.
 		return nil
 	}
 
-	if hostItem, ok := m.innerModel.SelectedItem().(ListItemHost); ok {
-		m.logger.Debug("[UI] Prev item: %v, Curr item: %v", m.prevSelectedItemID, hostItem.ID)
+	if hostItem, ok := m.SelectedItem().(ListItemHost); ok {
+		m.logger.Debug("[UI] Check if selection changed. Prev item: %v, Curr item: %v", m.prevSelectedItemID, hostItem.ID)
 		if m.prevSelectedItemID != hostItem.ID {
 			m.prevSelectedItemID = hostItem.ID
 			m.logger.Debug("[UI] Focus changed to host id: %v, title: %s", hostItem.ID, hostItem.Title())
@@ -390,4 +347,46 @@ func (m *listModel) onFocusChanged(_ tea.Msg) tea.Cmd {
 	}
 
 	return nil
+}
+
+func (m *listModel) listTitleUpdate() {
+	var newTitle string
+
+	item, ok := m.SelectedItem().(ListItemHost)
+
+	switch {
+	case !ok:
+		newTitle = defaultListTitle
+	case m.mode == modeRemoveItem:
+		newTitle = fmt.Sprintf("delete \"%s\" ? (y/N)", item.Title())
+	default:
+		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
+		newTitle = strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
+		newTitle = utils.RemoveDuplicateSpaces(newTitle)
+	}
+
+	if m.Title != newTitle {
+		m.Title = newTitle
+		m.logger.Debug("[UI] New list title: %s", m.Title)
+	}
+}
+
+func (m *listModel) updateKeyMap() {
+	shouldShowEditButtons := m.SelectedItem() != nil
+
+	if shouldShowEditButtons != m.keyMap.ShouldShowEditButtons() {
+		m.logger.Debug("[UI] Show edit keyboard shortcuts: %v", shouldShowEditButtons)
+		m.keyMap.SetShouldShowEditButtons(shouldShowEditButtons)
+	}
+}
+
+func (m *listModel) selectItemByModelID(id int) {
+	_, index, found := lo.FindIndexOf(m.VisibleItems(), func(item list.Item) bool {
+		hostItem, ok := item.(ListItemHost)
+		return ok && hostItem.ID == id
+	})
+
+	if found {
+		m.Select(index)
+	}
 }

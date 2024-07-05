@@ -97,7 +97,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Connect to focused SSH host")
 		return m, m.dispatchProcessSSHConnect(msg)
 	case message.RunProcessLoadSSHConfig:
-		m.logger.Debug("[UI] Load SSH config for focused host")
+		m.logger.Debug("[UI] Load SSH config for focused host id: %d", msg.Host.ID)
 		return m, m.dispatchProcessSSHLoadConfig(msg)
 	case message.RunProcessSuccess:
 		if msg.ProcessName == "ssh_load_config" {
@@ -129,12 +129,13 @@ func (m *mainModel) View() string {
 	// Build UI
 	var content string
 	switch m.appState.CurrentView {
+	case state.ViewHostList:
+		// Do not use viewport for HostList view. It's already scrollable.
+		return m.modelHostList.View()
 	case state.ViewErrorMessage:
 		content = m.appState.Err.Error()
 	case state.ViewEditItem:
 		content = m.modelHostEdit.View()
-	case state.ViewHostList:
-		content = m.modelHostList.View()
 	}
 
 	// Wrap UI into the ViewPort

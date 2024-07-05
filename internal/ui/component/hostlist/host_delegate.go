@@ -51,5 +51,5 @@ func (hd *hostDelegate) updateLayout() {
 		hd.ShowDescription = true
 	}
 
-	hd.logger.Debug("[UI] Change screen layout to: %s", *hd.layout)
+	hd.logger.Debug("[UI] Change screen layout to: '%s'", *hd.layout)
 }

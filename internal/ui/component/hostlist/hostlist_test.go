@@ -3,7 +3,6 @@ package hostlist
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -24,12 +23,12 @@ func Test_ListTitleUpdate(t *testing.T) {
 	lm.logger = &test.MockLogger{}
 
 	// Select host
-	lm.innerModel.Select(0)
+	lm.Select(0)
 
 	// Apply the function
 	lm.listTitleUpdate()
 
-	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", lm.innerModel.Title)
+	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", lm.Title)
 }
 
 func Test_listModel_Change_Selection(t *testing.T) {
@@ -76,13 +75,13 @@ func Test_listModel_Change_Selection(t *testing.T) {
 			model := *NewMockListModel(false)
 			// Select item at index 1. We need this preselection in order
 			// to test 'focus previous' and 'focus next' messages
-			model.innerModel.Select(1)
+			model.Select(1)
 
 			// Receive updated model
 			model.Update(tt.KeyMsg)
 
 			// Check if the selected index is correct
-			require.Equal(t, tt.expectedSelectionIndex, model.innerModel.Index())
+			require.Equal(t, tt.expectedSelectionIndex, model.Index())
 		})
 	}
 }
@@ -117,7 +116,7 @@ func TestRemoveItem(t *testing.T) {
 			name:          "Remove item success",
 			model:         *NewMockListModel(false),
 			mode:          modeRemoveItem,
-			want:          tea.BatchMsg{},
+			want:          MsgRefreshRepo{},
 			expectedItems: 2,
 		},
 		{
@@ -140,7 +139,7 @@ func TestRemoveItem(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.model.logger = &test.MockLogger{}
 			// Preselect item
-			tt.model.innerModel.Select(tt.preselectItem)
+			tt.model.Select(tt.preselectItem)
 			// Set mode removeMode
 			tt.model.mode = tt.mode
 			// Call remove function
@@ -189,7 +188,7 @@ func TestEnterRemoveItemMode(t *testing.T) {
 	model := *NewMockListModel(false)
 	model.logger = &test.MockLogger{}
 	// Select non-existent index
-	model.innerModel.Select(10)
+	model.Select(10)
 	// Call enterRemoveItemMode function
 	cmd := model.enterRemoveItemMode()
 	// and make sure that mode is unchanged
@@ -201,7 +200,7 @@ func TestEnterRemoveItemMode(t *testing.T) {
 	model = *NewMockListModel(false)
 	model.logger = &test.MockLogger{}
 	// Select a first item, which is valid
-	model.innerModel.Select(0)
+	model.Select(0)
 	// Call enterRemoveItemMode function
 	cmd = model.enterRemoveItemMode()
 	// Ensure that we entered remove mode
@@ -215,7 +214,7 @@ func TestExitRemoveItemMode(t *testing.T) {
 	model := *NewMockListModel(false)
 	model.logger = &test.MockLogger{}
 	// Select a first item, which is valid
-	model.innerModel.Select(0)
+	model.Select(0)
 	// Call enterRemoveItemMode function
 	model.enterRemoveItemMode()
 	// Ensure that we entered remove mode
@@ -239,7 +238,7 @@ func TestListTitleUpdate(t *testing.T) {
 	model := *NewMockListModel(false)
 	model.logger = &test.MockLogger{}
 	// Select non-existent item
-	model.innerModel.Select(10)
+	model.Select(10)
 	// Call listTitleUpdate function, but it will fail, however without throwing any errors
 	model.listTitleUpdate()
 	// Check that model is not nil
@@ -249,23 +248,23 @@ func TestListTitleUpdate(t *testing.T) {
 	model = *NewMockListModel(false)
 	model.logger = &test.MockLogger{}
 	// Select a host by valid index
-	model.innerModel.Select(0)
+	model.Select(0)
 	// Enter remove mode
 	model.enterRemoveItemMode()
 	// Call listTitleUpdate function
 	model.listTitleUpdate()
 	// Check that app is now asking for a confirmation before delete
-	require.Equal(t, "delete \"Mock Host 1\" ? (y/N)", model.innerModel.Title)
+	require.Equal(t, "delete \"Mock Host 1\" ? (y/N)", model.Title)
 
 	// 3 Call listTitleUpdate selected a host
 	model = *NewMockListModel(false)
 	model.logger = &test.MockLogger{}
 	// Select a host by valid index
-	model.innerModel.Select(0)
+	model.Select(0)
 	// Call listTitleUpdate function
 	model.listTitleUpdate()
 	// Check that app is displaying ssh connection string
-	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", model.innerModel.Title)
+	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", model.Title)
 }
 
 func TestListModel_title_when_app_just_starts(t *testing.T) {
@@ -273,23 +272,27 @@ func TestListModel_title_when_app_just_starts(t *testing.T) {
 	model := *NewMockListModel(false)
 	model.logger = &test.MockLogger{}
 	// When app just starts, it should display "press 'n' to add a new host"
-	require.Equal(t, "press 'n' to add a new host", model.innerModel.Title)
+	require.Equal(t, "press 'n' to add a new host", model.Title)
 	// When press 'down' key, it should display a proper ssh connection string
 	model.Update(tea.KeyMsg{Type: tea.KeyDown})
 	// Calling refresh UI manually, otherwise would have to put time.Sleep function
 	model.Update(msgRefreshUI{})
-	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", model.innerModel.Title)
+	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", model.Title)
 }
 
 func TestListModel_title_when_filter_is_enabled(t *testing.T) {
 	// Test bugfix for https://github.com/grafviktor/goto/issues/37
 	model := *NewMockListModel(false)
 	model.logger = &test.MockLogger{}
+	assert.Equal(t, model.FilterState(), list.Unfiltered)
 	// Enable filter
 	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	assert.Equal(t, model.FilterState(), list.Filtering)
+	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}})
 	// Press down key and make sure that title is properly updated
 	model.Update(tea.KeyMsg{Type: tea.KeyDown})
-	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", model.innerModel.Title)
+	assert.Equal(t, model.FilterState(), list.FilterApplied)
+	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", model.Title)
 }
 
 func TestListModel_refreshRepo(t *testing.T) {
@@ -299,25 +302,16 @@ func TestListModel_refreshRepo(t *testing.T) {
 	fakeAppState := state.ApplicationState{Selected: 1}
 	lm := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
 	teaCmd := lm.refreshRepo(nil)
-	result := teaCmd().(tea.BatchMsg)
-	receivedMsgRefresh := false
 
-	for _, v := range result {
-		if reflect.TypeOf(v).Kind() == reflect.Func {
-			msg := v()
-			if reflect.TypeOf(msg).String() == "hostlist.msgRefreshUI" {
-				receivedMsgRefresh = true
-			}
-		}
-	}
+	var dst []tea.Msg
+	test.CmdToMessage(teaCmd, &dst)
+	require.Contains(t, dst, msgRefreshUI{})
 
 	// Check that hosts are filtered by Title
-	require.Equal(t, "Mock Host 1", lm.innerModel.Items()[0].(ListItemHost).Title())
-	require.Equal(t, "Mock Host 2", lm.innerModel.Items()[1].(ListItemHost).Title())
+	require.Equal(t, "Mock Host 1", lm.Items()[0].(ListItemHost).Title())
+	require.Equal(t, "Mock Host 2", lm.Items()[1].(ListItemHost).Title())
 	// Check that currently selected item is "1", as it is set in the fakeAppState object
-	require.Equal(t, 1, lm.innerModel.SelectedItem().(ListItemHost).ID)
-	// Check that msgRefreshUI{} was found among returned messages, which indicate normal function return
-	require.True(t, receivedMsgRefresh)
+	require.Equal(t, 1, lm.SelectedItem().(ListItemHost).ID)
 
 	// Now test refreshRepo function simulating a broken storage
 	storageShouldFail = true
@@ -368,7 +362,7 @@ func TestListModel_editItem(t *testing.T) {
 	test.CmdToMessage(teaCmd, &dst)
 
 	require.Contains(t, dst, OpenEditForm{HostID: 1})
-	require.Contains(t, dst, message.RunProcessLoadSSHConfig{Host: lm.innerModel.SelectedItem().(ListItemHost).Host})
+	require.Contains(t, dst, message.RunProcessLoadSSHConfig{Host: lm.SelectedItem().(ListItemHost).Host})
 }
 
 func TestListModel_copyItem(t *testing.T) {
@@ -433,8 +427,8 @@ func TestUpdate_TeaSizeMsg(t *testing.T) {
 	model.logger = &test.MockLogger{}
 	model.Update(tea.WindowSizeMsg{Width: 100, Height: 100})
 
-	require.Greater(t, model.innerModel.Height(), 0)
-	require.Greater(t, model.innerModel.Width(), 0)
+	require.Greater(t, model.Height(), 0)
+	require.Greater(t, model.Width(), 0)
 }
 
 func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
@@ -453,7 +447,7 @@ func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
 	model.refreshRepo(nil)
 
 	// Make sure there are 3 items in the collection
-	assert.Len(t, model.innerModel.VisibleItems(), 3)
+	assert.Len(t, model.VisibleItems(), 3)
 
 	// Enable filtering mode
 	model.Update(tea.KeyMsg{
@@ -464,7 +458,7 @@ func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
 	})
 
 	// Check that filtering mode is enabled
-	assert.True(t, model.innerModel.SettingFilter())
+	assert.True(t, model.SettingFilter())
 
 	// Now press "1" button. Only one item should left in the host list - with title: "Mock Host 1"
 	_, cmds := model.Update(tea.KeyMsg{
@@ -482,7 +476,7 @@ func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
 	}
 
 	// Ensure, that only one item left in the list (which is "Mock Host 1")
-	require.Len(t, model.innerModel.VisibleItems(), 1)
+	require.Len(t, model.VisibleItems(), 1)
 }
 
 func TestUpdate_ToggleBetweenNormalAndCompactLayout(t *testing.T) {
@@ -499,7 +493,7 @@ func TestUpdate_ToggleBetweenNormalAndCompactLayout(t *testing.T) {
 	model.refreshRepo(nil)
 
 	// Make sure there are 3 items in the collection
-	assert.Len(t, model.innerModel.VisibleItems(), 3)
+	assert.Len(t, model.VisibleItems(), 3)
 	// Ensure that screen layout is not set
 	layoutNotSet := constant.ScreenLayout("")
 	assert.Equal(t, fakeAppState.ScreenLayout, layoutNotSet)
@@ -535,6 +529,54 @@ func TestBuildScreenLayout(t *testing.T) {
 	require.False(t, screenLayoutDelegate.ShowDescription)
 }
 
+func TestUpdate_HostFocusPreservedAfterClearFilterMessage(t *testing.T) {
+	// Test that the same host is selected after we exit filter mode (clear filter with "Esc" button)
+
+	// Create mock storage which contains hosts:
+	// "Mock Host 1"
+	// "Mock Host 2"
+	// "Mock Host 3"
+	storage := test.NewMockStorage(false)
+	fakeAppState := state.ApplicationState{Selected: 1}
+
+	// Create model
+	model := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
+	model.logger = &test.MockLogger{}
+	model.refreshRepo(nil)
+
+	// Make sure there are 3 items in the collection
+	assert.Len(t, model.VisibleItems(), 3)
+
+	// Check that first item is selected
+	assert.IsType(t, ListItemHost{}, model.SelectedItem())
+	assert.Equal(t, "Mock Host 1", model.SelectedItem().(ListItemHost).Title())
+
+	// Check that current status is "Unfiltered" and then enter filtering mode
+	assert.Equal(t, list.Unfiltered, model.FilterState())
+	model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune{'/'},
+	})
+	assert.Equal(t, list.Filtering, model.FilterState())
+
+	// When in filter mode type '2', so only "Mock Host 2" will become visible
+	_, cmds := model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune{'2'},
+	})
+
+	// Extract batch messages returned by the model
+	msgs := []tea.Msg{}
+	test.CmdToMessage(cmds, &msgs)
+
+	// Send those messages back to the model
+	for _, m := range msgs {
+		model.Update(m)
+	}
+
+	assert.Len(t, model.VisibleItems(), 1)
+}
+
 // ==============================================
 // ============================================== List Model
 // ==============================================
@@ -552,7 +594,7 @@ func NewMockListModel(storageShouldFail bool) *listModel {
 		items = append(items, ListItemHost{Host: h})
 	}
 
-	lm.innerModel.SetItems(items)
+	lm.SetItems(items)
 
 	return lm
 }
