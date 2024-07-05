@@ -529,6 +529,54 @@ func TestBuildScreenLayout(t *testing.T) {
 	require.False(t, screenLayoutDelegate.ShowDescription)
 }
 
+func TestUpdate_HostFocusPreservedAfterClearFilterMessage(t *testing.T) {
+	// Test that the same host is selected after we exit filter mode (clear filter with "Esc" button)
+
+	// Create mock storage which contains hosts:
+	// "Mock Host 1"
+	// "Mock Host 2"
+	// "Mock Host 3"
+	storage := test.NewMockStorage(false)
+	fakeAppState := state.ApplicationState{Selected: 1}
+
+	// Create model
+	model := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
+	model.logger = &test.MockLogger{}
+	model.refreshRepo(nil)
+
+	// Make sure there are 3 items in the collection
+	assert.Len(t, model.VisibleItems(), 3)
+
+	// Check that first item is selected
+	assert.IsType(t, ListItemHost{}, model.SelectedItem())
+	assert.Equal(t, "Mock Host 1", model.SelectedItem().(ListItemHost).Title())
+
+	// Check that current status is "Unfiltered" and then enter filtering mode
+	assert.Equal(t, list.Unfiltered, model.FilterState())
+	model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune{'/'},
+	})
+	assert.Equal(t, list.Filtering, model.FilterState())
+
+	// When in filter mode type '2', so only "Mock Host 2" will become visible
+	_, cmds := model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune{'2'},
+	})
+
+	// Extract batch messages returned by the model
+	msgs := []tea.Msg{}
+	test.CmdToMessage(cmds, &msgs)
+
+	// Send those messages back to the model
+	for _, m := range msgs {
+		model.Update(m)
+	}
+
+	assert.Len(t, model.VisibleItems(), 1)
+}
+
 // ==============================================
 // ============================================== List Model
 // ==============================================
