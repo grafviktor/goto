@@ -279,7 +279,7 @@ func (m *listModel) editItem(_ tea.Msg) tea.Cmd {
 	return tea.Sequence(
 		message.TeaCmd(OpenEditForm{HostID: item.ID}),
 		// Load SSH config for the selected host
-		message.TeaCmd(message.RunProcessLoadSSHConfig{Host: item.Host}),
+		message.TeaCmd(message.RunProcessSSHLoadConfig{Host: item.Host}),
 	)
 }
 
@@ -320,7 +320,7 @@ func (m *listModel) constructProcessCmd(_ tea.KeyMsg) tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
-	return message.TeaCmd(message.RunProcessConnectSSH{Host: item.Host})
+	return message.TeaCmd(message.RunProcessSSHConnect{Host: item.Host})
 }
 
 func (m *listModel) onFocusChanged() tea.Cmd {
@@ -339,7 +339,7 @@ func (m *listModel) onFocusChanged() tea.Cmd {
 			m.logger.Debug("[UI] Focus changed to host id: %v, title: %s", hostItem.ID, hostItem.Title())
 			return tea.Batch(
 				message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
-				message.TeaCmd(message.RunProcessLoadSSHConfig{Host: hostItem.Host}),
+				message.TeaCmd(message.RunProcessSSHLoadConfig{Host: hostItem.Host}),
 			)
 		}
 	} else {

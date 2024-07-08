@@ -23,10 +23,12 @@ type (
 	// HostSSHConfigLoaded triggers when app loads a host config using ssh -G <hostname>.
 	// The config is stored in main model: m.appState.HostSSHConfig.
 	HostSSHConfigLoaded struct{ Config ssh.Config }
-	// RunProcessConnectSSH is dispatched when user wants to connect to a host.
-	RunProcessConnectSSH struct{ Host host.Host }
-	// RunProcessLoadSSHConfig is dispatched it's required to read .ssh/config file for a certain host.
-	RunProcessLoadSSHConfig struct{ Host host.Host }
+	// RunProcessSSHConnect is dispatched when user wants to connect to a host.
+	RunProcessSSHConnect struct{ Host host.Host }
+	// RunProcessSSHLoadConfig is dispatched it's required to read .ssh/config file for a certain host.
+	RunProcessSSHLoadConfig struct{ Host host.Host }
+	// RunProcessSSHCopyID is dispatched when user wants to copy SSH key to a remote host.
+	RunProcessSSHCopyID struct{ Host host.Host }
 	// RunProcessErrorOccurred fires when there is an error executing an external process.
 	RunProcessErrorOccurred struct {
 		Name string

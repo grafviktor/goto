@@ -362,7 +362,7 @@ func TestListModel_editItem(t *testing.T) {
 	test.CmdToMessage(teaCmd, &dst)
 
 	require.Contains(t, dst, OpenEditForm{HostID: 1})
-	require.Contains(t, dst, message.RunProcessLoadSSHConfig{Host: lm.SelectedItem().(ListItemHost).Host})
+	require.Contains(t, dst, message.RunProcessSSHLoadConfig{Host: lm.SelectedItem().(ListItemHost).Host})
 }
 
 func TestListModel_copyItem(t *testing.T) {

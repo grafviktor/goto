@@ -53,6 +53,7 @@ func addOption(sb *strings.Builder, rawParameter Option) {
 	sb.WriteString(option)
 }
 
+// TODO: Move to command.go
 var baseCmd = BaseCMD()
 
 // ConnectCommand - builds ssh command to connect to a remote host.
@@ -73,6 +74,20 @@ func LoadConfigCommand(option OptionReadConfig) string {
 	sb.WriteString(baseCmd)
 
 	addOption(&sb, option)
+
+	return sb.String()
+}
+
+// CopyIDCommand - builds ssh command to copy ssh key to a remote host.
+func CopyIDCommand(options ...Option) string {
+	sb := strings.Builder{}
+	// FIXME: Not compatible with Windows OS
+	baseCmd := "ssh-copy-id"
+	sb.WriteString(baseCmd)
+
+	for _, option := range options {
+		addOption(&sb, option)
+	}
 
 	return sb.String()
 }

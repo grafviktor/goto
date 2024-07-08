@@ -36,7 +36,7 @@ type (
 	MsgClose struct{}
 	// MsgSave triggers when users saves results.
 	MsgSave struct{}
-	// debouncedMessage is used to trigger side effects. For instance dispatch RunProcessLoadSSHConfig
+	// debouncedMessage is used to trigger side effects. For instance dispatch RunProcessSSHLoadConfig
 	// which reads host config from ~/.ssh/config file.
 	debouncedMessage struct {
 		wrappedMsg  tea.Msg
@@ -370,7 +370,7 @@ func (m *editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 		if previousValue != currentValue {
 			// Load SSH config for the specified hostname
 			cmd = message.TeaCmd(debouncedMessage{
-				wrappedMsg:  message.RunProcessLoadSSHConfig{Host: *m.host.Host},
+				wrappedMsg:  message.RunProcessSSHLoadConfig{Host: *m.host.Host},
 				debounceTag: m.debounceTag, // See the comments in debouncedMessage definition.
 			})
 		}

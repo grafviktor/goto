@@ -145,7 +145,7 @@ func TestBuildProcess(t *testing.T) {
 
 func TestBuildConnectSSH(t *testing.T) {
 	// Test case: Build SSH sanity check
-	cmd := BuildConnectSSH("ssh localhost")
+	cmd := BuildProcessInterceptStdErr("ssh localhost")
 
 	// Check that cmd is created and stdErr is re-defined
 	require.NotNil(t, cmd)
@@ -155,7 +155,7 @@ func TestBuildConnectSSH(t *testing.T) {
 
 func TestBuildLoadSSHConfig(t *testing.T) {
 	// Test case: Load SSH config sanity check
-	cmd := BuildLoadSSHConfig("localhost")
+	cmd := BuildProcessInterceptStdAll("localhost")
 
 	// Check that cmd is created and stdErr and stdOut are re-defined
 	require.NotNil(t, cmd)

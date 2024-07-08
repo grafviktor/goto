@@ -93,10 +93,10 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case hostedit.MsgClose:
 		m.logger.Debug("[UI] Close host edit form")
 		m.appState.CurrentView = state.ViewHostList
-	case message.RunProcessConnectSSH:
+	case message.RunProcessSSHConnect:
 		m.logger.Debug("[UI] Connect to focused SSH host")
 		return m, m.dispatchProcessSSHConnect(msg)
-	case message.RunProcessLoadSSHConfig:
+	case message.RunProcessSSHLoadConfig:
 		m.logger.Debug("[UI] Load SSH config for focused host id: %d", msg.Host.ID)
 		return m, m.dispatchProcessSSHLoadConfig(msg)
 	case message.RunProcessSuccess:
@@ -234,19 +234,28 @@ func (m *mainModel) dispatchProcess(name string, process *exec.Cmd, inBackground
 	return tea.ExecProcess(process, onProcessExitCallback)
 }
 
-func (m *mainModel) dispatchProcessSSHConnect(msg message.RunProcessConnectSSH) tea.Cmd {
+func (m *mainModel) dispatchProcessSSHConnect(msg message.RunProcessSSHConnect) tea.Cmd {
 	m.logger.Debug("[EXEC] Build ssh connect command for hostname: %v, title: %v", msg.Host.Address, msg.Host.Title)
-	process := utils.BuildConnectSSH(msg.Host.CmdSSHConnect())
+	process := utils.BuildProcessInterceptStdErr(msg.Host.CmdSSHConnect())
 	m.logger.Info("[EXEC] Run process: '%s'", process.String())
 
 	return m.dispatchProcess("ssh_connect_host", process, false, false)
 }
 
-func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessLoadSSHConfig) tea.Cmd {
+func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadConfig) tea.Cmd {
 	m.logger.Debug("[EXEC] Read ssh configuration for host: %+v", msg.Host)
-	process := utils.BuildLoadSSHConfig(msg.Host.CmdSSHConfig())
+	process := utils.BuildProcessInterceptStdAll(msg.Host.CmdSSHConfig())
 	m.logger.Info("[EXEC] Run process: '%s'", process.String())
 
 	// Should run in non-blocking fashion for ssh load config
 	return m.dispatchProcess("ssh_load_config", process, true, true)
+}
+
+func (m *mainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) tea.Cmd {
+	m.logger.Debug("[EXEC] Copy ssh-key to host: %+v", msg.Host)
+	process := utils.BuildProcessInterceptStdAll(msg.Host.CmdSSHCopyID())
+	m.logger.Info("[EXEC] Run process: '%s'", process.String())
+
+	// Should run in non-blocking fashion for ssh load config
+	return m.dispatchProcess("ssh_copy_id", process, true, true)
 }

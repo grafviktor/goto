@@ -82,3 +82,19 @@ func (h *Host) CmdSSHConnect() string {
 func (h *Host) CmdSSHConfig() string {
 	return ssh.LoadConfigCommand(ssh.OptionReadConfig{Value: h.Address})
 }
+
+func (h *Host) CmdSSHCopyID() string {
+	user := h.DefaultSSHConfig.User
+	port := h.DefaultSSHConfig.Port
+	identityFile := h.DefaultSSHConfig.IdentityFile
+
+	// FIXME: Should use address from the config struct as in the hostlist instead of a real hostname user can put ssh_config alias.
+	// hostname := h.DefaultSSHConfig.Hostname
+
+	return ssh.CopyIDCommand(
+		ssh.OptionLoginName{Value: user},
+		ssh.OptionRemotePort{Value: port},
+		ssh.OptionPrivateKey{Value: identityFile},
+		// ssh.OptionAddress{Value: hostname},
+	)
+}
