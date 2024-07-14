@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/grafviktor/goto/internal/utils"
@@ -77,6 +78,12 @@ func LoadConfigCommand(option OptionReadConfig) string {
 
 	return sb.String()
 }
+
+var usernameRe = regexp.MustCompile(`.*-l\s(.*[^\r\n\s])\s`)
+
+// func sshCopyIDOptionsAdaptor(cmd string) string {
+// 	username := usernameRe.FindStringSubmatch(cmd)
+// }
 
 // CopyIDCommand - builds ssh command to copy ssh key to a remote host.
 func CopyIDCommand(options ...Option) string {

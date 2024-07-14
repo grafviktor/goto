@@ -29,7 +29,7 @@ type Host struct {
 	RemotePort       string      `yaml:"network_port,omitempty"`
 	LoginName        string      `yaml:"username,omitempty"`
 	IdentityFilePath string      `yaml:"identity_file_path,omitempty"`
-	DefaultSSHConfig *ssh.Config `yaml:"-"`
+	SSHClientConfig  *ssh.Config `yaml:"-"`
 }
 
 // Clone host model.
@@ -83,18 +83,17 @@ func (h *Host) CmdSSHConfig() string {
 	return ssh.LoadConfigCommand(ssh.OptionReadConfig{Value: h.Address})
 }
 
+// CmdSSHCopyID - returns SSH command for copying SSH key to a remote host (see ssh-copy-id).
 func (h *Host) CmdSSHCopyID() string {
-	user := h.DefaultSSHConfig.User
-	port := h.DefaultSSHConfig.Port
-	identityFile := h.DefaultSSHConfig.IdentityFile
-
-	// FIXME: Should use address from the config struct as in the hostlist instead of a real hostname user can put ssh_config alias.
-	// hostname := h.DefaultSSHConfig.Hostname
+	hostname := h.SSHClientConfig.Hostname
+	identityFile := h.SSHClientConfig.IdentityFile
+	port := h.SSHClientConfig.Port
+	user := h.SSHClientConfig.User
 
 	return ssh.CopyIDCommand(
 		ssh.OptionLoginName{Value: user},
 		ssh.OptionRemotePort{Value: port},
 		ssh.OptionPrivateKey{Value: identityFile},
-		// ssh.OptionAddress{Value: hostname},
+		ssh.OptionAddress{Value: hostname},
 	)
 }

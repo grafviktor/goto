@@ -9,6 +9,7 @@ type keyMap struct {
 	cursorUp              key.Binding
 	cursorDown            key.Binding
 	connect               key.Binding
+	copyID                key.Binding
 	append                key.Binding
 	clone                 key.Binding
 	edit                  key.Binding
@@ -32,6 +33,10 @@ func newDelegateKeyMap() *keyMap {
 			key.WithKeys("enter"),
 			key.WithHelp("↩", "connect"),
 		),
+		copyID: key.NewBinding(
+			key.WithKeys("t"),
+			key.WithHelp("t", "ssh copy id"),
+		),
 		append: key.NewBinding(
 			key.WithKeys("n"),
 			key.WithHelp("n", "new"),
@@ -50,7 +55,7 @@ func newDelegateKeyMap() *keyMap {
 		),
 		toggleLayout: key.NewBinding(
 			key.WithKeys("v"),
-			key.WithHelp("v", "view"),
+			key.WithHelp("v", "view toggle"),
 		),
 		confirm: key.NewBinding(
 			key.WithKeys("y", "Y"),
@@ -66,6 +71,7 @@ func (k *keyMap) SetShouldShowEditButtons(val bool) {
 	k.shouldShowEditButtons = val
 	k.clone.SetEnabled(val)
 	k.connect.SetEnabled(val)
+	k.copyID.SetEnabled(val)
 	k.cursorDown.SetEnabled(val)
 	k.cursorUp.SetEnabled(val)
 	k.edit.SetEnabled(val)
@@ -94,6 +100,7 @@ func (k *keyMap) ShortHelp() []key.Binding {
 func (k *keyMap) FullHelp() []key.Binding {
 	return []key.Binding{
 		k.connect,
+		k.copyID,
 		k.append,
 		k.clone,
 		k.edit,

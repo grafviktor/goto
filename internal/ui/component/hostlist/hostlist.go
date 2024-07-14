@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/grafviktor/goto/internal/constant"
+
 	"golang.org/x/exp/slices"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -124,6 +126,9 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case msgRefreshUI:
 		m.selectItemByModelID(m.appState.Selected)
 		return m, m.onFocusChanged()
+	case message.HostSSHConfigLoaded:
+		m.handleHostSSHConfigLoaded(msg)
+		return m, nil
 	default:
 		return m, m.updateChildModel(msg)
 	}
@@ -143,7 +148,9 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		// Handle key event when some mode is enabled. For instance "removeMode".
 		return m.handleKeyEventWhenModeEnabled(msg)
 	case key.Matches(msg, m.keyMap.connect):
-		return m.constructProcessCmd(msg)
+		return m.constructProcessCmd(constant.ProcessTypeSSHConnect)
+	case key.Matches(msg, m.keyMap.copyID):
+		return m.constructProcessCmd(constant.ProcessTypeSSHCopyID)
 	case key.Matches(msg, m.keyMap.remove):
 		return m.enterRemoveItemMode()
 	case key.Matches(msg, m.keyMap.edit):
@@ -313,14 +320,20 @@ func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
 	return message.TeaCmd(MsgRefreshRepo{})
 }
 
-func (m *listModel) constructProcessCmd(_ tea.KeyMsg) tea.Cmd {
+func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cmd {
 	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Error("[UI] Cannot cast selected item to host model")
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
-	return message.TeaCmd(message.RunProcessSSHConnect{Host: item.Host})
+	if processType == constant.ProcessTypeSSHConnect {
+		return message.TeaCmd(message.RunProcessSSHConnect{Host: item.Host})
+	} else if processType == constant.ProcessTypeSSHCopyID {
+		return message.TeaCmd(message.RunProcessSSHCopyID{Host: item.Host})
+	}
+
+	return nil
 }
 
 func (m *listModel) onFocusChanged() tea.Cmd {
@@ -388,5 +401,12 @@ func (m *listModel) selectItemByModelID(id int) {
 
 	if found {
 		m.Select(index)
+	}
+}
+
+func (m *listModel) handleHostSSHConfigLoaded(msg message.HostSSHConfigLoaded) {
+	if hostListItem, ok := m.SelectedItem().(ListItemHost); ok {
+		hostListItem.SSHClientConfig = &msg.Config
+		m.SetItem(m.Index(), hostListItem)
 	}
 }

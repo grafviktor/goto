@@ -9,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/model/ssh"
 )
@@ -36,7 +37,7 @@ type (
 	}
 	// RunProcessSuccess fires when external process exits normally.
 	RunProcessSuccess struct {
-		ProcessName string
+		ProcessType constant.ProcessType
 		Output      *string
 	}
 )

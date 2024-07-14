@@ -9,17 +9,20 @@ import (
 // Config struct contains values loaded from ~/.ssh_config file.
 type Config struct {
 	// Values which should be extracted from 'ssh -G <hostname>' command:
-	// 1. 'identityfile'
-	// 2. 'user'
+	// 1. 'hostname'
+	// 2. 'identityfile'
 	// 3. 'port'
+	// 4. 'user'
+	Hostname     string
 	IdentityFile string
-	User         string
 	Port         string
+	User         string
 }
 
 // Parse - parses 'ssh -G <hostname> command' output and returns Config struct.
 func Parse(config string) *Config {
 	return &Config{
+		Hostname:     getRegexFirstMatchingGroup(sshConfigHostnameRe.FindStringSubmatch(config)),
 		IdentityFile: getRegexFirstMatchingGroup(sshConfigIdentityFileRe.FindStringSubmatch(config)),
 		Port:         getRegexFirstMatchingGroup(sshConfigPortRe.FindStringSubmatch(config)),
 		User:         getRegexFirstMatchingGroup(sshConfigUserRe.FindStringSubmatch(config)),
@@ -30,6 +33,7 @@ func Parse(config string) *Config {
 // no hosts yet available. Consider to run real ssh process to request a config. See 'message.RunProcessLoadSSHConfig'.
 func StubConfig() *Config {
 	return &Config{
+		Hostname:     "Loading, please wait...",
 		IdentityFile: "$HOME/.ssh/id_rsa",
 		Port:         "22",
 		User:         currentUsername(),
@@ -37,9 +41,10 @@ func StubConfig() *Config {
 }
 
 var (
-	sshConfigUserRe         = regexp.MustCompile(`(?i)user\s+(.*[^\r\n])`)
-	sshConfigPortRe         = regexp.MustCompile(`(?i)port\s+(.*[^\r\n])`)
+	sshConfigHostnameRe     = regexp.MustCompile(`(?i)hostname\s+(.*[^\r\n])`)
 	sshConfigIdentityFileRe = regexp.MustCompile(`(?i)identityfile\s+(.*[^\r\n])`)
+	sshConfigPortRe         = regexp.MustCompile(`(?i)port\s+(.*[^\r\n])`)
+	sshConfigUserRe         = regexp.MustCompile(`(?i)user\s+(.*[^\r\n])`)
 )
 
 func getRegexFirstMatchingGroup(groups []string) string {

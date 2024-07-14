@@ -124,7 +124,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		// Logger should notify that this is a new host
 		host = hostModel.Host{}
 	}
-	host.DefaultSSHConfig = ssh.StubConfig()
+	host.SSHClientConfig = ssh.StubConfig()
 
 	m := editModel{
 		inputs:       make([]input.Input, 6),
@@ -203,7 +203,7 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case debouncedMessage:
 		cmd = m.handleDebouncedMessage(msg)
 	case message.HostSSHConfigLoaded:
-		m.host.DefaultSSHConfig = &msg.Config
+		m.host.SSHClientConfig = &msg.Config
 		m.updateInputFields()
 		m.viewport.SetContent(m.inputsView())
 	}
@@ -472,9 +472,9 @@ func (m *editModel) updateInputFields() {
 	m.inputs[inputTitle].Placeholder = "*required*" //nolint:goconst
 	m.inputs[inputAddress].Placeholder = "*required*"
 	m.inputs[inputDescription].Placeholder = "n/a"
-	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.DefaultSSHConfig.User)
-	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.DefaultSSHConfig.Port)
-	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.DefaultSSHConfig.IdentityFile)
+	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.User)
+	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.Port)
+	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.IdentityFile)
 
 	hostInputLabel := lo.Ternary(customConnectString, "Command", "Host")
 	m.inputs[inputAddress].SetLabel(hostInputLabel)

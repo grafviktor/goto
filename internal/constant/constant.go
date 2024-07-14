@@ -13,8 +13,16 @@ const ProtocolSSH = "ssh"
 type ScreenLayout string
 
 const (
-	// LayoutTight is set when all items in the hostlist are shown without description.
-	LayoutTight ScreenLayout = "tight"
-	// LayoutNormal is set when all hosts are shown with description field and a margin.
-	LayoutNormal ScreenLayout = "normal"
+	// ScreenLayoutTight is set when all items in the hostlist are shown without description.
+	ScreenLayoutTight ScreenLayout = "tight"
+	// ScreenLayoutNormal is set when all hosts are shown with description field and a margin.
+	ScreenLayoutNormal ScreenLayout = "normal"
+)
+
+type ProcessType string
+
+const (
+	ProcessTypeSSHLoadConfig ProcessType = "ssh-load-config"
+	ProcessTypeSSHCopyID     ProcessType = "ssh-copy-id"
+	ProcessTypeSSHConnect    ProcessType = "ssh-connect"
 )
