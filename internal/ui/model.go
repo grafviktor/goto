@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/grafviktor/goto/internal/constant"
+
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -97,13 +99,20 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Connect to focused SSH host")
 		return m, m.dispatchProcessSSHConnect(msg)
 	case message.RunProcessSSHLoadConfig:
-		m.logger.Debug("[UI] Load SSH config for focused host id: %d", msg.Host.ID)
+		m.logger.Debug("[UI] Load SSH config for focused host id: %d, title: %s", msg.Host.ID, msg.Host.Title)
 		return m, m.dispatchProcessSSHLoadConfig(msg)
+	case message.RunProcessSSHCopyID:
+		m.logger.Debug("[UI] Copy SSH config to host id: %d, title: %s", msg.Host.ID, msg.Host.Title)
+		return m, m.dispatchProcessSSHCopyID(msg)
 	case message.RunProcessSuccess:
-		if msg.ProcessName == "ssh_load_config" {
+		if msg.ProcessType == constant.ProcessTypeSSHLoadConfig {
 			parsedSSHConfig := ssh.Parse(*msg.Output)
 			m.logger.Debug("[UI] Host SSH config loaded: %+v", *parsedSSHConfig)
 			cmds = append(cmds, message.TeaCmd(message.HostSSHConfigLoaded{Config: *parsedSSHConfig}))
+		}
+
+		if msg.ProcessType == constant.ProcessTypeSSHCopyID {
+			m.logger.Debug("[UI] Host SSH key copied to: %+v", *msg.Output)
 		}
 	case message.RunProcessErrorOccurred:
 		// We use m.logger.Debug method to report about the error,
@@ -182,7 +191,7 @@ func (m *mainModel) updateViewPort(w, h int) tea.Model {
 	return m
 }
 
-func (m *mainModel) dispatchProcess(name string, process *exec.Cmd, inBackground, ignoreError bool) tea.Cmd {
+func (m *mainModel) dispatchProcess(processType constant.ProcessType, process *exec.Cmd, inBackground, ignoreError bool) tea.Cmd {
 	onProcessExitCallback := func(err error) tea.Msg {
 		// This callback triggers when external process exits
 		if err != nil {
@@ -216,7 +225,7 @@ func (m *mainModel) dispatchProcess(name string, process *exec.Cmd, inBackground
 		}
 
 		return message.RunProcessSuccess{
-			ProcessName: name,
+			ProcessType: processType,
 			Output:      output, // Equals to null if process runs in a foreground.
 		}
 	}
@@ -239,7 +248,7 @@ func (m *mainModel) dispatchProcessSSHConnect(msg message.RunProcessSSHConnect) 
 	process := utils.BuildProcessInterceptStdErr(msg.Host.CmdSSHConnect())
 	m.logger.Info("[EXEC] Run process: '%s'", process.String())
 
-	return m.dispatchProcess("ssh_connect_host", process, false, false)
+	return m.dispatchProcess(constant.ProcessTypeSSHConnect, process, false, false)
 }
 
 func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadConfig) tea.Cmd {
@@ -248,7 +257,7 @@ func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadCo
 	m.logger.Info("[EXEC] Run process: '%s'", process.String())
 
 	// Should run in non-blocking fashion for ssh load config
-	return m.dispatchProcess("ssh_load_config", process, true, true)
+	return m.dispatchProcess(constant.ProcessTypeSSHLoadConfig, process, true, true)
 }
 
 func (m *mainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) tea.Cmd {
@@ -256,6 +265,6 @@ func (m *mainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) te
 	process := utils.BuildProcessInterceptStdAll(msg.Host.CmdSSHCopyID())
 	m.logger.Info("[EXEC] Run process: '%s'", process.String())
 
-	// Should run in non-blocking fashion for ssh load config
-	return m.dispatchProcess("ssh_copy_id", process, true, true)
+	// Should run in non-blocking fashion for ssh copy id
+	return m.dispatchProcess(constant.ProcessTypeSSHCopyID, process, true, false)
 }
