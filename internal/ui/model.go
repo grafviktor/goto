@@ -191,6 +191,10 @@ func (m *mainModel) updateViewPort(w, h int) tea.Model {
 	return m
 }
 
+var fallBackErrorText = map[constant.ProcessType]string{
+	constant.ProcessTypeSSHCopyID: "Failed to copy SSH key. Probably the key is already installed.",
+}
+
 func (m *mainModel) dispatchProcess(processType constant.ProcessType, process *exec.Cmd, inBackground, ignoreError bool) tea.Cmd {
 	onProcessExitCallback := func(err error) tea.Msg {
 		// This callback triggers when external process exits
@@ -262,9 +266,9 @@ func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadCo
 
 func (m *mainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) tea.Cmd {
 	m.logger.Debug("[EXEC] Copy ssh-key to host: %+v", msg.Host)
-	process := utils.BuildProcessInterceptStdAll(msg.Host.CmdSSHCopyID())
+	process := utils.BuildProcessInterceptStdErr(msg.Host.CmdSSHCopyID())
 	m.logger.Info("[EXEC] Run process: '%s'", process.String())
 
 	// Should run in non-blocking fashion for ssh copy id
-	return m.dispatchProcess(constant.ProcessTypeSSHCopyID, process, true, false)
+	return m.dispatchProcess(constant.ProcessTypeSSHCopyID, process, false, false)
 }
