@@ -32,8 +32,9 @@ type (
 	RunProcessSSHCopyID struct{ Host host.Host }
 	// RunProcessErrorOccurred fires when there is an error executing an external process.
 	RunProcessErrorOccurred struct {
-		Name string
-		Err  error
+		ProcessType constant.ProcessType
+		Err         error
+		Output      *string // Even if process fails, it may have some output.
 	}
 	// RunProcessSuccess fires when external process exits normally.
 	RunProcessSuccess struct {

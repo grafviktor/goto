@@ -8,11 +8,11 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/grafviktor/goto/internal/constant"
-
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/samber/lo"
 
+	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/ssh"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
@@ -105,21 +105,12 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Copy SSH config to host id: %d, title: %s", msg.Host.ID, msg.Host.Title)
 		return m, m.dispatchProcessSSHCopyID(msg)
 	case message.RunProcessSuccess:
-		if msg.ProcessType == constant.ProcessTypeSSHLoadConfig {
-			parsedSSHConfig := ssh.Parse(*msg.Output)
-			m.logger.Debug("[UI] Host SSH config loaded: %+v", *parsedSSHConfig)
-			cmds = append(cmds, message.TeaCmd(message.HostSSHConfigLoaded{Config: *parsedSSHConfig}))
-		}
-
-		if msg.ProcessType == constant.ProcessTypeSSHCopyID {
-			m.logger.Debug("[UI] Host SSH key copied to: %+v", *msg.Output)
-		}
+		m.logger.Debug("[UI] Handle process success message. %v", msg.ProcessType)
+		cmd = m.handleProcessSuccess(msg)
+		cmds = append(cmds, cmd)
 	case message.RunProcessErrorOccurred:
-		// We use m.logger.Debug method to report about the error,
-		// because the error was already reported by run process module.
-		m.logger.Debug("[UI] External process error. %v", msg.Err)
-		m.appState.Err = msg.Err
-		m.appState.CurrentView = state.ViewErrorMessage
+		m.logger.Debug("[UI] Handle process error message. %v", msg.ProcessType)
+		m.handleProcessError(msg)
 	}
 
 	m.modelHostList, cmd = m.modelHostList.Update(msg)
@@ -191,12 +182,15 @@ func (m *mainModel) updateViewPort(w, h int) tea.Model {
 	return m
 }
 
-var fallBackErrorText = map[constant.ProcessType]string{
-	constant.ProcessTypeSSHCopyID: "Failed to copy SSH key. Probably the key is already installed.",
-}
-
 func (m *mainModel) dispatchProcess(processType constant.ProcessType, process *exec.Cmd, inBackground, ignoreError bool) tea.Cmd {
 	onProcessExitCallback := func(err error) tea.Msg {
+		var processOutput string
+		// We can only read output of a process which was build using `BuildProcessInterceptStdAll()`
+		// function because it intercepts both stdout and stderr. Check here if we can read output.
+		if readableStdOutput, ok := process.Stdout.(*utils.ProcessBufferWriter); ok {
+			processOutput = strings.TrimSpace(string(readableStdOutput.Output))
+		}
+
 		// This callback triggers when external process exits
 		if err != nil {
 			readableErrOutput := process.Stderr.(*utils.ProcessBufferWriter)
@@ -215,26 +209,23 @@ func (m *mainModel) dispatchProcess(processType constant.ProcessType, process *e
 			commandWhichFailed := strings.Join(process.Args, " ")
 			// errorDetails contains command which was executed and the error text.
 			errorDetails := fmt.Sprintf("Command: %s\nError:   %s", commandWhichFailed, errorMessage)
-			return message.RunProcessErrorOccurred{Err: errors.New(errorDetails)}
+			return message.RunProcessErrorOccurred{
+				ProcessType: processType,
+				Err:         errors.New(errorDetails),
+				Output:      &processOutput,
+			}
 		}
 
 		m.logger.Info("[EXEC] Terminate process gracefully: %s", process.String())
 
-		// If process runs in background we have to read its output and store in msg.
-		var output *string
-		if inBackground {
-			readableStdOutput := process.Stdout.(*utils.ProcessBufferWriter)
-			tmp := strings.TrimSpace(string(readableStdOutput.Output))
-			output = &tmp
-		}
-
 		return message.RunProcessSuccess{
 			ProcessType: processType,
-			Output:      output, // Equals to null if process runs in a foreground.
+			Output:      &processOutput, // Equals to null if process output was not intercepted.
 		}
 	}
 
 	if inBackground {
+		// If process runs in background we have to read its output and store in msg.
 		return func() tea.Msg {
 			err := process.Run()
 
@@ -266,9 +257,43 @@ func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadCo
 
 func (m *mainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) tea.Cmd {
 	m.logger.Debug("[EXEC] Copy ssh-key to host: %+v", msg.Host)
-	process := utils.BuildProcessInterceptStdErr(msg.Host.CmdSSHCopyID())
+	process := utils.BuildProcessInterceptStdAll(msg.Host.CmdSSHCopyID())
 	m.logger.Info("[EXEC] Run process: '%s'", process.String())
 
 	// Should run in non-blocking fashion for ssh copy id
 	return m.dispatchProcess(constant.ProcessTypeSSHCopyID, process, false, false)
+}
+
+func (m *mainModel) handleProcessSuccess(msg message.RunProcessSuccess) tea.Cmd {
+	if msg.ProcessType == constant.ProcessTypeSSHLoadConfig {
+		parsedSSHConfig := ssh.Parse(*msg.Output)
+		m.logger.Debug("[UI] Host SSH config loaded: %+v", *parsedSSHConfig)
+		return message.TeaCmd(message.HostSSHConfigLoaded{Config: *parsedSSHConfig})
+	}
+
+	if msg.ProcessType == constant.ProcessTypeSSHCopyID {
+		m.logger.Debug("[UI] Host SSH key copied to: %+v", *msg.Output)
+	}
+
+	return nil
+}
+
+func (m *mainModel) handleProcessError(msg message.RunProcessErrorOccurred) {
+	var err error
+	if msg.ProcessType == constant.ProcessTypeSSHCopyID {
+		// ssh-copy-id command spits error details into stdout, parse it here.
+		err = lo.Ternary(
+			msg.Output == nil,
+			msg.Err,
+			errors.New(fmt.Sprintf("%s\nDetails: %s", msg.Err, *msg.Output)),
+		)
+	} else {
+		err = msg.Err
+	}
+
+	// We use m.logger.Debug method to report about the error,
+	// because the error was already reported by run process module.
+	m.logger.Debug("[UI] External process error. %v", err)
+	m.appState.Err = err
+	m.appState.CurrentView = state.ViewErrorMessage
 }
