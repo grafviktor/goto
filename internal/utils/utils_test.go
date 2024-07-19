@@ -162,3 +162,18 @@ func TestBuildLoadSSHConfig(t *testing.T) {
 	require.Equal(t, &ProcessBufferWriter{}, cmd.Stderr)
 	require.Equal(t, &ProcessBufferWriter{}, cmd.Stdout)
 }
+
+func TestSplitArguments(t *testing.T) {
+	arguments := `ssh user@127.0.0.1 -o ProxyCommand="/usr/bin/nc -x 127.0.0.1:9689 %h %p" -i /Users/roman/.ssh/id_rsa`
+	expected := []string{
+		"ssh",
+		"user@127.0.0.1",
+		"-o",
+		"ProxyCommand=/usr/bin/nc -x 127.0.0.1:9689 %h %p",
+		"-i",
+		"/Users/roman/.ssh/id_rsa",
+	}
+
+	actual := splitArguments(arguments)
+	require.Equal(t, expected, actual)
+}
