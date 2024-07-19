@@ -84,6 +84,12 @@ func CheckAppInstalled(appName string) error {
 	return err
 }
 
+// splitArguments - converts a command with arguments into an array of strings.
+// Note, that it does not preserves inner quote characters:
+//
+//	ssh -o option="123 456"
+//	// will be split into 3 this array:
+//	"ssh" "-o" "option=123 456" // no quotes around 123 456
 func splitArguments(cmd string) []string {
 	args := make([]string, 0)
 	inQuotes := false
