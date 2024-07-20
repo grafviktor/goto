@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/grafviktor/goto/internal/utils"
@@ -93,8 +94,14 @@ func CopyIDCommand(options ...Option) string {
 			hostname = opt.Value
 		case OptionLoginName:
 			username = opt.Value
+		case OptionPrivateKey:
+			if strings.HasPrefix(opt.Value, "~") {
+				// Replace "~" with "$HOME" environment variable
+				opt.Value = strings.Replace(opt.Value, "~", os.Getenv("HOME"), 1)
+			}
+			addOption(&sb, opt)
 		default:
-			addOption(&sb, option)
+			addOption(&sb, opt)
 		}
 	}
 

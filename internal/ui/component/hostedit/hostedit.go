@@ -291,7 +291,7 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 
 	host, _ := m.hostStorage.Save(m.host.unwrap())
 	// Need to check storage error and update application status:
-	// if err !=nil { return message.TeaCmd(message.Error{Err: err}) }
+	// if err !=nil { return message.TeaCmd(message.Error{StdErr: err}) }
 	// or
 	// m.title = err
 

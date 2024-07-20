@@ -33,13 +33,14 @@ type (
 	// RunProcessErrorOccurred fires when there is an error executing an external process.
 	RunProcessErrorOccurred struct {
 		ProcessType constant.ProcessType
-		Err         error
-		Output      *string // Even if process fails, it may have some output.
+		StdOut      string // Even if process fails, it may have some output.
+		StdErr      string
 	}
 	// RunProcessSuccess fires when external process exits normally.
 	RunProcessSuccess struct {
 		ProcessType constant.ProcessType
-		Output      *string
+		StdOut      string
+		StdErr      string // Even if process succeeds, it may have some output.
 	}
 )
 

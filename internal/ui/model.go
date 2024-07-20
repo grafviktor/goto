@@ -10,8 +10,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/samber/lo"
-
 	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/ssh"
 	"github.com/grafviktor/goto/internal/state"
@@ -184,35 +182,38 @@ func (m *mainModel) updateViewPort(w, h int) tea.Model {
 
 func (m *mainModel) dispatchProcess(processType constant.ProcessType, process *exec.Cmd, inBackground, ignoreError bool) tea.Cmd {
 	onProcessExitCallback := func(err error) tea.Msg {
+		// We can only read StdOut or StdErr of a process which was built using `BuildProcessInterceptStdAll()`
+		// function because it preserves process output in a temporary buffer.
 		var processOutput string
-		// We can only read output of a process which was build using `BuildProcessInterceptStdAll()`
-		// function because it intercepts both stdout and stderr. Check here if we can read output.
-		if readableStdOutput, ok := process.Stdout.(*utils.ProcessBufferWriter); ok {
-			processOutput = strings.TrimSpace(string(readableStdOutput.Output))
+		if readableStdOut, ok := process.Stdout.(*utils.ProcessBufferWriter); ok {
+			processOutput = strings.TrimSpace(string(readableStdOut.Output))
+		}
+
+		var readableStdErr string
+		if readableErrOutput, ok := process.Stderr.(*utils.ProcessBufferWriter); ok {
+			readableStdErr = strings.TrimSpace(string(readableErrOutput.Output))
 		}
 
 		// This callback triggers when external process exits
 		if err != nil {
-			readableErrOutput := process.Stderr.(*utils.ProcessBufferWriter)
-			errorMessage := strings.TrimSpace(string(readableErrOutput.Output))
-			if utils.StringEmpty(errorMessage) {
-				errorMessage = err.Error()
+			if utils.StringEmpty(readableStdErr) {
+				readableStdErr = err.Error()
 			}
 
 			// Sometimes we don't care when external process ends with an error.
 			if ignoreError {
-				m.logger.Debug("[EXEC] Terminate process with reason %v. Error ignored.", errorMessage)
+				m.logger.Debug("[EXEC] Terminate process with reason %v. Error ignored.", readableStdErr)
 				return nil
 			}
 
-			m.logger.Error("[EXEC] Terminate process with reason %v", errorMessage)
+			m.logger.Error("[EXEC] Terminate process with reason %v", readableStdErr)
 			commandWhichFailed := strings.Join(process.Args, " ")
 			// errorDetails contains command which was executed and the error text.
-			errorDetails := fmt.Sprintf("Command: %s\nError:   %s", commandWhichFailed, errorMessage)
+			errorDetails := fmt.Sprintf("Command: %s\nError:   %s", commandWhichFailed, readableStdErr)
 			return message.RunProcessErrorOccurred{
 				ProcessType: processType,
-				Err:         errors.New(errorDetails),
-				Output:      &processOutput,
+				StdOut:      processOutput,
+				StdErr:      errorDetails,
 			}
 		}
 
@@ -220,7 +221,8 @@ func (m *mainModel) dispatchProcess(processType constant.ProcessType, process *e
 
 		return message.RunProcessSuccess{
 			ProcessType: processType,
-			Output:      &processOutput, // Equals to null if process output was not intercepted.
+			StdOut:      processOutput,
+			StdErr:      readableStdErr,
 		}
 	}
 
@@ -266,34 +268,29 @@ func (m *mainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) te
 
 func (m *mainModel) handleProcessSuccess(msg message.RunProcessSuccess) tea.Cmd {
 	if msg.ProcessType == constant.ProcessTypeSSHLoadConfig {
-		parsedSSHConfig := ssh.Parse(*msg.Output)
+		parsedSSHConfig := ssh.Parse(msg.StdOut)
 		m.logger.Debug("[UI] Host SSH config loaded: %+v", *parsedSSHConfig)
 		return message.TeaCmd(message.HostSSHConfigLoaded{Config: *parsedSSHConfig})
 	}
 
 	if msg.ProcessType == constant.ProcessTypeSSHCopyID {
-		m.logger.Debug("[UI] Host SSH key copied to: %+v", *msg.Output)
+		m.logger.Debug("[UI] Host SSH key copied to: %s", msg.StdOut)
 	}
 
 	return nil
 }
 
 func (m *mainModel) handleProcessError(msg message.RunProcessErrorOccurred) {
-	var err error
-	if msg.ProcessType == constant.ProcessTypeSSHCopyID {
-		// ssh-copy-id command spits error details into stdout, parse it here.
-		err = lo.Ternary(
-			msg.Output == nil,
-			msg.Err,
-			errors.New(fmt.Sprintf("%s\nDetails: %s", msg.Err, *msg.Output)),
-		)
+	var errMsg string
+	if utils.StringEmpty(msg.StdOut) {
+		errMsg = fmt.Sprintf("%s\nDetails: %s", msg.StdErr, msg.StdOut)
 	} else {
-		err = msg.Err
+		errMsg = msg.StdErr
 	}
 
 	// We use m.logger.Debug method to report about the error,
 	// because the error was already reported by run process module.
-	m.logger.Debug("[UI] External process error. %v", err)
-	m.appState.Err = err
+	m.logger.Debug("[UI] External process error. %v", errMsg)
+	m.appState.Err = errors.New(errMsg)
 	m.appState.CurrentView = state.ViewErrorMessage
 }

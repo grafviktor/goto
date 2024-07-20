@@ -99,8 +99,8 @@ func BuildProcess(cmd string) *exec.Cmd {
 	return exec.Command(command, arguments...)
 }
 
-// ProcessBufferWriter - is an object which pretends to be a writer, however it saves all data into 'Output' variable
-// for future reading and do not write anything in terminal. We need it to display or parse process output or error.
+// ProcessBufferWriter - is an object which pretends to be a writer, however it saves all data into a temporary buffer
+// variable for future reading and do not write anything in terminal. We need it to display or parse process output or error.
 type ProcessBufferWriter struct {
 	Output []byte
 }
