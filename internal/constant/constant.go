@@ -19,10 +19,14 @@ const (
 	ScreenLayoutNormal ScreenLayout = "normal"
 )
 
+// ProcessType is used to determine what kind of external process is running.
 type ProcessType string
 
 const (
+	// ProcessTypeSSHLoadConfig is used when we need to run ssh -G <hostname> to get config.
 	ProcessTypeSSHLoadConfig ProcessType = "ssh-load-config"
-	ProcessTypeSSHCopyID     ProcessType = "ssh-copy-id"
-	ProcessTypeSSHConnect    ProcessType = "ssh-connect"
+	// ProcessTypeSSHCopyID is used when we need to run ssh-copy-id to copy a public key to a remote host.
+	ProcessTypeSSHCopyID ProcessType = "ssh-copy-id"
+	// ProcessTypeSSHConnect is used when we want to connect to a remote host.
+	ProcessTypeSSHConnect ProcessType = "ssh-connect"
 )
