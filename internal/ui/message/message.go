@@ -21,6 +21,8 @@ type (
 	TerminalSizePolling struct{ Width, Height int }
 	// HostListSelectItem is required to let host list know that it's time to update title.
 	HostListSelectItem struct{ HostID int }
+	// HostUpdated - is dispatched when host model is updated.
+	HostUpdated struct{ Host host.Host }
 	// HostSSHConfigLoaded triggers when app loads a host config using ssh -G <hostname>.
 	// The config is stored in main model: m.appState.HostSSHConfig.
 	HostSSHConfigLoaded struct{ Config ssh.Config }
