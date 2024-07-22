@@ -29,6 +29,7 @@ var (
 	itemNotSelectedMessage = "you must select an item"
 	modeRemoveItem         = "removeItem"
 	modeDefault            = ""
+	modeSSHCopyID          = "sshCopyID"
 	defaultListTitle       = "press 'n' to add a new host"
 )
 
@@ -129,6 +130,9 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case message.HostSSHConfigLoaded:
 		m.handleHostSSHConfigLoaded(msg)
 		return m, nil
+	case message.HostUpdated:
+		cmd := m.Model.SetItem(m.Index(), ListItemHost{Host: msg.Host})
+		return m, cmd
 	default:
 		return m, m.updateChildModel(msg)
 	}
@@ -150,7 +154,7 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, m.keyMap.connect):
 		return m.constructProcessCmd(constant.ProcessTypeSSHConnect)
 	case key.Matches(msg, m.keyMap.copyID):
-		return m.constructProcessCmd(constant.ProcessTypeSSHCopyID)
+		return m.enterSSHCopyIDMode()
 	case key.Matches(msg, m.keyMap.remove):
 		return m.enterRemoveItemMode()
 	case key.Matches(msg, m.keyMap.edit):
@@ -201,17 +205,37 @@ func (m *listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
 
 	// If user doesn't confirm the operation, we go back to normal mode and update
 	// title back to normal, this exact key event won't be handled
-	m.logger.Debug("[UI] Exit %s mode. Cancel action", m.mode)
+	m.logger.Debug("[UI] Exit %s mode. Cancel action.", m.mode)
 	m.mode = modeDefault
 	return message.TeaCmd(msgRefreshUI{})
 }
 
 func (m *listModel) confirmAction() tea.Cmd {
+	var cmd tea.Cmd
 	if m.mode == modeRemoveItem {
-		m.logger.Debug("[UI] Exit %s mode. Confirm action", m.mode)
-		m.mode = modeDefault
-		return m.removeItem()
+		cmd = m.removeItem()
+	} else if m.mode == modeSSHCopyID {
+		cmd = m.constructProcessCmd(constant.ProcessTypeSSHCopyID)
 	}
+
+	m.logger.Debug("[UI] Exit %s mode. Confirm action.", m.mode)
+	m.mode = modeDefault
+	m.listTitleUpdate()
+
+	return cmd
+}
+
+func (m *listModel) enterSSHCopyIDMode() tea.Cmd {
+	// Check if item is selected.
+	_, ok := m.SelectedItem().(ListItemHost)
+	if !ok {
+		m.logger.Debug("[UI] Cannot copy id. Host is not selected.")
+		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
+	}
+
+	m.mode = modeSSHCopyID
+	m.logger.Debug("[UI] Enter %s mode. Ask user for confirmation.", m.mode)
+	m.Title = "copy ssh key to the remote host? (y/N)"
 
 	return nil
 }
@@ -220,12 +244,12 @@ func (m *listModel) enterRemoveItemMode() tea.Cmd {
 	// Check if item is selected.
 	_, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
-		m.logger.Debug("[UI] Cannot remove. Item is not selected")
+		m.logger.Debug("[UI] Cannot remove. Host is not selected.")
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
 	m.mode = modeRemoveItem
-	m.logger.Debug("[UI] Enter %s mode. Ask user for confirmation", m.mode)
+	m.logger.Debug("[UI] Enter %s mode. Ask user for confirmation.", m.mode)
 
 	// Ideally, we should not return msgRefreshUI{} from this function,
 	// but title is not getting updated. Requires investigation.
@@ -248,6 +272,9 @@ func (m *listModel) removeItem() tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err})
 	}
 
+	// To check,
+	// 1. cmd := m.Model.RemoveItem(m.Index())
+	// 2. whether it's possible to call m.listTitleUpdate() title without returning msgRefreshUI
 	return message.TeaCmd(MsgRefreshRepo{})
 }
 
