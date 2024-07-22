@@ -19,7 +19,6 @@ import (
 	"github.com/grafviktor/goto/internal/model/ssh"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
-	"github.com/grafviktor/goto/internal/ui/component/hostlist"
 	"github.com/grafviktor/goto/internal/ui/component/input"
 	"github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
@@ -32,8 +31,8 @@ type Size struct {
 }
 
 type (
-	// MsgClose triggers when users exits from edit form without saving results.
-	MsgClose struct{}
+	// CloseEditForm triggers when users exits from edit form without saving results.
+	CloseEditForm struct{}
 	// MsgSave triggers when users saves results.
 	MsgSave struct{}
 	// debouncedMessage is used to trigger side effects. For instance dispatch RunProcessSSHLoadConfig
@@ -238,7 +237,7 @@ func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		return m.inputFocusChange(msg)
 	case key.Matches(msg, m.keyMap.Discard):
 		m.logger.Info("[UI] Discard changes for host id: %v", m.host.ID)
-		return message.TeaCmd(MsgClose{})
+		return message.TeaCmd(CloseEditForm{})
 	default:
 		// Handle all other key events
 		cmd := m.focusedInputProcessKeyEvent(msg)
@@ -296,13 +295,14 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 	// m.title = err
 
 	return tea.Sequence(
-		message.TeaCmd(MsgClose{}),
+		message.TeaCmd(CloseEditForm{}),
 		// Order matters here! That's why we use tea.Sequence instead of tea.Batch.
 		// 'HostListSelectItem' message should be dispatched
 		// before 'MsgRefreshRepo'. The reasons of that is because
 		// 'MsgRefreshRepo' handler automatically sets focus on previously selected item.
 		message.TeaCmd(message.HostListSelectItem{HostID: host.ID}),
-		message.TeaCmd(hostlist.MsgRefreshRepo{}),
+		// message.TeaCmd(hostlist.MsgRefreshRepo{}),
+		message.TeaCmd(message.HostUpdated{Host: host}),
 	)
 }
 
