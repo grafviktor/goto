@@ -131,8 +131,15 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleHostSSHConfigLoaded(msg)
 		return m, nil
 	case message.HostUpdated:
+		// FIXME: Does not sort items when host name is updated.
 		cmd := m.Model.SetItem(m.Index(), ListItemHost{Host: msg.Host})
 		return m, cmd
+	case message.HostCreated:
+		// FIXME: Should calculate index here to keep hosts in alphabetical order
+		// index := len(m.Model.Items())
+		// cmd := m.Model.InsertItem(index, ListItemHost{Host: msg.Host})
+		// return m, cmd
+		return m, message.TeaCmd(MsgRefreshRepo{})
 	default:
 		return m, m.updateChildModel(msg)
 	}

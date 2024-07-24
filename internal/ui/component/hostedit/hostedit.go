@@ -294,6 +294,7 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 	// or
 	// m.title = err
 
+	cmd := lo.Ternary(m.isNewHost, message.TeaCmd(message.HostCreated{Host: host}), message.TeaCmd(message.HostUpdated{Host: host}))
 	return tea.Sequence(
 		message.TeaCmd(CloseEditForm{}),
 		// Order matters here! That's why we use tea.Sequence instead of tea.Batch.
@@ -302,7 +303,7 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 		// 'MsgRefreshRepo' handler automatically sets focus on previously selected item.
 		message.TeaCmd(message.HostListSelectItem{HostID: host.ID}),
 		// message.TeaCmd(hostlist.MsgRefreshRepo{}),
-		message.TeaCmd(message.HostUpdated{Host: host}),
+		cmd,
 	)
 }
 
