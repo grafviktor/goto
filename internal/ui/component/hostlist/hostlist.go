@@ -131,18 +131,60 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleHostSSHConfigLoaded(msg)
 		return m, nil
 	case message.HostUpdated:
-		// FIXME: Does not sort items when host name is updated.
-		cmd := m.Model.SetItem(m.Index(), ListItemHost{Host: msg.Host})
+		// FIXME: Should update title
+		cmd := m.handleHostUpdated(msg)
 		return m, cmd
 	case message.HostCreated:
-		// FIXME: Should calculate index here to keep hosts in alphabetical order
-		// index := len(m.Model.Items())
-		// cmd := m.Model.InsertItem(index, ListItemHost{Host: msg.Host})
-		// return m, cmd
-		return m, message.TeaCmd(MsgRefreshRepo{})
+		// FIXME: Should update title
+		cmd := m.handleHostCreated(msg)
+		return m, cmd
 	default:
 		return m, m.updateChildModel(msg)
 	}
+}
+
+func (m *listModel) handleHostUpdated(msg message.HostUpdated) tea.Cmd {
+	var cmd tea.Cmd
+	listItem := ListItemHost{Host: msg.Host}
+	index := m.indexOfHost(listItem)
+
+	if index == m.Index() {
+		// If host position isn't changed, then just replace it in hostlist using the same index
+		cmd = m.Model.SetItem(m.Index(), listItem)
+	} else if index == len(m.Model.Items()) {
+		// If host position is last, then remove it from current position and place it in the end of collection
+		m.Model.RemoveItem(m.Index())
+		cmd = m.Model.InsertItem(index-1, listItem)
+		m.Select(index - 1)
+	} else {
+		// If host position coincides with other host, then shift other host to the new place
+		temp := m.Model.Items()[index].(ListItemHost)
+		// If item does not exist, there will be no error
+		m.Model.RemoveItem(index)
+		index = m.indexOfHost(temp)
+		cmd = m.Model.InsertItem(index, listItem)
+		m.Select(index)
+	}
+
+	return cmd
+}
+
+func (m *listModel) handleHostCreated(msg message.HostCreated) tea.Cmd {
+	listItem := ListItemHost{Host: msg.Host}
+	index := m.indexOfHost(listItem)
+
+	// If host position coincides with other host, then let the underlying model to handle that
+	return m.Model.InsertItem(index, listItem)
+}
+
+func (m *listModel) indexOfHost(host ListItemHost) int {
+	titles := lo.Map(m.Items(), func(i list.Item, index int) string {
+		return i.(ListItemHost).Title()
+	})
+
+	titles = append(titles, host.Title())
+	slices.Sort(titles)
+	return lo.IndexOf(titles, host.Title())
 }
 
 func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
