@@ -131,11 +131,9 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleHostSSHConfigLoaded(msg)
 		return m, nil
 	case message.HostUpdated:
-		// FIXME: Should update title
 		cmd := m.handleHostUpdated(msg)
 		return m, cmd
 	case message.HostCreated:
-		// FIXME: Should update title
 		cmd := m.handleHostCreated(msg)
 		return m, cmd
 	default:
@@ -144,82 +142,53 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *listModel) handleHostUpdated(msg message.HostUpdated) tea.Cmd {
-	var cmds []tea.Cmd
-	listItem := ListItemHost{Host: msg.Host}
+	var cmd tea.Cmd
+	updatedItem := ListItemHost{Host: msg.Host}
+	// TODO: Move to indexOf function
 	titles := lo.Map(m.Items(), func(item list.Item, index int) string {
-		if item.(ListItemHost).ID == listItem.ID {
-			return listItem.Title()
+		if item.(ListItemHost).ID == updatedItem.ID {
+			return updatedItem.Title()
 		}
 
 		return item.(ListItemHost).Title()
 	})
 
 	slices.Sort(titles)
-	newIndex := lo.IndexOf(titles, listItem.Title())
+	newIndex := lo.IndexOf(titles, updatedItem.Title())
 
 	if newIndex == m.Index() {
-		cmds = append(cmds, m.Model.SetItem(m.Index(), listItem))
+		// Index isn't changed.
+		cmd = m.Model.SetItem(m.Index(), updatedItem)
 	} else {
+		// Index is changed, need to move the host into a new location
 		m.Model.RemoveItem(m.Index())
-		cmds = append(cmds, m.Model.InsertItem(newIndex, listItem))
+		cmd = m.Model.InsertItem(newIndex, updatedItem)
 		m.Select(newIndex)
 	}
 
-	// cmds = append(cmds, m.Model.SetItem(m.Index(), listItem))
-
 	m.listTitleUpdate()
-	cmds = append(cmds, message.TeaCmd(message.HostListSelectItem{HostID: msg.Host.ID}))
-	cmds = append(cmds, message.TeaCmd(message.RunProcessSSHLoadConfig{Host: msg.Host}))
 
-	return tea.Sequence(cmds...)
-
-	// if newIndex == m.Index() {
-	// 	// If host position isn't changed, then just replace it in hostlist using the same index
-	// 	cmds = append(cmds, m.Model.SetItem(m.Index(), listItem))
-	// 	m.listTitleUpdate()
-	// } else if newIndex == len(m.Model.Items()) {
-	// 	// If host position is last, then remove it from current position and place it in the end of collection
-	// 	m.Model.RemoveItem(m.Index())
-	// 	cmds = append(cmds, m.Model.InsertItem(newIndex-1, listItem))
-	// 	m.Select(newIndex - 1)
-	// 	m.listTitleUpdate()
-	// } else {
-	// 	// If host position coincides with other host, then shift other host to the new place
-	// 	temp := m.Model.Items()[newIndex].(ListItemHost)
-	// 	cmds = append(cmds, m.Model.SetItem(newIndex, listItem))
-	// 	m.Select(newIndex)
-	// 	m.listTitleUpdate()
-	// 	// Because we're moving the host to a new place, we should remove
-	// 	// it from existing one. If item does not exist, there will be no error
-	// 	m.Model.RemoveItem(m.Index()) // m.Index() contains current host position
-	// 	newIndex = m.indexOfHost(temp)
-	// 	// Is this a bug? Probably not, because we use InsertItem, not SetItem
-	// 	// Because we're inserting the temprorary item at a specific index where
-	// 	// another host can be. It's required to run a recursive call here
-	// 	cmds = append(cmds, m.Model.InsertItem(newIndex, temp))
-	// }
-
-	// cmds = append(cmds, message.TeaCmd(message.HostListSelectItem{HostID: msg.Host.ID}))
-	// cmds = append(cmds, message.TeaCmd(message.RunProcessSSHLoadConfig{Host: msg.Host}))
-
-	// // return cmd
-	// return tea.Sequence(cmds...)
+	return tea.Sequence(
+		cmd,
+		message.TeaCmd(message.HostListSelectItem{HostID: msg.Host.ID}),
+		message.TeaCmd(message.RunProcessSSHLoadConfig{Host: msg.Host}),
+	)
 }
 
 func (m *listModel) handleHostCreated(msg message.HostCreated) tea.Cmd {
 	listItem := ListItemHost{Host: msg.Host}
-	// FIXME: title cotains duplicate item
+	// TODO: Move to indexOf function
 	titles := lo.Reduce(m.Items(), func(agg []string, item list.Item, index int) []string {
 		return append(agg, item.(ListItemHost).Title())
 	}, []string{listItem.Title()})
 
-	slices.Sort(append(titles, listItem.Title()))
+	slices.Sort(titles)
 	index := lo.IndexOf(titles, listItem.Title())
 
+	cmd := m.Model.InsertItem(index, listItem)
 	m.Select(index)
 	m.listTitleUpdate()
 
-	cmd := m.Model.InsertItem(index, listItem)
 	return tea.Sequence(
 		// If host position coincides with other host, then let the underlying model to handle that
 		cmd,
@@ -276,6 +245,7 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		return nil
 	case key.Matches(msg, m.Model.KeyMap.ClearFilter):
 		// When user clears the host filter, keep the focus on the selected item.
+		// FIXME: Contains duplicate items when exits filter mode
 		cmd := m.updateChildModel(msg)
 		m.selectItemByModelID(m.prevSelectedItemID)
 		return cmd
