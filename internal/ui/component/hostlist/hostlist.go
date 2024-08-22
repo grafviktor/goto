@@ -144,48 +144,102 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *listModel) handleHostUpdated(msg message.HostUpdated) tea.Cmd {
-	var cmd tea.Cmd
+	var cmds []tea.Cmd
 	listItem := ListItemHost{Host: msg.Host}
-	index := m.indexOfHost(listItem)
+	titles := lo.Map(m.Items(), func(item list.Item, index int) string {
+		if item.(ListItemHost).ID == listItem.ID {
+			return listItem.Title()
+		}
 
-	if index == m.Index() {
-		// If host position isn't changed, then just replace it in hostlist using the same index
-		cmd = m.Model.SetItem(m.Index(), listItem)
-	} else if index == len(m.Model.Items()) {
-		// If host position is last, then remove it from current position and place it in the end of collection
-		m.Model.RemoveItem(m.Index())
-		cmd = m.Model.InsertItem(index-1, listItem)
-		m.Select(index - 1)
+		return item.(ListItemHost).Title()
+	})
+
+	slices.Sort(titles)
+	newIndex := lo.IndexOf(titles, listItem.Title())
+
+	if newIndex == m.Index() {
+		cmds = append(cmds, m.Model.SetItem(m.Index(), listItem))
 	} else {
-		// If host position coincides with other host, then shift other host to the new place
-		temp := m.Model.Items()[index].(ListItemHost)
-		// If item does not exist, there will be no error
-		m.Model.RemoveItem(index)
-		index = m.indexOfHost(temp)
-		cmd = m.Model.InsertItem(index, listItem)
-		m.Select(index)
+		m.Model.RemoveItem(m.Index())
+		cmds = append(cmds, m.Model.InsertItem(newIndex, listItem))
+		m.Select(newIndex)
 	}
 
-	return cmd
+	// cmds = append(cmds, m.Model.SetItem(m.Index(), listItem))
+
+	m.listTitleUpdate()
+	cmds = append(cmds, message.TeaCmd(message.HostListSelectItem{HostID: msg.Host.ID}))
+	cmds = append(cmds, message.TeaCmd(message.RunProcessSSHLoadConfig{Host: msg.Host}))
+
+	return tea.Sequence(cmds...)
+
+	// if newIndex == m.Index() {
+	// 	// If host position isn't changed, then just replace it in hostlist using the same index
+	// 	cmds = append(cmds, m.Model.SetItem(m.Index(), listItem))
+	// 	m.listTitleUpdate()
+	// } else if newIndex == len(m.Model.Items()) {
+	// 	// If host position is last, then remove it from current position and place it in the end of collection
+	// 	m.Model.RemoveItem(m.Index())
+	// 	cmds = append(cmds, m.Model.InsertItem(newIndex-1, listItem))
+	// 	m.Select(newIndex - 1)
+	// 	m.listTitleUpdate()
+	// } else {
+	// 	// If host position coincides with other host, then shift other host to the new place
+	// 	temp := m.Model.Items()[newIndex].(ListItemHost)
+	// 	cmds = append(cmds, m.Model.SetItem(newIndex, listItem))
+	// 	m.Select(newIndex)
+	// 	m.listTitleUpdate()
+	// 	// Because we're moving the host to a new place, we should remove
+	// 	// it from existing one. If item does not exist, there will be no error
+	// 	m.Model.RemoveItem(m.Index()) // m.Index() contains current host position
+	// 	newIndex = m.indexOfHost(temp)
+	// 	// Is this a bug? Probably not, because we use InsertItem, not SetItem
+	// 	// Because we're inserting the temprorary item at a specific index where
+	// 	// another host can be. It's required to run a recursive call here
+	// 	cmds = append(cmds, m.Model.InsertItem(newIndex, temp))
+	// }
+
+	// cmds = append(cmds, message.TeaCmd(message.HostListSelectItem{HostID: msg.Host.ID}))
+	// cmds = append(cmds, message.TeaCmd(message.RunProcessSSHLoadConfig{Host: msg.Host}))
+
+	// // return cmd
+	// return tea.Sequence(cmds...)
 }
 
 func (m *listModel) handleHostCreated(msg message.HostCreated) tea.Cmd {
 	listItem := ListItemHost{Host: msg.Host}
-	index := m.indexOfHost(listItem)
+	// FIXME: title cotains duplicate item
+	titles := lo.Reduce(m.Items(), func(agg []string, item list.Item, index int) []string {
+		return append(agg, item.(ListItemHost).Title())
+	}, []string{listItem.Title()})
 
-	// If host position coincides with other host, then let the underlying model to handle that
-	return m.Model.InsertItem(index, listItem)
+	slices.Sort(append(titles, listItem.Title()))
+	index := lo.IndexOf(titles, listItem.Title())
+
+	m.Select(index)
+	m.listTitleUpdate()
+
+	cmd := m.Model.InsertItem(index, listItem)
+	return tea.Sequence(
+		// If host position coincides with other host, then let the underlying model to handle that
+		cmd,
+		message.TeaCmd(message.HostListSelectItem{HostID: msg.Host.ID}),
+		message.TeaCmd(message.RunProcessSSHLoadConfig{Host: msg.Host}),
+	)
 }
 
-func (m *listModel) indexOfHost(host ListItemHost) int {
-	titles := lo.Map(m.Items(), func(i list.Item, index int) string {
-		return i.(ListItemHost).Title()
-	})
+// func (m *listModel) indexOfHost(host ListItemHost, isNewHost bool) int {
+// 	titles := lo.Map(m.Items(), func(i list.Item, index int) string {
+// 		return i.(ListItemHost).Title()
+// 	})
 
-	titles = append(titles, host.Title())
-	slices.Sort(titles)
-	return lo.IndexOf(titles, host.Title())
-}
+// 	if isNewHost {
+// 		titles = append(titles, host.Title())
+// 	}
+
+// 	slices.Sort(titles)
+// 	return lo.IndexOf(titles, host.Title())
+// }
 
 func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	switch {
@@ -324,7 +378,15 @@ func (m *listModel) removeItem() tea.Cmd {
 	// To check,
 	// 1. cmd := m.Model.RemoveItem(m.Index())
 	// 2. whether it's possible to call m.listTitleUpdate() title without returning msgRefreshUI
-	return message.TeaCmd(MsgRefreshRepo{})
+	m.Model.RemoveItem(m.Index())
+	if item, ok := m.Model.SelectedItem().(ListItemHost); ok {
+		return tea.Sequence(
+			message.TeaCmd(message.HostListSelectItem{HostID: item.ID}),
+			message.TeaCmd(message.RunProcessSSHLoadConfig{Host: item.Host}),
+		)
+	}
+
+	return nil
 }
 
 func (m *listModel) refreshRepo(_ tea.Msg) tea.Cmd {
@@ -413,6 +475,7 @@ func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 }
 
 func (m *listModel) onFocusChanged() tea.Cmd {
+	m.logger.Debug("m.Index(): %d", m.Index())
 	m.listTitleUpdate()
 	m.updateKeyMap()
 
