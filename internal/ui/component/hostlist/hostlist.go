@@ -11,6 +11,7 @@ import (
 
 	"golang.org/x/exp/slices"
 
+	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -113,6 +114,8 @@ func (m *listModel) Init() tea.Cmd {
 
 func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case cursor.BlinkMsg:
+		return m, nil
 	case tea.KeyMsg:
 		return m, m.handleKeyboardEvent(msg)
 	case tea.WindowSizeMsg:
@@ -245,7 +248,6 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		return nil
 	case key.Matches(msg, m.Model.KeyMap.ClearFilter):
 		// When user clears the host filter, keep the focus on the selected item.
-		// FIXME: Contains duplicate items when exits filter mode
 		cmd := m.updateChildModel(msg)
 		m.selectItemByModelID(m.prevSelectedItemID)
 		return cmd
@@ -445,28 +447,29 @@ func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 }
 
 func (m *listModel) onFocusChanged() tea.Cmd {
-	m.logger.Debug("m.Index(): %d", m.Index())
-	m.listTitleUpdate()
-	m.updateKeyMap()
+	// FIXME: Contains duplicate items when exits filter mode
+	// m.logger.Debug("m.Index(): %d", m.Index())
+	// m.listTitleUpdate()
+	// m.updateKeyMap()
 
-	if m.SelectedItem() == nil {
-		m.logger.Debug("[UI] Focus is not set to any item in the list")
-		return nil
-	}
+	// if m.SelectedItem() == nil {
+	// 	m.logger.Debug("[UI] Focus is not set to any item in the list")
+	// 	return nil
+	// }
 
-	if hostItem, ok := m.SelectedItem().(ListItemHost); ok {
-		m.logger.Debug("[UI] Check if selection changed. Prev item: %v, Curr item: %v", m.prevSelectedItemID, hostItem.ID)
-		if m.prevSelectedItemID != hostItem.ID {
-			m.prevSelectedItemID = hostItem.ID
-			m.logger.Debug("[UI] Focus changed to host id: %v, title: %s", hostItem.ID, hostItem.Title())
-			return tea.Batch(
-				message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
-				message.TeaCmd(message.RunProcessSSHLoadConfig{Host: hostItem.Host}),
-			)
-		}
-	} else {
-		m.logger.Error("[UI] Select unknown item type from the list")
-	}
+	// if hostItem, ok := m.SelectedItem().(ListItemHost); ok {
+	// 	m.logger.Debug("[UI] Check if selection changed. Prev item: %v, Curr item: %v", m.prevSelectedItemID, hostItem.ID)
+	// 	if m.prevSelectedItemID != hostItem.ID {
+	// 		m.prevSelectedItemID = hostItem.ID
+	// 		m.logger.Debug("[UI] Focus changed to host id: %v, title: %s", hostItem.ID, hostItem.Title())
+	// 		return tea.Batch(
+	// 			message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
+	// 			message.TeaCmd(message.RunProcessSSHLoadConfig{Host: hostItem.Host}),
+	// 		)
+	// 	}
+	// } else {
+	// 	m.logger.Error("[UI] Select unknown item type from the list")
+	// }
 
 	return nil
 }
