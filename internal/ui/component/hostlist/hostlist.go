@@ -245,7 +245,7 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		return nil
 	case key.Matches(msg, m.Model.KeyMap.ClearFilter):
 		// When user clears the host filter, keep the focus on the selected item.
-		// FIXME: Contains duplicate items when exits filter mode
+		// FIXME: Contains duplicate items when exits filter mode, see list.go#433
 		cmd := m.updateChildModel(msg)
 		m.selectItemByModelID(m.prevSelectedItemID)
 		return cmd
