@@ -18,6 +18,8 @@ func CmdToMessage(cmd tea.Cmd, messages *[]tea.Msg) {
 	valueOf := reflect.ValueOf(message)
 
 	// Slice of messages is returned by tea.BatchMsg or tea.sequenceMsg
+	// See also github.com/charmbracelet/bubbletea@v0.25.0/tea.go#eventLoop
+	// which handles tea.Sequence
 	if valueOf.Kind() == reflect.Slice {
 		for i := 0; i < valueOf.Len(); i++ {
 			if valueOf.Index(i).Kind() == reflect.Func {
