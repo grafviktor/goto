@@ -59,9 +59,6 @@ type listModel struct {
 	appState *state.ApplicationState
 	logger   iLogger
 	mode     string
-	// That is a small optimization, as we do not want to re-read host configuration
-	// every time when we dispatch msgRefreshUI{} message.
-	prevSelectedItemID int
 }
 
 // New - creates new host list model.
@@ -127,9 +124,12 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case MsgRefreshRepo:
 		m.logger.Debug("[UI] Load hostnames from the database")
 		return m, m.refreshRepo(msg)
+	// case msgRefreshUI:
+	// 	m.selectHostByID(m.appState.Selected)
+	// 	return m, m.onFocusChanged()
 	case msgRefreshUI:
-		m.selectItemByModelID(m.appState.Selected)
-		return m, m.onFocusChanged()
+		// m.selectHostByID(m.appState.Selected)
+		return m, m.selectHostByID(m.appState.Selected)
 	case message.HostSSHConfigLoaded:
 		m.handleHostSSHConfigLoaded(msg)
 		return m, nil
@@ -142,6 +142,80 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	default:
 		return m, m.updateChildModel(msg)
 	}
+}
+
+func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
+	switch {
+	case m.SettingFilter():
+		m.logger.Debug("[UI] Process key message when in filter mode")
+		// If filter is enabled, we should not handle any keyboard messages,
+		// as it should be done by filter component.
+		if key.Matches(msg, m.KeyMap.AcceptWhileFiltering) {
+			// When user presses enter key while in filter mode, we should load SSH config.
+			m.logger.Debug("[UI] Focus item while in filter mode")
+			cmd1 := m.updateChildModel(msg)
+			return tea.Sequence(cmd1, m.onFocusChanged())
+		}
+		return m.updateChildModel(msg)
+	case m.mode != modeDefault:
+		// Handle key event when some mode is enabled. For instance "removeMode".
+		return m.handleKeyEventWhenModeEnabled(msg)
+	case key.Matches(msg, m.keyMap.connect):
+		return m.constructProcessCmd(constant.ProcessTypeSSHConnect)
+	case key.Matches(msg, m.keyMap.copyID):
+		return m.enterSSHCopyIDMode()
+	case key.Matches(msg, m.keyMap.remove):
+		return m.enterRemoveItemMode()
+	case key.Matches(msg, m.keyMap.edit):
+		return m.editItem(msg)
+	case key.Matches(msg, m.keyMap.append):
+		return message.TeaCmd(OpenEditForm{}) // When create a new item, jump to edit mode.
+	case key.Matches(msg, m.keyMap.clone):
+		return m.copyItem(msg)
+	case key.Matches(msg, m.keyMap.toggleLayout):
+		m.updateChildModel(msgToggleLayout{})
+		// When switch between screen layouts, it's required to update pagination.
+		// ListModel's updatePagination method is private and cannot be called from
+		// here. One of the ways to trigger it is to invoke model.SetSize method.
+		m.Model.SetSize(m.Width(), m.Height())
+		return nil
+	case key.Matches(msg, m.KeyMap.CancelWhileFiltering):
+		selectedID := m.SelectedItem().(ListItemHost).ID
+		// cmd = m.updateChildModel(msg)
+		// m.selectHostByID(selectedID)
+		return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
+	case key.Matches(msg, m.Model.KeyMap.ClearFilter):
+		// FIXME: Creates duplicate item in the list at index '0' if dispatch message.RunProcessSSHLoadConfig{...}
+		// When user clears the host filter, child model resets the focus. Explicitly set focus on previously selected item.
+		selectedID := m.SelectedItem().(ListItemHost).ID
+		return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
+	default:
+		cmd := m.updateChildModel(msg)
+		return tea.Sequence(cmd, m.onFocusChanged())
+	}
+}
+
+func (m *listModel) View() string {
+	return docStyle.Render(m.Model.View())
+}
+
+func (m *listModel) updateChildModel(msg tea.Msg) tea.Cmd {
+	var cmd tea.Cmd
+	m.Model, cmd = m.Model.Update(msg)
+
+	return cmd
+}
+
+func (m *listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
+	if key.Matches(msg, m.keyMap.confirm) {
+		return m.confirmAction()
+	}
+
+	// If user doesn't confirm the operation, we go back to normal mode and update
+	// title back to normal, this exact key event won't be handled
+	m.logger.Debug("[UI] Exit %s mode. Cancel action.", m.mode)
+	m.mode = modeDefault
+	return message.TeaCmd(msgRefreshUI{})
 }
 
 func (m *listModel) handleHostUpdated(msg message.HostUpdated) tea.Cmd {
@@ -169,7 +243,7 @@ func (m *listModel) handleHostUpdated(msg message.HostUpdated) tea.Cmd {
 		m.Select(newIndex)
 	}
 
-	m.listTitleUpdate()
+	m.updateTitle()
 
 	return tea.Sequence(
 		cmd,
@@ -187,10 +261,10 @@ func (m *listModel) handleHostCreated(msg message.HostCreated) tea.Cmd {
 
 	slices.Sort(titles)
 	index := lo.IndexOf(titles, listItem.Title())
-
 	cmd := m.Model.InsertItem(index, listItem)
+
 	m.Select(index)
-	m.listTitleUpdate()
+	m.updateTitle()
 
 	return tea.Sequence(
 		// If host position coincides with other host, then let the underlying model to handle that
@@ -198,92 +272,6 @@ func (m *listModel) handleHostCreated(msg message.HostCreated) tea.Cmd {
 		message.TeaCmd(message.HostListSelectItem{HostID: msg.Host.ID}),
 		message.TeaCmd(message.RunProcessSSHLoadConfig{Host: msg.Host}),
 	)
-}
-
-// func (m *listModel) indexOfHost(host ListItemHost, isNewHost bool) int {
-// 	titles := lo.Map(m.Items(), func(i list.Item, index int) string {
-// 		return i.(ListItemHost).Title()
-// 	})
-
-// 	if isNewHost {
-// 		titles = append(titles, host.Title())
-// 	}
-
-// 	slices.Sort(titles)
-// 	return lo.IndexOf(titles, host.Title())
-// }
-
-func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
-	switch {
-	case key.Matches(msg, m.KeyMap.AcceptWhileFiltering):
-		m.logger.Debug("[UI] Focus item while in filter mode")
-		return tea.Batch(m.updateChildModel(msg), m.onFocusChanged())
-	case m.SettingFilter():
-		m.logger.Debug("[UI] Process key message when in filter mode")
-		// If filter is enabled, we should not handle any keyboard messages,
-		// as it should be done by filter component.
-		return m.updateChildModel(msg)
-	case m.mode != modeDefault:
-		// Handle key event when some mode is enabled. For instance "removeMode".
-		return m.handleKeyEventWhenModeEnabled(msg)
-	case key.Matches(msg, m.keyMap.connect):
-		return m.constructProcessCmd(constant.ProcessTypeSSHConnect)
-	case key.Matches(msg, m.keyMap.copyID):
-		return m.enterSSHCopyIDMode()
-	case key.Matches(msg, m.keyMap.remove):
-		return m.enterRemoveItemMode()
-	case key.Matches(msg, m.keyMap.edit):
-		return m.editItem(msg)
-	case key.Matches(msg, m.keyMap.append):
-		return message.TeaCmd(OpenEditForm{}) // When create a new item, jump to edit mode.
-	case key.Matches(msg, m.keyMap.clone):
-		return m.copyItem(msg)
-	case key.Matches(msg, m.keyMap.toggleLayout):
-		m.updateChildModel(msgToggleLayout{})
-		// When switch between screen layouts, it's required to update pagination.
-		// ListModel's updatePagination method is private and cannot be called from
-		// here. One of the ways to trigger it is to invoke model.SetSize method.
-		m.Model.SetSize(m.Width(), m.Height())
-
-		return nil
-	case key.Matches(msg, m.Model.KeyMap.ClearFilter):
-		// When user clears the host filter, keep the focus on the selected item.
-		// FIXME: Contains duplicate items when exits filter mode, see list.go#433
-		cmd := m.updateChildModel(msg)
-		m.selectItemByModelID(m.prevSelectedItemID)
-		return cmd
-	default:
-		// If we could not find our own update handler, we pass message to the child model
-		// otherwise we would have to implement all key handlers and other stuff by ourselves
-
-		// Dispatch several messages:
-		// 1 - message which was returned from the inner model.
-		// 2 - messages which returned by onFocusChanged, which will trigger the SSH configuration load.
-		return tea.Sequence(m.updateChildModel(msg), m.onFocusChanged())
-	}
-}
-
-func (m *listModel) View() string {
-	return docStyle.Render(m.Model.View())
-}
-
-func (m *listModel) updateChildModel(msg tea.Msg) tea.Cmd {
-	var cmd tea.Cmd
-	m.Model, cmd = m.Model.Update(msg)
-
-	return cmd
-}
-
-func (m *listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
-	if key.Matches(msg, m.keyMap.confirm) {
-		return m.confirmAction()
-	}
-
-	// If user doesn't confirm the operation, we go back to normal mode and update
-	// title back to normal, this exact key event won't be handled
-	m.logger.Debug("[UI] Exit %s mode. Cancel action.", m.mode)
-	m.mode = modeDefault
-	return message.TeaCmd(msgRefreshUI{})
 }
 
 func (m *listModel) confirmAction() tea.Cmd {
@@ -296,7 +284,7 @@ func (m *listModel) confirmAction() tea.Cmd {
 
 	m.logger.Debug("[UI] Exit %s mode. Confirm action.", m.mode)
 	m.mode = modeDefault
-	m.listTitleUpdate()
+	m.updateTitle()
 
 	return cmd
 }
@@ -326,10 +314,9 @@ func (m *listModel) enterRemoveItemMode() tea.Cmd {
 
 	m.mode = modeRemoveItem
 	m.logger.Debug("[UI] Enter %s mode. Ask user for confirmation.", m.mode)
+	m.updateTitle()
 
-	// Ideally, we should not return msgRefreshUI{} from this function,
-	// but title is not getting updated. Requires investigation.
-	return message.TeaCmd(msgRefreshUI{})
+	return nil
 }
 
 func (m *listModel) removeItem() tea.Cmd {
@@ -350,7 +337,7 @@ func (m *listModel) removeItem() tea.Cmd {
 
 	// To check,
 	// 1. cmd := m.Model.RemoveItem(m.Index())
-	// 2. whether it's possible to call m.listTitleUpdate() title without returning msgRefreshUI
+	// 2. whether it's possible to call m.updateTitle() title without returning msgRefreshUI
 	m.Model.RemoveItem(m.Index())
 	if item, ok := m.Model.SelectedItem().(ListItemHost); ok {
 		return tea.Sequence(
@@ -383,8 +370,8 @@ func (m *listModel) refreshRepo(_ tea.Msg) tea.Cmd {
 	}
 
 	setItemsCmd := m.SetItems(items)
-
-	return tea.Sequence(setItemsCmd, message.TeaCmd(msgRefreshUI{}))
+	selectHostByIDCmd := m.selectHostByID(m.appState.Selected)
+	return tea.Sequence(setItemsCmd, selectHostByIDCmd)
 }
 
 func (m *listModel) editItem(_ tea.Msg) tea.Cmd {
@@ -412,12 +399,14 @@ func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
 	m.logger.Info("[UI] Copy host item id: %d, title: %s", originalHost.ID, originalHost.Title)
 	clonedHost := originalHost.Clone()
 	for i := 1; ok; i++ {
+		// Keep generating new title until it's unique
 		clonedHostTitle := fmt.Sprintf("%s (%d)", originalHost.Title, i)
 		listItems := m.Items()
 		idx := slices.IndexFunc(listItems, func(li list.Item) bool {
 			return li.(ListItemHost).Title() == clonedHostTitle
 		})
 
+		// If title is unique, then we assign the title to the cloned host
 		if idx < 0 {
 			clonedHost.Title = clonedHostTitle
 			break
@@ -428,7 +417,13 @@ func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err})
 	}
 
-	return message.TeaCmd(MsgRefreshRepo{})
+	titles := lo.Reduce(m.Items(), func(agg []string, item list.Item, index int) []string {
+		return append(agg, item.(ListItemHost).Title())
+	}, []string{clonedHost.Title})
+
+	slices.Sort(titles)
+	index := lo.IndexOf(titles, clonedHost.Title)
+	return m.Model.InsertItem(index, ListItemHost{Host: clonedHost})
 }
 
 func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cmd {
@@ -447,35 +442,7 @@ func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 	return nil
 }
 
-func (m *listModel) onFocusChanged() tea.Cmd {
-	// FIXME: Contains duplicate items when exits filter mode
-	// m.logger.Debug("m.Index(): %d", m.Index())
-	// m.listTitleUpdate()
-	// m.updateKeyMap()
-
-	// if m.SelectedItem() == nil {
-	// 	m.logger.Debug("[UI] Focus is not set to any item in the list")
-	// 	return nil
-	// }
-
-	// if hostItem, ok := m.SelectedItem().(ListItemHost); ok {
-	// 	m.logger.Debug("[UI] Check if selection changed. Prev item: %v, Curr item: %v", m.prevSelectedItemID, hostItem.ID)
-	// 	if m.prevSelectedItemID != hostItem.ID {
-	// 		m.prevSelectedItemID = hostItem.ID
-	// 		m.logger.Debug("[UI] Focus changed to host id: %v, title: %s", hostItem.ID, hostItem.Title())
-	// 		return tea.Batch(
-	// 			message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
-	// 			message.TeaCmd(message.RunProcessSSHLoadConfig{Host: hostItem.Host}),
-	// 		)
-	// 	}
-	// } else {
-	// 	m.logger.Error("[UI] Select unknown item type from the list")
-	// }
-
-	return nil
-}
-
-func (m *listModel) listTitleUpdate() {
+func (m *listModel) updateTitle() {
 	var newTitle string
 
 	item, ok := m.SelectedItem().(ListItemHost)
@@ -506,7 +473,28 @@ func (m *listModel) updateKeyMap() {
 	}
 }
 
-func (m *listModel) selectItemByModelID(id int) {
+func (m *listModel) onFocusChanged() tea.Cmd {
+	if m.SelectedItem() == nil {
+		m.logger.Debug("[UI] Focus is not set to any item in the list")
+	}
+
+	if hostItem, ok := m.SelectedItem().(ListItemHost); ok {
+		m.logger.Debug("[UI] Focus changed to host id: %v, title: %s", hostItem.ID, hostItem.Title())
+		m.updateTitle()
+		m.updateKeyMap()
+
+		return tea.Sequence(
+			message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
+			message.TeaCmd(message.RunProcessSSHLoadConfig{Host: hostItem.Host}),
+		)
+	}
+
+	m.logger.Error("[UI] Select unknown item type from the list")
+
+	return nil
+}
+
+func (m *listModel) selectHostByID(id int) tea.Cmd {
 	_, index, found := lo.FindIndexOf(m.VisibleItems(), func(item list.Item) bool {
 		hostItem, ok := item.(ListItemHost)
 		return ok && hostItem.ID == id
@@ -514,12 +502,16 @@ func (m *listModel) selectItemByModelID(id int) {
 
 	if found {
 		m.Select(index)
+		return m.onFocusChanged()
 	}
+
+	return nil
 }
 
 func (m *listModel) handleHostSSHConfigLoaded(msg message.HostSSHConfigLoaded) {
 	if hostListItem, ok := m.SelectedItem().(ListItemHost); ok {
 		hostListItem.SSHClientConfig = &msg.Config
+		// FIXME: This line causes the list to be duplicated when the filter is enabled.
 		m.SetItem(m.Index(), hostListItem)
 	}
 }

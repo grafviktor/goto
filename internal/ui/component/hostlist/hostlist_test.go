@@ -26,7 +26,7 @@ func Test_ListTitleUpdate(t *testing.T) {
 	lm.Select(0)
 
 	// Apply the function
-	lm.listTitleUpdate()
+	lm.updateTitle()
 
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", lm.Title)
 }
@@ -234,35 +234,35 @@ func TestExitRemoveItemMode(t *testing.T) {
 }
 
 func TestListTitleUpdate(t *testing.T) {
-	// 1 Call listTitleUpdate when host is not selected
+	// 1 Call updateTitle when host is not selected
 	model := *NewMockListModel(false)
 	model.logger = &test.MockLogger{}
 	// Select non-existent item
 	model.Select(10)
-	// Call listTitleUpdate function, but it will fail, however without throwing any errors
-	model.listTitleUpdate()
+	// Call updateTitle function, but it will fail, however without throwing any errors
+	model.updateTitle()
 	// Check that model is not nil
 	require.NotNil(t, model)
 
-	// 2 Call listTitleUpdate when removeMode is active
+	// 2 Call updateTitle when removeMode is active
 	model = *NewMockListModel(false)
 	model.logger = &test.MockLogger{}
 	// Select a host by valid index
 	model.Select(0)
 	// Enter remove mode
 	model.enterRemoveItemMode()
-	// Call listTitleUpdate function
-	model.listTitleUpdate()
+	// Call updateTitle function
+	model.updateTitle()
 	// Check that app is now asking for a confirmation before delete
 	require.Equal(t, "delete \"Mock Host 1\" ? (y/N)", model.Title)
 
-	// 3 Call listTitleUpdate selected a host
+	// 3 Call updateTitle selected a host
 	model = *NewMockListModel(false)
 	model.logger = &test.MockLogger{}
 	// Select a host by valid index
 	model.Select(0)
-	// Call listTitleUpdate function
-	model.listTitleUpdate()
+	// Call updateTitle function
+	model.updateTitle()
 	// Check that app is displaying ssh connection string
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", model.Title)
 }

@@ -76,7 +76,7 @@ func (as *ApplicationState) readFromFile() error {
 		return err
 	}
 
-	as.logger.Debug("[APPSTATE] Screen layout: '%v'. Focused host: '%v'", as.ScreenLayout, as.Selected)
+	as.logger.Debug("[APPSTATE] Screen layout: '%v'. Focused host id: '%v'", as.ScreenLayout, as.Selected)
 
 	return nil
 }
