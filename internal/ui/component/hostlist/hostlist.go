@@ -413,8 +413,10 @@ func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
 		}
 	}
 
-	if _, err := m.repo.Save(clonedHost); err != nil {
+	if savedHost, err := m.repo.Save(clonedHost); err != nil {
 		return message.TeaCmd(msgErrorOccurred{err})
+	} else {
+		clonedHost.ID = savedHost.ID
 	}
 
 	titles := lo.Reduce(m.Items(), func(agg []string, item list.Item, index int) []string {
