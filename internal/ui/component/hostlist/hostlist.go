@@ -5,24 +5,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
-
 	"github.com/grafviktor/goto/internal/constant"
+	hostModel "github.com/grafviktor/goto/internal/model/host"
+	"github.com/grafviktor/goto/internal/utils"
+	"strings"
 
 	"golang.org/x/exp/slices"
 
-	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
 
-	hostModel "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/message"
-	"github.com/grafviktor/goto/internal/utils"
 )
 
 var (
@@ -42,14 +40,9 @@ type iLogger interface {
 
 type (
 	// OpenEditForm fires when user press edit button.
-	OpenEditForm struct{ HostID int }
-	// MsgCopyItem fires when user press copy button.
-	MsgCopyItem      struct{ HostID int }
+	OpenEditForm     struct{ HostID int }
 	msgErrorOccurred struct{ err error }
-	// MsgRefreshRepo - fires when data layer updated, and it's required to reload the host list.
-	MsgRefreshRepo  struct{}
-	msgRefreshUI    struct{}
-	msgToggleLayout struct{}
+	msgToggleLayout  struct{}
 )
 
 type listModel struct {
@@ -106,13 +99,33 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 
 func (m *listModel) Init() tea.Cmd {
 	// This function is called from init_$PLATFORM.go file
-	return message.TeaCmd(MsgRefreshRepo{})
+	m.logger.Debug("[UI] Load hostnames from the database")
+	hosts, err := m.repo.GetAll()
+	if err != nil {
+		m.logger.Error("[UI] Cannot read database. %v", err)
+		return message.TeaCmd(msgErrorOccurred{err})
+	}
+
+	slices.SortFunc(hosts, func(a, b hostModel.Host) int {
+		if a.Title < b.Title {
+			return -1
+		}
+		return 1
+	})
+
+	// Wrap hosts into List items
+	items := make([]list.Item, 0, len(hosts))
+	for _, h := range hosts {
+		items = append(items, ListItemHost{Host: h})
+	}
+
+	setItemsCmd := m.SetItems(items)
+	selectHostByIDCmd := m.selectHostByID(m.appState.Selected)
+	return tea.Sequence(setItemsCmd, selectHostByIDCmd)
 }
 
 func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case cursor.BlinkMsg:
-		return m, nil
 	case tea.KeyMsg:
 		return m, m.handleKeyboardEvent(msg)
 	case tea.WindowSizeMsg:
@@ -121,23 +134,14 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.SetSize(msg.Width-h, msg.Height-v)
 		m.logger.Debug("[UI] Set host list size: %d %d", m.Width(), m.Height())
 		return m, nil
-	case MsgRefreshRepo:
-		m.logger.Debug("[UI] Load hostnames from the database")
-		return m, m.refreshRepo(msg)
-	// case msgRefreshUI:
-	// 	m.selectHostByID(m.appState.Selected)
-	// 	return m, m.onFocusChanged()
-	case msgRefreshUI:
-		// m.selectHostByID(m.appState.Selected)
-		return m, m.selectHostByID(m.appState.Selected)
 	case message.HostSSHConfigLoaded:
-		m.handleHostSSHConfigLoaded(msg)
+		m.onHostSSHConfigLoaded(msg)
 		return m, nil
 	case message.HostUpdated:
-		cmd := m.handleHostUpdated(msg)
+		cmd := m.onHostUpdated(msg)
 		return m, cmd
 	case message.HostCreated:
-		cmd := m.handleHostCreated(msg)
+		cmd := m.onHostCreated(msg)
 		return m, cmd
 	default:
 		return m, m.updateChildModel(msg)
@@ -156,6 +160,13 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 			return tea.Sequence(m.updateChildModel(msg), m.onFocusChanged())
 		}
 		return m.updateChildModel(msg)
+	case key.Matches(msg, m.KeyMap.CancelWhileFiltering):
+		selectedID := m.SelectedItem().(ListItemHost).ID
+		return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
+	case key.Matches(msg, m.Model.KeyMap.ClearFilter):
+		// When user clears the host filter, child model resets the focus. Explicitly set focus on previously selected item.
+		selectedID := m.SelectedItem().(ListItemHost).ID
+		return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
 	case m.mode != modeDefault:
 		// Handle key event when some mode is enabled. For instance "removeMode".
 		return m.handleKeyEventWhenModeEnabled(msg)
@@ -166,11 +177,11 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, m.keyMap.remove):
 		return m.enterRemoveItemMode()
 	case key.Matches(msg, m.keyMap.edit):
-		return m.editItem(msg)
+		return m.editItem()
 	case key.Matches(msg, m.keyMap.append):
 		return message.TeaCmd(OpenEditForm{}) // When create a new item, jump to edit mode.
 	case key.Matches(msg, m.keyMap.clone):
-		return m.copyItem(msg)
+		return m.copyItem()
 	case key.Matches(msg, m.keyMap.toggleLayout):
 		m.updateChildModel(msgToggleLayout{})
 		// When switch between screen layouts, it's required to update pagination.
@@ -178,13 +189,6 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		// here. One of the ways to trigger it is to invoke model.SetSize method.
 		m.Model.SetSize(m.Width(), m.Height())
 		return nil
-	case key.Matches(msg, m.KeyMap.CancelWhileFiltering):
-		selectedID := m.SelectedItem().(ListItemHost).ID
-		return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
-	case key.Matches(msg, m.Model.KeyMap.ClearFilter):
-		// When user clears the host filter, child model resets the focus. Explicitly set focus on previously selected item.
-		selectedID := m.SelectedItem().(ListItemHost).ID
-		return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
 	default:
 		cmd := m.updateChildModel(msg)
 		return tea.Sequence(cmd, m.onFocusChanged())
@@ -202,19 +206,96 @@ func (m *listModel) updateChildModel(msg tea.Msg) tea.Cmd {
 	return cmd
 }
 
-func (m *listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
-	if key.Matches(msg, m.keyMap.confirm) {
-		return m.confirmAction()
+/*
+ * Actions.
+ */
+
+func (m *listModel) removeItem() tea.Cmd {
+	m.logger.Debug("[UI] Remove host from the database")
+	item, ok := m.SelectedItem().(ListItemHost)
+	if !ok {
+		// We should not be here at all, because delete
+		// button isn't available when a host is not selected.
+		m.logger.Error("[UI] Cannot cast selected item to host model")
+		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
-	// If user doesn't confirm the operation, we go back to normal mode and update
-	// title back to normal, this exact key event won't be handled
-	m.logger.Debug("[UI] Exit %s mode. Cancel action.", m.mode)
-	m.mode = modeDefault
-	return message.TeaCmd(msgRefreshUI{})
+	err := m.repo.Delete(item.ID)
+	if err != nil {
+		m.logger.Debug("[UI] Error removing host from the database. %v", err)
+		return message.TeaCmd(msgErrorOccurred{err})
+	}
+
+	m.Model.RemoveItem(m.Index())
+	if item, ok := m.Model.SelectedItem().(ListItemHost); ok {
+		return tea.Sequence(
+			message.TeaCmd(message.HostListSelectItem{HostID: item.ID}),
+			message.TeaCmd(message.RunProcessSSHLoadConfig{Host: item.Host}),
+		)
+	}
+
+	return nil
 }
 
-func (m *listModel) handleHostUpdated(msg message.HostUpdated) tea.Cmd {
+func (m *listModel) editItem() tea.Cmd {
+	item, ok := m.SelectedItem().(ListItemHost)
+	if !ok {
+		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
+	}
+
+	m.logger.Info("[UI] Edit item id: %d, title: %s", item.ID, item.Title())
+	return tea.Sequence(
+		message.TeaCmd(OpenEditForm{HostID: item.ID}),
+		// Load SSH config for the selected host
+		message.TeaCmd(message.RunProcessSSHLoadConfig{Host: item.Host}),
+	)
+}
+
+func (m *listModel) copyItem() tea.Cmd {
+	item, ok := m.SelectedItem().(ListItemHost)
+	if !ok {
+		m.logger.Error("[UI] Cannot cast selected item to host model")
+		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
+	}
+
+	originalHost := item.Host
+	m.logger.Info("[UI] Copy host item id: %d, title: %s", originalHost.ID, originalHost.Title)
+	clonedHost := originalHost.Clone()
+	for i := 1; ok; i++ {
+		// Keep generating new title until it's unique
+		clonedHostTitle := fmt.Sprintf("%s (%d)", originalHost.Title, i)
+		listItems := m.Items()
+		idx := slices.IndexFunc(listItems, func(li list.Item) bool {
+			return li.(ListItemHost).Title() == clonedHostTitle
+		})
+
+		// If title is unique, then we assign the title to the cloned host
+		if idx < 0 {
+			clonedHost.Title = clonedHostTitle
+			break
+		}
+	}
+
+	var err error
+	// Re-assign clonedHost to obtain host ID which is assigned by the database
+	if clonedHost, err = m.repo.Save(clonedHost); err != nil {
+		return message.TeaCmd(msgErrorOccurred{err})
+	}
+
+	titles := lo.Reduce(m.Items(), func(agg []string, item list.Item, index int) []string {
+		return append(agg, item.(ListItemHost).Title())
+	}, []string{clonedHost.Title})
+
+	slices.Sort(titles)
+	index := lo.IndexOf(titles, clonedHost.Title)
+	return m.Model.InsertItem(index, ListItemHost{Host: clonedHost})
+}
+
+/*
+ * Event handlers.
+ */
+
+func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
 	var cmd tea.Cmd
 	updatedItem := ListItemHost{Host: msg.Host}
 	titles := lo.Map(m.Items(), func(item list.Item, index int) string {
@@ -243,11 +324,12 @@ func (m *listModel) handleHostUpdated(msg message.HostUpdated) tea.Cmd {
 	return tea.Sequence(
 		cmd,
 		message.TeaCmd(message.HostListSelectItem{HostID: msg.Host.ID}),
-		message.TeaCmd(message.RunProcessSSHLoadConfig{Host: msg.Host}),
+		// See S1016 - Use a type conversion instead of manually copying struct fields one by one.
+		message.TeaCmd(message.RunProcessSSHLoadConfig(msg)),
 	)
 }
 
-func (m *listModel) handleHostCreated(msg message.HostCreated) tea.Cmd {
+func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
 	listItem := ListItemHost{Host: msg.Host}
 	titles := lo.Reduce(m.Items(), func(agg []string, item list.Item, index int) []string {
 		return append(agg, item.(ListItemHost).Title())
@@ -264,24 +346,108 @@ func (m *listModel) handleHostCreated(msg message.HostCreated) tea.Cmd {
 		// If host position coincides with other host, then let the underlying model to handle that
 		cmd,
 		message.TeaCmd(message.HostListSelectItem{HostID: msg.Host.ID}),
-		message.TeaCmd(message.RunProcessSSHLoadConfig{Host: msg.Host}),
+		// See S1016 - Use a type conversion instead of manually copying struct fields one by one.
+		message.TeaCmd(message.RunProcessSSHLoadConfig(msg)),
 	)
 }
 
-func (m *listModel) confirmAction() tea.Cmd {
-	var cmd tea.Cmd
-	if m.mode == modeRemoveItem {
-		cmd = m.removeItem()
-	} else if m.mode == modeSSHCopyID {
-		cmd = m.constructProcessCmd(constant.ProcessTypeSSHCopyID)
+func (m *listModel) onFocusChanged() tea.Cmd {
+	if m.SelectedItem() == nil {
+		m.logger.Debug("[UI] Focus is not set to any item in the list")
 	}
 
-	m.logger.Debug("[UI] Exit %s mode. Confirm action.", m.mode)
-	m.mode = modeDefault
-	m.updateTitle()
+	if hostItem, ok := m.SelectedItem().(ListItemHost); ok {
+		m.logger.Debug("[UI] Focus changed to host id: %v, title: %s", hostItem.ID, hostItem.Title())
+		m.updateTitle()
+		m.updateKeyMap()
 
-	return cmd
+		return tea.Sequence(
+			message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
+			message.TeaCmd(message.RunProcessSSHLoadConfig{Host: hostItem.Host}),
+		)
+	}
+
+	m.logger.Error("[UI] Select unknown item type from the list")
+	return nil
 }
+
+func (m *listModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoaded) {
+	for index, item := range m.Items() {
+		if hostListItem, ok := item.(ListItemHost); ok && hostListItem.ID == msg.HostID {
+			hostListItem.SSHClientConfig = &msg.Config
+			m.SetItem(index, hostListItem)
+			break
+		}
+	}
+}
+
+/*
+ * Helper methods.
+ */
+
+func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cmd {
+	item, ok := m.SelectedItem().(ListItemHost)
+	if !ok {
+		m.logger.Error("[UI] Cannot cast selected item to host model")
+		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
+	}
+
+	if processType == constant.ProcessTypeSSHConnect {
+		return message.TeaCmd(message.RunProcessSSHConnect{Host: item.Host})
+	} else if processType == constant.ProcessTypeSSHCopyID {
+		return message.TeaCmd(message.RunProcessSSHCopyID{Host: item.Host})
+	}
+
+	return nil
+}
+
+func (m *listModel) updateTitle() {
+	var newTitle string
+	item, ok := m.SelectedItem().(ListItemHost)
+
+	switch {
+	case !ok:
+		newTitle = defaultListTitle
+	case m.mode == modeRemoveItem:
+		newTitle = fmt.Sprintf("delete \"%s\" ? (y/N)", item.Title())
+	default:
+		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
+		newTitle = strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
+		newTitle = utils.RemoveDuplicateSpaces(newTitle)
+	}
+
+	if m.Title != newTitle {
+		m.Title = newTitle
+		m.logger.Debug("[UI] New list title: %s", m.Title)
+	}
+}
+
+func (m *listModel) updateKeyMap() {
+	shouldShowEditButtons := m.SelectedItem() != nil
+
+	if shouldShowEditButtons != m.keyMap.ShouldShowEditButtons() {
+		m.logger.Debug("[UI] Show edit keyboard shortcuts: %v", shouldShowEditButtons)
+		m.keyMap.SetShouldShowEditButtons(shouldShowEditButtons)
+	}
+}
+
+func (m *listModel) selectHostByID(id int) tea.Cmd {
+	_, index, found := lo.FindIndexOf(m.Items(), func(item list.Item) bool {
+		hostItem, ok := item.(ListItemHost)
+		return ok && hostItem.ID == id
+	})
+
+	if found {
+		m.Select(index)
+		return m.onFocusChanged()
+	}
+
+	return nil
+}
+
+/*
+ * Deal with actions which require confirmation from the user.
+ */
 
 func (m *listModel) enterSSHCopyIDMode() tea.Cmd {
 	// Check if item is selected.
@@ -313,200 +479,29 @@ func (m *listModel) enterRemoveItemMode() tea.Cmd {
 	return nil
 }
 
-func (m *listModel) removeItem() tea.Cmd {
-	m.logger.Debug("[UI] Remove host from the database")
-	item, ok := m.SelectedItem().(ListItemHost)
-	if !ok {
-		// We should not be here at all, because delete
-		// button isn't available when a host is not selected.
-		m.logger.Error("[UI] Cannot cast selected item to host model")
-		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
+func (m *listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
+	if key.Matches(msg, m.keyMap.confirm) {
+		return m.confirmAction()
 	}
 
-	err := m.repo.Delete(item.ID)
-	if err != nil {
-		m.logger.Debug("[UI] Error removing host from the database. %v", err)
-		return message.TeaCmd(msgErrorOccurred{err})
-	}
-
-	m.Model.RemoveItem(m.Index())
-	if item, ok := m.Model.SelectedItem().(ListItemHost); ok {
-		return tea.Sequence(
-			message.TeaCmd(message.HostListSelectItem{HostID: item.ID}),
-			message.TeaCmd(message.RunProcessSSHLoadConfig{Host: item.Host}),
-		)
-	}
-
-	return nil
+	// If user doesn't confirm the operation, we go back to normal mode and update
+	// title back to normal, this exact key event won't be handled
+	m.logger.Debug("[UI] Exit %s mode. Cancel action.", m.mode)
+	m.mode = modeDefault
+	return m.selectHostByID(m.appState.Selected)
 }
 
-func (m *listModel) refreshRepo(_ tea.Msg) tea.Cmd {
-	hosts, err := m.repo.GetAll()
-	if err != nil {
-		m.logger.Error("[UI] Cannot read database. %v", err)
-		return message.TeaCmd(msgErrorOccurred{err})
+func (m *listModel) confirmAction() tea.Cmd {
+	var cmd tea.Cmd
+	if m.mode == modeRemoveItem {
+		cmd = m.removeItem()
+	} else if m.mode == modeSSHCopyID {
+		cmd = m.constructProcessCmd(constant.ProcessTypeSSHCopyID)
 	}
 
-	slices.SortFunc(hosts, func(a, b hostModel.Host) int {
-		if a.Title < b.Title {
-			return -1
-		}
-		return 1
-	})
+	m.logger.Debug("[UI] Exit %s mode. Confirm action.", m.mode)
+	m.mode = modeDefault
+	m.updateTitle()
 
-	// Wrap hosts into List items
-	items := make([]list.Item, 0, len(hosts))
-	for _, h := range hosts {
-		items = append(items, ListItemHost{Host: h})
-	}
-
-	setItemsCmd := m.SetItems(items)
-	selectHostByIDCmd := m.selectHostByID(m.appState.Selected)
-	return tea.Sequence(setItemsCmd, selectHostByIDCmd)
-}
-
-func (m *listModel) editItem(_ tea.Msg) tea.Cmd {
-	item, ok := m.SelectedItem().(ListItemHost)
-	if !ok {
-		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
-	}
-
-	m.logger.Info("[UI] Edit item id: %d, title: %s", item.ID, item.Title())
-	return tea.Sequence(
-		message.TeaCmd(OpenEditForm{HostID: item.ID}),
-		// Load SSH config for the selected host
-		message.TeaCmd(message.RunProcessSSHLoadConfig{Host: item.Host}),
-	)
-}
-
-func (m *listModel) copyItem(_ tea.Msg) tea.Cmd {
-	item, ok := m.SelectedItem().(ListItemHost)
-	if !ok {
-		m.logger.Error("[UI] Cannot cast selected item to host model")
-		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
-	}
-
-	originalHost := item.Host
-	m.logger.Info("[UI] Copy host item id: %d, title: %s", originalHost.ID, originalHost.Title)
-	clonedHost := originalHost.Clone()
-	for i := 1; ok; i++ {
-		// Keep generating new title until it's unique
-		clonedHostTitle := fmt.Sprintf("%s (%d)", originalHost.Title, i)
-		listItems := m.Items()
-		idx := slices.IndexFunc(listItems, func(li list.Item) bool {
-			return li.(ListItemHost).Title() == clonedHostTitle
-		})
-
-		// If title is unique, then we assign the title to the cloned host
-		if idx < 0 {
-			clonedHost.Title = clonedHostTitle
-			break
-		}
-	}
-
-	if savedHost, err := m.repo.Save(clonedHost); err != nil {
-		return message.TeaCmd(msgErrorOccurred{err})
-	} else {
-		clonedHost.ID = savedHost.ID
-	}
-
-	titles := lo.Reduce(m.Items(), func(agg []string, item list.Item, index int) []string {
-		return append(agg, item.(ListItemHost).Title())
-	}, []string{clonedHost.Title})
-
-	slices.Sort(titles)
-	index := lo.IndexOf(titles, clonedHost.Title)
-	return m.Model.InsertItem(index, ListItemHost{Host: clonedHost})
-}
-
-func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cmd {
-	item, ok := m.SelectedItem().(ListItemHost)
-	if !ok {
-		m.logger.Error("[UI] Cannot cast selected item to host model")
-		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
-	}
-
-	if processType == constant.ProcessTypeSSHConnect {
-		return message.TeaCmd(message.RunProcessSSHConnect{Host: item.Host})
-	} else if processType == constant.ProcessTypeSSHCopyID {
-		return message.TeaCmd(message.RunProcessSSHCopyID{Host: item.Host})
-	}
-
-	return nil
-}
-
-func (m *listModel) updateTitle() {
-	var newTitle string
-
-	item, ok := m.SelectedItem().(ListItemHost)
-
-	switch {
-	case !ok:
-		newTitle = defaultListTitle
-	case m.mode == modeRemoveItem:
-		newTitle = fmt.Sprintf("delete \"%s\" ? (y/N)", item.Title())
-	default:
-		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
-		newTitle = strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
-		newTitle = utils.RemoveDuplicateSpaces(newTitle)
-	}
-
-	if m.Title != newTitle {
-		m.Title = newTitle
-		m.logger.Debug("[UI] New list title: %s", m.Title)
-	}
-}
-
-func (m *listModel) updateKeyMap() {
-	shouldShowEditButtons := m.SelectedItem() != nil
-
-	if shouldShowEditButtons != m.keyMap.ShouldShowEditButtons() {
-		m.logger.Debug("[UI] Show edit keyboard shortcuts: %v", shouldShowEditButtons)
-		m.keyMap.SetShouldShowEditButtons(shouldShowEditButtons)
-	}
-}
-
-func (m *listModel) onFocusChanged() tea.Cmd {
-	if m.SelectedItem() == nil {
-		m.logger.Debug("[UI] Focus is not set to any item in the list")
-	}
-
-	if hostItem, ok := m.SelectedItem().(ListItemHost); ok {
-		m.logger.Debug("[UI] Focus changed to host id: %v, title: %s", hostItem.ID, hostItem.Title())
-		m.updateTitle()
-		m.updateKeyMap()
-
-		return tea.Sequence(
-			message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
-			message.TeaCmd(message.RunProcessSSHLoadConfig{Host: hostItem.Host}),
-		)
-	}
-
-	m.logger.Error("[UI] Select unknown item type from the list")
-
-	return nil
-}
-
-func (m *listModel) selectHostByID(id int) tea.Cmd {
-	_, index, found := lo.FindIndexOf(m.Items(), func(item list.Item) bool {
-		hostItem, ok := item.(ListItemHost)
-		return ok && hostItem.ID == id
-	})
-
-	if found {
-		m.Select(index)
-		return m.onFocusChanged()
-	}
-
-	return nil
-}
-
-func (m *listModel) handleHostSSHConfigLoaded(msg message.HostSSHConfigLoaded) {
-	for index, item := range m.Items() {
-		if hostListItem, ok := item.(ListItemHost); ok && hostListItem.ID == msg.HostID {
-			hostListItem.SSHClientConfig = &msg.Config
-			m.SetItem(index, hostListItem)
-			break
-		}
-	}
+	return cmd
 }

@@ -290,11 +290,14 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 
 	host, _ := m.hostStorage.Save(m.host.unwrap())
 	// Need to check storage error and update application status:
-	// if err !=nil { return message.TeaCmd(message.Error{StdErr: err}) }
+	// if err != nil { return message.TeaCmd(message.Error{StdErr: err}) }
 	// or
 	// m.title = err
 
-	cmd := lo.Ternary(m.isNewHost, message.TeaCmd(message.HostCreated{Host: host}), message.TeaCmd(message.HostUpdated{Host: host}))
+	cmd := lo.Ternary(m.isNewHost,
+		message.TeaCmd(message.HostCreated{Host: host}),
+		message.TeaCmd(message.HostUpdated{Host: host}))
+
 	return tea.Sequence(
 		message.TeaCmd(CloseEditForm{}),
 		// Order matters here! That's why we use tea.Sequence instead of tea.Batch.

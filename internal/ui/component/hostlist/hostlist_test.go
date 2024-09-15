@@ -296,12 +296,12 @@ func TestListModel_title_when_filter_is_enabled(t *testing.T) {
 }
 
 func TestListModel_refreshRepo(t *testing.T) {
-	// Test refreshRepo function with normal storage behavior
+	// Test initialLoad function with normal storage behavior
 	storageShouldFail := false
 	storage := test.NewMockStorage(storageShouldFail)
 	fakeAppState := state.ApplicationState{Selected: 1}
 	lm := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
-	teaCmd := lm.refreshRepo(nil)
+	teaCmd := lm.initialLoad(nil)
 
 	var dst []tea.Msg
 	test.CmdToMessage(teaCmd, &dst)
@@ -313,7 +313,7 @@ func TestListModel_refreshRepo(t *testing.T) {
 	// Check that currently selected item is "1", as it is set in the fakeAppState object
 	require.Equal(t, 1, lm.SelectedItem().(ListItemHost).ID)
 
-	// Now test refreshRepo function simulating a broken storage
+	// Now test initialLoad function simulating a broken storage
 	storageShouldFail = true
 	storage = test.NewMockStorage(storageShouldFail)
 	lm = New(
@@ -323,7 +323,7 @@ func TestListModel_refreshRepo(t *testing.T) {
 		&test.MockLogger{},
 	)
 	lm.logger = &test.MockLogger{}
-	teaCmd = lm.refreshRepo(nil)
+	teaCmd = lm.initialLoad(nil)
 
 	// Check that msgErrorOccurred{} was found among returned messages, which indicate that
 	// something is wrong with the storage
@@ -444,7 +444,7 @@ func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
 	// Create model
 	model := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
 	model.logger = &test.MockLogger{}
-	model.refreshRepo(nil)
+	model.initialLoad(nil)
 
 	// Make sure there are 3 items in the collection
 	assert.Len(t, model.VisibleItems(), 3)
@@ -490,7 +490,7 @@ func TestUpdate_ToggleBetweenNormalAndCompactLayout(t *testing.T) {
 	// Create model
 	model := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
 	model.logger = &test.MockLogger{}
-	model.refreshRepo(nil)
+	model.initialLoad(nil)
 
 	// Make sure there are 3 items in the collection
 	assert.Len(t, model.VisibleItems(), 3)
@@ -542,7 +542,7 @@ func TestUpdate_HostFocusPreservedAfterClearFilterMessage(t *testing.T) {
 	// Create model
 	model := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
 	model.logger = &test.MockLogger{}
-	model.refreshRepo(nil)
+	model.initialLoad(nil)
 
 	// Make sure there are 3 items in the collection
 	assert.Len(t, model.VisibleItems(), 3)
