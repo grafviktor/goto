@@ -277,7 +277,10 @@ func (m *mainModel) handleProcessSuccess(msg message.RunProcessSuccess) tea.Cmd 
 	if msg.ProcessType == constant.ProcessTypeSSHLoadConfig {
 		parsedSSHConfig := ssh.Parse(msg.StdOut)
 		m.logger.Debug("[EXEC] Host SSH config loaded: %+v", *parsedSSHConfig)
-		return message.TeaCmd(message.HostSSHConfigLoaded{Config: *parsedSSHConfig})
+		return message.TeaCmd(message.HostSSHConfigLoaded{
+			HostID: m.appState.Selected,
+			Config: *parsedSSHConfig,
+		})
 	}
 
 	if msg.ProcessType == constant.ProcessTypeSSHCopyID {

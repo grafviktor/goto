@@ -27,7 +27,10 @@ type (
 	HostUpdated struct{ Host host.Host }
 	// HostSSHConfigLoaded triggers when app loads a host config using ssh -G <hostname>.
 	// The config is stored in main model: m.appState.HostSSHConfig.
-	HostSSHConfigLoaded struct{ Config ssh.Config }
+	HostSSHConfigLoaded struct {
+		HostID int
+		Config ssh.Config
+	}
 	// RunProcessSSHConnect is dispatched when user wants to connect to a host.
 	RunProcessSSHConnect struct{ Host host.Host }
 	// RunProcessSSHLoadConfig is dispatched it's required to read .ssh/config file for a certain host.
