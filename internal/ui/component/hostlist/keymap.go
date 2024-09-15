@@ -55,7 +55,7 @@ func newDelegateKeyMap() *keyMap {
 		),
 		toggleLayout: key.NewBinding(
 			key.WithKeys("v"),
-			key.WithHelp("v", "view toggle"),
+			key.WithHelp("v", "toggle view"),
 		),
 		confirm: key.NewBinding(
 			key.WithKeys("y", "Y"),
