@@ -226,7 +226,15 @@ func (m *listModel) removeItem() tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err})
 	}
 
+	// If we remove the last item, then we should select the previous one. However, this won't work if only one item is
+	// left on the page, because m.VisibleItems() returns nothing. Need to improve.
+	isLastPosition := m.Index() == len(m.VisibleItems())-1
 	m.Model.RemoveItem(m.Index())
+
+	if isLastPosition {
+		m.Select(m.Index() - 1)
+	}
+
 	if item, ok := m.Model.SelectedItem().(ListItemHost); ok {
 		return tea.Sequence(
 			message.TeaCmd(message.HostListSelectItem{HostID: item.ID}),
@@ -292,7 +300,7 @@ func (m *listModel) copyItem() tea.Cmd {
 }
 
 /*
- * Event handlers.
+ * Event handlers - those events come from other components.
  */
 
 func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
