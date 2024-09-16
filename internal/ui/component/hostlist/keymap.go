@@ -33,13 +33,9 @@ func newDelegateKeyMap() *keyMap {
 			key.WithKeys("enter"),
 			key.WithHelp("↩", "connect"),
 		),
-		copyID: key.NewBinding(
-			key.WithKeys("t"),
-			key.WithHelp("t", "ssh copy id"),
-		),
 		append: key.NewBinding(
-			key.WithKeys("n"),
-			key.WithHelp("n", "new"),
+			key.WithKeys("i", "n", "insert"),
+			key.WithHelp("i/n", "new"),
 		),
 		edit: key.NewBinding(
 			key.WithKeys("e"),
@@ -50,8 +46,12 @@ func newDelegateKeyMap() *keyMap {
 			key.WithHelp("c", "clone"),
 		),
 		remove: key.NewBinding(
-			key.WithKeys("d"),
-			key.WithHelp("d", "delete"),
+			key.WithKeys("d", "x"),
+			key.WithHelp("d/x", "delete"),
+		),
+		copyID: key.NewBinding(
+			key.WithKeys("t"),
+			key.WithHelp("t", "ssh copy id"),
 		),
 		toggleLayout: key.NewBinding(
 			key.WithKeys("v"),
