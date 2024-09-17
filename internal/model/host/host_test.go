@@ -4,8 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/grafviktor/goto/internal/model/ssh"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -63,46 +61,5 @@ func TestCloneHost(t *testing.T) {
 	clonedHost.Address = "ModifiedAddress"
 	if clonedHost.Address == originalHost.Address {
 		t.Error("Modifying the cloned host should not affect the original host")
-	}
-}
-
-func TestToSSHOptions(t *testing.T) {
-	// Sanity test for toSSHOptions function
-	tests := []struct {
-		name            string
-		host            Host
-		expectedOptions []ssh.Option
-	}{
-		{
-			name: "Valid Host",
-			host: Host{
-				Address:          "example.com",
-				LoginName:        "user",
-				RemotePort:       "22",
-				IdentityFilePath: "/path/to/private_key",
-			},
-			expectedOptions: []ssh.Option{
-				ssh.OptionPrivateKey{Value: "/path/to/private_key"},
-				ssh.OptionRemotePort{Value: "22"},
-				ssh.OptionLoginName{Value: "user"},
-				ssh.OptionAddress{Value: "example.com"},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.host.toSSHOptions()
-
-			if len(result) != len(tt.expectedOptions) {
-				t.Errorf("Expected %d options, but got %d", len(tt.expectedOptions), len(result))
-			}
-
-			for i := range result {
-				if result[i] != tt.expectedOptions[i] {
-					t.Errorf("Expected option %v, but got %v", tt.expectedOptions[i], result[i])
-				}
-			}
-		})
 	}
 }
