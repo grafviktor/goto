@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/grafviktor/goto/internal/utils"
@@ -52,58 +51,4 @@ func addOption(sb *strings.Builder, rawParameter Option) {
 	}
 
 	sb.WriteString(option)
-}
-
-// TODO: Move to command.go.
-var baseCmd = BaseCMD()
-
-// ConnectCommand - builds ssh command to connect to a remote host.
-func ConnectCommand(options ...Option) string {
-	sb := strings.Builder{}
-	sb.WriteString(baseCmd)
-
-	for _, option := range options {
-		addOption(&sb, option)
-	}
-
-	return sb.String()
-}
-
-// LoadConfigCommand - builds ssh command to load config from ssh_config file.
-func LoadConfigCommand(option OptionReadConfig) string {
-	sb := strings.Builder{}
-	sb.WriteString(baseCmd)
-
-	addOption(&sb, option)
-
-	return sb.String()
-}
-
-// CopyIDCommand - builds ssh command to copy ssh key to a remote host.
-func CopyIDCommand(options ...Option) string {
-	sb := strings.Builder{}
-	// FIXME: Not compatible with Windows OS.
-	baseCmd := "ssh-copy-id"
-	sb.WriteString(baseCmd)
-
-	var hostname string
-	var username string
-	for _, option := range options {
-		switch opt := option.(type) {
-		case OptionAddress:
-			hostname = opt.Value
-		case OptionLoginName:
-			username = opt.Value
-		case OptionPrivateKey:
-			if strings.HasPrefix(opt.Value, "~") {
-				// Replace "~" with "$HOME" environment variable
-				opt.Value = strings.Replace(opt.Value, "~", os.Getenv("HOME"), 1)
-			}
-			addOption(&sb, opt)
-		default:
-			addOption(&sb, opt)
-		}
-	}
-
-	return fmt.Sprintf("%s %s@%s", sb.String(), username, hostname)
 }
