@@ -15,7 +15,6 @@ func BaseCMD() string {
 
 // CopyIDCommand - builds ssh command to copy ssh key to a remote host.
 func CopyIDCommand(options ...Option) string {
-	// cmd /c type "%USERPROFILE%\.ssh\id_rsa.pub" | ssh user@host "cat >> .ssh/authorized_keys && chmod 600 .ssh/authorized_keys"
 	var hostname string
 	var username string
 	var remotePort string
@@ -39,7 +38,7 @@ func CopyIDCommand(options ...Option) string {
 		}
 	}
 
-	return fmt.Sprintf("cmd /c type \"%s.pub\" | ssh %s@%s -p %s \"cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys\"",
+	return fmt.Sprintf("cmd /c type \"%s.pub\" | ssh %s@%s -p %s \"cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && echo Key added. Now try logging into the machine.\"",
 		privateKey,
 		username,
 		hostname,
