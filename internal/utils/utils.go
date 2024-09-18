@@ -84,7 +84,40 @@ func CheckAppInstalled(appName string) error {
 	return err
 }
 
-var argumentsRegexp = regexp.MustCompile(`\s+`)
+// splitArguments - converts a command with arguments into an array of strings.
+// Note, that it does not preserves inner quote characters:
+//
+//	ssh -o option="123 456"
+//	// will be split into 3 this array:
+//	"ssh" "-o" "option=123 456" // no quotes around 123 456
+func splitArguments(cmd string) []string {
+	args := make([]string, 0)
+	inQuotes := false
+	commandLength := len(cmd)
+
+	var arg string
+	for charIndex, ch := range cmd {
+		isQuoteCharacter := ch == '"' || ch == '\''
+		isSpaceCharacter := ch == ' '
+
+		switch {
+		case isSpaceCharacter && !inQuotes:
+			args = append(args, arg)
+			arg = ""
+		case isQuoteCharacter:
+			inQuotes = !inQuotes
+		default:
+			arg += string(ch)
+		}
+
+		isLastCharacter := charIndex == commandLength-1
+		if isLastCharacter {
+			args = append(args, arg)
+		}
+	}
+
+	return args
+}
 
 // BuildProcess - builds exec.Cmd object from command string.
 func BuildProcess(cmd string) *exec.Cmd {
@@ -92,7 +125,7 @@ func BuildProcess(cmd string) *exec.Cmd {
 		return nil
 	}
 
-	commandWithArguments := argumentsRegexp.Split(cmd, -1)
+	commandWithArguments := splitArguments(cmd)
 	command := commandWithArguments[0]
 	arguments := commandWithArguments[1:]
 
