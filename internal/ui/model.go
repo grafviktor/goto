@@ -129,8 +129,7 @@ func (m *mainModel) View() string {
 	var content string
 	switch m.appState.CurrentView {
 	case state.ViewHostList:
-		// Do not use viewport for HostList view. It's already scrollable.
-		return m.modelHostList.View()
+		content = m.modelHostList.View()
 	case state.ViewMessage:
 		content = m.viewMessageContent
 	case state.ViewEditItem:
