@@ -101,21 +101,21 @@ func TestRemoveItem(t *testing.T) {
 		expectedItems int
 	}{
 		{
-			name:  "Remove item success",
-			model: *NewMockListModel(false),
-			mode:  modeRemoveItem,
-			preselectItem: 0,
+			name:          "Remove item success",
+			model:         *NewMockListModel(false),
+			mode:          modeRemoveItem,
+			preselectItem: 0, // It's already '0' by default. Just to be more explicit
 			want: []tea.Msg{
 				// Because we remote item "Mock Host 1" (which has index 0), we should ensure that next available item will be focused
 				message.HostListSelectItem{HostID: 2},
 				message.RunProcessSSHLoadConfig{
 					Host: host.Host{
-						ID: 2,
-						Title: "Mock Host 2",
-						Description:"",
-						Address: "localhost",
-						RemotePort: "2222",
-						LoginName: "root",
+						ID:               2,
+						Title:            "Mock Host 2",
+						Description:      "",
+						Address:          "localhost",
+						RemotePort:       "2222",
+						LoginName:        "root",
 						IdentityFilePath: "id_rsa",
 					},
 				},
@@ -123,24 +123,23 @@ func TestRemoveItem(t *testing.T) {
 			expectedItems: 2,
 		},
 		{
-			// FAILS
 			// Checking this because there is a focusing problem in bubbles/list component
 			// when remove last item, the component does not set focus on any item.
-			name:  "Remove LAST item success",
-			model: *NewMockListModel(false),
-			mode:  modeRemoveItem,
+			name:          "Remove LAST item success",
+			model:         *NewMockListModel(false),
+			mode:          modeRemoveItem,
 			preselectItem: 2, // We have 3 items in the mock storage. Selecting the last one
 			want: []tea.Msg{
 				// Because we remote item "Mock Host 1" (which has index 0), we should ensure that next available item will be focused
 				message.HostListSelectItem{HostID: 2},
 				message.RunProcessSSHLoadConfig{
 					Host: host.Host{
-						ID: 2,
-						Title: "Mock Host 2",
-						Description:"",
-						Address: "localhost",
-						RemotePort: "2222",
-						LoginName: "root",
+						ID:               2,
+						Title:            "Mock Host 2",
+						Description:      "",
+						Address:          "localhost",
+						RemotePort:       "2222",
+						LoginName:        "root",
 						IdentityFilePath: "id_rsa",
 					},
 				},
@@ -148,19 +147,19 @@ func TestRemoveItem(t *testing.T) {
 			expectedItems: 2,
 		},
 		{
-			name:          "Remove item error because of the database error",
-			model:         *NewMockListModel(true),
-			mode:          modeRemoveItem,
-			want:          []tea.Msg{
+			name:  "Remove item error because of the database error",
+			model: *NewMockListModel(true),
+			mode:  modeRemoveItem,
+			want: []tea.Msg{
 				msgErrorOccurred{err: errors.New("mock error")},
 			},
 			expectedItems: 3,
 		},
 		{
-			name:          "Remove item error wrong item selected",
-			model:         *NewMockListModel(false),
-			mode:          modeRemoveItem,
-			want:          []tea.Msg{
+			name:  "Remove item error wrong item selected",
+			model: *NewMockListModel(false),
+			mode:  modeRemoveItem,
+			want: []tea.Msg{
 				msgErrorOccurred{err: errors.New("you must select an item")},
 			},
 			preselectItem: 10,
@@ -217,33 +216,36 @@ func TestConfirmAction(t *testing.T) {
 	require.NotNil(t, cmd)
 }
 
+func TestEnterRemoveItemMode(t *testing.T) {
+	// 1. FAILS
+	// 2. Need to check storage error case
+
+	// Create a new model
+	model := *NewMockListModel(false)
+	model.logger = &test.MockLogger{}
+	// Select non-existent index
+	model.Select(10)
+	// Call enterRemoveItemMode function
+	cmd := model.enterRemoveItemMode()
+	// and make sure that mode is unchanged
+	require.Len(t, model.mode, 0)
+	// cmd() should return msgErrorOccurred error
+	require.IsType(t, msgErrorOccurred{}, cmd(), "Wrong message type")
+
+	// Create another model
+	model = *NewMockListModel(false)
+	model.logger = &test.MockLogger{}
+	// Select a first item, which is valid
+	model.Select(0)
+	// Call enterRemoveItemMode function
+	cmd = model.enterRemoveItemMode()
+	// Ensure that we entered remove mode
+	require.Equal(t, modeRemoveItem, model.mode)
+	// cmd() should return msgRefreshUI in order to update title
+	require.Equal(t, nil, cmd, "Wrong message type")
+}
+
 /*
-	func TestEnterRemoveItemMode(t *testing.T) {
-		// Create a new model
-		model := *NewMockListModel(false)
-		model.logger = &test.MockLogger{}
-		// Select non-existent index
-		model.Select(10)
-		// Call enterRemoveItemMode function
-		cmd := model.enterRemoveItemMode()
-		// and make sure that mode is unchanged
-		require.Len(t, model.mode, 0)
-		// cmd() should return msgErrorOccurred error
-		require.IsType(t, msgErrorOccurred{}, cmd(), "Wrong message type")
-
-		// Create another model
-		model = *NewMockListModel(false)
-		model.logger = &test.MockLogger{}
-		// Select a first item, which is valid
-		model.Select(0)
-		// Call enterRemoveItemMode function
-		cmd = model.enterRemoveItemMode()
-		// Ensure that we entered remove mode
-		require.Equal(t, modeRemoveItem, model.mode)
-		// cmd() should return msgRefreshUI in order to update title
-		require.IsType(t, msgRefreshUI{}, cmd(), "Wrong message type")
-	}
-
 	func TestExitRemoveItemMode(t *testing.T) {
 		// Create a new model
 		model := *NewMockListModel(false)

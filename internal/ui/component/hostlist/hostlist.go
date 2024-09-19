@@ -226,13 +226,14 @@ func (m *listModel) removeItem() tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err})
 	}
 
+	index := m.Index()
 	// If we remove the last item, then we should select the previous one. However, this won't work if only one item is
 	// left on the page, because m.VisibleItems() returns nothing. Need to improve.
-	isLastPosition := m.Index() == len(m.VisibleItems())-1
-	m.Model.RemoveItem(m.Index())
+	isLastPosition := index == len(m.VisibleItems())-1
+	m.Model.RemoveItem(index)
 
 	if isLastPosition {
-		m.Select(m.Index() - 1)
+		m.Select(index - 1)
 	}
 
 	if item, ok := m.Model.SelectedItem().(ListItemHost); ok {
