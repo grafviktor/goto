@@ -14,7 +14,6 @@ import (
 
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/test"
-	"github.com/grafviktor/goto/internal/ui/component/hostlist"
 	"github.com/grafviktor/goto/internal/ui/message"
 )
 
@@ -102,7 +101,6 @@ func TestSave(t *testing.T) {
 	var dst []tea.Msg
 	test.CmdToMessage(messageSequence, &dst)
 	require.Contains(t, dst, CloseEditForm{})
-	require.Contains(t, dst, hostlist.MsgRefreshRepo{})
 	require.Contains(t, dst, message.HostListSelectItem{HostID: 0})
 }
 

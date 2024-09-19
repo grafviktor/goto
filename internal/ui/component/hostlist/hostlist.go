@@ -5,9 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/grafviktor/goto/internal/constant"
-	hostModel "github.com/grafviktor/goto/internal/model/host"
-	"github.com/grafviktor/goto/internal/utils"
 	"strings"
 
 	"golang.org/x/exp/slices"
@@ -18,9 +15,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
 
+	"github.com/grafviktor/goto/internal/constant"
+	hostModel "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/message"
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 var (
