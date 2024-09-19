@@ -3,6 +3,7 @@ package hostlist
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/grafviktor/goto/internal/constant"
+	"github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/test"
 	"github.com/grafviktor/goto/internal/ui/message"
@@ -102,27 +104,68 @@ func TestRemoveItem(t *testing.T) {
 			name:  "Remove item success",
 			model: *NewMockListModel(false),
 			mode:  modeRemoveItem,
+			preselectItem: 0,
 			want: []tea.Msg{
-				message.HostListSelectItem{},
-				message.RunProcessSSHLoadConfig{},
+				// Because we remote item "Mock Host 1" (which has index 0), we should ensure that next available item will be focused
+				message.HostListSelectItem{HostID: 2},
+				message.RunProcessSSHLoadConfig{
+					Host: host.Host{
+						ID: 2,
+						Title: "Mock Host 2",
+						Description:"",
+						Address: "localhost",
+						RemotePort: "2222",
+						LoginName: "root",
+						IdentityFilePath: "id_rsa",
+					},
+				},
 			},
 			expectedItems: 2,
 		},
-		//{
-		//	name:          "Remove item error because of the database error",
-		//	model:         *NewMockListModel(true),
-		//	mode:          modeRemoveItem,
-		//	want:          msgErrorOccurred{},
-		//	expectedItems: 3,
-		//},
-		//{
-		//	name:          "Remove item error wrong item selected",
-		//	model:         *NewMockListModel(false),
-		//	mode:          modeRemoveItem,
-		//	want:          msgErrorOccurred{},
-		//	preselectItem: 10,
-		//	expectedItems: 3,
-		//},
+		{
+			// FAILS
+			// Checking this because there is a focusing problem in bubbles/list component
+			// when remove last item, the component does not set focus on any item.
+			name:  "Remove LAST item success",
+			model: *NewMockListModel(false),
+			mode:  modeRemoveItem,
+			preselectItem: 2, // We have 3 items in the mock storage. Selecting the last one
+			want: []tea.Msg{
+				// Because we remote item "Mock Host 1" (which has index 0), we should ensure that next available item will be focused
+				message.HostListSelectItem{HostID: 2},
+				message.RunProcessSSHLoadConfig{
+					Host: host.Host{
+						ID: 2,
+						Title: "Mock Host 2",
+						Description:"",
+						Address: "localhost",
+						RemotePort: "2222",
+						LoginName: "root",
+						IdentityFilePath: "id_rsa",
+					},
+				},
+			},
+			expectedItems: 2,
+		},
+		{
+			name:          "Remove item error because of the database error",
+			model:         *NewMockListModel(true),
+			mode:          modeRemoveItem,
+			want:          []tea.Msg{
+				msgErrorOccurred{err: errors.New("mock error")},
+			},
+			expectedItems: 3,
+		},
+		{
+			name:          "Remove item error wrong item selected",
+			model:         *NewMockListModel(false),
+			mode:          modeRemoveItem,
+			want:          []tea.Msg{
+				msgErrorOccurred{err: errors.New("you must select an item")},
+			},
+			preselectItem: 10,
+			expectedItems: 3,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -136,8 +179,7 @@ func TestRemoveItem(t *testing.T) {
 			// Cmd() can return a sequence or tea.Msg
 			var actual []tea.Msg
 			test.CmdToMessage(cmd, &actual)
-			// BUG: does not compare the contents of tt.want and actual
-			require.IsType(t, tt.want, actual, "Wrong message type")
+			require.Equal(t, tt.want, actual, "Wrong message type")
 			// Get all items from the database without error
 			items, _ := tt.model.repo.GetAll()
 			// Make sure that the list contains expected quantity of ite,s after remove operation
