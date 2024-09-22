@@ -428,24 +428,25 @@ func TestListModel_editItem(t *testing.T) {
 	require.Contains(t, dst, message.RunProcessSSHLoadConfig{Host: lm.SelectedItem().(ListItemHost).Host})
 }
 
+func TestListModel_copyItem(t *testing.T) {
+	// First case - test that we receive an error when item is not selected
+	storageShouldFail := true
+	storage := test.NewMockStorage(storageShouldFail)
+	lm := New(context.TODO(), storage, &state.ApplicationState{}, &test.MockLogger{})
+	teaCmd := lm.copyItem()
+	require.Equal(t, itemNotSelectedMessage, teaCmd().(msgErrorOccurred).err.Error())
+
+	// Second case: storage is OK, and we have to ensure that copied host title as we expect it to be:
+	lm = NewMockListModel(false)
+	lm.logger = &test.MockLogger{}
+
+	lm.copyItem()
+	host, err := lm.repo.Get(3)
+	require.NoError(t, err)
+	require.Equal(t, "Mock Host 1 (1)", host.Title)
+}
+
 /*
-	func TestListModel_copyItem(t *testing.T) {
-		// First case - test that we receive an error when item is not selected
-		storageShouldFail := true
-		storage := test.NewMockStorage(storageShouldFail)
-		lm := New(context.TODO(), storage, &state.ApplicationState{}, &test.MockLogger{})
-		teaCmd := lm.copyItem(nil)
-		require.Equal(t, itemNotSelectedMessage, teaCmd().(msgErrorOccurred).err.Error())
-
-		// Second case: storage is, OK and we have to ensure that copied host title as we expect it to be:
-		lm = NewMockListModel(false)
-		lm.logger = &test.MockLogger{}
-
-		lm.copyItem(nil)
-		host, err := lm.repo.Get(3)
-		require.NoError(t, err)
-		require.Equal(t, "Mock Host 1 (1)", host.Title)
-	}
 
 func TestListModel_updateKeyMap(t *testing.T) {
 	// Case 1: Test that if a host list contains items and item is selected, then all keyboard shortcuts are shown on the screen
