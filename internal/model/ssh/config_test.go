@@ -19,6 +19,7 @@ var (
 func TestParseConfig(t *testing.T) {
 	// Windows uses '\r\n' for lines ending.
 	expected := &Config{
+		Hostname:     "mock_hostname",
 		IdentityFile: "c:/temp/mock_rsa_file",
 		User:         "mock_domain\\mock_user",
 		Port:         "22",
@@ -29,6 +30,7 @@ func TestParseConfig(t *testing.T) {
 
 	// UNIX uses '\n' for lines ending.
 	expected = &Config{
+		Hostname:     "mock_hostname",
 		IdentityFile: "~/.ssh/mock_rsa_file",
 		User:         "mock_user",
 		Port:         "22",

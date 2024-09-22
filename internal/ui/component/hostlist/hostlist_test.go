@@ -217,9 +217,6 @@ func TestConfirmAction(t *testing.T) {
 }
 
 func TestEnterRemoveItemMode(t *testing.T) {
-	// 1. FAILS
-	// 2. Need to check storage error case
-
 	// Create a new model
 	model := *NewMockListModel(false)
 	model.logger = &test.MockLogger{}
@@ -239,37 +236,55 @@ func TestEnterRemoveItemMode(t *testing.T) {
 	model.Select(0)
 	// Call enterRemoveItemMode function
 	cmd = model.enterRemoveItemMode()
-	// Ensure that we entered remove mode
+	// cmd should be equal to nil
+	require.Nil(t, cmd, "Wrong message type")
+	// Ensure that we entered remove mode and title is updated
 	require.Equal(t, modeRemoveItem, model.mode)
-	// cmd() should return msgRefreshUI in order to update title
-	require.Equal(t, nil, cmd, "Wrong message type")
+	require.Equal(t, model.Title, "delete \"Mock Host 1\" ? (y/N)")
 }
 
-/*
-	func TestExitRemoveItemMode(t *testing.T) {
-		// Create a new model
-		model := *NewMockListModel(false)
-		model.logger = &test.MockLogger{}
-		// Select a first item, which is valid
-		model.Select(0)
-		// Call enterRemoveItemMode function
-		model.enterRemoveItemMode()
-		// Ensure that we entered remove mode
-		require.Equal(t, modeRemoveItem, model.mode)
+func TestExitRemoveItemMode(t *testing.T) {
+	// Create a new model
+	model := *NewMockListModel(false)
+	model.logger = &test.MockLogger{}
+	// Select a first item, which is valid
+	model.Select(0)
+	// Call enterRemoveItemMode function
+	model.enterRemoveItemMode()
+	// Ensure that we entered remove mode
+	require.Equal(t, modeRemoveItem, model.mode)
 
-		// Reject the action by pressing 'n' (it can be any key apart from 'y')
-		_, cmd := model.Update(tea.KeyMsg{
-			Type:  -1, // Type '-1' should be equal to 'KeyRunes'
-			Runes: []rune{'n'},
-		})
+	// Reject the action by pressing 'n' (it can be any key apart from 'y')
+	_, cmd := model.Update(tea.KeyMsg{
+		Type:  -1, // Type '-1' should be equal to 'KeyRunes'
+		Runes: []rune{'n'},
+	})
 
-		// Ensure that model exited remove move
-		require.Equal(t, modeDefault, model.mode)
-
-		// cmd() should return msgRefreshUI in order to update title
-		require.IsType(t, msgRefreshUI{}, cmd(), "Wrong message type")
+	expected := []tea.Msg{
+		// Because we remote item "Mock Host 1" (which has index 0), we should ensure that next available item will be focused
+		message.HostListSelectItem{HostID: 1},
+		message.RunProcessSSHLoadConfig{
+			Host: host.Host{
+				ID:               1,
+				Title:            "Mock Host 1",
+				Description:      "",
+				Address:          "localhost",
+				RemotePort:       "2222",
+				LoginName:        "root",
+				IdentityFilePath: "id_rsa",
+			},
+		},
 	}
-*/
+
+	var actual []tea.Msg
+	test.CmdToMessage(cmd, &actual)
+	// cmd() should return msgRefreshUI in order to update title
+	require.Equal(t, expected, actual, "Wrong message type")
+
+	// Ensure that model exited remove move
+	require.Equal(t, modeDefault, model.mode)
+}
+
 func TestListTitleUpdate(t *testing.T) {
 	// 1 Call updateTitle when host is not selected
 	model := *NewMockListModel(false)
@@ -304,20 +319,17 @@ func TestListTitleUpdate(t *testing.T) {
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", model.Title)
 }
 
-/*
-	func TestListModel_title_when_app_just_starts(t *testing.T) {
-		// This is just a sanity test, which checks title update function
-		model := *NewMockListModel(false)
-		model.logger = &test.MockLogger{}
-		// When app just starts, it should display "press 'n' to add a new host"
-		require.Equal(t, "press 'n' to add a new host", model.Title)
-		// When press 'down' key, it should display a proper ssh connection string
-		model.Update(tea.KeyMsg{Type: tea.KeyDown})
-		// Calling refresh UI manually, otherwise would have to put time.Sleep function
-		model.Update(msgRefreshUI{})
-		require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", model.Title)
-	}
-*/
+func TestListModel_title_when_app_just_starts(t *testing.T) {
+	// This is just a sanity test, which checks title update function
+	model := *NewMockListModel(false)
+	model.logger = &test.MockLogger{}
+	// When app just starts, it should display "press 'n' to add a new host"
+	require.Equal(t, "press 'n' to add a new host", model.Title)
+	// When press 'down' key, it should display a proper ssh connection string
+	model.Update(tea.KeyMsg{Type: tea.KeyDown})
+	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", model.Title)
+}
+
 func TestListModel_title_when_filter_is_enabled(t *testing.T) {
 	// Test bugfix for https://github.com/grafviktor/goto/issues/37
 	model := *NewMockListModel(false)
@@ -333,42 +345,54 @@ func TestListModel_title_when_filter_is_enabled(t *testing.T) {
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", model.Title)
 }
 
-/*
-	func TestListModel_refreshRepo(t *testing.T) {
-		// Test initialLoad function with normal storage behavior
-		storageShouldFail := false
-		storage := test.NewMockStorage(storageShouldFail)
-		fakeAppState := state.ApplicationState{Selected: 1}
-		lm := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
-		teaCmd := lm.initialLoad(nil)
+func TestListModel_Init(t *testing.T) {
+	// Test Init function which loads data from storage
+	storageShouldFail := false
+	storage := test.NewMockStorage(storageShouldFail)
+	fakeAppState := state.ApplicationState{Selected: 1}
+	lm := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
+	teaCmd := lm.Init()
 
-		var dst []tea.Msg
-		test.CmdToMessage(teaCmd, &dst)
-		require.Contains(t, dst, msgRefreshUI{})
+	var dst []tea.Msg
+	test.CmdToMessage(teaCmd, &dst)
+	require.Equal(t, dst, []tea.Msg{
+		message.HostListSelectItem{HostID: 1},
+		message.RunProcessSSHLoadConfig{
+			Host: host.Host{
+				ID:               1,
+				Title:            "Mock Host 1",
+				Description:      "",
+				Address:          "localhost",
+				RemotePort:       "2222",
+				LoginName:        "root",
+				IdentityFilePath: "id_rsa",
+			},
+		},
+	})
 
-		// Check that hosts are filtered by Title
-		require.Equal(t, "Mock Host 1", lm.Items()[0].(ListItemHost).Title())
-		require.Equal(t, "Mock Host 2", lm.Items()[1].(ListItemHost).Title())
-		// Check that currently selected item is "1", as it is set in the fakeAppState object
-		require.Equal(t, 1, lm.SelectedItem().(ListItemHost).ID)
+	// Check that hosts are filtered by Title
+	require.Equal(t, "Mock Host 1", lm.Items()[0].(ListItemHost).Title())
+	require.Equal(t, "Mock Host 2", lm.Items()[1].(ListItemHost).Title())
+	// Check that currently selected item is "1"
+	require.Equal(t, 1, lm.SelectedItem().(ListItemHost).ID)
 
-		// Now test initialLoad function simulating a broken storage
-		storageShouldFail = true
-		storage = test.NewMockStorage(storageShouldFail)
-		lm = New(
-			context.TODO(),
-			storage,
-			&state.ApplicationState{}, // we don't need app state, as error should be reported before we can even use it
-			&test.MockLogger{},
-		)
-		lm.logger = &test.MockLogger{}
-		teaCmd = lm.initialLoad(nil)
+	// Now test initialLoad function simulating a broken storage
+	storageShouldFail = true
+	storage = test.NewMockStorage(storageShouldFail)
+	lm = New(
+		context.TODO(),
+		storage,
+		&state.ApplicationState{}, // we don't need app state, as error should be reported before we can even use it
+		&test.MockLogger{},
+	)
+	lm.logger = &test.MockLogger{}
+	teaCmd = lm.Init()
 
-		// Check that msgErrorOccurred{} was found among returned messages, which indicate that
-		// something is wrong with the storage
-		require.Equal(t, "mock error", teaCmd().(msgErrorOccurred).err.Error())
-	}
-*/
+	// Check that msgErrorOccurred{} was found among returned messages, which indicate that
+	// something is wrong with the storage
+	require.Equal(t, "mock error", teaCmd().(msgErrorOccurred).err.Error())
+}
+
 func TestListModel_editItem(t *testing.T) {
 	// Test edit item function by making sure that it's returning correct messages
 

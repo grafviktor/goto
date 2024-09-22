@@ -447,6 +447,9 @@ func (m *listModel) selectHostByID(id int) tea.Cmd {
 	})
 
 	if found {
+		// Here we should check if the item with this index is already selected.
+		// However, this will cause problems with title update when we enter remove
+		// mode and then cancel it.
 		m.Select(index)
 		return m.onFocusChanged()
 	}
@@ -496,8 +499,15 @@ func (m *listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
 	// If user doesn't confirm the operation, we go back to normal mode and update
 	// title back to normal, this exact key event won't be handled
 	m.logger.Debug("[UI] Exit %s mode. Cancel action.", m.mode)
+
+	if hostListItem, ok := m.SelectedItem().(ListItemHost); ok {
+		m.mode = modeDefault
+		return m.selectHostByID(hostListItem.ID)
+	}
+
+	m.logger.Error("[UI] Exit %s mode, but cannot set focus on an item in the list of hosts.", m.mode)
 	m.mode = modeDefault
-	return m.selectHostByID(m.appState.Selected)
+	return nil
 }
 
 func (m *listModel) confirmAction() tea.Cmd {
