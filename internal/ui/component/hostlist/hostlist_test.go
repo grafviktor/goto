@@ -450,6 +450,7 @@ func TestListModel_updateKeyMap(t *testing.T) {
 	// Case 1: Test that if a host list contains items and item is selected, then all keyboard shortcuts are shown on the screen
 	lm := *NewMockListModel(false)
 	lm.logger = &test.MockLogger{}
+	lm.Init()
 
 	// Actually "displayedKeys" will also contain cursor up and cursor down and help keybindings,
 	// but we're ignoring them in this test
@@ -465,10 +466,13 @@ func TestListModel_updateKeyMap(t *testing.T) {
 
 	// Case 2: Test that if a host list does not contain any items,
 	// then some of the keyboard shortcuts should NOT be shown.
-
-	lm = *NewMockListModel(true)
-	lm.logger = &test.MockLogger{}
-	lm.Init()
+	// Removing all hosts.
+	lm.enterRemoveItemMode()
+	lm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+	lm.enterRemoveItemMode()
+	lm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+	lm.enterRemoveItemMode()
+	lm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
 
 	displayedKeys = lm.keyMap.ShortHelp()
 
