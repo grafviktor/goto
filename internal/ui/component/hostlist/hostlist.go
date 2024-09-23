@@ -236,14 +236,7 @@ func (m *listModel) removeItem() tea.Cmd {
 		m.Select(index - 1)
 	}
 
-	if item, ok := m.Model.SelectedItem().(ListItemHost); ok {
-		return tea.Sequence(
-			message.TeaCmd(message.HostListSelectItem{HostID: item.ID}),
-			message.TeaCmd(message.RunProcessSSHLoadConfig{Host: item.Host}),
-		)
-	}
-
-	return nil
+	return m.onFocusChanged()
 }
 
 func (m *listModel) editItem() tea.Cmd {
@@ -297,6 +290,7 @@ func (m *listModel) copyItem() tea.Cmd {
 
 	slices.Sort(titles)
 	index := lo.IndexOf(titles, clonedHost.Title)
+	// We should NOT call onFocusChanged here, because we do not change focus when copying an item.
 	return m.Model.InsertItem(index, ListItemHost{Host: clonedHost})
 }
 
@@ -328,14 +322,7 @@ func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
 		m.Select(newIndex)
 	}
 
-	m.updateTitle()
-
-	return tea.Sequence(
-		cmd,
-		message.TeaCmd(message.HostListSelectItem{HostID: msg.Host.ID}),
-		// See S1016 - Use a type conversion instead of manually copying struct fields one by one.
-		message.TeaCmd(message.RunProcessSSHLoadConfig(msg)),
-	)
+	return tea.Sequence(cmd, m.onFocusChanged())
 }
 
 func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
@@ -349,26 +336,20 @@ func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
 	cmd := m.Model.InsertItem(index, listItem)
 
 	m.Select(index)
-	m.updateTitle()
 
 	return tea.Sequence(
 		// If host position coincides with other host, then let the underlying model to handle that
 		cmd,
-		message.TeaCmd(message.HostListSelectItem{HostID: msg.Host.ID}),
-		// See S1016 - Use a type conversion instead of manually copying struct fields one by one.
-		message.TeaCmd(message.RunProcessSSHLoadConfig(msg)),
+		m.onFocusChanged(),
 	)
 }
 
 func (m *listModel) onFocusChanged() tea.Cmd {
-	if m.SelectedItem() == nil {
-		m.logger.Debug("[UI] Focus is not set to any item in the list")
-	}
+	m.updateTitle()
+	m.updateKeyMap()
 
 	if hostItem, ok := m.SelectedItem().(ListItemHost); ok {
 		m.logger.Debug("[UI] Focus changed to host id: %v, title: %s", hostItem.ID, hostItem.Title())
-		m.updateTitle()
-		m.updateKeyMap()
 
 		return tea.Sequence(
 			message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
@@ -376,7 +357,7 @@ func (m *listModel) onFocusChanged() tea.Cmd {
 		)
 	}
 
-	m.logger.Error("[UI] Select unknown item type from the list")
+	m.logger.Debug("[UI] Focus is not set to any item in the list")
 	return nil
 }
 
@@ -451,10 +432,9 @@ func (m *listModel) selectHostByID(id int) tea.Cmd {
 		// However, this will cause problems with title update when we enter remove
 		// mode and then cancel it.
 		m.Select(index)
-		return m.onFocusChanged()
 	}
 
-	return nil
+	return m.onFocusChanged()
 }
 
 /*
@@ -511,16 +491,17 @@ func (m *listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
 }
 
 func (m *listModel) confirmAction() tea.Cmd {
+	m.logger.Debug("[UI] Exit %s mode. Confirm action.", m.mode)
+
 	var cmd tea.Cmd
 	if m.mode == modeRemoveItem {
-		cmd = m.removeItem()
+		m.mode = modeDefault
+		cmd = m.removeItem() // removeItem triggers title and keymap updates. See "onFocusChanged" method.
 	} else if m.mode == modeSSHCopyID {
+		m.mode = modeDefault
+		m.updateTitle()
 		cmd = m.constructProcessCmd(constant.ProcessTypeSSHCopyID)
 	}
-
-	m.logger.Debug("[UI] Exit %s mode. Confirm action.", m.mode)
-	m.mode = modeDefault
-	m.updateTitle()
 
 	return cmd
 }

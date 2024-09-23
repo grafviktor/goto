@@ -446,13 +446,10 @@ func TestListModel_copyItem(t *testing.T) {
 	require.Equal(t, "Mock Host 1 (1)", host.Title)
 }
 
-/*
-
 func TestListModel_updateKeyMap(t *testing.T) {
 	// Case 1: Test that if a host list contains items and item is selected, then all keyboard shortcuts are shown on the screen
 	lm := *NewMockListModel(false)
 	lm.logger = &test.MockLogger{}
-	lm.Update(msgRefreshUI{})
 
 	// Actually "displayedKeys" will also contain cursor up and cursor down and help keybindings,
 	// but we're ignoring them in this test
@@ -466,16 +463,13 @@ func TestListModel_updateKeyMap(t *testing.T) {
 	require.Contains(t, displayedKeys, availableKeys.edit)
 	require.Contains(t, displayedKeys, availableKeys.remove)
 
-	// Case 2: Test that if a host list contains items and item is NOT selected,
+	// Case 2: Test that if a host list does not contain any items,
 	// then some of the keyboard shortcuts should NOT be shown.
 
-	// Now let's delete all elements from the database
-	lm.repo.Delete(1)
-	lm.repo.Delete(2)
-	lm.repo.Delete(3)
+	lm = *NewMockListModel(true)
+	lm.logger = &test.MockLogger{}
+	lm.Init()
 
-	lm.Update(MsgRefreshRepo{})
-	lm.Update(msgRefreshUI{})
 	displayedKeys = lm.keyMap.ShortHelp()
 
 	require.Equal(t, 1, len(displayedKeys))
@@ -485,7 +479,6 @@ func TestListModel_updateKeyMap(t *testing.T) {
 	require.NotContains(t, displayedKeys, availableKeys.edit)
 	require.NotContains(t, displayedKeys, availableKeys.remove)
 }
-*/
 
 func TestUpdate_TeaSizeMsg(t *testing.T) {
 	// Test that if model is ready, WindowSizeMsg message will update inner model size
