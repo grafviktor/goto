@@ -581,7 +581,14 @@ func TestUpdate_HostCreated(t *testing.T) {
 }
 
 func Test_constructProcessCmd(t *testing.T) {
-	t.Skip()
+	// Test that we receive expected messages when invoke constructProcessCmd function
+	lm := *NewMockListModel(false)
+	lm.Init()
+	connectSSHResultCmd := lm.constructProcessCmd(constant.ProcessTypeSSHConnect)
+	selectedHost := lm.SelectedItem().(ListItemHost).Host
+	require.Equal(t, message.RunProcessSSHConnect{Host: selectedHost}, connectSSHResultCmd())
+
+	// TODO: check RunProcessSSHCopyID
 }
 
 func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
