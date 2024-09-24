@@ -4,8 +4,9 @@ package hostlist
 import (
 	"context"
 	"errors"
-	"github.com/grafviktor/goto/internal/model/ssh"
 	"testing"
+
+	"github.com/grafviktor/goto/internal/model/ssh"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -501,10 +502,10 @@ func TestUpdate_HostSSHConfigLoaded(t *testing.T) {
 
 func TestUpdate_HostUpdated(t *testing.T) {
 	// Test that host is updated when hostlist model receives message.HostUpdated.
-	// Also check that host is inserted into a correct position of the hostlist model
 	lm := *NewMockListModel(false)
 	lm.Init()
 
+	// Check that the host we're going to update exists and has the expected title
 	require.Equal(t, lm.Items()[0].(ListItemHost).Title(), "Mock Host 1")
 
 	updatedHost := host.Host{
@@ -519,10 +520,68 @@ func TestUpdate_HostUpdated(t *testing.T) {
 	}
 
 	lm.Update(message.HostUpdated{Host: updatedHost})
-
 	require.Equal(t, updatedHost, lm.Items()[0].(ListItemHost).Host)
 
-	// TODO: Check sorting order when update a host
+	// Also check that host is inserted into a correct position of the hostlist model
+	updatedHost = host.Host{
+		ID:               1,
+		Title:            "zzz", // Title is now updated, the host should be positioned at the last index
+		Description:      "Mock Host Updated",
+		Address:          "mock_hostname",
+		RemotePort:       "9999",
+		LoginName:        "mock_username",
+		IdentityFilePath: "/tmp",
+		SSHClientConfig:  nil,
+	}
+
+	lm.Update(message.HostUpdated{Host: updatedHost})
+	lastIndex := 2
+	require.Equal(t, updatedHost, lm.Items()[lastIndex].(ListItemHost).Host)
+}
+
+func TestUpdate_HostCreated(t *testing.T) {
+	// Test that when host is created it is appended to the host list and
+	// its visual position in the list of hosts is correct
+	lm := *NewMockListModel(false)
+	lm.Init()
+
+	require.Equal(t, lm.Items()[0].(ListItemHost).Title(), "Mock Host 1")
+
+	createdHost1 := host.Host{
+		ID:               999,
+		Title:            "AAA new host", // Should be positioned first
+		Description:      "Mock Host Updated",
+		Address:          "mock_hostname",
+		RemotePort:       "9999",
+		LoginName:        "mock_username",
+		IdentityFilePath: "/tmp",
+		SSHClientConfig:  nil,
+	}
+
+	lm.Update(message.HostCreated{Host: createdHost1})
+	require.Len(t, lm.Items(), 4, "Wrong host list size")
+	require.Equal(t, createdHost1, lm.Items()[0].(ListItemHost).Host)
+
+	// Also check that host is inserted into a correct position of the hostlist model
+	createdHost2 := host.Host{
+		ID:               1,
+		Title:            "ZZZ new host", // Should be positioned at last index
+		Description:      "Mock Host Updated",
+		Address:          "mock_hostname",
+		RemotePort:       "9999",
+		LoginName:        "mock_username",
+		IdentityFilePath: "/tmp",
+		SSHClientConfig:  nil,
+	}
+
+	lm.Update(message.HostCreated{Host: createdHost2})
+	require.Len(t, lm.Items(), 5, "Wrong host list size")
+	lastIndex := 4 // because we have 5 hosts in total
+	require.Equal(t, createdHost2, lm.Items()[lastIndex].(ListItemHost).Host)
+}
+
+func Test_constructProcessCmd(t *testing.T) {
+	t.Skip()
 }
 
 func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
