@@ -298,6 +298,8 @@ func (m *listModel) copyItem() tea.Cmd {
  * Event handlers - those events come from other components.
  */
 
+// onHostUpdated - not only updates a new host, it also re-inserts the host into
+// a correct position of the host list, to keep it sorted.
 func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
 	var cmd tea.Cmd
 	updatedItem := ListItemHost{Host: msg.Host}
@@ -309,6 +311,7 @@ func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
 		return item.(ListItemHost).Title()
 	})
 
+	// When sorting, shall we take description into account as well or sorting by title is enough ?
 	slices.Sort(titles)
 	newIndex := lo.IndexOf(titles, updatedItem.Title())
 

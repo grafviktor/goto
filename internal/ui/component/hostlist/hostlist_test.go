@@ -4,6 +4,7 @@ package hostlist
 import (
 	"context"
 	"errors"
+	"github.com/grafviktor/goto/internal/model/ssh"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -18,18 +19,52 @@ import (
 	"github.com/grafviktor/goto/internal/ui/message"
 )
 
-func Test_ListTitleUpdate(t *testing.T) {
-	// Create a lm with initial state
-	lm := *NewMockListModel(false)
+func TestListModel_Init(t *testing.T) {
+	// Test Init function which loads data from storage
+	storageShouldFail := false
+	storage := test.NewMockStorage(storageShouldFail)
+	fakeAppState := state.ApplicationState{Selected: 1}
+	lm := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
+	teaCmd := lm.Init()
+
+	var dst []tea.Msg
+	test.CmdToMessage(teaCmd, &dst)
+	require.Equal(t, dst, []tea.Msg{
+		message.HostListSelectItem{HostID: 1},
+		message.RunProcessSSHLoadConfig{
+			Host: host.Host{
+				ID:               1,
+				Title:            "Mock Host 1",
+				Description:      "",
+				Address:          "localhost",
+				RemotePort:       "2222",
+				LoginName:        "root",
+				IdentityFilePath: "id_rsa",
+			},
+		},
+	})
+
+	// Check that hosts are filtered by Title
+	require.Equal(t, "Mock Host 1", lm.Items()[0].(ListItemHost).Title())
+	require.Equal(t, "Mock Host 2", lm.Items()[1].(ListItemHost).Title())
+	// Check that currently selected item is "1"
+	require.Equal(t, 1, lm.SelectedItem().(ListItemHost).ID)
+
+	// Now test initialLoad function simulating a broken storage
+	storageShouldFail = true
+	storage = test.NewMockStorage(storageShouldFail)
+	lm = New(
+		context.TODO(),
+		storage,
+		&state.ApplicationState{}, // we don't need app state, as error should be reported before we can even use it
+		&test.MockLogger{},
+	)
 	lm.logger = &test.MockLogger{}
+	teaCmd = lm.Init()
 
-	// Select host
-	lm.Select(0)
-
-	// Apply the function
-	lm.updateTitle()
-
-	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", lm.Title)
+	// Check that msgErrorOccurred{} was found among returned messages, which indicate that
+	// something is wrong with the storage
+	require.Equal(t, "mock error", teaCmd().(msgErrorOccurred).err.Error())
 }
 
 func Test_listModel_Change_Selection(t *testing.T) {
@@ -278,7 +313,6 @@ func TestExitRemoveItemMode(t *testing.T) {
 
 	var actual []tea.Msg
 	test.CmdToMessage(cmd, &actual)
-	// cmd() should return msgRefreshUI in order to update title
 	require.Equal(t, expected, actual, "Wrong message type")
 
 	// Ensure that model exited remove move
@@ -343,54 +377,6 @@ func TestListModel_title_when_filter_is_enabled(t *testing.T) {
 	model.Update(tea.KeyMsg{Type: tea.KeyDown})
 	assert.Equal(t, model.FilterState(), list.FilterApplied)
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", model.Title)
-}
-
-func TestListModel_Init(t *testing.T) {
-	// Test Init function which loads data from storage
-	storageShouldFail := false
-	storage := test.NewMockStorage(storageShouldFail)
-	fakeAppState := state.ApplicationState{Selected: 1}
-	lm := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
-	teaCmd := lm.Init()
-
-	var dst []tea.Msg
-	test.CmdToMessage(teaCmd, &dst)
-	require.Equal(t, dst, []tea.Msg{
-		message.HostListSelectItem{HostID: 1},
-		message.RunProcessSSHLoadConfig{
-			Host: host.Host{
-				ID:               1,
-				Title:            "Mock Host 1",
-				Description:      "",
-				Address:          "localhost",
-				RemotePort:       "2222",
-				LoginName:        "root",
-				IdentityFilePath: "id_rsa",
-			},
-		},
-	})
-
-	// Check that hosts are filtered by Title
-	require.Equal(t, "Mock Host 1", lm.Items()[0].(ListItemHost).Title())
-	require.Equal(t, "Mock Host 2", lm.Items()[1].(ListItemHost).Title())
-	// Check that currently selected item is "1"
-	require.Equal(t, 1, lm.SelectedItem().(ListItemHost).ID)
-
-	// Now test initialLoad function simulating a broken storage
-	storageShouldFail = true
-	storage = test.NewMockStorage(storageShouldFail)
-	lm = New(
-		context.TODO(),
-		storage,
-		&state.ApplicationState{}, // we don't need app state, as error should be reported before we can even use it
-		&test.MockLogger{},
-	)
-	lm.logger = &test.MockLogger{}
-	teaCmd = lm.Init()
-
-	// Check that msgErrorOccurred{} was found among returned messages, which indicate that
-	// something is wrong with the storage
-	require.Equal(t, "mock error", teaCmd().(msgErrorOccurred).err.Error())
 }
 
 func TestListModel_editItem(t *testing.T) {
@@ -492,6 +478,51 @@ func TestUpdate_TeaSizeMsg(t *testing.T) {
 
 	require.Greater(t, model.Height(), 0)
 	require.Greater(t, model.Width(), 0)
+}
+
+func TestUpdate_HostSSHConfigLoaded(t *testing.T) {
+	// Test that host receives SSH expectedConfig once HostConfigLoaded message is dispatched
+	lm := *NewMockListModel(false)
+	lm.Init()
+	expectedConfig := ssh.Config{
+		Hostname:     "mock_hostname",
+		IdentityFile: "/tmp",
+		Port:         "9999",
+		User:         "mock_username",
+	}
+	lm.Update(message.HostSSHConfigLoaded{
+		HostID: 1,
+		Config: expectedConfig,
+	})
+
+	actualConfig := lm.Items()[0].(ListItemHost).SSHClientConfig
+	require.Equal(t, &expectedConfig, actualConfig)
+}
+
+func TestUpdate_HostUpdated(t *testing.T) {
+	// Test that host is updated when hostlist model receives message.HostUpdated.
+	// Also check that host is inserted into a correct position of the hostlist model
+	lm := *NewMockListModel(false)
+	lm.Init()
+
+	require.Equal(t, lm.Items()[0].(ListItemHost).Title(), "Mock Host 1")
+
+	updatedHost := host.Host{
+		ID:               1,
+		Title:            "Mock Host 11",
+		Description:      "Mock Host Updated",
+		Address:          "mock_hostname",
+		RemotePort:       "9999",
+		LoginName:        "mock_username",
+		IdentityFilePath: "/tmp",
+		SSHClientConfig:  nil,
+	}
+
+	lm.Update(message.HostUpdated{Host: updatedHost})
+
+	require.Equal(t, updatedHost, lm.Items()[0].(ListItemHost).Host)
+
+	// TODO: Check sorting order when update a host
 }
 
 func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
