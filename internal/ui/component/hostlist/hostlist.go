@@ -158,11 +158,15 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 			// When user presses enter key while in filter mode, we should load SSH config.
 			m.logger.Debug("[UI] Focus item while in filter mode")
 			return tea.Sequence(m.updateChildModel(msg), m.onFocusChanged())
+		} else if key.Matches(msg, m.KeyMap.CancelWhileFiltering) {
+			// When user presses Escape key while in filter mode without accepting filter results.
+			// Be aware that focus will be set to the first item from the search results, though we haven't
+			// selected it explicitly.
+			m.logger.Debug("[UI] Clear and exit filter mode")
+			selectedID := m.SelectedItem().(ListItemHost).ID
+			return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
 		}
 		return m.updateChildModel(msg)
-	case key.Matches(msg, m.KeyMap.CancelWhileFiltering):
-		selectedID := m.SelectedItem().(ListItemHost).ID
-		return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
 	case key.Matches(msg, m.Model.KeyMap.ClearFilter):
 		// When user clears the host filter, child model resets the focus. Explicitly set focus on previously selected item.
 		selectedID := m.SelectedItem().(ListItemHost).ID
@@ -425,7 +429,10 @@ func (m *listModel) updateKeyMap() {
 }
 
 func (m *listModel) selectHostByID(id int) tea.Cmd {
-	_, index, found := lo.FindIndexOf(m.Items(), func(item list.Item) bool {
+	// Use VisibleItems() instead of Items() because we need to find the correct index when deleting an item
+	// while in filter mode where part of the collection is hidden. You can replicate a wrong behavior when using Items():
+	// Enter filter mode, enter remove mode and then cancel it. The focus will be lost.
+	_, index, found := lo.FindIndexOf(m.VisibleItems(), func(item list.Item) bool {
 		hostItem, ok := item.(ListItemHost)
 		return ok && hostItem.ID == id
 	})

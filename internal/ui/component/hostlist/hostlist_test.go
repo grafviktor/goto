@@ -224,32 +224,61 @@ func TestRemoveItem(t *testing.T) {
 }
 
 func TestConfirmAction(t *testing.T) {
+	// Test the fallback option when there is no active mode
 	// Create a new model. There is no special mode (for instance remove item mode)
 	model := NewMockListModel(false)
 	model.logger = &test.MockLogger{}
-	// Imagine that user triggers confirm aciton
+	// Imagine that user triggers confirm action
 	cmd := model.confirmAction()
 	// When cancel action, we reset mode and return back to normal state
-	require.Len(t, model.mode, 0)
-	// Updated model should not be nil
-	require.NotNil(t, model)
+	require.Equal(t, model.mode, modeDefault)
 	// Because there is no active mode, model should ignore the event
 	require.Nil(t, cmd)
 
-	// Create a new model
+	// Now test remove item mode
 	model = NewMockListModel(false)
-	model.logger = &test.MockLogger{}
 	// Now we enable remove mode
 	model.mode = modeRemoveItem
 	// Imagine that user triggers confirm aciton
 	cmd = model.confirmAction()
 	// When confirm action is triggered, we reset mode and return back to normal state
+	require.Equal(t, model.mode, modeDefault)
+	// cmd should not be nil because when we modify storage, some Cmds will be dispatched
+	require.IsType(t, tea.Cmd(nil), cmd)
+
+	// Now test remove item mode
+	model = NewMockListModel(false)
+	// Now we enable remove mode
+	model.mode = modeSSHCopyID
+	// Imagine that user triggers confirm aciton
+	cmd = model.confirmAction()
+	// When confirm action is triggered, we reset mode and return back to normal state
+	require.Equal(t, model.mode, modeDefault)
+	// cmd should not be nil because when we modify storage, some Cmds will be dispatched
+	require.IsType(t, tea.Cmd(nil), cmd)
+}
+
+func TestEnterSSHCopyIDMode(t *testing.T) {
+	// Create a new model
+	model := *NewMockListModel(false)
+	// Select non-existent index
+	model.Select(10)
+	// Call enterRemoveItemMode function
+	cmd := model.enterSSHCopyIDMode()
+	// and make sure that mode is unchanged
 	require.Len(t, model.mode, 0)
-	// Updated model should not be nil
-	require.NotNil(t, model)
-	// cmd should not be nil because when we modify storage, some events will be dispatched
-	// we should not check the exact event type here, because it is action-dependent
-	require.NotNil(t, cmd)
+	// cmd() should return msgErrorOccurred error
+	require.IsType(t, msgErrorOccurred{}, cmd(), "Wrong message type")
+
+	// Now select an existing item in the host list
+	model.Select(0)
+	// Call enterRemoveItemMode function
+	cmd = model.enterSSHCopyIDMode()
+	// cmd should be equal to nil
+	require.Nil(t, cmd, "Wrong message type")
+	// Ensure that we entered remove mode and title is updated
+	require.Equal(t, modeSSHCopyID, model.mode)
+	require.Equal(t, model.Title, "copy ssh key to the remote host? (y/N)")
 }
 
 func TestEnterRemoveItemMode(t *testing.T) {
@@ -580,6 +609,85 @@ func TestUpdate_HostCreated(t *testing.T) {
 	require.Equal(t, createdHost2, lm.Items()[lastIndex].(ListItemHost).Host)
 }
 
+func Test_handleKeyboardEvent_cancelWhileFiltering(t *testing.T) {
+	// Test that when user presses 'Esc' key while filtering, the model doesn't lose focus
+	// Create model
+	model := NewMockListModel(false)
+	model.Init()
+
+	// Make sure there are 3 items in the collection
+	require.Len(t, model.VisibleItems(), 3)
+
+	// Check that first item is selected
+	require.IsType(t, ListItemHost{}, model.SelectedItem())
+	require.Equal(t, "Mock Host 1", model.SelectedItem().(ListItemHost).Title())
+
+	// Check that current status is "Unfiltered" and then enter filtering mode
+	require.Equal(t, list.Unfiltered, model.FilterState())
+	model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune{'/'},
+	})
+	require.Equal(t, list.Filtering, model.FilterState())
+
+	// When in filter mode type '2', so only "Mock Host 2" will become visible
+	_, cmds := model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune{'2'},
+	})
+
+	// Extract batch messages returned by the model
+	msgs := []tea.Msg{}
+	test.CmdToMessage(cmds, &msgs)
+
+	// Send those messages back to the model
+	for _, m := range msgs {
+		model.Update(m)
+	}
+
+	require.Len(t, model.VisibleItems(), 1)
+
+	// When in filter mode type 'Esc', and ensure that we exited filter mode but the
+	// focus is set on the first item from the search results
+	_, cmds = model.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	// Extract batch messages returned by the model
+	test.CmdToMessage(cmds, &msgs)
+
+	// Send those messages back to the model
+	for _, m := range msgs {
+		model.Update(m)
+	}
+
+	require.Equal(t, list.Unfiltered, model.FilterState())
+	require.Len(t, model.VisibleItems(), 3)
+	// By triggering filter, though we haven't selected anything, we implicitly selected the first item from the search results
+	require.Equal(t, "Mock Host 2", model.SelectedItem().(ListItemHost).Title())
+}
+
+func Test_handleKeyboardEvent_clearFilter(t *testing.T) {
+	t.Skip("In progress")
+}
+
+func Test_handleKeyboardEvent_connect(t *testing.T) {
+	t.Skip("In progress")
+}
+
+func Test_handleKeyboardEvent_copyID(t *testing.T) {
+	t.Skip("In progress")
+}
+
+func Test_handleKeyboardEvent_remove(t *testing.T) {
+	t.Skip("In progress")
+}
+
+func Test_handleKeyboardEvent_edit(t *testing.T) {
+	t.Skip("In progress")
+}
+
+func Test_handleKeyboardEvent_append(t *testing.T) {
+	t.Skip("In progress")
+}
+
 func Test_constructProcessCmd(t *testing.T) {
 	// Test that we receive expected messages when invoke constructProcessCmd function
 	lm := *NewMockListModel(false)
@@ -588,7 +696,8 @@ func Test_constructProcessCmd(t *testing.T) {
 	selectedHost := lm.SelectedItem().(ListItemHost).Host
 	require.Equal(t, message.RunProcessSSHConnect{Host: selectedHost}, connectSSHResultCmd())
 
-	// TODO: check RunProcessSSHCopyID
+	sshCopyID := lm.constructProcessCmd(constant.ProcessTypeSSHCopyID)
+	require.Equal(t, message.RunProcessSSHCopyID{Host: selectedHost}, sshCopyID())
 }
 
 func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
