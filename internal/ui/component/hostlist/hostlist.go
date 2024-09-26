@@ -23,6 +23,33 @@ import (
 	"github.com/grafviktor/goto/internal/utils"
 )
 
+/*
+BUG:
+Create hosts with following titles:
+1
+1 (7)
+1 (7) (1)
+1 (7) (2)
+1 (7) (3)
+
+Go into filter mode and type "7"
+Delete host "1 (7) (2)"
+Go to host "1 (7)" and copy it
+Host "1 (7) (2)" will be re-created. All looks correct:
+1
+1 (7)
+1 (7) (1)
+1 (7) (2) // If you try to edit it, all fields will be empty
+1 (7) (3)
+
+Now restart the application and notice that re-created host was saved with a wrong title:
+1
+1 (7)
+1 (7) (1)
+1 (7) (1) // WRONG: Should be "1 (7) (2)"
+1 (7) (3)
+*/
+
 var (
 	docStyle               = lipgloss.NewStyle().Margin(1, 2)
 	itemNotSelectedMessage = "you must select an item"
