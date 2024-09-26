@@ -665,19 +665,137 @@ func Test_handleKeyboardEvent_cancelWhileFiltering(t *testing.T) {
 }
 
 func Test_handleKeyboardEvent_clearFilter(t *testing.T) {
-	t.Skip("In progress")
+	// When enable filter and then focus a host (while still in filtering mode)
+	// and after that press Escape button (to exit from filter mode),
+	// we must ensure that focus hasn't changed and the same host is still
+	// focused which was selected when filter was enabled.
+	model := NewMockListModel(false)
+	model.Init()
+
+	// Make sure there are 3 items in the collection
+	require.Len(t, model.VisibleItems(), 3)
+
+	// Check that first item is selected
+	require.IsType(t, ListItemHost{}, model.SelectedItem())
+	require.Equal(t, "Mock Host 1", model.SelectedItem().(ListItemHost).Title())
+
+	// Check that current status is "Unfiltered" and then enter filtering mode
+	require.Equal(t, list.Unfiltered, model.FilterState())
+	model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune{'/'},
+	})
+	require.Equal(t, list.Filtering, model.FilterState())
+
+	// When in filter mode type '2', so only "Mock Host 2" will become visible
+	_, cmds := model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune{'2'},
+	})
+
+	// Extract batch messages returned by the model
+	msgs := []tea.Msg{}
+	test.CmdToMessage(cmds, &msgs)
+
+	// Send those messages back to the model
+	for _, m := range msgs {
+		model.Update(m)
+	}
+
+	require.Len(t, model.VisibleItems(), 1)
+
+	// When in filter mode press 'Enter', and ensure that
+	// focus is set to host "Mock Host 2"
+	_, cmds = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	// Extract batch messages returned by the model
+	test.CmdToMessage(cmds, &msgs)
+	for _, m := range msgs {
+		model.Update(m)
+	}
+	// Check that we're still in filter mode when pressed Enter
+	require.Equal(t, list.FilterApplied, model.FilterState())
+	require.Len(t, model.VisibleItems(), 1)
+	// And check that now "Mock Host 2" is selected
+	require.Equal(t, "Mock Host 2", model.SelectedItem().(ListItemHost).Title())
+
+	// Now press 'Esc', and ensure that we exited filter mode but the
+	// focus is set on the same item which was focused while we were in filter mode
+	_, cmds = model.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	// Extract batch messages returned by the model
+	test.CmdToMessage(cmds, &msgs)
+	for _, m := range msgs {
+		model.Update(m)
+	}
+	require.Len(t, model.VisibleItems(), 3)
+	require.Equal(t, list.Unfiltered, model.FilterState())
+	require.Equal(t, "Mock Host 2", model.SelectedItem().(ListItemHost).Title())
 }
 
 func Test_handleKeyboardEvent_connect(t *testing.T) {
-	t.Skip("In progress")
+	// Check that when we press Enter button while host is selected
+	// we dispatch processConstruct command from the host list model
+	model := NewMockListModel(false)
+	model.Init()
+
+	// Make sure there are 3 items in the collection
+	require.Len(t, model.VisibleItems(), 3)
+	// Check that first item is selected
+	require.IsType(t, ListItemHost{}, model.SelectedItem())
+	require.Equal(t, "Mock Host 1", model.SelectedItem().(ListItemHost).Title())
+
+	// Hit enter
+	_, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	require.IsType(t, message.RunProcessSSHConnect{}, cmd())
 }
 
 func Test_handleKeyboardEvent_copyID(t *testing.T) {
-	t.Skip("In progress")
+	// Just check that we enter copyID mode when a host is selected and press "t" button
+	model := NewMockListModel(false)
+	model.Init()
+
+	// Make sure there are 3 items in the collection
+	require.Len(t, model.VisibleItems(), 3)
+	// Check that first item is selected
+	require.IsType(t, ListItemHost{}, model.SelectedItem())
+	require.Equal(t, "Mock Host 1", model.SelectedItem().(ListItemHost).Title())
+
+	_, cmds := model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune{'t'},
+	})
+
+	msgs := []tea.Msg{}
+	test.CmdToMessage(cmds, &msgs)
+	for _, m := range msgs {
+		model.Update(m)
+	}
+
+	require.Equal(t, modeSSHCopyID, model.mode)
 }
 
 func Test_handleKeyboardEvent_remove(t *testing.T) {
-	t.Skip("In progress")
+	// Just check that we enter removeItem mode when a host is selected and press "t" button
+	model := NewMockListModel(false)
+	model.Init()
+
+	// Make sure there are 3 items in the collection
+	require.Len(t, model.VisibleItems(), 3)
+	// Check that first item is selected
+	require.IsType(t, ListItemHost{}, model.SelectedItem())
+	require.Equal(t, "Mock Host 1", model.SelectedItem().(ListItemHost).Title())
+
+	_, cmds := model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune{'x'},
+	})
+
+	msgs := []tea.Msg{}
+	test.CmdToMessage(cmds, &msgs)
+	for _, m := range msgs {
+		model.Update(m)
+	}
+
+	require.Equal(t, modeRemoveItem, model.mode)
 }
 
 func Test_handleKeyboardEvent_edit(t *testing.T) {
