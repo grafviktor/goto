@@ -38,10 +38,12 @@ func CopyIDCommand(options ...Option) string {
 		}
 	}
 
-	return fmt.Sprintf("cmd /c type \"%s.pub\" | ssh %s@%s -p %s \"cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && echo Key added. Now try logging into the machine.\"",
+	installKeyCommand := `"cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && echo Key added. Now try logging into the machine."`
+	return fmt.Sprintf(`cmd /c type "%s.pub" | ssh %s@%s -p %s %s`,
 		privateKey,
 		username,
 		hostname,
 		remotePort,
+		installKeyCommand,
 	)
 }
