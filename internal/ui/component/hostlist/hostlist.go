@@ -23,33 +23,6 @@ import (
 	"github.com/grafviktor/goto/internal/utils"
 )
 
-/*
-BUG:
-Create hosts with following titles:
-1
-1 (7)
-1 (7) (1)
-1 (7) (2)
-1 (7) (3)
-
-Go into filter mode and type "7"
-Delete host "1 (7) (2)"
-Go to host "1 (7)" and copy it
-Host "1 (7) (2)" will be re-created. All looks correct:
-1
-1 (7)
-1 (7) (1)
-1 (7) (2) // If you try to edit it, all fields will be empty
-1 (7) (3)
-
-Now restart the application and notice that re-created host was saved with a wrong title:
-1
-1 (7)
-1 (7) (1)
-1 (7) (1) // WRONG: Should be "1 (7) (2)"
-1 (7) (3)
-*/
-
 var (
 	docStyle               = lipgloss.NewStyle().Margin(1, 2)
 	itemNotSelectedMessage = "you must select an item"
@@ -257,13 +230,66 @@ func (m *listModel) removeItem() tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err})
 	}
 
-	index := m.Index()
-	// If we remove the last item, then we should select the previous one. However, this won't work if only one item is
-	// left on the page, because m.VisibleItems() returns nothing. Need to improve.
-	isLastPosition := index == len(m.VisibleItems())-1
-	m.Model.RemoveItem(index)
+	_, index, _ := lo.FindIndexOf(m.Items(), func(i list.Item) bool {
+		return i.(ListItemHost).ID == item.ID
+	})
 
-	if isLastPosition {
+	/*
+		nolint-godox BUG: Steps to reproduce:
+		Create hosts with following titles:
+		1
+		1 (7)
+		1 (7) (1)
+		1 (7) (2)
+		1 (7) (3)
+
+		Go into filter mode and type "7"
+		Delete host "1 (7) (2)"
+		Go to host "1 (7)" and copy it
+		Host "1 (7) (2)" will be re-created. All looks correct:
+		1
+		1 (7)
+		1 (7) (1)
+		1 (7) (2) // If you try to edit it, all fields will be empty
+		1 (7) (3)
+
+		Now restart the application and notice that re-created host was saved with a wrong title:
+		1
+		1 (7)
+		1 (7) (1)
+		1 (7) (1) // WRONG: Should be "1 (7) (2)"
+		1 (7) (3)
+
+		Brief analysis:
+		When filter is enabled and user deletes and item, list.go modifies 2 collections simultaneously:
+		1. m.items
+		2. m.filteredItems
+
+		These 2 collections are modified by RemoveItem method where we send the index of the item which should be removed.
+		Because the index of the same item can be different in m.items and m.filteredItems, RemoveItem deletes different
+		items in m.Items and m.filteredItems:
+
+		m.items
+			1
+			1 (7)
+			1 (7) (1)
+			1 (7) (2) // index = 3, in m.items we delete item "1 (7) (2)"
+			1 (7) (3)
+
+		m.filteredItems
+			1 (7)
+			1 (7) (1)
+			1 (7) (2)
+			1 (7) (3) // index = 3, in m.filteredItems we delete item "1 (7) (3)"
+
+		To raise a bug in https://github.com/charmbracelet/bubbles project
+	*/
+	m.Model.RemoveItem(index)
+	// We have to reset filter when remove an item from the list because of the aforementioned bug.
+	m.Model.ResetFilter()
+
+	if index > 1 {
+		// If it's not the first item in the list, then let's focus on the previous one.
 		m.Select(index - 1)
 	}
 
