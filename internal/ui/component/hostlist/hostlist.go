@@ -163,8 +163,13 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 			// Be aware that focus will be set to the first item from the search results, though we haven't
 			// selected it explicitly.
 			m.logger.Debug("[UI] Clear and exit filter mode")
-			selectedID := m.SelectedItem().(ListItemHost).ID
-			return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
+
+			if hostItem, ok := m.SelectedItem().(ListItemHost); ok {
+				selectedID := hostItem.ID
+				return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
+			}
+
+			return m.updateChildModel(msg)
 		}
 		return m.updateChildModel(msg)
 	case key.Matches(msg, m.Model.KeyMap.ClearFilter):
