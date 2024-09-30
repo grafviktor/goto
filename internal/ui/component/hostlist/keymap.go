@@ -105,7 +105,7 @@ func (k *keyMap) FullHelp() []key.Binding {
 		k.clone,
 		k.edit,
 		k.remove,
-		k.toggleLayout,
 		k.copyID,
+		k.toggleLayout,
 	}
 }

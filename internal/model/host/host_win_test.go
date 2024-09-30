@@ -7,8 +7,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/grafviktor/goto/internal/model/ssh"
 	"github.com/stretchr/testify/require"
+
+	"github.com/grafviktor/goto/internal/model/ssh"
 )
 
 // The only difference between Unix and Windows version tests is that Windows

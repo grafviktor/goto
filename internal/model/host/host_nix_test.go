@@ -5,8 +5,9 @@ package host
 import (
 	"testing"
 
-	"github.com/grafviktor/goto/internal/model/ssh"
 	"github.com/stretchr/testify/require"
+
+	"github.com/grafviktor/goto/internal/model/ssh"
 )
 
 func TestIsUserDefinedSSHCommand(t *testing.T) {
