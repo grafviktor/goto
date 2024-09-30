@@ -9,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/model/ssh"
 )
@@ -20,22 +21,33 @@ type (
 	TerminalSizePolling struct{ Width, Height int }
 	// HostListSelectItem is required to let host list know that it's time to update title.
 	HostListSelectItem struct{ HostID int }
+	// HostCreated - is dispatched when a new host was added to the database.
+	HostCreated struct{ Host host.Host }
+	// HostUpdated - is dispatched when host model is updated.
+	HostUpdated struct{ Host host.Host }
 	// HostSSHConfigLoaded triggers when app loads a host config using ssh -G <hostname>.
 	// The config is stored in main model: m.appState.HostSSHConfig.
-	HostSSHConfigLoaded struct{ Config ssh.Config }
-	// RunProcessConnectSSH is dispatched when user wants to connect to a host.
-	RunProcessConnectSSH struct{ Host host.Host }
-	// RunProcessLoadSSHConfig is dispatched it's required to read .ssh/config file for a certain host.
-	RunProcessLoadSSHConfig struct{ Host host.Host }
+	HostSSHConfigLoaded struct {
+		HostID int
+		Config ssh.Config
+	}
+	// RunProcessSSHConnect is dispatched when user wants to connect to a host.
+	RunProcessSSHConnect struct{ Host host.Host }
+	// RunProcessSSHLoadConfig is dispatched it's required to read .ssh/config file for a certain host.
+	RunProcessSSHLoadConfig struct{ Host host.Host }
+	// RunProcessSSHCopyID is dispatched when user wants to copy SSH key to a remote host.
+	RunProcessSSHCopyID struct{ Host host.Host }
 	// RunProcessErrorOccurred fires when there is an error executing an external process.
 	RunProcessErrorOccurred struct {
-		Name string
-		Err  error
+		ProcessType constant.ProcessType
+		StdOut      string // Even if process fails, it may have some output.
+		StdErr      string
 	}
 	// RunProcessSuccess fires when external process exits normally.
 	RunProcessSuccess struct {
-		ProcessName string
-		Output      *string
+		ProcessType constant.ProcessType
+		StdOut      string
+		StdErr      string // Even if process succeeds, it may have some output.
 	}
 )
 

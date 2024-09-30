@@ -4,8 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/grafviktor/goto/internal/model/ssh"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -66,43 +64,38 @@ func TestCloneHost(t *testing.T) {
 	}
 }
 
-func TestToSSHOptions(t *testing.T) {
-	// Sanity test for toSSHOptions function
+func TestCmdSSHConnect(t *testing.T) {
 	tests := []struct {
-		name            string
-		host            Host
-		expectedOptions []ssh.Option
+		name     string
+		host     Host
+		expected bool
 	}{
 		{
-			name: "Valid Host",
+			name: "NOT user defined ssh command",
 			host: Host{
-				Address:          "example.com",
-				LoginName:        "user",
-				RemotePort:       "22",
-				IdentityFilePath: "/path/to/private_key",
+				Address: "localhost",
 			},
-			expectedOptions: []ssh.Option{
-				ssh.OptionPrivateKey{Value: "/path/to/private_key"},
-				ssh.OptionRemotePort{Value: "22"},
-				ssh.OptionLoginName{Value: "user"},
-				ssh.OptionAddress{Value: "example.com"},
+			expected: false,
+		},
+		{
+			name: "User defined ssh command - contains symbol: '@'",
+			host: Host{
+				Address: "user@localhost",
 			},
+			expected: true,
+		},
+		{
+			name: "User defined ssh command - contains symbol: ' '",
+			host: Host{
+				Address: "localhost -p 2222",
+			},
+			expected: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.host.toSSHOptions()
-
-			if len(result) != len(tt.expectedOptions) {
-				t.Errorf("Expected %d options, but got %d", len(tt.expectedOptions), len(result))
-			}
-
-			for i := range result {
-				if result[i] != tt.expectedOptions[i] {
-					t.Errorf("Expected option %v, but got %v", tt.expectedOptions[i], result[i])
-				}
-			}
+			require.Equal(t, tt.expected, tt.host.IsUserDefinedSSHCommand())
 		})
 	}
 }

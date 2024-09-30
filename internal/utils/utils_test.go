@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -145,7 +146,7 @@ func TestBuildProcess(t *testing.T) {
 
 func TestBuildConnectSSH(t *testing.T) {
 	// Test case: Build SSH sanity check
-	cmd := BuildConnectSSH("ssh localhost")
+	cmd := BuildProcessInterceptStdErr("ssh localhost")
 
 	// Check that cmd is created and stdErr is re-defined
 	require.NotNil(t, cmd)
@@ -155,7 +156,7 @@ func TestBuildConnectSSH(t *testing.T) {
 
 func TestBuildLoadSSHConfig(t *testing.T) {
 	// Test case: Load SSH config sanity check
-	cmd := BuildLoadSSHConfig("localhost")
+	cmd := BuildProcessInterceptStdAll("localhost")
 
 	// Check that cmd is created and stdErr and stdOut are re-defined
 	require.NotNil(t, cmd)
@@ -176,4 +177,17 @@ func TestSplitArguments(t *testing.T) {
 
 	actual := splitArguments(arguments)
 	require.Equal(t, expected, actual)
+}
+
+func Test_ProcessBufferWriter_Write(t *testing.T) {
+	// Test the Write method of ProcessBufferWriter
+	writer := ProcessBufferWriter{}
+	data := []byte("test test test")
+	n, err := writer.Write(data)
+
+	assert.NoError(t, err)
+	// Make sure that 'n' is equal to the data length which we sent to the writer
+	assert.Equal(t, len(data), n)
+	// However we can read the text from writer.Output variable when we need
+	assert.Equal(t, data, writer.Output)
 }

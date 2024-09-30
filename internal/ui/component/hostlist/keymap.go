@@ -9,6 +9,7 @@ type keyMap struct {
 	cursorUp              key.Binding
 	cursorDown            key.Binding
 	connect               key.Binding
+	copyID                key.Binding
 	append                key.Binding
 	clone                 key.Binding
 	edit                  key.Binding
@@ -33,8 +34,8 @@ func newDelegateKeyMap() *keyMap {
 			key.WithHelp("↩", "connect"),
 		),
 		append: key.NewBinding(
-			key.WithKeys("n"),
-			key.WithHelp("n", "new"),
+			key.WithKeys("i", "n", "insert"),
+			key.WithHelp("i/n", "new"),
 		),
 		edit: key.NewBinding(
 			key.WithKeys("e"),
@@ -45,12 +46,16 @@ func newDelegateKeyMap() *keyMap {
 			key.WithHelp("c", "clone"),
 		),
 		remove: key.NewBinding(
-			key.WithKeys("d"),
-			key.WithHelp("d", "delete"),
+			key.WithKeys("d", "x"),
+			key.WithHelp("d/x", "delete"),
+		),
+		copyID: key.NewBinding(
+			key.WithKeys("t"),
+			key.WithHelp("t", "ssh-copy-id"),
 		),
 		toggleLayout: key.NewBinding(
 			key.WithKeys("v"),
-			key.WithHelp("v", "view"),
+			key.WithHelp("v", "toggle view"),
 		),
 		confirm: key.NewBinding(
 			key.WithKeys("y", "Y"),
@@ -66,10 +71,12 @@ func (k *keyMap) SetShouldShowEditButtons(val bool) {
 	k.shouldShowEditButtons = val
 	k.clone.SetEnabled(val)
 	k.connect.SetEnabled(val)
+	k.copyID.SetEnabled(val)
 	k.cursorDown.SetEnabled(val)
 	k.cursorUp.SetEnabled(val)
 	k.edit.SetEnabled(val)
 	k.remove.SetEnabled(val)
+	k.copyID.SetEnabled(val)
 }
 
 func (k *keyMap) ShouldShowEditButtons() bool {
@@ -98,6 +105,7 @@ func (k *keyMap) FullHelp() []key.Binding {
 		k.clone,
 		k.edit,
 		k.remove,
+		k.copyID,
 		k.toggleLayout,
 	}
 }

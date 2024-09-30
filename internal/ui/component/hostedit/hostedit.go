@@ -19,7 +19,6 @@ import (
 	"github.com/grafviktor/goto/internal/model/ssh"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
-	"github.com/grafviktor/goto/internal/ui/component/hostlist"
 	"github.com/grafviktor/goto/internal/ui/component/input"
 	"github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
@@ -32,11 +31,11 @@ type Size struct {
 }
 
 type (
-	// MsgClose triggers when users exits from edit form without saving results.
-	MsgClose struct{}
+	// CloseEditForm triggers when users exits from edit form without saving results.
+	CloseEditForm struct{}
 	// MsgSave triggers when users saves results.
 	MsgSave struct{}
-	// debouncedMessage is used to trigger side effects. For instance dispatch RunProcessLoadSSHConfig
+	// debouncedMessage is used to trigger side effects. For instance dispatch RunProcessSSHLoadConfig
 	// which reads host config from ~/.ssh/config file.
 	debouncedMessage struct {
 		wrappedMsg  tea.Msg
@@ -124,7 +123,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		// Logger should notify that this is a new host
 		host = hostModel.Host{}
 	}
-	host.DefaultSSHConfig = ssh.StubConfig()
+	host.SSHClientConfig = ssh.StubConfig()
 
 	m := editModel{
 		inputs:       make([]input.Input, 6),
@@ -203,7 +202,7 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case debouncedMessage:
 		cmd = m.handleDebouncedMessage(msg)
 	case message.HostSSHConfigLoaded:
-		m.host.DefaultSSHConfig = &msg.Config
+		m.host.SSHClientConfig = &msg.Config
 		m.updateInputFields()
 		m.viewport.SetContent(m.inputsView())
 	}
@@ -238,7 +237,7 @@ func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		return m.inputFocusChange(msg)
 	case key.Matches(msg, m.keyMap.Discard):
 		m.logger.Info("[UI] Discard changes for host id: %v", m.host.ID)
-		return message.TeaCmd(MsgClose{})
+		return message.TeaCmd(CloseEditForm{})
 	default:
 		// Handle all other key events
 		cmd := m.focusedInputProcessKeyEvent(msg)
@@ -291,18 +290,23 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 
 	host, _ := m.hostStorage.Save(m.host.unwrap())
 	// Need to check storage error and update application status:
-	// if err !=nil { return message.TeaCmd(message.Error{Err: err}) }
+	// if err != nil { return message.TeaCmd(message.Error{StdErr: err}) }
 	// or
 	// m.title = err
 
+	cmd := lo.Ternary(m.isNewHost,
+		message.TeaCmd(message.HostCreated{Host: host}),
+		message.TeaCmd(message.HostUpdated{Host: host}))
+
 	return tea.Sequence(
-		message.TeaCmd(MsgClose{}),
+		message.TeaCmd(CloseEditForm{}),
 		// Order matters here! That's why we use tea.Sequence instead of tea.Batch.
 		// 'HostListSelectItem' message should be dispatched
 		// before 'MsgRefreshRepo'. The reasons of that is because
 		// 'MsgRefreshRepo' handler automatically sets focus on previously selected item.
 		message.TeaCmd(message.HostListSelectItem{HostID: host.ID}),
-		message.TeaCmd(hostlist.MsgRefreshRepo{}),
+		// message.TeaCmd(hostlist.MsgRefreshRepo{}),
+		cmd,
 	)
 }
 
@@ -370,7 +374,7 @@ func (m *editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 		if previousValue != currentValue {
 			// Load SSH config for the specified hostname
 			cmd = message.TeaCmd(debouncedMessage{
-				wrappedMsg:  message.RunProcessLoadSSHConfig{Host: *m.host.Host},
+				wrappedMsg:  message.RunProcessSSHLoadConfig{Host: *m.host.Host},
 				debounceTag: m.debounceTag, // See the comments in debouncedMessage definition.
 			})
 		}
@@ -472,9 +476,9 @@ func (m *editModel) updateInputFields() {
 	m.inputs[inputTitle].Placeholder = "*required*" //nolint:goconst
 	m.inputs[inputAddress].Placeholder = "*required*"
 	m.inputs[inputDescription].Placeholder = "n/a"
-	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.DefaultSSHConfig.User)
-	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.DefaultSSHConfig.Port)
-	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.DefaultSSHConfig.IdentityFile)
+	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.User)
+	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.Port)
+	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.IdentityFile)
 
 	hostInputLabel := lo.Ternary(customConnectString, "Command", "Host")
 	m.inputs[inputAddress].SetLabel(hostInputLabel)

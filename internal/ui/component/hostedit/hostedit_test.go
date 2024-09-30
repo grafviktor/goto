@@ -14,7 +14,6 @@ import (
 
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/test"
-	"github.com/grafviktor/goto/internal/ui/component/hostlist"
 	"github.com/grafviktor/goto/internal/ui/message"
 )
 
@@ -101,8 +100,7 @@ func TestSave(t *testing.T) {
 
 	var dst []tea.Msg
 	test.CmdToMessage(messageSequence, &dst)
-	require.Contains(t, dst, MsgClose{})
-	require.Contains(t, dst, hostlist.MsgRefreshRepo{})
+	require.Contains(t, dst, CloseEditForm{})
 	require.Contains(t, dst, message.HostListSelectItem{HostID: 0})
 }
 
@@ -271,7 +269,7 @@ func TestUpdateInputPlaceHolders(t *testing.T) {
 	// Make sure that placeholders have correct values once ssh config is changed.
 	appState := MockAppState()
 	model := New(context.TODO(), test.NewMockStorage(false), appState, &test.MockLogger{})
-	model.host.DefaultSSHConfig = &ssh.Config{
+	model.host.SSHClientConfig = &ssh.Config{
 		IdentityFile: "Mock Identity File",
 		User:         "Mock User",
 		Port:         "Mock Port",

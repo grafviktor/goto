@@ -29,7 +29,7 @@ type Host struct {
 	RemotePort       string      `yaml:"network_port,omitempty"`
 	LoginName        string      `yaml:"username,omitempty"`
 	IdentityFilePath string      `yaml:"identity_file_path,omitempty"`
-	DefaultSSHConfig *ssh.Config `yaml:"-"`
+	SSHClientConfig  *ssh.Config `yaml:"-"`
 }
 
 // Clone host model.
@@ -57,28 +57,45 @@ func (h *Host) IsUserDefinedSSHCommand() bool {
 	return containsSpace || containsAtSymbol
 }
 
-// toSSHOptions - extract values from model.Host into a set of ssh.CommandLineOption
-// host - model.Host to be adapted
-// returns []ssh.CommandLineOption.
-func (h *Host) toSSHOptions() []ssh.Option {
-	return []ssh.Option{
-		ssh.OptionPrivateKey{Value: h.IdentityFilePath},
-		ssh.OptionRemotePort{Value: h.RemotePort},
-		ssh.OptionLoginName{Value: h.LoginName},
-		ssh.OptionAddress{Value: h.Address},
-	}
-}
-
 // CmdSSHConnect - returns SSH command for connecting to a remote host.
 func (h *Host) CmdSSHConnect() string {
 	if h.IsUserDefinedSSHCommand() {
 		return ssh.ConnectCommand(ssh.OptionAddress{Value: h.Address})
 	}
 
-	return ssh.ConnectCommand(h.toSSHOptions()...)
+	return ssh.ConnectCommand([]ssh.Option{
+		ssh.OptionPrivateKey{Value: h.IdentityFilePath},
+		ssh.OptionRemotePort{Value: h.RemotePort},
+		ssh.OptionLoginName{Value: h.LoginName},
+		ssh.OptionAddress{Value: h.Address},
+	}...)
 }
 
 // CmdSSHConfig - returns SSH command for loading host default configuration.
 func (h *Host) CmdSSHConfig() string {
-	return ssh.LoadConfigCommand(ssh.OptionReadConfig{Value: h.Address})
+	if h.IsUserDefinedSSHCommand() {
+		return ssh.LoadConfigCommand(ssh.OptionReadConfig{Value: h.Address})
+	}
+
+	return ssh.LoadConfigCommand([]ssh.Option{
+		ssh.OptionPrivateKey{Value: h.IdentityFilePath},
+		ssh.OptionRemotePort{Value: h.RemotePort},
+		ssh.OptionLoginName{Value: h.LoginName},
+		ssh.OptionReadConfig{Value: h.Address},
+	}...)
+}
+
+// CmdSSHCopyID - returns SSH command for copying SSH key to a remote host (see ssh-copy-id).
+func (h *Host) CmdSSHCopyID() string {
+	hostname := h.SSHClientConfig.Hostname
+	identityFile := h.SSHClientConfig.IdentityFile
+	port := h.SSHClientConfig.Port
+	user := h.SSHClientConfig.User
+
+	return ssh.CopyIDCommand(
+		ssh.OptionLoginName{Value: user},
+		ssh.OptionRemotePort{Value: port},
+		ssh.OptionPrivateKey{Value: identityFile},
+		ssh.OptionAddress{Value: hostname},
+	)
 }

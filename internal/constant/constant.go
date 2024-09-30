@@ -13,8 +13,20 @@ const ProtocolSSH = "ssh"
 type ScreenLayout string
 
 const (
-	// LayoutTight is set when all items in the hostlist are shown without description.
-	LayoutTight ScreenLayout = "tight"
-	// LayoutNormal is set when all hosts are shown with description field and a margin.
-	LayoutNormal ScreenLayout = "normal"
+	// ScreenLayoutTight is set when all items in the hostlist are shown without description.
+	ScreenLayoutTight ScreenLayout = "tight"
+	// ScreenLayoutNormal is set when all hosts are shown with description field and a margin.
+	ScreenLayoutNormal ScreenLayout = "normal"
+)
+
+// ProcessType is used to determine what kind of external process is running.
+type ProcessType string
+
+const (
+	// ProcessTypeSSHLoadConfig is used when we need to run ssh -G <hostname> to get config.
+	ProcessTypeSSHLoadConfig ProcessType = "ssh-load-config"
+	// ProcessTypeSSHCopyID is used when we need to run ssh-copy-id to copy a public key to a remote host.
+	ProcessTypeSSHCopyID ProcessType = "ssh-copy-id"
+	// ProcessTypeSSHConnect is used when we want to connect to a remote host.
+	ProcessTypeSSHConnect ProcessType = "ssh-connect"
 )

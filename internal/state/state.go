@@ -18,8 +18,8 @@ const (
 	ViewHostList view = iota
 	// ViewEditItem mode is active when we edit existing or add a new host.
 	ViewEditItem
-	// ViewErrorMessage mode is active when there was an error when attempted to connect to a remote host.
-	ViewErrorMessage
+	// ViewMessage mode is active when there was an error when attempted to connect to a remote host.
+	ViewMessage
 )
 
 var (
@@ -40,7 +40,6 @@ type ApplicationState struct {
 	appStateFilePath string
 	logger           iLogger
 	CurrentView      view                  `yaml:"-"`
-	Err              error                 `yaml:"-"`
 	Width            int                   `yaml:"-"`
 	Height           int                   `yaml:"-"`
 	ScreenLayout     constant.ScreenLayout `yaml:"screenLayout,omitempty"`
@@ -77,7 +76,7 @@ func (as *ApplicationState) readFromFile() error {
 		return err
 	}
 
-	as.logger.Debug("[APPSTATE] Screen layout: '%v'. Focused host: '%v'", as.ScreenLayout, as.Selected)
+	as.logger.Debug("[APPSTATE] Screen layout: '%v'. Focused host id: '%v'", as.ScreenLayout, as.Selected)
 
 	return nil
 }

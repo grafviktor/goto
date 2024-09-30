@@ -132,8 +132,8 @@ func BuildProcess(cmd string) *exec.Cmd {
 	return exec.Command(command, arguments...)
 }
 
-// ProcessBufferWriter - is an object which pretends to be a writer, however it saves all data into 'Output' variable
-// for future reading and do not write anything in terminal. We need it to display or parse process output or error.
+// ProcessBufferWriter - is an object which pretends to be a writer, however it saves all data into a temporary buffer
+// variable for future reading and doesn't write anything in terminal. Utilized to parse process stdout or stderr.
 type ProcessBufferWriter struct {
 	Output []byte
 }
@@ -156,8 +156,8 @@ func RemoveDuplicateSpaces(arguments string) string {
 	return twoOrMoreSpacesRegexp.ReplaceAllLiteralString(arguments, " ")
 }
 
-// BuildConnectSSH - builds ssh command which is based on host.Model.
-func BuildConnectSSH(command string) *exec.Cmd {
+// BuildProcessInterceptStdErr - builds a process where stderr is intercepted for further processing.
+func BuildProcessInterceptStdErr(command string) *exec.Cmd {
 	process := BuildProcess(command)
 	process.Stdout = os.Stdout
 	process.Stderr = &ProcessBufferWriter{}
@@ -165,9 +165,8 @@ func BuildConnectSSH(command string) *exec.Cmd {
 	return process
 }
 
-// BuildLoadSSHConfig - builds ssh command, which runs ssh -G <hostname> command
-// to get a list of options associated with the hostname.
-func BuildLoadSSHConfig(command string) *exec.Cmd {
+// BuildProcessInterceptStdAll - builds a process where both stdout and stderr are intercepted for further processing.
+func BuildProcessInterceptStdAll(command string) *exec.Cmd {
 	// Use case 1: User edits host
 	// Use case 2: User is going to copy his ssh key using <t> command from the hostlist
 

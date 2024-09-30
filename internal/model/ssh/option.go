@@ -19,7 +19,7 @@ type (
 	OptionLoginName struct{ Value string }
 	// OptionAddress - is a remote host address. Example: somehost.com.
 	OptionAddress struct{ Value string }
-	// OptionReadConfig - is used to read config file from ssh_config. Cannot be combined with other options.
+	// OptionReadConfig - is used to read config file from ssh_config.
 	OptionReadConfig struct{ Value string }
 )
 
@@ -51,28 +51,4 @@ func addOption(sb *strings.Builder, rawParameter Option) {
 	}
 
 	sb.WriteString(option)
-}
-
-var baseCmd = BaseCMD()
-
-// ConnectCommand - builds ssh command to connect to a remote host.
-func ConnectCommand(options ...Option) string {
-	sb := strings.Builder{}
-	sb.WriteString(baseCmd)
-
-	for _, option := range options {
-		addOption(&sb, option)
-	}
-
-	return sb.String()
-}
-
-// LoadConfigCommand - builds ssh command to load config from ssh_config file.
-func LoadConfigCommand(option OptionReadConfig) string {
-	sb := strings.Builder{}
-	sb.WriteString(baseCmd)
-
-	addOption(&sb, option)
-
-	return sb.String()
 }
