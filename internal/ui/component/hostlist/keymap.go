@@ -51,7 +51,7 @@ func newDelegateKeyMap() *keyMap {
 		),
 		copyID: key.NewBinding(
 			key.WithKeys("t"),
-			key.WithHelp("t", "ssh copy id"),
+			key.WithHelp("t", "ssh-copy-id"),
 		),
 		toggleLayout: key.NewBinding(
 			key.WithKeys("v"),
@@ -76,6 +76,7 @@ func (k *keyMap) SetShouldShowEditButtons(val bool) {
 	k.cursorUp.SetEnabled(val)
 	k.edit.SetEnabled(val)
 	k.remove.SetEnabled(val)
+	k.copyID.SetEnabled(val)
 }
 
 func (k *keyMap) ShouldShowEditButtons() bool {
@@ -100,11 +101,11 @@ func (k *keyMap) ShortHelp() []key.Binding {
 func (k *keyMap) FullHelp() []key.Binding {
 	return []key.Binding{
 		k.connect,
-		k.copyID,
 		k.append,
 		k.clone,
 		k.edit,
 		k.remove,
 		k.toggleLayout,
+		k.copyID,
 	}
 }

@@ -20,9 +20,9 @@ func TestBaseCMD(t *testing.T) {
 
 func TestCopyIDCommand(t *testing.T) {
 	// Rewrite user home, otherwise the test will depend on a username who executes the test
-	os.Setenv("USERPROFILE", "c:\\Users\\username")
+	os.Setenv("USERPROFILE", `c:\Users\username`)
 
-	expected := "cmd /c type \"c:\\Users\\username\\.ssh\\id_rsa.pub\" | ssh username@localhost -p 2222 \"cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && echo Key added. Now try logging into the machine.\""
+	expected := `cmd /c type "c:\Users\username\.ssh\id_rsa.pub" | ssh username@localhost -p 2222 "cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && echo Key added. Now try logging into the machine."`
 	actual := CopyIDCommand(
 		OptionAddress{Value: "localhost"},
 		OptionLoginName{Value: "username"},
