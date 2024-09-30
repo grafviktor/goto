@@ -1,5 +1,12 @@
 # Changelog #
 
+**[v1.2.0](https://github.com/grafviktor/goto/compare/v1.1.0...v1.2.0) - 2024-09-30**
+
+* Description field is now collapsible, press `v` to toggle the layout [[details](https://github.com/grafviktor/goto/issues/61)].
+* You can invoke `ssh-copy-id` command for selected host by pressing `t` [[details](https://github.com/grafviktor/goto/issues/47)] _In test mode for Windows OS_.
+* This release contains a fix for complex ssh commands containing quotes [[details](https://github.com/grafviktor/goto/issues/75)].
+* Various minor improvements and bugfixes, including host focusing issues [[details](https://github.com/grafviktor/goto/issues/70)].
+
 **[v1.1.0](https://github.com/grafviktor/goto/compare/v1.0.0...v1.1.0) - 2024-05-01**
 
 * Support custom SSH parameters [[details](https://github.com/grafviktor/goto/issues/39)].
