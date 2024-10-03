@@ -1,6 +1,6 @@
 #!/bin/bash
 
 for file in *.tape; do
-    vhs "$file" --output "$file".txt
+    vhs "$file"
     rm out.gif
 done
