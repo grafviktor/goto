@@ -1,6 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
+set -x
 set -e
+cd $(dirname "$(readlink -f "$0")")
 
 TMP_HOME=temp
 HOSTS_FILE="${TMP_HOME}"/hosts.yaml

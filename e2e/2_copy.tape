@@ -11,5 +11,6 @@ Type "127.0.0.1"
 Down
 Type "network host description"
 Ctrl+S
+Sleep 100ms
 Type "c"
 Type "q"
