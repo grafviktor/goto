@@ -4,6 +4,7 @@ Type "gg -f temp"
 Enter
 Sleep 100ms
 Type "n"
+Sleep 100ms
 Type "network host"
 Down
 Ctrl+u

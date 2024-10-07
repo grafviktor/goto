@@ -1,27 +1,35 @@
 #!/usr/bin/env bash
 
-set -x
 set -e
+
+# cd to this file location
 cd $(dirname "$(readlink -f "$0")")
 
+export VHS_PUBLISH=false # disable "Host your GIF on vhs.charm.sh: vhs publish <file>.gif" message
 TMP_HOME=temp
 HOSTS_FILE="${TMP_HOME}"/hosts.yaml
 
-function clean() {
+function cleanup() {
     rm -f out.gif "${TMP_HOME}"/*
 }
 
+function cleanup_or_die() {
+    local exit_code="$1"
+    local file_name="$2"
+
+    if [ "$exit_code" -ne 0 ]; then
+        echo "Failed: ${file_name}!"
+        exit 1;
+    fi
+
+    cleanup
+}
+
 mkdir -p "${TMP_HOME}"
-clean
+cleanup
 
-vhs 1_create.tape > /dev/null
-diff "${HOSTS_FILE}" expected/1_create.yaml || (echo Failed: 1_create.tape; exit 1)
-clean
-
-vhs 2_copy.tape > /dev/null
-diff "${HOSTS_FILE}" expected/2_copy.yaml || (echo Failed: 2_copy.tape; exit 1)
-clean
-
-vhs 3_delete.tape > /dev/null
-diff "${HOSTS_FILE}" expected/3_delete.yaml || (echo Failed: 3_delete.tape; exit 1)
-clean
+for file in *.tape; do
+    vhs "$file" > /dev/null
+    diff "${HOSTS_FILE}" "expected/${file%.*}.yaml" # file extension removed
+    cleanup_or_die $? "$file"
+done
