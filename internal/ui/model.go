@@ -57,6 +57,11 @@ type mainModel struct {
 	ready              bool
 }
 
+func (m *mainModel) Init() tea.Cmd {
+	m.logger.Debug("[UI] Run init function")
+	return m.modelHostList.Init()
+}
+
 func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
@@ -65,19 +70,6 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		m.logger.Debug("[UI] Keyboard event: '%v'", msg)
 		return m.handleKeyEvent(msg)
-	case message.TerminalSizePolling:
-		// That is Windows OS specific. Windows cmd.exe does not trigger terminal
-		// resize events, that is why we poll terminal size with intervals
-		// First message is being triggered by Windows version of the model.
-		if msg.Width != m.appState.Width || msg.Height != m.appState.Height {
-			m.logger.Debug("[UI] Terminal size polling message received: %d %d", msg.Width, msg.Height)
-			cmds = append(cmds, message.TeaCmd(tea.WindowSizeMsg{Width: msg.Width, Height: msg.Height}))
-		}
-
-		// We dispatch the same message from this function and therefore cycle TerminalSizePollingMsg.
-		// That's done on purpose to keep this process running. Message.TerminalSizePollingMsg will trigger
-		// automatically after an artificial delay which is set by Time.Sleep inside message.
-		cmds = append(cmds, message.TerminalSizePollingMsg)
 	case tea.WindowSizeMsg:
 		m.logger.Debug("[UI] Set terminal window size: %d %d", msg.Width, msg.Height)
 		m.appState.Width = msg.Width
