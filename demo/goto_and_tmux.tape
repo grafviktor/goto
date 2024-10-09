@@ -55,16 +55,15 @@
 Set PlaybackSpeed 1
 Output goto_and_tmux.gif
 Require echo
-Set Shell tmux
+Require tmux
 Set Padding 5
 Set FontSize 13
 Set Width 600
 Set Height 400
+Set Padding 20
 
 Show
 Sleep 1
-
-Require tmux
 
 Hide
   Type "tmux -f /dev/null -L test new-session -- bash" Enter

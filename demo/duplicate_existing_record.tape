@@ -5,6 +5,8 @@ Set Shell "bash"
 Set FontSize 13
 Set Width 600
 Set Height 400
+Set Padding 20
+
 Show
 
 Sleep 1s
@@ -29,39 +31,39 @@ Sleep 1s
 # Edit host
 Type "e"
 Sleep 1s
-# Append " which was cloned" to Server
-Type " which was cloned"
+# Rename to "The Death Star"
+Backspace 12
+Type "The Death Star"
 Sleep 1s
 
 # Go to description
 Down
 Sleep 1s
 Backspace 11
-Type remotedomain
+Type "d.vader@death-star.net"
 Sleep 2s
 Down
 Sleep 1s
 # Remove everything
 Ctrl+U
-Type "darkstar"
-Sleep 2s
-Down
-Sleep 1s
-Type "d.vader"
+Type "Turbolaser cannon remote control"
 Sleep 2s
 
 # Save
 Ctrl+S
-
-# Delete what was copied
 Sleep 3s
-Type d
-Sleep 2s
-Type y
 
+# Delete other hosts
+Up
 Sleep 1s
 Type d
-Sleep 2s
+Sleep 1s
+Type y
+
+Up
+Sleep 1s
+Type d
+Sleep 1s
 Type y
 
 Sleep 3s
