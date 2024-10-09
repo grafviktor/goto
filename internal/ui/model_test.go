@@ -19,8 +19,14 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	model := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
 	require.NotNil(t, model)
+	cmd := model.Init()
+	var msgs []tea.Msg
+	test.CmdToMessage(cmd, &msgs)
+
+	require.IsType(t, message.HostListSelectItem{}, msgs[0])
+	require.IsType(t, message.RunProcessSSHLoadConfig{}, msgs[1])
 }
 
 func TestUpdate_KeyMsg(t *testing.T) {

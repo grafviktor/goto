@@ -98,7 +98,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 }
 
 func (m *listModel) Init() tea.Cmd {
-	// This function is called from init_$PLATFORM.go file
+	// This function is called from model.go#init() file
 	m.logger.Debug("[UI] Load hostnames from the database")
 	hosts, err := m.repo.GetAll()
 	if err != nil {
