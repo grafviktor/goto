@@ -1,0 +1,20 @@
+- host:
+    title: network host
+    description: network host description
+    address: 127.0.0.1
+- host:
+    title: network host (1)
+    description: network host description
+    address: 127.0.0.1
+- host:
+    title: network host (2)
+    description: network host description
+    address: 127.0.0.1
+- host:
+    title: network host (4)
+    description: network host description
+    address: 127.0.0.1
+- host:
+    title: network host (5)
+    description: network host description
+    address: 127.0.0.1

@@ -52,9 +52,11 @@ const (
 	inputIdentityFile
 )
 
+type itemID struct{}
+
 var (
 	// ItemID is a key to extract item id from application context.
-	ItemID       = struct{}{}
+	ItemID       = itemID{}
 	defaultTitle = "host details"
 	debounceTime = time.Millisecond * 300
 )

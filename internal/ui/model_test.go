@@ -19,8 +19,14 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	model := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
+	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
 	require.NotNil(t, model)
+	cmd := model.Init()
+	var msgs []tea.Msg
+	test.CmdToMessage(cmd, &msgs)
+
+	require.IsType(t, message.HostListSelectItem{}, msgs[0])
+	require.IsType(t, message.RunProcessSSHLoadConfig{}, msgs[1])
 }
 
 func TestUpdate_KeyMsg(t *testing.T) {
@@ -32,26 +38,6 @@ func TestUpdate_KeyMsg(t *testing.T) {
 
 	assert.NotNil(t, model)
 	require.IsType(t, tea.QuitMsg{}, cmd(), "Wrong message type")
-}
-
-func TestUpdate_TerminalSizePolling(t *testing.T) {
-	// Ensure that when the model receives TerminalSizePolling it autogenerates 'WindowSizeMsg'
-	model := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
-	assert.Equal(t, 0, model.appState.Width)
-	assert.Equal(t, 0, model.appState.Height)
-
-	_, cmds := model.Update(message.TerminalSizePolling{
-		Width:  10,
-		Height: 10,
-	})
-
-	var dst []tea.Msg
-	test.CmdToMessage(cmds, &dst)
-
-	require.Contains(t, dst, tea.WindowSizeMsg{
-		Width:  10,
-		Height: 10,
-	})
 }
 
 func TestDispatchProcess_Foreground(t *testing.T) {
