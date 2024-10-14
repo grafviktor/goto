@@ -40,13 +40,19 @@ Sleep 1s
 Down
 Sleep 1s
 Backspace 11
-Type "d.vader@death-star.net"
-Sleep 2s
+Type "d.vader"
+Sleep 300ms
+Type "@"
+Sleep 300ms
+Type "death-star.space"
+Sleep 300ms
+Type " -p 2222"
+Sleep 3s
 Down
 Sleep 1s
 # Remove everything
 Ctrl+U
-Type "Turbolaser cannon remote control"
+Type "turbolaser cannon secure shell"
 Sleep 2s
 
 # Save

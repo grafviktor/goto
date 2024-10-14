@@ -78,10 +78,10 @@ Hide
   Sleep 1
 Show
 
-Sleep 1s
 Type "gg"
-Sleep 2s
+Sleep 1s
 Enter
+Sleep 2s
 
 # Create a new host
 Type "n"
