@@ -27,8 +27,6 @@ Supported platforms: macOS, Linux, Windows.
 Package [goto-ssh-bin](https://aur.archlinux.org/packages/goto-ssh-bin) is supported by Arch Linux community. Please find the details in [PKGBUILD](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=goto-ssh-bin) file.
 
 ```bash
-# Install ssh client if necessary
-yay -S openssh-client
 # Install goto
 yay -S goto-ssh-bin
 ```
