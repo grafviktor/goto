@@ -9,6 +9,8 @@ Supported platforms: macOS, Linux, Windows.
 
 ## 1. Installation ##
 
+### 1.1 Manual ###
+
 * Download the latest version from the [Releases](https://github.com/grafviktor/goto/releases) section;
 * Choose a binary file which matches your platform;
 * Place the binary into your user's binary path;
@@ -17,6 +19,17 @@ Supported platforms: macOS, Linux, Windows.
   ```bash
   chmod +x gg
   ```
+
+### 1.2 Using package manager ###
+
+#### Arch Linux ####
+
+Package [goto-ssh-bin](https://aur.archlinux.org/packages/goto-ssh-bin) is supported by Arch Linux community. Please find the details in [PKGBUILD](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=goto-ssh-bin) file.
+
+```bash
+# Install goto
+yay -S goto-ssh-bin
+```
 
 ## 2. Functional demo ##
 
