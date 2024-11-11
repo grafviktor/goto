@@ -14,6 +14,7 @@ import (
 	"github.com/grafviktor/goto/internal/model/ssh"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
+	"github.com/grafviktor/goto/internal/ui/component/grouplist"
 	"github.com/grafviktor/goto/internal/ui/component/hostedit"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
 	"github.com/grafviktor/goto/internal/ui/message"
@@ -35,11 +36,12 @@ func New(
 	log iLogger,
 ) mainModel {
 	m := mainModel{
-		modelHostList: hostlist.New(ctx, storage, appState, log),
-		appContext:    ctx,
-		hostStorage:   storage,
-		appState:      appState,
-		logger:        log,
+		modelHostList:  hostlist.New(ctx, storage, appState, log),
+		modelGroupList: grouplist.New(ctx, storage, appState, log),
+		appContext:     ctx,
+		hostStorage:    storage,
+		appState:       appState,
+		logger:         log,
 	}
 
 	return m
@@ -49,6 +51,7 @@ type mainModel struct {
 	appContext         context.Context
 	hostStorage        storage.HostStorage
 	modelHostList      tea.Model
+	modelGroupList     tea.Model
 	modelHostEdit      tea.Model
 	appState           *state.ApplicationState
 	viewMessageContent string
@@ -75,13 +78,19 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.appState.Width = msg.Width
 		m.appState.Height = msg.Height
 		m.updateViewPort(msg.Width, msg.Height)
-	case hostlist.OpenEditForm:
+	case hostlist.OpenEditForm: // FIXME: CloseEditForm and OpenEditForm are located in different packages
 		m.logger.Debug("[UI] Open host edit form")
 		m.appState.CurrentView = state.ViewEditItem
 		ctx := context.WithValue(m.appContext, hostedit.ItemID, msg.HostID)
 		m.modelHostEdit = hostedit.New(ctx, m.hostStorage, m.appState, m.logger)
-	case hostedit.CloseEditForm:
+	case hostedit.CloseEditForm: // FIXME: CloseEditForm and OpenEditForm are located in different packages
 		m.logger.Debug("[UI] Close host edit form")
+		m.appState.CurrentView = state.ViewHostList
+	case message.OpenSelectGroupForm:
+		m.logger.Debug("[UI] Open select group form")
+		m.appState.CurrentView = state.ViewGroupList
+	case message.CloseSelectGroupForm:
+		m.logger.Debug("[UI] Open select group form")
 		m.appState.CurrentView = state.ViewHostList
 	case message.HostListSelectItem:
 		m.logger.Debug("[UI] Update app state. Active host id: %d", msg.HostID)
@@ -122,6 +131,8 @@ func (m *mainModel) View() string {
 	switch m.appState.CurrentView {
 	case state.ViewHostList:
 		content = m.modelHostList.View()
+	case state.ViewGroupList:
+		content = m.modelGroupList.View()
 	case state.ViewMessage:
 		content = m.viewMessageContent
 	case state.ViewEditItem:
@@ -153,6 +164,8 @@ func (m *mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.appState.CurrentView = state.ViewHostList
 	case state.ViewHostList:
 		m.modelHostList, cmd = m.modelHostList.Update(msg)
+	case state.ViewGroupList:
+		m.modelHostEdit, cmd = m.modelGroupList.Update(msg)
 	case state.ViewEditItem:
 		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
 	}
