@@ -179,6 +179,8 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	case m.mode != modeDefault:
 		// Handle key event when some mode is enabled. For instance "removeMode".
 		return m.handleKeyEventWhenModeEnabled(msg)
+	case key.Matches(msg, m.keyMap.selectGroup):
+		return message.TeaCmd(message.OpenSelectGroupForm{})
 	case key.Matches(msg, m.keyMap.connect):
 		return m.constructProcessCmd(constant.ProcessTypeSSHConnect)
 	case key.Matches(msg, m.keyMap.copyID):

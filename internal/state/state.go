@@ -16,6 +16,8 @@ type view int
 const (
 	// ViewHostList mode is active when we browse through a list of hostnames.
 	ViewHostList view = iota
+	// ViewGroupList mode is active when the app displays available host groups.
+	ViewGroupList
 	// ViewEditItem mode is active when we edit existing or add a new host.
 	ViewEditItem
 	// ViewMessage mode is active when there was an error when attempted to connect to a remote host.
@@ -43,6 +45,7 @@ type ApplicationState struct {
 	Width            int                   `yaml:"-"`
 	Height           int                   `yaml:"-"`
 	ScreenLayout     constant.ScreenLayout `yaml:"screenLayout,omitempty"`
+	Group            string                `yaml:"group,omitempty"`
 }
 
 // Get - reads application state from disk.

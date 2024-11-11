@@ -31,6 +31,10 @@ type (
 		HostID int
 		Config ssh.Config
 	}
+	// Open available host groups form
+	OpenSelectGroupForm struct{}
+	// Close available host groups form
+	CloseSelectGroupForm struct{ activeGroup string }
 	// RunProcessSSHConnect is dispatched when user wants to connect to a host.
 	RunProcessSSHConnect struct{ Host host.Host }
 	// RunProcessSSHLoadConfig is dispatched it's required to read .ssh/config file for a certain host.
