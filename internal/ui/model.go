@@ -62,7 +62,13 @@ type mainModel struct {
 
 func (m *mainModel) Init() tea.Cmd {
 	m.logger.Debug("[UI] Run init function")
-	return m.modelHostList.Init() // Loads hosts from DB
+
+	msgs := tea.Batch(
+		// Loads hosts from DB
+		m.modelHostList.Init(),
+		// Build group list
+		m.modelGroupList.Init())
+	return msgs
 }
 
 func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -88,6 +94,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.appState.CurrentView = state.ViewHostList
 	case message.OpenSelectGroupForm:
 		m.logger.Debug("[UI] Open select group form")
+		m.modelGroupList.Update(msg)
 		m.appState.CurrentView = state.ViewGroupList
 	case message.CloseSelectGroupForm:
 		m.logger.Debug("[UI] Open select group form")
