@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/model/host"
@@ -30,6 +31,8 @@ type ListModel struct {
 	appState  *state.ApplicationState
 	logger    iLogger
 }
+
+var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
 func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *ListModel {
 	var listItems []list.Item
@@ -60,6 +63,12 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		// FIXME: Never gets called!
+		h, v := docStyle.GetFrameSize()
+		m.SetSize(msg.Width-h, msg.Height-v)
+		m.logger.Debug("[UI] Set host list size: %d %d", m.Width(), m.Height())
+		return m, nil
 	case tea.KeyMsg:
 		cmd = m.handleKeyboardEvent(msg)
 		return m, cmd
@@ -72,7 +81,7 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *ListModel) View() string {
-	return m.Model.View()
+	return docStyle.Render(m.Model.View())
 }
 
 func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
@@ -99,6 +108,10 @@ func (m *ListModel) loadHostGroups() tea.Cmd {
 
 	groupList := []string{}
 	groupList = append(groupList, "default")
+	groupList = append(groupList, "default1")
+	groupList = append(groupList, "default2")
+	groupList = append(groupList, "default3")
+	groupList = append(groupList, "default4")
 
 	lo.Map(hosts, func(h host.Host, index int) string {
 		return h.Group
