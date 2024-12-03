@@ -172,7 +172,7 @@ func (m *mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case state.ViewHostList:
 		m.modelHostList, cmd = m.modelHostList.Update(msg)
 	case state.ViewGroupList:
-		m.modelHostEdit, cmd = m.modelGroupList.Update(msg)
+		m.modelGroupList, cmd = m.modelGroupList.Update(msg)
 	case state.ViewEditItem:
 		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
 	}
