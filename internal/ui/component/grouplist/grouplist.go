@@ -29,7 +29,6 @@ type ListModel struct {
 	repo      storage.HostStorage
 	appState  *state.ApplicationState
 	logger    iLogger
-	groupList []string
 }
 
 func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *ListModel {
@@ -54,6 +53,43 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 }
 
 func (m *ListModel) Init() tea.Cmd {
+	return m.loadHostGroups()
+}
+
+func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		cmd = m.handleKeyboardEvent(msg)
+		return m, cmd
+	case 	message.OpenSelectGroupForm:
+		return m, m.loadHostGroups()
+	}
+
+	m.Model, cmd = m.Model.Update(msg)
+	return m, cmd
+}
+
+func (m *ListModel) View() string {
+	return m.Model.View()
+}
+
+func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
+	var cmd tea.Cmd
+
+	switch msg.Type {
+	case tea.KeyEscape:
+		return message.TeaCmd(message.CloseSelectGroupForm{})
+	case tea.KeyEnter:
+		return message.TeaCmd(message.CloseSelectGroupForm{})
+	}
+
+	m.Model, cmd = m.Model.Update(msg)
+	return cmd
+}
+
+func (m *ListModel) loadHostGroups() tea.Cmd {
 	m.logger.Debug("[UI] Load groups from the database")
 	hosts, err := m.repo.GetAll()
 	if err != nil {
@@ -61,24 +97,23 @@ func (m *ListModel) Init() tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err}) // TODO: msgErrorOccurred should be public and shared between hostlist and grouplist ?
 	}
 
-	groupList := lo.Map(hosts, func(h host.Host, index int) string {
+	groupList := []string{}
+	groupList = append(groupList, "default")
+
+	lo.Map(hosts, func(h host.Host, index int) string {
 		return h.Group
 	})
-
+	lo.Uniq(groupList)
 	slices.Sort(groupList)
 	// m.groupList = groupList
-	m.groupList = []string{"group 1", "group 2"}
+	// m.groupList = []string{"group 1", "group 2"}
 
-	return nil
-}
+	// m.SetItems([]ListItemHostGroup{"group1", "group2"})
 
-func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-	m.Model, cmd = m.Model.Update(msg)
+	items := make([]list.Item, 0, len(groupList))
+	for _, group := range groupList {
+		items = append(items, ListItemHostGroup{group})
+	}
 
-	return m, cmd
-}
-
-func (m *ListModel) View() string {
-	return m.Model.View()
+	return m.SetItems(items)
 }
