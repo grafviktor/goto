@@ -293,7 +293,7 @@ func (m *listModel) removeItem() tea.Cmd {
 	// We have to reset filter when remove an item from the list because of the aforementioned bug.
 	m.Model.ResetFilter()
 
-	if index > 1 {
+	if index >= 1 {
 		// If it's not the first item in the list, then let's focus on the previous one.
 		m.Select(index - 1)
 	}
@@ -307,6 +307,7 @@ func (m *listModel) editItem() tea.Cmd {
 		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
 	}
 
+	m.Model.ResetFilter()
 	m.logger.Info("[UI] Edit item id: %d, title: %s", item.ID, item.Title())
 	return tea.Sequence(
 		message.TeaCmd(OpenEditForm{HostID: item.ID}),
