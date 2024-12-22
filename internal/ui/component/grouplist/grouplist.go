@@ -3,6 +3,7 @@ package grouplist
 import (
 	"context"
 	"slices"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -21,26 +22,27 @@ type iLogger interface {
 	Error(format string, args ...any)
 }
 
-type (
-	msgErrorOccurred struct{ err error }
-)
-
 type ListModel struct {
 	list.Model
-	repo      storage.HostStorage
-	appState  *state.ApplicationState
-	logger    iLogger
+	repo     storage.HostStorage
+	appState *state.ApplicationState
+	logger   iLogger
 }
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
+var unselectGroup = "* ALL *"
 
 func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *ListModel {
 	var listItems []list.Item
-	model := list.New(listItems, list.NewDefaultDelegate(), 0, 0)
+	var listDelegate = list.NewDefaultDelegate()
+	listDelegate.ShowDescription = false
+	// listDelegate.SetSpacing(lo.Ternary(appState.ScreenLayout == constant.ScreenLayoutTight, 0, 1))
+	listDelegate.SetSpacing(0)
+	model := list.New(listItems, listDelegate, 0, 0)
 	// This line affects sorting when filtering enabled. What UnsortedFilter
 	// does - it filters the collection, but leaves initial items order unchanged.
 	// Default filter on the contrary - filters the collection based on the match rank.
-	model.Filter = list.UnsortedFilter
+	// model.Filter = list.UnsortedFilter
 
 	m := ListModel{
 		Model:    model,
@@ -64,15 +66,14 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		// FIXME: Never gets called!
 		h, v := docStyle.GetFrameSize()
 		m.SetSize(msg.Width-h, msg.Height-v)
-		m.logger.Debug("[UI] Set host list size: %d %d", m.Width(), m.Height())
+		m.logger.Debug("[UI] Set group list size: %d %d", m.Width(), m.Height())
 		return m, nil
 	case tea.KeyMsg:
 		cmd = m.handleKeyboardEvent(msg)
 		return m, cmd
-	case 	message.OpenSelectGroupForm:
+	case message.OpenSelectGroupForm:
 		return m, m.loadHostGroups()
 	}
 
@@ -91,7 +92,17 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	case tea.KeyEscape:
 		return message.TeaCmd(message.CloseSelectGroupForm{})
 	case tea.KeyEnter:
-		return message.TeaCmd(message.CloseSelectGroupForm{})
+		selected := m.SelectedItem().(ListItemHostGroup).Title()
+		selected = strings.TrimSpace(selected)
+
+		if selected == unselectGroup {
+			selected = ""
+		}
+
+		return tea.Batch(
+			message.TeaCmd(message.GroupListSelectItem{GroupName: selected}),
+			message.TeaCmd(message.CloseSelectGroupForm{}),
+		)
 	}
 
 	m.Model, cmd = m.Model.Update(msg)
@@ -103,25 +114,19 @@ func (m *ListModel) loadHostGroups() tea.Cmd {
 	hosts, err := m.repo.GetAll()
 	if err != nil {
 		m.logger.Error("[UI] Cannot read database. %v", err)
-		return message.TeaCmd(msgErrorOccurred{err}) // TODO: msgErrorOccurred should be public and shared between hostlist and grouplist ?
+		return message.TeaCmd(message.ErrorOccurred{Err: err})
 	}
 
-	groupList := []string{}
-	groupList = append(groupList, "default")
-	groupList = append(groupList, "default1")
-	groupList = append(groupList, "default2")
-	groupList = append(groupList, "default3")
-	groupList = append(groupList, "default4")
-
-	lo.Map(hosts, func(h host.Host, index int) string {
-		return h.Group
+	// Create a list of unique groups, one group is always there - "unselectGroup".
+	groupList := []string{unselectGroup}
+	lo.ForEach(hosts, func(h host.Host, index int) {
+		if strings.TrimSpace(h.Group) != "" {
+			groupList = append(groupList, h.Group)
+		}
 	})
-	lo.Uniq(groupList)
-	slices.Sort(groupList)
-	// m.groupList = groupList
-	// m.groupList = []string{"group 1", "group 2"}
 
-	// m.SetItems([]ListItemHostGroup{"group1", "group2"})
+	groupList = lo.Uniq(groupList)
+	slices.Sort(groupList)
 
 	items := make([]list.Item, 0, len(groupList))
 	for _, group := range groupList {

@@ -64,7 +64,7 @@ func TestListModel_Init(t *testing.T) {
 
 	// Check that msgErrorOccurred{} was found among returned messages, which indicate that
 	// something is wrong with the storage
-	require.Equal(t, "mock error", teaCmd().(msgErrorOccurred).err.Error())
+	require.Equal(t, "mock error", teaCmd().(message.ErrorOccurred).Err.Error())
 }
 
 func Test_listModel_Change_Selection(t *testing.T) {
@@ -186,7 +186,7 @@ func TestRemoveItem(t *testing.T) {
 			model: *NewMockListModel(true),
 			mode:  modeRemoveItem,
 			want: []tea.Msg{
-				msgErrorOccurred{err: errors.New("mock error")},
+				message.ErrorOccurred{Err: errors.New("mock error")},
 			},
 			expectedItems: 3,
 		},
@@ -195,7 +195,7 @@ func TestRemoveItem(t *testing.T) {
 			model: *NewMockListModel(false),
 			mode:  modeRemoveItem,
 			want: []tea.Msg{
-				msgErrorOccurred{err: errors.New("you must select an item")},
+				message.ErrorOccurred{Err: errors.New("you must select an item")},
 			},
 			preselectItem: 10,
 			expectedItems: 3,
@@ -267,7 +267,7 @@ func TestEnterSSHCopyIDMode(t *testing.T) {
 	// and make sure that mode is unchanged
 	require.Len(t, model.mode, 0)
 	// cmd() should return msgErrorOccurred error
-	require.IsType(t, msgErrorOccurred{}, cmd(), "Wrong message type")
+	require.IsType(t, message.ErrorOccurred{}, cmd(), "Wrong message type")
 
 	// Now select an existing item in the host list
 	model.Select(0)
@@ -291,7 +291,7 @@ func TestEnterRemoveItemMode(t *testing.T) {
 	// and make sure that mode is unchanged
 	require.Len(t, model.mode, 0)
 	// cmd() should return msgErrorOccurred error
-	require.IsType(t, msgErrorOccurred{}, cmd(), "Wrong message type")
+	require.IsType(t, message.ErrorOccurred{}, cmd(), "Wrong message type")
 
 	// Create another model
 	model = *NewMockListModel(false)
@@ -423,7 +423,7 @@ func TestListModel_editItem(t *testing.T) {
 	lm.logger = &test.MockLogger{}
 	teaCmd := lm.editItem()
 
-	require.IsType(t, msgErrorOccurred{}, teaCmd())
+	require.IsType(t, message.ErrorOccurred{}, teaCmd())
 
 	// Second case - we select a host from the list and sending a message to parent form
 	// That a host with a certain ID is ready to be modified.
@@ -449,7 +449,7 @@ func TestListModel_copyItem(t *testing.T) {
 	storage := test.NewMockStorage(storageShouldFail)
 	lm := New(context.TODO(), storage, &state.ApplicationState{}, &test.MockLogger{})
 	teaCmd := lm.copyItem()
-	require.Equal(t, itemNotSelectedMessage, teaCmd().(msgErrorOccurred).err.Error())
+	require.Equal(t, itemNotSelectedMessage, teaCmd().(message.ErrorOccurred).Err.Error())
 
 	// Second case: storage is OK, and we have to ensure that copied host title as we expect it to be:
 	lm = NewMockListModel(false)

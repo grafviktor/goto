@@ -34,7 +34,11 @@ type (
 	// Open available host groups form
 	OpenSelectGroupForm struct{}
 	// Close available host groups form
-	CloseSelectGroupForm struct{ activeGroup string }
+	CloseSelectGroupForm struct{}
+	// GroupListSelectItem - is dispatched when select a group in grouplist.
+	GroupListSelectItem struct{ GroupName string }
+	// ErrorOccurred - is dispatched when an error occurs.
+	ErrorOccurred struct{ Err error }
 	// RunProcessSSHConnect is dispatched when user wants to connect to a host.
 	RunProcessSSHConnect struct{ Host host.Host }
 	// RunProcessSSHLoadConfig is dispatched it's required to read .ssh/config file for a certain host.
