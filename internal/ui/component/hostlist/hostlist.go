@@ -40,9 +40,8 @@ type iLogger interface {
 
 type (
 	// OpenEditForm fires when user press edit button.
-	OpenEditForm     struct{ HostID int }
-	msgErrorOccurred struct{ err error }
-	msgToggleLayout  struct{}
+	OpenEditForm    struct{ HostID int }
+	msgToggleLayout struct{}
 )
 
 type listModel struct {
@@ -99,11 +98,21 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 
 func (m *listModel) Init() tea.Cmd {
 	// This function is called from model.go#init() file
+	return m.loadHosts()
+}
+
+func (m *listModel) loadHosts() tea.Cmd {
 	m.logger.Debug("[UI] Load hostnames from the database")
 	hosts, err := m.repo.GetAll()
 	if err != nil {
 		m.logger.Error("[UI] Cannot read database. %v", err)
-		return message.TeaCmd(msgErrorOccurred{err})
+		return message.TeaCmd(message.ErrorOccurred{Err: err})
+	}
+
+	if m.appState.Group != "" {
+		hosts = lo.Filter(hosts, func(h hostModel.Host, index int) bool {
+			return h.Group == m.appState.Group
+		})
 	}
 
 	slices.SortFunc(hosts, func(a, b hostModel.Host) int {
@@ -138,11 +147,20 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.onHostSSHConfigLoaded(msg)
 		return m, nil
 	case message.HostUpdated:
+		// FIXME: When host is updated and contains a different group, it should be removed from the list.
 		cmd := m.onHostUpdated(msg)
 		return m, cmd
 	case message.HostCreated:
+		// FIXME: When host is updated and contains a different group, it should be removed from the list.
 		cmd := m.onHostCreated(msg)
 		return m, cmd
+	case message.GroupListSelectItem:
+		// We re-load hosts every time a group is selected. This is not the best way
+		// to handle this, as it leads to series of hacks here and there. But it's the
+		// simplest way to implement it.
+
+		// FIXME: Sometimes we loose focus when switching between groups.
+		return m, m.loadHosts()
 	default:
 		return m, m.updateChildModel(msg)
 	}
@@ -228,13 +246,13 @@ func (m *listModel) removeItem() tea.Cmd {
 		// We should not be here at all, because delete
 		// button isn't available when a host is not selected.
 		m.logger.Error("[UI] Cannot cast selected item to host model")
-		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
+		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedMessage)})
 	}
 
 	err := m.repo.Delete(item.ID)
 	if err != nil {
 		m.logger.Debug("[UI] Error removing host from the database. %v", err)
-		return message.TeaCmd(msgErrorOccurred{err})
+		return message.TeaCmd(message.ErrorOccurred{Err: err})
 	}
 
 	_, index, _ := lo.FindIndexOf(m.Items(), func(i list.Item) bool {
@@ -306,7 +324,7 @@ func (m *listModel) removeItem() tea.Cmd {
 func (m *listModel) editItem() tea.Cmd {
 	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
-		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
+		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedMessage)})
 	}
 
 	m.logger.Info("[UI] Edit item id: %d, title: %s", item.ID, item.Title())
@@ -321,7 +339,7 @@ func (m *listModel) copyItem() tea.Cmd {
 	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Error("[UI] Cannot cast selected item to host model")
-		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
+		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedMessage)})
 	}
 
 	originalHost := item.Host
@@ -345,7 +363,7 @@ func (m *listModel) copyItem() tea.Cmd {
 	var err error
 	// Re-assign clonedHost to obtain host ID which is assigned by the database
 	if clonedHost, err = m.repo.Save(clonedHost); err != nil {
-		return message.TeaCmd(msgErrorOccurred{err})
+		return message.TeaCmd(message.ErrorOccurred{Err: err})
 	}
 
 	titles := lo.Reduce(m.Items(), func(agg []string, item list.Item, index int) []string {
@@ -365,6 +383,10 @@ func (m *listModel) copyItem() tea.Cmd {
 // onHostUpdated - not only updates a new host, it also re-inserts the host into
 // a correct position of the host list, to keep it sorted.
 func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
+	if m.isHostInDifferentGroup(msg.Host.Group) {
+		return nil
+	}
+
 	var cmd tea.Cmd
 	updatedItem := ListItemHost{Host: msg.Host}
 	titles := lo.Map(m.Items(), func(item list.Item, index int) string {
@@ -393,6 +415,10 @@ func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
 }
 
 func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
+	if m.isHostInDifferentGroup(msg.Host.Group) {
+		return nil
+	}
+
 	listItem := ListItemHost{Host: msg.Host}
 	titles := lo.Reduce(m.Items(), func(agg []string, item list.Item, index int) []string {
 		return append(agg, item.(ListItemHost).Title())
@@ -409,6 +435,10 @@ func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
 		cmd,
 		m.onFocusChanged(),
 	)
+}
+
+func (m *listModel) isHostInDifferentGroup(groupName string) bool {
+	return strings.TrimSpace(groupName) != m.appState.Group
 }
 
 func (m *listModel) onFocusChanged() tea.Cmd {
@@ -446,7 +476,7 @@ func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Error("[UI] Cannot cast selected item to host model")
-		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
+		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedMessage)})
 	}
 
 	if processType == constant.ProcessTypeSSHConnect {
@@ -516,7 +546,7 @@ func (m *listModel) enterSSHCopyIDMode() tea.Cmd {
 	_, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Debug("[UI] Cannot copy id. Host is not selected.")
-		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
+		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedMessage)})
 	}
 
 	m.mode = modeSSHCopyID
@@ -531,7 +561,7 @@ func (m *listModel) enterRemoveItemMode() tea.Cmd {
 	_, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Debug("[UI] Cannot remove. Host is not selected.")
-		return message.TeaCmd(msgErrorOccurred{err: errors.New(itemNotSelectedMessage)})
+		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedMessage)})
 	}
 
 	m.mode = modeRemoveItem
