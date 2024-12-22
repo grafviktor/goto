@@ -46,6 +46,7 @@ type (
 const (
 	inputTitle int = iota
 	inputAddress
+	inputGroup
 	inputDescription
 	inputLogin
 	inputNetworkPort
@@ -128,7 +129,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	host.SSHClientConfig = ssh.StubConfig()
 
 	m := editModel{
-		inputs:       make([]input.Input, 6),
+		inputs:       make([]input.Input, 7),
 		hostStorage:  storage,
 		host:         wrap(&host),
 		help:         help.New(),
@@ -159,6 +160,10 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 			t.SetValue(host.Address)
 			t.Validate = notEmptyValidator
 			t.Tooltip = "ssh"
+		case inputGroup:
+			t.SetLabel("Group")
+			t.CharLimit = 512
+			t.SetValue(host.Group)
 		case inputDescription:
 			t.SetLabel("Description")
 			t.CharLimit = 512
@@ -477,6 +482,7 @@ func (m *editModel) updateInputFields() {
 	prefix := lo.Ternary(customConnectString, "readonly", "default")
 	m.inputs[inputTitle].Placeholder = "*required*" //nolint:goconst
 	m.inputs[inputAddress].Placeholder = "*required*"
+	m.inputs[inputGroup].Placeholder = "n/a"
 	m.inputs[inputDescription].Placeholder = "n/a"
 	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.User)
 	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.Port)
@@ -485,6 +491,8 @@ func (m *editModel) updateInputFields() {
 	hostInputLabel := lo.Ternary(customConnectString, "Command", "Host")
 	m.inputs[inputAddress].SetLabel(hostInputLabel)
 	m.inputs[inputAddress].SetDisplayTooltip(customConnectString)
+
+	// Enable or disable inputs based on the custom connect string //
 
 	// Get input fields by pointer to update their state
 	sshParamsInputFields := []*input.Input{
@@ -504,6 +512,14 @@ func (m *editModel) updateInputFields() {
 			m.inputs[n].SetValue("")
 		}
 	})
+
+	// FIXME: This should trigger only once when the form is opened! Not when we update fields.
+	// If group is selected, then pre-populate group field
+	if !utils.StringEmpty(m.appState.Group) &&
+		utils.StringEmpty(m.inputs[inputGroup].Value()) &&
+		m.isNewHost {
+		(&m.inputs[inputGroup]).SetValue(m.appState.Group)
+	}
 }
 
 func (m *editModel) inputsView() string {

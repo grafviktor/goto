@@ -37,6 +37,7 @@ type Host struct {
 func (h *Host) Clone() Host {
 	newHost := Host{
 		Title:            h.Title,
+		Group:            h.Group,
 		Description:      h.Description,
 		Address:          h.Address,
 		LoginName:        h.LoginName,

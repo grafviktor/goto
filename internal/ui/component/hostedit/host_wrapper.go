@@ -16,6 +16,8 @@ func (m *hostModelWrapper) getHostAttributeValueByIndex(inputType int) string {
 		return m.Title
 	case inputAddress:
 		return m.Address
+	case inputGroup:
+		return m.Group
 	case inputDescription:
 		return m.Description
 	case inputLogin:
@@ -35,6 +37,8 @@ func (m *hostModelWrapper) setHostAttributeByIndex(inputType int, value string) 
 		m.Title = value
 	case inputAddress:
 		m.Address = value
+	case inputGroup:
+		m.Group = value
 	case inputDescription:
 		m.Description = value
 	case inputLogin:
