@@ -97,8 +97,11 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.modelGroupList.Update(msg)
 		m.appState.CurrentView = state.ViewGroupList
 	case message.CloseSelectGroupForm:
-		m.logger.Debug("[UI] Open select group form")
+		m.logger.Debug("[UI] Close select group form")
 		m.appState.CurrentView = state.ViewHostList
+	case message.GroupListSelectItem:
+		m.logger.Debug("[UI] Update app state. Active group: %s", msg.GroupName)
+		m.appState.Group = msg.GroupName
 	case message.HostListSelectItem:
 		m.logger.Debug("[UI] Update app state. Active host id: %d", msg.HostID)
 		m.appState.Selected = msg.HostID
@@ -121,6 +124,8 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	m.modelHostList, cmd = m.modelHostList.Update(msg)
+	cmds = append(cmds, cmd)
+	m.modelGroupList, cmd = m.modelGroupList.Update(msg)
 	cmds = append(cmds, cmd)
 
 	if m.appState.CurrentView == state.ViewEditItem {
