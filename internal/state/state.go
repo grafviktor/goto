@@ -45,7 +45,7 @@ type ApplicationState struct {
 	Width            int                   `yaml:"-"`
 	Height           int                   `yaml:"-"`
 	ScreenLayout     constant.ScreenLayout `yaml:"screenLayout,omitempty"`
-	Group            string                `yaml:"group,omitempty"`
+	Group            string                `yaml:"-"`
 }
 
 // Get - reads application state from disk.
