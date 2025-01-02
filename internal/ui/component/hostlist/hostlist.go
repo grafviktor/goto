@@ -60,7 +60,6 @@ type listModel struct {
 // for instance focus previously selected host.
 // log - application logger.
 func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *listModel {
-	// delegate := buildScreenLayout(appState.ScreenLayout)
 	delegate := NewHostDelegate(&appState.ScreenLayout, log)
 	delegateKeys := newDelegateKeyMap()
 
@@ -151,7 +150,7 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd := m.onHostUpdated(msg)
 		return m, cmd
 	case message.HostCreated:
-		// FIXME: When host is updated and contains a different group, it should be removed from the list.
+		// FIXME: When host is created and contains a different group, it should be removed from the list.
 		cmd := m.onHostCreated(msg)
 		return m, cmd
 	case message.GroupListSelectItem:
@@ -439,7 +438,12 @@ func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
 }
 
 func (m *listModel) isHostInDifferentGroup(groupName string) bool {
-	return strings.TrimSpace(groupName) != m.appState.Group
+	selectedGroup := m.appState.Group
+	if selectedGroup == "" {
+		return false
+	}
+
+	return strings.TrimSpace(groupName) != selectedGroup
 }
 
 func (m *listModel) onFocusChanged() tea.Cmd {
