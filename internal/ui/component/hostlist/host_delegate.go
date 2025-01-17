@@ -1,6 +1,7 @@
 package hostlist
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -12,16 +13,18 @@ import (
 
 type hostDelegate struct {
 	list.DefaultDelegate
-	layout *constant.ScreenLayout
-	logger iLogger
+	layout        *constant.ScreenLayout
+	selectedGroup *string
+	logger        iLogger
 }
 
 // NewHostDelegate creates a new Delegate object which can be used for customizing the view of a host.
-func NewHostDelegate(layout *constant.ScreenLayout, log iLogger) *hostDelegate {
+func NewHostDelegate(layout *constant.ScreenLayout, group *string, log iLogger) *hostDelegate {
 	delegate := &hostDelegate{
 		DefaultDelegate: list.NewDefaultDelegate(),
 		logger:          log,
 		layout:          layout,
+		selectedGroup:   group,
 	}
 
 	delegate.updateLayout()
@@ -59,16 +62,18 @@ func (hd *hostDelegate) updateLayout() {
 
 func (hd *hostDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 	var hostItem ListItemHost
-	// FIXME:
-	// Should greyout items from a different group.
-	// Should check selected group and compare with the item's group instead of the layout
-	if (hd.layout != nil) {
+	if hd.layout != nil {
 		var ok bool
 		if hostItem, ok = item.(ListItemHost); ok {
-			greyedOutStyle := lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#999999"));
-
-			hostItem.Host.Title = greyedOutStyle.Render(hostItem.Title());
+			// TODO: Refactor!
+			if hd.selectedGroup != nil &&
+				*hd.selectedGroup != "" &&
+				hostItem.Group != *hd.selectedGroup {
+				greyedOutStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#999999"))
+				groupMessage := fmt.Sprintf("[group: '%s']", hostItem.Group)
+				title := fmt.Sprintf("%s %s", hostItem.Title(), greyedOutStyle.Render(groupMessage))
+				hostItem.Host.Title = title
+			}
 		}
 	}
 

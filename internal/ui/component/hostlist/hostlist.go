@@ -60,7 +60,7 @@ type listModel struct {
 // for instance focus previously selected host.
 // log - application logger.
 func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *listModel {
-	delegate := NewHostDelegate(&appState.ScreenLayout, log)
+	delegate := NewHostDelegate(&appState.ScreenLayout, &appState.Group, log)
 	delegateKeys := newDelegateKeyMap()
 
 	var listItems []list.Item
@@ -158,7 +158,7 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// to handle this, as it leads to series of hacks here and there. But it's the
 		// simplest way to implement it.
 
-		// FIXME: Sometimes we loose focus when switching between groups.
+		// FIXME: Sometimes we lose focus when switching between groups.
 		return m, m.loadHosts()
 	default:
 		return m, m.updateChildModel(msg)
@@ -383,9 +383,11 @@ func (m *listModel) copyItem() tea.Cmd {
 // onHostUpdated - not only updates a new host, it also re-inserts the host into
 // a correct position of the host list, to keep it sorted.
 func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
-	if m.isHostInDifferentGroup(msg.Host.Group) {
-		return nil
-	}
+	// If enable this code, then group name is not updated when host is moved to another group.
+	// See host_delegate.go#Render method for more details.
+	// if m.isHostInDifferentGroup(msg.Host.Group) {
+	// 	return nil
+	// }
 
 	var cmd tea.Cmd
 	updatedItem := ListItemHost{Host: msg.Host}
