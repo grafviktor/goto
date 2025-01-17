@@ -308,11 +308,7 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 	return tea.Sequence(
 		message.TeaCmd(CloseEditForm{}),
 		// Order matters here! That's why we use tea.Sequence instead of tea.Batch.
-		// 'HostListSelectItem' message should be dispatched
-		// before 'MsgRefreshRepo'. The reasons of that is because
-		// 'MsgRefreshRepo' handler automatically sets focus on previously selected item.
 		message.TeaCmd(message.HostListSelectItem{HostID: host.ID}),
-		// message.TeaCmd(hostlist.MsgRefreshRepo{}),
 		cmd,
 	)
 }

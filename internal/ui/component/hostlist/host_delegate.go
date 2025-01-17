@@ -1,8 +1,11 @@
 package hostlist
 
 import (
+	"io"
+
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/grafviktor/goto/internal/constant"
 )
@@ -52,4 +55,22 @@ func (hd *hostDelegate) updateLayout() {
 	}
 
 	hd.logger.Debug("[UI] Change screen layout to: '%s'", *hd.layout)
+}
+
+func (hd *hostDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+	var hostItem ListItemHost
+	// FIXME:
+	// Should greyout items from a different group.
+	// Should check selected group and compare with the item's group instead of the layout
+	if (hd.layout != nil) {
+		var ok bool
+		if hostItem, ok = item.(ListItemHost); ok {
+			greyedOutStyle := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#999999"));
+
+			hostItem.Host.Title = greyedOutStyle.Render(hostItem.Title());
+		}
+	}
+
+	hd.DefaultDelegate.Render(w, m, index, hostItem)
 }
