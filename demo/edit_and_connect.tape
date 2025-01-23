@@ -85,10 +85,6 @@ Ctrl+S
 Sleep 3s
 Enter
 Sleep 3s
-Type "xxxx"
-
-Enter
-Sleep 5s
 Type "exit"
 Sleep 1s
 Enter

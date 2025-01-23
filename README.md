@@ -20,17 +20,19 @@ Supported platforms: macOS, Linux, Windows.
 
 ## 2. Functional demo ##
 
-### 2.1. Edit and connect to a remote box ###
+### 2.1. Edit a host and connect to the remote box ###
 
 ![Small demo where we open ssh session using goto](demo/edit_and_connect.gif)
 
-### 2.2. Duplicate an existing record ###
+### 2.2. Manipulate easily with your hosts database ###
 
 ![Small demo where duplicate an existing record in goto database](demo/duplicate_existing_record.gif)
 
 ### 2.3. Find a required host easily among all your records ###
 
 ![Small demo where we open ssh session using goto](demo/search_through_database.gif)
+
+Find mode demos and uses cases [here >>>](demo/README.md)
 
 ## 3. Configuration ##
 

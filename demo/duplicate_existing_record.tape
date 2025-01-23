@@ -47,7 +47,7 @@ Sleep 300ms
 Type "death-star.space"
 Sleep 300ms
 Type " -p 2222"
-Sleep 3s
+Sleep 1s
 Down
 Sleep 1s
 # Remove everything
@@ -57,7 +57,7 @@ Sleep 2s
 
 # Save
 Ctrl+S
-Sleep 3s
+Sleep 1s
 
 # Delete other hosts
 Up

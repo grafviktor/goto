@@ -53,123 +53,52 @@
 #   Show                            Show the subsequent commands in the output
 
 Set PlaybackSpeed 1
-Output goto_and_tmux.gif
+Output create_proxy.gif
 Require echo
-Require tmux
-Set Padding 5
+Set Shell "bash"
 Set FontSize 13
 Set Width 600
 Set Height 400
 Set Padding 20
 
 Show
-Sleep 1
-
-Hide
-  Type "tmux -f /dev/null -L test new-session -- bash" Enter
-  #Type "tmux split-window -d -h -- bash && \" Enter
-  Type "tmux set status && \" Enter
-  Type 'tmux setw pane-border-style "fg=0" && \' Enter
-  Type 'tmux setw pane-active-border-style "fg=0"' Enter
-  Type 'tmux bind x split-window -h -c "#{pane_current_path}"' Enter
-  Sleep 0.5
-  Type "export GG_HOME=. GG_LOG_LEVEL=debug" Enter
-  Ctrl+L
-  Sleep 1
-Show
-
+# Run gg
+Sleep 1s
 Type "gg"
 Sleep 1s
 Enter
-Sleep 2s
+Sleep 1s
 
 # Create a new host
 Type "n"
 Sleep 1s
 # Set Title
-Type "localhost"
+Type "Socks proxy"
 Sleep 1s
 Down
 Sleep 1s
 
-# Replace localhost with 127.0.0.1 in Host input and add additional parameters
+# Put a custom command
 Ctrl+U
 Sleep 1s
-Type '127.0.0.1 '
-Sleep 0.3s
-Type 'tail -n 5 -f .colima/daemon.log'
+Type 'roman@127.0.0.1 -o ProxyCommand="/usr/bin/nc -x 127.0.0.1:7000 %h %p" -i /Users/roman/.ssh/id_rsa'
 Sleep 2s
 Down
 
 # Set Description field
-Type 'Tail kuber cluster logs on DEV box'
+Type 'Runs a proxy server'
 Sleep 2s
 
 # Save the first host and exit
 Ctrl+S
 Sleep 3s
 
-# Clone first host
-Type c
-Sleep 1s
-
-# Focus on the copied host
-Down
-Sleep 1s
-
-# Edit the copied host
-Type e
-Sleep 1s
-
-# Delete " (1)" from the Title field
-Backspace 4
-Type " 2"
-Sleep 1s
-
-# Focus Host field and type new command
-Down
-Sleep 1s
-Ctrl+U
-Sleep 1s
-Type "127.0.0.1 -t sh -c 'iostat -c5; sh read -p Done...'"
-Sleep 2s
-
-# Update description field
-Down
-Sleep 1s
-Ctrl+U
-Type "Display IO load"
-Sleep 1s
-
-# Save the second host and exit
-Ctrl+S
-Sleep 3s
-
-Up
-
 # Connect to the first host
 Enter
-Sleep 3s
+Sleep 1s
 
-# tmux bind to switch to next pane
-Ctrl+B
-Type x
-# Sleep 0.5
-# Ctrl+B
-# Type o
-Hide
-  Type "export GG_HOME=. GG_LOG_LEVEL=debug" Enter
-  Sleep 0.5
-  Ctrl+L
-  Sleep 1
-Show
-
-Sleep 1
-Type "gg"
-Sleep 1
+# Interrupt socks proxy command
+Ctrl+C
 Enter
-Sleep 1
 Down
-Sleep 1
-Enter
-Sleep 5s
+Sleep 3s
