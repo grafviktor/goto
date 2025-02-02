@@ -24,6 +24,7 @@ import (
 )
 
 var (
+	// docStyle               = lipgloss.NewStyle().Margin(1, 2, 1, 0)
 	docStyle               = lipgloss.NewStyle().Margin(1, 2)
 	itemNotSelectedMessage = "you must select an item"
 	modeRemoveItem         = "removeItem"
