@@ -4,10 +4,6 @@ import (
 	model "github.com/grafviktor/goto/internal/model/host"
 )
 
-func wrap(host *model.Host) hostModelWrapper {
-	return hostModelWrapper{Host: host}
-}
-
 type hostModelWrapper struct{ *model.Host }
 
 func (m *hostModelWrapper) getHostAttributeValueByIndex(inputType int) string {
@@ -48,6 +44,10 @@ func (m *hostModelWrapper) setHostAttributeByIndex(inputType int, value string) 
 	case inputIdentityFile:
 		m.IdentityFilePath = value
 	}
+}
+
+func wrap(host *model.Host) hostModelWrapper {
+	return hostModelWrapper{Host: host}
 }
 
 func (m *hostModelWrapper) unwrap() model.Host {

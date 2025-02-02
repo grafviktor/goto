@@ -121,11 +121,18 @@ func (m *ListModel) loadHostGroups() tea.Cmd {
 	groupList := []string{unselectGroup}
 	lo.ForEach(hosts, func(h host.Host, index int) {
 		if strings.TrimSpace(h.Group) != "" {
-			groupList = append(groupList, h.Group)
+			_, found := lo.Find(groupList, func(g string) bool {
+				return strings.EqualFold(g, h.Group)
+			})
+
+			// Only add if there is no such group already in the list. Case ignored.
+			if !found {
+				groupList = append(groupList, h.Group)
+			}
 		}
 	})
 
-	groupList = lo.Uniq(groupList)
+	// groupList = lo.Uniq(groupList)
 	slices.Sort(groupList)
 
 	items := make([]list.Item, 0, len(groupList))

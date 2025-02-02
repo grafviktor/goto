@@ -3,10 +3,12 @@ package hostlist
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/constant"
 )
@@ -68,10 +70,13 @@ func (hd *hostDelegate) Render(w io.Writer, m list.Model, index int, item list.I
 			// TODO: Refactor!
 			if hd.selectedGroup != nil &&
 				*hd.selectedGroup != "" &&
-				hostItem.Group != *hd.selectedGroup {
-				greyedOutStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#999999"))
-				groupMessage := fmt.Sprintf("[group: '%s']", hostItem.Group)
-				title := fmt.Sprintf("%s %s", hostItem.Title(), greyedOutStyle.Render(groupMessage))
+				!strings.EqualFold(hostItem.Group, *hd.selectedGroup) {
+				greyedOutStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#333"))
+				groupName := lo.Ternary(strings.TrimSpace(hostItem.Group) == "",
+					"[n/a]",
+					fmt.Sprintf("['%s']", hostItem.Group))
+				// groupMessage := fmt.Sprintf("['%s']", hostItem.Group)
+				title := fmt.Sprintf("%s %s", hostItem.Title(), greyedOutStyle.Render(groupName))
 				hostItem.Host.Title = title
 			}
 		}

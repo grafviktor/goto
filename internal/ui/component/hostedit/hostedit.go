@@ -124,7 +124,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	host, hostNotFoundErr := storage.Get(hostID)
 	if hostNotFoundErr != nil {
 		// Logger should notify that this is a new host
-		host = hostModel.Host{}
+		host = hostModel.Host{Group: state.Group}
 	}
 	host.SSHClientConfig = ssh.StubConfig()
 
@@ -293,6 +293,14 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 				return nil
 			}
 		}
+
+		if i == inputGroup {
+			// When create a new host within specific group, the app pre-populates group value
+			// however, there is a chance that the group field will never be focused by user
+			// and the value will never be copied to the model. This is a workaround for this issue.
+			// Explicitly set group value to the model.
+			m.host.setHostAttributeByIndex(i, m.inputs[i].Value())
+		}
 	}
 
 	host, _ := m.hostStorage.Save(m.host.unwrap())
@@ -366,7 +374,10 @@ func (m *editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 		m.copyInputValueFromTo(inputTitle, inputAddress)
 	}
 
-	// When change UI field, update the model as well
+	// When change UI field, update the model as well. We need to update the model on this stage
+	// because we need to know its details(such as username, port number, ssh key) when request SSH config.
+	// We assign value to the model here, then we read it again in "updateInputFields" function. That
+	// should be simplified, we only need to assign value to the model when we save it.
 	m.host.setHostAttributeByIndex(m.focusedInput, m.inputs[m.focusedInput].Value())
 
 	// If type in address field
@@ -508,14 +519,6 @@ func (m *editModel) updateInputFields() {
 			m.inputs[n].SetValue("")
 		}
 	})
-
-	// FIXME: This should trigger only once when the form is opened! Not when we update fields.
-	// If group is selected, then pre-populate group field
-	if !utils.StringEmpty(m.appState.Group) &&
-		utils.StringEmpty(m.inputs[inputGroup].Value()) &&
-		m.isNewHost {
-		(&m.inputs[inputGroup]).SetValue(m.appState.Group)
-	}
 }
 
 func (m *editModel) inputsView() string {

@@ -110,7 +110,7 @@ func (m *listModel) loadHosts() tea.Cmd {
 
 	if m.appState.Group != "" {
 		hosts = lo.Filter(hosts, func(h hostModel.Host, index int) bool {
-			return h.Group == m.appState.Group
+			return strings.EqualFold(h.Group, m.appState.Group)
 		})
 	}
 
@@ -146,11 +146,9 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.onHostSSHConfigLoaded(msg)
 		return m, nil
 	case message.HostUpdated:
-		// FIXME: When host is updated and contains a different group, it should be removed from the list.
 		cmd := m.onHostUpdated(msg)
 		return m, cmd
 	case message.HostCreated:
-		// FIXME: When host is created and contains a different group, it should be removed from the list.
 		cmd := m.onHostCreated(msg)
 		return m, cmd
 	case message.GroupListSelectItem:
@@ -383,12 +381,6 @@ func (m *listModel) copyItem() tea.Cmd {
 // onHostUpdated - not only updates a new host, it also re-inserts the host into
 // a correct position of the host list, to keep it sorted.
 func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
-	// If enable this code, then group name is not updated when host is moved to another group.
-	// See host_delegate.go#Render method for more details.
-	// if m.isHostInDifferentGroup(msg.Host.Group) {
-	// 	return nil
-	// }
-
 	var cmd tea.Cmd
 	updatedItem := ListItemHost{Host: msg.Host}
 	titles := lo.Map(m.Items(), func(item list.Item, index int) string {
@@ -417,10 +409,6 @@ func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
 }
 
 func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
-	if m.isHostInDifferentGroup(msg.Host.Group) {
-		return nil
-	}
-
 	listItem := ListItemHost{Host: msg.Host}
 	titles := lo.Reduce(m.Items(), func(agg []string, item list.Item, index int) []string {
 		return append(agg, item.(ListItemHost).Title())
@@ -437,15 +425,6 @@ func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
 		cmd,
 		m.onFocusChanged(),
 	)
-}
-
-func (m *listModel) isHostInDifferentGroup(groupName string) bool {
-	selectedGroup := m.appState.Group
-	if selectedGroup == "" {
-		return false
-	}
-
-	return strings.TrimSpace(groupName) != selectedGroup
 }
 
 func (m *listModel) onFocusChanged() tea.Cmd {
@@ -539,6 +518,9 @@ func (m *listModel) selectHostByID(id int) tea.Cmd {
 		// However, this will cause problems with title update when we enter remove
 		// mode and then cancel it.
 		m.Select(index)
+	} else {
+		// If host is not found, then we should reset the focus. Function 'onFocusChanged', will update application state.
+		m.Select(0)
 	}
 
 	return m.onFocusChanged()
