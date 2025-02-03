@@ -45,7 +45,7 @@ type ApplicationState struct {
 	Width            int                   `yaml:"-"`
 	Height           int                   `yaml:"-"`
 	ScreenLayout     constant.ScreenLayout `yaml:"screenLayout,omitempty"`
-	Group            string                `yaml:"-"`
+	Group            string                `yaml:"group,omitempty"`
 }
 
 // Get - reads application state from disk.
@@ -55,7 +55,7 @@ func Get(appHomePath string, lg iLogger) *ApplicationState {
 		appState = &ApplicationState{
 			appStateFilePath: path.Join(appHomePath, stateFile),
 			logger:           lg,
-			Group:            "", // TODO: Find a better bane for this field
+			Group:            "", // TODO: Find a better name for this field
 		}
 
 		// If we cannot read previously created application state, that's fine - we can continue execution.

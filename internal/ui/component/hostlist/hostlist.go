@@ -115,18 +115,20 @@ func (m *listModel) loadHosts() tea.Cmd {
 		})
 	}
 
-	slices.SortFunc(hosts, func(a, b hostModel.Host) int {
-		if a.Title < b.Title {
-			return -1
-		}
-		return 1
-	})
-
 	// Wrap hosts into List items
 	items := make([]list.Item, 0, len(hosts))
 	for _, h := range hosts {
 		items = append(items, ListItemHost{Host: h})
 	}
+
+	slices.SortFunc(items, func(a, b list.Item) int {
+		hostA := a.(ListItemHost)
+		hostB := b.(ListItemHost)
+		if hostA.uniqueName() < hostB.uniqueName() {
+			return -1
+		}
+		return 1
+	})
 
 	setItemsCmd := m.SetItems(items)
 	selectHostByIDCmd := m.selectHostByID(m.appState.Selected)
@@ -216,6 +218,11 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		// here. One of the ways to trigger it is to invoke model.SetSize method.
 		m.Model.SetSize(m.Width(), m.Height())
 		return nil
+	case msg.Type == tea.KeyEsc && m.appState.Group != "":
+		// When user presses Escape key while group is selected, we should
+		// deselect the group instead of closing the app.
+		m.logger.Debug("[UI] Receive Escape key when group selected. Deselect group")
+		return message.TeaCmd(message.GroupListSelectItem{GroupName: ""})
 	default:
 		cmd := m.updateChildModel(msg)
 		return tea.Sequence(cmd, m.onFocusChanged())
@@ -383,26 +390,29 @@ func (m *listModel) copyItem() tea.Cmd {
 // a correct position of the host list, to keep it sorted.
 func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
 	var cmd tea.Cmd
-	updatedItem := ListItemHost{Host: msg.Host}
-	titles := lo.Map(m.Items(), func(item list.Item, index int) string {
-		if item.(ListItemHost).ID == updatedItem.ID {
-			return updatedItem.Title()
+	updatedHostItem := ListItemHost{Host: msg.Host}
+	uniqueTitles := lo.Map(m.Items(), func(item list.Item, index int) string {
+		listItemHost := item.(ListItemHost)
+		if listItemHost.ID == updatedHostItem.ID {
+			// Return the new Title instead of the previously stored one
+			return updatedHostItem.uniqueName()
 		}
 
-		return item.(ListItemHost).Title()
+		// Use combination of Title and ID to uniquely identify the host
+		return listItemHost.uniqueName()
 	})
 
 	// When sorting, shall we take description into account as well or sorting by title is enough ?
-	slices.Sort(titles)
-	newIndex := lo.IndexOf(titles, updatedItem.Title())
+	slices.Sort(uniqueTitles)
+	newIndex := lo.IndexOf(uniqueTitles, updatedHostItem.uniqueName())
 
 	if newIndex == m.Index() {
 		// Index isn't changed.
-		cmd = m.Model.SetItem(m.Index(), updatedItem)
+		cmd = m.Model.SetItem(m.Index(), updatedHostItem)
 	} else {
 		// Index is changed, need to move the host into a new location
 		m.Model.RemoveItem(m.Index())
-		cmd = m.Model.InsertItem(newIndex, updatedItem)
+		cmd = m.Model.InsertItem(newIndex, updatedHostItem)
 		m.Select(newIndex)
 	}
 
@@ -410,14 +420,14 @@ func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
 }
 
 func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
-	listItem := ListItemHost{Host: msg.Host}
+	createdHostItem := ListItemHost{Host: msg.Host}
 	titles := lo.Reduce(m.Items(), func(agg []string, item list.Item, index int) []string {
-		return append(agg, item.(ListItemHost).Title())
-	}, []string{listItem.Title()})
+		return append(agg, item.(ListItemHost).uniqueName())
+	}, []string{createdHostItem.uniqueName()})
 
 	slices.Sort(titles)
-	index := lo.IndexOf(titles, listItem.Title())
-	cmd := m.Model.InsertItem(index, listItem)
+	index := lo.IndexOf(titles, createdHostItem.uniqueName())
+	cmd := m.Model.InsertItem(index, createdHostItem)
 
 	m.Select(index)
 

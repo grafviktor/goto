@@ -132,7 +132,6 @@ func (m *ListModel) loadHostGroups() tea.Cmd {
 		}
 	})
 
-	// groupList = lo.Uniq(groupList)
 	slices.Sort(groupList)
 
 	items := make([]list.Item, 0, len(groupList))

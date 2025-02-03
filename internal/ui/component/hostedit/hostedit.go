@@ -299,7 +299,8 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 			// however, there is a chance that the group field will never be focused by user
 			// and the value will never be copied to the model. This is a workaround for this issue.
 			// Explicitly set group value to the model.
-			m.host.setHostAttributeByIndex(i, m.inputs[i].Value())
+			groupName := m.inputs[i].Value()
+			m.host.setHostAttributeByIndex(i, strings.TrimSpace(groupName))
 		}
 	}
 
