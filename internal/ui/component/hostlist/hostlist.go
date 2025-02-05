@@ -159,7 +159,8 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// to handle this, as it leads to series of hacks here and there. But it's the
 		// simplest way to implement it.
 
-		// FIXME: Sometimes we lose focus when switching between groups.
+		// Reset filter when group is selected
+		m.ResetFilter()
 		return m, m.loadHosts()
 	default:
 		return m, m.updateChildModel(msg)
@@ -212,12 +213,12 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, m.keyMap.clone):
 		return m.copyItem()
 	case key.Matches(msg, m.keyMap.toggleLayout):
-		m.updateChildModel(msgToggleLayout{})
+		m.updateChildModel(msgToggleLayout{ /*layout type: tight*/ })
 		// When switch between screen layouts, it's required to update pagination.
 		// ListModel's updatePagination method is private and cannot be called from
 		// here. One of the ways to trigger it is to invoke model.SetSize method.
 		m.Model.SetSize(m.Width(), m.Height())
-		return nil
+		return m.NewStatusMessage(fmt.Sprintf("toggle layout: %v", m.appState.ScreenLayout))
 	case msg.Type == tea.KeyEsc && m.appState.Group != "":
 		// When user presses Escape key while group is selected, we should
 		// deselect the group instead of closing the app.

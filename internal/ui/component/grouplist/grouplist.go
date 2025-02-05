@@ -36,13 +36,8 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	var listItems []list.Item
 	var listDelegate = list.NewDefaultDelegate()
 	listDelegate.ShowDescription = false
-	// listDelegate.SetSpacing(lo.Ternary(appState.ScreenLayout == constant.ScreenLayoutTight, 0, 1))
 	listDelegate.SetSpacing(0)
 	model := list.New(listItems, listDelegate, 0, 0)
-	// This line affects sorting when filtering enabled. What UnsortedFilter
-	// does - it filters the collection, but leaves initial items order unchanged.
-	// Default filter on the contrary - filters the collection based on the match rank.
-	// model.Filter = list.UnsortedFilter
 
 	m := ListModel{
 		Model:    model,

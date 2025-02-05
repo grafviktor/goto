@@ -11,7 +11,10 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/constant"
+	"github.com/grafviktor/goto/internal/utils"
 )
+
+var groupHint = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#9B9B9B", Dark: "#5C5C5C"})
 
 type hostDelegate struct {
 	list.DefaultDelegate
@@ -33,10 +36,12 @@ func NewHostDelegate(layout *constant.ScreenLayout, group *string, log iLogger) 
 
 	delegate.UpdateFunc = func(msg tea.Msg, m *list.Model) tea.Cmd {
 		if _, ok := msg.(msgToggleLayout); ok {
-			if *delegate.layout == constant.ScreenLayoutTight {
+			switch *delegate.layout {
+			case constant.ScreenLayoutTight:
 				*delegate.layout = constant.ScreenLayoutNormal
-			} else {
-				// If layout is not set or "Normal", switch to "tight" layout.
+			case constant.ScreenLayoutNormal:
+				*delegate.layout = constant.ScreenLayoutGroup
+			default:
 				*delegate.layout = constant.ScreenLayoutTight
 			}
 
@@ -62,54 +67,22 @@ func (hd *hostDelegate) updateLayout() {
 	hd.logger.Debug("[UI] Change screen layout to: '%s'", *hd.layout)
 }
 
-// var selectedStyle = lipgloss.NewStyle().
-// 	Border(lipgloss.NormalBorder(), false, true, false, false).
-// 	BorderForeground(lipgloss.AdaptiveColor{Light: "#F793FF", Dark: "#AD58B4"}).
-// 	Foreground(lipgloss.AdaptiveColor{Light: "#EE6FF8", Dark: "#EE6FF8"}).
-// 	Padding(0, 0, 0, 0)
-
-func (hd *hostDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
-	// TODO:
-	// 1. Make an abbreviation from group name My Group -> MG
-	// 2. If group is not selected, display group abbreviation in grey color before title
-	// Also see https://github.com/charmbracelet/bubbletea/blob/main/examples/list-simple/main.go
-
-	defaultRenderer := hd.DefaultDelegate.Render
-	hostItem, ok := item.(ListItemHost)
-	if ok {
-		// TODO: Refactor!
-		if hd.selectedGroup != nil &&
-			*hd.selectedGroup != "" &&
-			!strings.EqualFold(hostItem.Group, *hd.selectedGroup) {
-			greyedOutStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#333333"))
-			groupName := lo.Ternary(strings.TrimSpace(hostItem.Group) == "",
-				"[group removed]",
-				fmt.Sprintf("['%s']", hostItem.Group))
-			// groupMessage := fmt.Sprintf("['%s']", hostItem.Group)
-			title := fmt.Sprintf("%s %s", hostItem.Title(), greyedOutStyle.Render(groupName))
-			hostItem.Host.Title = title
-		}
-	}
-
-	// Use buffered writer to hack the default renderer output
-	// bw := utils.ProcessBufferWriter{}
-	// defaultRenderer(&bw, m, index, hostItem)
-	// text := string(bw.Output)
-	// fmt.Fprint(w, cutItemBorder(text))
-
-	defaultRenderer(w, m, index, hostItem)
+func (hd *hostDelegate) isHostMovedToAnotherGroup(hostGroup string) bool {
+	appStatedGroup := hd.selectedGroup
+	return appStatedGroup != nil &&
+		*appStatedGroup != "" &&
+		!strings.EqualFold(hostGroup, *appStatedGroup)
 }
 
-/* func cutItemBorder(str string) string {
-	// runes := []rune(str)
-	// if len(runes) < 2 {
-	// 	return str
-	// }
-	resetStyle := lipgloss.NewStyle()
-
-	if len(str) < 3 {
-		return str
+func (hd *hostDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+	hostItem, ok := item.(ListItemHost)
+	if *hd.layout == constant.ScreenLayoutGroup {
+		hostItem.Host.Description = hostItem.Group
+	} else if ok && hd.isHostMovedToAnotherGroup(hostItem.Group) {
+		groupIsEmpty := utils.StringEmpty(hostItem.Group)
+		groupName := lo.Ternary(groupIsEmpty, "[no group]", fmt.Sprintf("(%s)", hostItem.Group))
+		hostItem.Host.Title = fmt.Sprintf("%s %s", hostItem.Title(), groupHint.Render(groupName))
 	}
 
-	return resetStyle.Render(str)
-} */
+	hd.DefaultDelegate.Render(w, m, index, hostItem)
+}

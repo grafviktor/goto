@@ -17,6 +17,8 @@ const (
 	ScreenLayoutTight ScreenLayout = "tight"
 	// ScreenLayoutNormal is set when all hosts are shown with description field and a margin.
 	ScreenLayoutNormal ScreenLayout = "normal"
+	// ScreenLayoutNormal is set when all hosts are shown with description field and a margin.
+	ScreenLayoutGroup ScreenLayout = "show-groups"
 )
 
 // ProcessType is used to determine what kind of external process is running.
