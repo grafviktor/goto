@@ -37,12 +37,12 @@ func NewHostDelegate(layout *constant.ScreenLayout, group *string, log iLogger) 
 	delegate.UpdateFunc = func(msg tea.Msg, m *list.Model) tea.Cmd {
 		if _, ok := msg.(msgToggleLayout); ok {
 			switch *delegate.layout {
-			case constant.ScreenLayoutTight:
-				*delegate.layout = constant.ScreenLayoutNormal
-			case constant.ScreenLayoutNormal:
+			case constant.ScreenLayoutCompact:
+				*delegate.layout = constant.ScreenLayoutDescription
+			case constant.ScreenLayoutDescription:
 				*delegate.layout = constant.ScreenLayoutGroup
 			default:
-				*delegate.layout = constant.ScreenLayoutTight
+				*delegate.layout = constant.ScreenLayoutCompact
 			}
 
 			delegate.updateLayout()
@@ -55,7 +55,7 @@ func NewHostDelegate(layout *constant.ScreenLayout, group *string, log iLogger) 
 }
 
 func (hd *hostDelegate) updateLayout() {
-	if *hd.layout == constant.ScreenLayoutTight {
+	if *hd.layout == constant.ScreenLayoutCompact {
 		hd.SetSpacing(0)
 		hd.ShowDescription = false
 	} else {

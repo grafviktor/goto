@@ -890,9 +890,9 @@ func TestUpdate_ToggleBetweenNormalAndCompactLayout(t *testing.T) {
 		Runes: []rune{'v'},
 	})
 
-	fakeAppState.ScreenLayout = constant.ScreenLayoutTight
+	fakeAppState.ScreenLayout = constant.ScreenLayoutCompact
 	// Ensure that screen layout is equal to
-	require.Equal(t, constant.ScreenLayoutTight, fakeAppState.ScreenLayout)
+	require.Equal(t, constant.ScreenLayoutCompact, fakeAppState.ScreenLayout)
 
 	// Toggle layout again and check that it's now set to "normal"
 	model.Update(tea.KeyMsg{
@@ -900,16 +900,16 @@ func TestUpdate_ToggleBetweenNormalAndCompactLayout(t *testing.T) {
 		Runes: []rune{'v'},
 	})
 
-	require.Equal(t, constant.ScreenLayoutNormal, fakeAppState.ScreenLayout)
+	require.Equal(t, constant.ScreenLayoutDescription, fakeAppState.ScreenLayout)
 }
 
 func TestBuildScreenLayout(t *testing.T) {
-	layout := constant.ScreenLayoutNormal
+	layout := constant.ScreenLayoutDescription
 	screenLayoutDelegate := NewHostDelegate(&layout, &test.MockLogger{})
 	require.Equal(t, 1, screenLayoutDelegate.Spacing())
 	require.True(t, screenLayoutDelegate.ShowDescription)
 
-	layout = constant.ScreenLayoutTight
+	layout = constant.ScreenLayoutCompact
 	screenLayoutDelegate = NewHostDelegate(&layout, &test.MockLogger{})
 	require.Equal(t, 0, screenLayoutDelegate.Spacing())
 	require.False(t, screenLayoutDelegate.ShowDescription)

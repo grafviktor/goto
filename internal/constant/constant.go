@@ -13,12 +13,12 @@ const ProtocolSSH = "ssh"
 type ScreenLayout string
 
 const (
-	// ScreenLayoutTight is set when all items in the hostlist are shown without description.
-	ScreenLayoutTight ScreenLayout = "tight"
+	// ScreenLayoutCompact is set when all items in the hostlist are shown without description.
+	ScreenLayoutCompact ScreenLayout = "compact"
+	// ScreenLayoutDescription is set when all hosts are shown with description field and a margin.
+	ScreenLayoutDescription ScreenLayout = "description"
 	// ScreenLayoutNormal is set when all hosts are shown with description field and a margin.
-	ScreenLayoutNormal ScreenLayout = "normal"
-	// ScreenLayoutNormal is set when all hosts are shown with description field and a margin.
-	ScreenLayoutGroup ScreenLayout = "show-groups"
+	ScreenLayoutGroup ScreenLayout = "group"
 )
 
 // ProcessType is used to determine what kind of external process is running.

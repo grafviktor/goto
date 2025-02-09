@@ -85,7 +85,12 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 
 	switch msg.Type {
 	case tea.KeyEscape:
-		return message.TeaCmd(message.CloseSelectGroupForm{})
+		return tea.Sequence(
+			// If group view is shown and user presses ESC, we should
+			// deselect the group view and then show the full host list.
+			message.TeaCmd(message.GroupListSelectItem{GroupName: ""}),
+			message.TeaCmd(message.CloseSelectGroupForm{}),
+		)
 	case tea.KeyEnter:
 		selected := m.SelectedItem().(ListItemHostGroup).Title()
 		selected = strings.TrimSpace(selected)

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"golang.org/x/exp/slices"
 
@@ -24,11 +25,12 @@ import (
 )
 
 var (
-	// docStyle               = lipgloss.NewStyle().Margin(1, 2, 1, 0)
-	docStyle               = lipgloss.NewStyle().Margin(1, 2)
+	// styleDoc               = lipgloss.NewStyle().Margin(1, 2, 1, 0)
+	styleDoc               = lipgloss.NewStyle().Margin(1, 2)
 	itemNotSelectedMessage = "you must select an item"
-	modeRemoveItem         = "removeItem"
+	modeCloseApp           = "closeApp"
 	modeDefault            = ""
+	modeRemoveItem         = "removeItem"
 	modeSSHCopyID          = "sshCopyID"
 	defaultListTitle       = "press 'n' to add a new host"
 )
@@ -41,17 +43,20 @@ type iLogger interface {
 
 type (
 	// OpenEditForm fires when user press edit button.
-	OpenEditForm    struct{ HostID int }
-	msgToggleLayout struct{}
+	OpenEditForm        struct{ HostID int }
+	msgToggleLayout     struct{ layout constant.ScreenLayout }
+	msgHideNotification struct{}
 )
 
 type listModel struct {
 	list.Model
-	repo     storage.HostStorage
-	keyMap   *keyMap
-	appState *state.ApplicationState
-	logger   iLogger
-	mode     string
+	repo                       storage.HostStorage
+	keyMap                     *keyMap
+	appState                   *state.ApplicationState
+	logger                     iLogger
+	mode                       string
+	notificationMessageTimer   *time.Timer
+	notificationMessageTimeout time.Duration
 }
 
 // New - creates new host list model.
@@ -91,6 +96,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	m.AdditionalFullHelpKeys = delegateKeys.FullHelp
 
 	m.Title = defaultListTitle
+	m.notificationMessageTimeout = time.Second
 	m.SetShowStatusBar(false)
 
 	return &m
@@ -141,7 +147,7 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleKeyboardEvent(msg)
 	case tea.WindowSizeMsg:
 		// Triggers immediately after app start because we render this component by default
-		h, v := docStyle.GetFrameSize()
+		h, v := styleDoc.GetFrameSize()
 		m.SetSize(msg.Width-h, msg.Height-v)
 		m.logger.Debug("[UI] Set host list size: %d %d", m.Width(), m.Height())
 		return m, nil
@@ -162,6 +168,9 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Reset filter when group is selected
 		m.ResetFilter()
 		return m, m.loadHosts()
+	case msgHideNotification:
+		m.updateTitle()
+		return m, nil
 	default:
 		return m, m.updateChildModel(msg)
 	}
@@ -213,17 +222,24 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, m.keyMap.clone):
 		return m.copyItem()
 	case key.Matches(msg, m.keyMap.toggleLayout):
-		m.updateChildModel(msgToggleLayout{ /*layout type: tight*/ })
+		m.updateChildModel(msgToggleLayout{m.appState.ScreenLayout})
 		// When switch between screen layouts, it's required to update pagination.
 		// ListModel's updatePagination method is private and cannot be called from
 		// here. One of the ways to trigger it is to invoke model.SetSize method.
 		m.Model.SetSize(m.Width(), m.Height())
-		return m.NewStatusMessage(fmt.Sprintf("toggle layout: %v", m.appState.ScreenLayout))
-	case msg.Type == tea.KeyEsc && m.appState.Group != "":
-		// When user presses Escape key while group is selected, we should
-		// deselect the group instead of closing the app.
-		m.logger.Debug("[UI] Receive Escape key when group selected. Deselect group")
-		return message.TeaCmd(message.GroupListSelectItem{GroupName: ""})
+		notificationMsg := m.createNotificationMessage(msg)
+		return m.displayNotificationMsg(notificationMsg)
+	case msg.Type == tea.KeyEsc:
+		if m.appState.Group != "" {
+			// When user presses Escape key while group is selected,
+			// we should open select group form.
+			m.logger.Debug("[UI] Receive Escape key when group selected. Open select group form.")
+			return message.TeaCmd(message.OpenSelectGroupForm{})
+		} else {
+			m.logger.Debug("[UI] Receive Escape key. Ask user for confirmation to close the app.")
+			m.enterCloseAppMode()
+			return nil
+		}
 	default:
 		cmd := m.updateChildModel(msg)
 		return tea.Sequence(cmd, m.onFocusChanged())
@@ -231,7 +247,7 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 }
 
 func (m *listModel) View() string {
-	return docStyle.Render(m.Model.View())
+	return styleDoc.Render(m.Model.View())
 }
 
 func (m *listModel) updateChildModel(msg tea.Msg) tea.Cmd {
@@ -495,6 +511,8 @@ func (m *listModel) updateTitle() {
 		newTitle = defaultListTitle
 	case m.mode == modeRemoveItem:
 		newTitle = fmt.Sprintf("delete \"%s\" ? (y/N)", item.Title())
+	case m.mode == modeCloseApp:
+		newTitle = "close app ? (y/N)"
 	default:
 		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
 		newTitle = strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
@@ -572,6 +590,12 @@ func (m *listModel) enterRemoveItemMode() tea.Cmd {
 	return nil
 }
 
+func (m *listModel) enterCloseAppMode() {
+	m.mode = modeCloseApp
+	m.logger.Debug("[UI] Enter %s mode. Ask user for confirmation.", m.mode)
+	m.updateTitle()
+}
+
 func (m *listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
 	if key.Matches(msg, m.keyMap.confirm) {
 		return m.confirmAction()
@@ -602,7 +626,41 @@ func (m *listModel) confirmAction() tea.Cmd {
 		m.mode = modeDefault
 		m.updateTitle()
 		cmd = m.constructProcessCmd(constant.ProcessTypeSSHCopyID)
+	} else if m.mode == modeCloseApp {
+		cmd = tea.Quit
 	}
 
 	return cmd
+}
+
+func (m *listModel) createNotificationMessage(msg tea.Msg) string {
+	var message string
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		if key.Matches(keyMsg, m.keyMap.toggleLayout) {
+			message = map[constant.ScreenLayout]string{
+				constant.ScreenLayoutDescription: "show description",
+				constant.ScreenLayoutGroup:       "show group",
+				constant.ScreenLayoutCompact:     "compact view",
+			}[m.appState.ScreenLayout]
+		}
+	}
+	return message
+}
+
+func (m *listModel) displayNotificationMsg(msg string) tea.Cmd {
+	if utils.StringEmpty(msg) {
+		return nil
+	}
+
+	m.Title = msg
+	if m.notificationMessageTimer != nil {
+		m.notificationMessageTimer.Stop()
+	}
+
+	m.notificationMessageTimer = time.NewTimer(m.notificationMessageTimeout)
+
+	return func() tea.Msg {
+		<-m.notificationMessageTimer.C
+		return msgHideNotification{}
+	}
 }
