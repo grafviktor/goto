@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	// styleDoc               = lipgloss.NewStyle().Margin(1, 2, 1, 0)
+	// styleDoc = lipgloss.NewStyle().Margin(1, 2, 1, 0)
 	styleDoc               = lipgloss.NewStyle().Margin(1, 2)
 	itemNotSelectedMessage = "you must select an item"
 	modeCloseApp           = "closeApp"
@@ -161,12 +161,11 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd := m.onHostCreated(msg)
 		return m, cmd
 	case message.GroupListSelectItem:
+		// Reset filter when group is selected
+		m.ResetFilter()
 		// We re-load hosts every time a group is selected. This is not the best way
 		// to handle this, as it leads to series of hacks here and there. But it's the
 		// simplest way to implement it.
-
-		// Reset filter when group is selected
-		m.ResetFilter()
 		return m, m.loadHosts()
 	case msgHideNotification:
 		m.updateTitle()
@@ -227,6 +226,13 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		// ListModel's updatePagination method is private and cannot be called from
 		// here. One of the ways to trigger it is to invoke model.SetSize method.
 		m.Model.SetSize(m.Width(), m.Height())
+		// Another hack - need to invoke inner model's private updateKeyBindings method
+		// when screen layout is toggled. If not update keybindings, then pagination
+		// keys stop working properly when switching between compact and normal layouts.
+		// The only way to trigger updateKeyBindings is via SetFilteringEnabled method.
+		// The alternative way is copy and paste the entire updateKeyBindings method into
+		// this file, and invoke it from here.
+		m.SetFilteringEnabled(m.FilteringEnabled())
 		notificationMsg := m.createNotificationMessage(msg)
 		return m.displayNotificationMsg(notificationMsg)
 	case msg.Type == tea.KeyEsc:
