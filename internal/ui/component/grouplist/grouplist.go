@@ -30,7 +30,7 @@ type ListModel struct {
 }
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
-var unselectGroup = "* ALL *"
+var noGroupSelected = "~ all ~"
 
 func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *ListModel {
 	var listItems []list.Item
@@ -95,7 +95,7 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		selected := m.SelectedItem().(ListItemHostGroup).Title()
 		selected = strings.TrimSpace(selected)
 
-		if selected == unselectGroup {
+		if selected == noGroupSelected {
 			selected = ""
 		}
 
@@ -117,8 +117,8 @@ func (m *ListModel) loadHostGroups() tea.Cmd {
 		return message.TeaCmd(message.ErrorOccurred{Err: err})
 	}
 
-	// Create a list of unique groups, one group is always there - "unselectGroup".
-	groupList := []string{unselectGroup}
+	// Create a list of unique groups.
+	groupList := []string{}
 	lo.ForEach(hosts, func(h host.Host, index int) {
 		if strings.TrimSpace(h.Group) != "" {
 			_, found := lo.Find(groupList, func(g string) bool {
@@ -133,6 +133,8 @@ func (m *ListModel) loadHostGroups() tea.Cmd {
 	})
 
 	slices.Sort(groupList)
+	// noGroupSelected always comes first
+	groupList = append([]string{noGroupSelected}, groupList...)
 
 	items := make([]list.Item, 0, len(groupList))
 	for _, group := range groupList {

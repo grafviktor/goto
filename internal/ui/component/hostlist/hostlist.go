@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -25,8 +26,8 @@ import (
 )
 
 var (
-	// styleDoc = lipgloss.NewStyle().Margin(1, 2, 1, 0)
-	styleDoc               = lipgloss.NewStyle().Margin(1, 2)
+	styleDoc = lipgloss.NewStyle().Margin(1, 2, 1, 0)
+	// styleDoc               = lipgloss.NewStyle().Margin(1, 2)
 	itemNotSelectedMessage = "you must select an item"
 	modeCloseApp           = "closeApp"
 	modeDefault            = ""
@@ -97,7 +98,6 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 
 	m.Title = defaultListTitle
 	m.notificationMessageTimeout = time.Second
-	m.SetShowStatusBar(false)
 
 	return &m
 }
@@ -127,13 +127,10 @@ func (m *listModel) loadHosts() tea.Cmd {
 		items = append(items, ListItemHost{Host: h})
 	}
 
-	slices.SortFunc(items, func(a, b list.Item) int {
-		hostA := a.(ListItemHost)
-		hostB := b.(ListItemHost)
-		if hostA.uniqueName() < hostB.uniqueName() {
-			return -1
-		}
-		return 1
+	sort.Slice(items, func(i, j int) bool {
+		uniqueName1 := items[i].(ListItemHost).uniqueName()
+		uniqueName2 := items[j].(ListItemHost).uniqueName()
+		return uniqueName1 < uniqueName2
 	})
 
 	setItemsCmd := m.SetItems(items)
@@ -171,6 +168,7 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateTitle()
 		return m, nil
 	default:
+		m.SetShowStatusBar(m.FilterState() != list.Unfiltered)
 		return m, m.updateChildModel(msg)
 	}
 }
@@ -196,6 +194,7 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 				return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
 			}
 
+			// TODO: probably should be removed, as we invoke it anyway when exit from "else if" block
 			return m.updateChildModel(msg)
 		}
 		return m.updateChildModel(msg)
@@ -355,7 +354,7 @@ func (m *listModel) editItem() tea.Cmd {
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedMessage)})
 	}
 
-	m.Model.ResetFilter()
+	// m.Model.ResetFilter()
 	m.logger.Info("[UI] Edit item id: %d, title: %s", item.ID, item.Title())
 	return tea.Sequence(
 		message.TeaCmd(OpenEditForm{HostID: item.ID}),
@@ -409,37 +408,51 @@ func (m *listModel) copyItem() tea.Cmd {
  * Event handlers - those events come from other components.
  */
 
-// onHostUpdated - not only updates a new host, it also re-inserts the host into
+// onHostUpdated - not only updates a host, it also re-inserts the host into
 // a correct position of the host list, to keep it sorted.
 func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
-	var cmd tea.Cmd
-	updatedHostItem := ListItemHost{Host: msg.Host}
-	uniqueTitles := lo.Map(m.Items(), func(item list.Item, index int) string {
-		listItemHost := item.(ListItemHost)
-		if listItemHost.ID == updatedHostItem.ID {
-			// Return the new Title instead of the previously stored one
-			return updatedHostItem.uniqueName()
-		}
-
-		// Use combination of Title and ID to uniquely identify the host
-		return listItemHost.uniqueName()
+	updatedHost := ListItemHost{Host: msg.Host}
+	// Get all item titles, replacing the updated host's title
+	allTitles := lo.Map(m.Items(), func(item list.Item, _ int) string {
+		host := item.(ListItemHost)
+		return lo.Ternary(host.ID == updatedHost.ID, updatedHost.uniqueName(), host.uniqueName())
 	})
 
-	// When sorting, shall we take description into account as well or sorting by title is enough ?
-	slices.Sort(uniqueTitles)
-	newIndex := lo.IndexOf(uniqueTitles, updatedHostItem.uniqueName())
+	slices.Sort(allTitles)
+	newIndex := lo.IndexOf(allTitles, updatedHost.uniqueName())
 
-	if newIndex == m.Index() {
-		// Index isn't changed.
-		cmd = m.Model.SetItem(m.Index(), updatedHostItem)
-	} else {
-		// Index is changed, need to move the host into a new location
-		m.Model.RemoveItem(m.Index())
-		cmd = m.Model.InsertItem(newIndex, updatedHostItem)
-		m.Select(newIndex)
-	}
+	_, currentIndex, _ := lo.FindIndexOf(m.Items(), func(item list.Item) bool {
+		return updatedHost.ID == item.(ListItemHost).ID
+	})
+
+	// Do not use m.Index(), as it returns Visible Index, whilst
+	// all other functions require the index among all items.
+	cmd := lo.Ternary(
+		newIndex == currentIndex,
+		m.SetItem(currentIndex, updatedHost),
+		m.setItemAndReorder(newIndex, currentIndex, updatedHost),
+	)
 
 	return tea.Sequence(cmd, m.onFocusChanged())
+}
+
+func (m *listModel) setItemAndReorder(newIndex, currentIndex int, host ListItemHost) tea.Cmd {
+	m.Model.RemoveItem(currentIndex)
+	cmd := m.Model.InsertItem(newIndex, host)
+
+	// The collection is not yet updated and m.VisibleItems() may NOT contain the updated host yet,
+	// filtering is enabled. However, we must predict the new index.
+	visibleTitles := lo.Reduce(m.VisibleItems(), func(agg []string, item list.Item, index int) []string {
+		i := item.(ListItemHost)
+		return lo.Ternary(i.ID == host.ID, agg, append(agg, i.uniqueName()))
+	}, []string{host.uniqueName()})
+
+	slices.Sort(visibleTitles)
+	newVisibleItemsIndex := slices.Index(visibleTitles, host.uniqueName())
+
+	m.Select(newVisibleItemsIndex)
+
+	return cmd
 }
 
 func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
@@ -452,6 +465,10 @@ func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
 	index := lo.IndexOf(titles, createdHostItem.uniqueName())
 	cmd := m.Model.InsertItem(index, createdHostItem)
 
+	// ResetFilter is required here because, user can create a new Item which will be filtered out,
+	// therefore the user will not see any changes in the UI which is confusing.
+	m.ResetFilter()
+	// m.Select requires a visible item index, but because we reset filter VisibleItems array equals to Items
 	m.Select(index)
 
 	return tea.Sequence(
@@ -508,6 +525,11 @@ func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 	return nil
 }
 
+var styleGroupName = lipgloss.NewStyle().
+	Background(lipgloss.Color("#ffffd7")).
+	Foreground(lipgloss.Color("#5f5fd7")).
+	Padding(0, 1).Render
+
 func (m *listModel) updateTitle() {
 	var newTitle string
 	item, ok := m.SelectedItem().(ListItemHost)
@@ -523,6 +545,9 @@ func (m *listModel) updateTitle() {
 		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
 		newTitle = strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
 		newTitle = utils.RemoveDuplicateSpaces(newTitle)
+		if m.appState.Group != "" {
+			newTitle = fmt.Sprintf("%s | %s", styleGroupName(item.Host.Group), newTitle)
+		}
 	}
 
 	if m.Title != newTitle {
@@ -559,6 +584,7 @@ func (m *listModel) selectHostByID(id int) tea.Cmd {
 		m.Select(0)
 	}
 
+	// This is a side effect. Ideally, it should not be here.
 	return m.onFocusChanged()
 }
 
