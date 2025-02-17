@@ -271,7 +271,7 @@ func (m *mainModel) dispatchProcessSSHConnect(msg message.RunProcessSSHConnect) 
 }
 
 func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadConfig) tea.Cmd {
-	m.logger.Debug("[EXEC] Read ssh configuration for host: %+v", msg.Host)
+	m.logger.Debug("[EXEC] Read ssh configuration for host: '%+v'", msg.Host)
 	process := utils.BuildProcessInterceptStdAll(msg.Host.CmdSSHConfig())
 	m.logger.Info("[EXEC] Run process: '%s'", process.String())
 

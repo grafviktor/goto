@@ -513,16 +513,31 @@ func (m *listModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoaded) {
  */
 
 func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cmd {
-	item, ok := m.SelectedItem().(ListItemHost)
-	if !ok {
-		m.logger.Error("[UI] Cannot cast selected item to host model")
+	// Do not use m.SelectedItem() here!
+	// list.Model keeps 2 collections - m.items and m.filteredItems, which can be inconsistent
+	// as a result in some hosts taken from m.filteredItems ssh config is nil.
+	var host *hostModel.Host
+	for _, item := range m.Items() {
+		if listItemHost, ok := item.(ListItemHost); ok && listItemHost.ID == m.appState.Selected {
+			host = &listItemHost.Host
+		}
+	}
+
+	if host == nil {
+		m.logger.Error("[UI] Could not find host with ID='%d'", m.appState.Selected)
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedMessage)})
 	}
 
+	if host.SSHClientConfig == nil {
+		errorText := fmt.Sprintf("[UI] SSH config is not set for host ID='%d', Title='%s'", host.ID, host.Title)
+		m.logger.Error(errorText)
+		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(errorText)})
+	}
+
 	if processType == constant.ProcessTypeSSHConnect {
-		return message.TeaCmd(message.RunProcessSSHConnect{Host: item.Host})
+		return message.TeaCmd(message.RunProcessSSHConnect{Host: *host})
 	} else if processType == constant.ProcessTypeSSHCopyID {
-		return message.TeaCmd(message.RunProcessSSHCopyID{Host: item.Host})
+		return message.TeaCmd(message.RunProcessSSHCopyID{Host: *host})
 	}
 
 	return nil
@@ -536,6 +551,8 @@ func (m *listModel) updateTitle() {
 	switch {
 	case !ok:
 		newTitle = defaultListTitle
+	case m.mode == modeSSHCopyID:
+		newTitle = "copy ssh key to the remote host? (y/N)"
 	case m.mode == modeRemoveItem:
 		newTitle = fmt.Sprintf("delete \"%s\" ? (y/N)", item.Title())
 	case m.mode == modeCloseApp:
@@ -605,7 +622,7 @@ func (m *listModel) enterSSHCopyIDMode() tea.Cmd {
 
 	m.mode = modeSSHCopyID
 	m.logger.Debug("[UI] Enter %s mode. Ask user for confirmation.", m.mode)
-	m.Title = "copy ssh key to the remote host? (y/N)"
+	m.updateTitle()
 
 	return nil
 }
@@ -674,7 +691,7 @@ func (m *listModel) createNotificationMessage(msg tea.Msg) string {
 		if key.Matches(keyMsg, m.keyMap.toggleLayout) {
 			message = map[constant.ScreenLayout]string{
 				constant.ScreenLayoutDescription: "show description",
-				constant.ScreenLayoutGroup:       "show group",
+				constant.ScreenLayoutGroup:       "group view",
 				constant.ScreenLayoutCompact:     "compact view",
 			}[m.appState.ScreenLayout]
 		}

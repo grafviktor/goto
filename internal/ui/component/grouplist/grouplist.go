@@ -85,6 +85,7 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 
 	switch msg.Type {
 	case tea.KeyEscape:
+		m.logger.Debug("[UI] Escape key. Deselect group and exit from group list view.")
 		return tea.Sequence(
 			// If group view is shown and user presses ESC, we should
 			// deselect the group view and then show the full host list.
@@ -99,6 +100,7 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 			selected = ""
 		}
 
+		m.logger.Debug("[UI] Enter key. Select group '%s' and exit from group lust view.")
 		return tea.Batch(
 			message.TeaCmd(message.GroupListSelectItem{GroupName: selected}),
 			message.TeaCmd(message.CloseSelectGroupForm{}),
@@ -132,6 +134,7 @@ func (m *ListModel) loadHostGroups() tea.Cmd {
 		}
 	})
 
+	m.logger.Debug("[UI] Load complete. Found '%d' groups", len(groupList))
 	slices.Sort(groupList)
 	// noGroupSelected always comes first
 	groupList = append([]string{noGroupSelected}, groupList...)

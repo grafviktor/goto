@@ -48,6 +48,12 @@ func StringAbbreviation(s string) string {
 	return fmt.Sprintf("%c%c", unicode.ToUpper(ch1), unicode.ToUpper(ch2))
 }
 
+var ansiRegex = regexp.MustCompile("\x1b\\[[0-9;]*m")
+
+func StripANSI(input string) string {
+	return ansiRegex.ReplaceAllString(input, "")
+}
+
 // CreateAppDirIfNotExists - creates application home folder if it doesn't exist.
 // appConfigDir is application home folder path.
 func CreateAppDirIfNotExists(appConfigDir string) error {
