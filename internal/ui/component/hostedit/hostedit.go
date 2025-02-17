@@ -46,8 +46,8 @@ type (
 const (
 	inputTitle int = iota
 	inputAddress
-	inputGroup
 	inputDescription
+	inputGroup
 	inputLogin
 	inputNetworkPort
 	inputIdentityFile
@@ -160,14 +160,14 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 			t.SetValue(host.Address)
 			t.Validate = notEmptyValidator
 			t.Tooltip = "ssh"
-		case inputGroup:
-			t.SetLabel("Group")
-			t.CharLimit = 512
-			t.SetValue(host.Group)
 		case inputDescription:
 			t.SetLabel("Description")
 			t.CharLimit = 512
 			t.SetValue(host.Description)
+		case inputGroup:
+			t.SetLabel("Group")
+			t.CharLimit = 512
+			t.SetValue(host.Group)
 		case inputLogin:
 			t.SetLabel("Login")
 			t.CharLimit = 128

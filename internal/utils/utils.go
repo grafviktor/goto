@@ -3,18 +3,49 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 // StringEmpty - checks if string is empty or contains only spaces.
 // s is string to check.
 func StringEmpty(s string) bool {
 	return len(strings.TrimSpace(s)) == 0
+}
+
+func StringAbbreviation(s string) string {
+	s = strings.TrimSpace(s)
+	foundWordBreak := false
+	var ch1, ch2 rune
+	for index, ch := range s {
+		if index == 0 {
+			ch1 = ch
+			continue
+		}
+
+		if foundWordBreak && unicode.IsLetter(ch) {
+			foundWordBreak = false
+			ch2 = ch
+			continue
+		}
+
+		if !unicode.IsLetter(ch) {
+			foundWordBreak = true
+			continue
+		}
+
+		if unicode.IsUpper(ch) {
+			ch2 = ch
+		}
+	}
+
+	return fmt.Sprintf("%c%c", unicode.ToUpper(ch1), unicode.ToUpper(ch2))
 }
 
 // CreateAppDirIfNotExists - creates application home folder if it doesn't exist.

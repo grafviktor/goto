@@ -29,7 +29,7 @@ type ListModel struct {
 	logger   iLogger
 }
 
-var docStyle = lipgloss.NewStyle().Margin(1, 2)
+var docStyle = lipgloss.NewStyle().Margin(1, 2, 1, 0)
 var noGroupSelected = "~ all ~"
 
 func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *ListModel {

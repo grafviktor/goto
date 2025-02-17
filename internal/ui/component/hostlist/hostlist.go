@@ -26,8 +26,7 @@ import (
 )
 
 var (
-	styleDoc = lipgloss.NewStyle().Margin(1, 2, 1, 0)
-	// styleDoc               = lipgloss.NewStyle().Margin(1, 2)
+	styleDoc               = lipgloss.NewStyle().Margin(1, 2, 1, 0)
 	itemNotSelectedMessage = "you must select an item"
 	modeCloseApp           = "closeApp"
 	modeDefault            = ""
@@ -58,6 +57,7 @@ type listModel struct {
 	mode                       string
 	notificationMessageTimer   *time.Timer
 	notificationMessageTimeout time.Duration
+	Styles                     Styles
 }
 
 // New - creates new host list model.
@@ -69,6 +69,7 @@ type listModel struct {
 func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *listModel {
 	delegate := NewHostDelegate(&appState.ScreenLayout, &appState.Group, log)
 	delegateKeys := newDelegateKeyMap()
+	customStyles := CustomStyles()
 
 	var listItems []list.Item
 	model := list.New(listItems, delegate, 0, 0)
@@ -76,6 +77,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	// does - it filters the collection, but leaves initial items order unchanged.
 	// Default filter on the contrary - filters the collection based on the match rank.
 	model.Filter = list.UnsortedFilter
+	model.Styles = customStyles.Styles
 
 	m := listModel{
 		Model:    model,
@@ -83,6 +85,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 		repo:     storage,
 		appState: appState,
 		logger:   log,
+		Styles:   customStyles,
 	}
 
 	m.KeyMap.CursorUp.Unbind()
@@ -525,14 +528,10 @@ func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 	return nil
 }
 
-var styleGroupName = lipgloss.NewStyle().
-	Background(lipgloss.Color("#ffffd7")).
-	Foreground(lipgloss.Color("#5f5fd7")).
-	Padding(0, 1).Render
-
 func (m *listModel) updateTitle() {
 	var newTitle string
 	item, ok := m.SelectedItem().(ListItemHost)
+	applyDefaultStyle := true
 
 	switch {
 	case !ok:
@@ -545,14 +544,18 @@ func (m *listModel) updateTitle() {
 		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
 		newTitle = strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
 		newTitle = utils.RemoveDuplicateSpaces(newTitle)
-		if m.appState.Group != "" {
-			newTitle = fmt.Sprintf("%s | %s", styleGroupName(item.Host.Group), newTitle)
+		if !utils.StringEmpty(m.appState.Group) {
+			var shortGroupName = utils.StringAbbreviation(m.appState.Group)
+			applyDefaultStyle = false
+			newTitle = fmt.Sprintf("%s%s",
+				m.Styles.Group.Render(shortGroupName),
+				m.Styles.Title.Render(newTitle))
 		}
 	}
 
 	if m.Title != newTitle {
-		m.Title = newTitle
-		m.logger.Debug("[UI] New list title: %s", m.Title)
+		m.Title = lo.Ternary(applyDefaultStyle, m.Styles.Title.Render(newTitle), newTitle)
+		m.logger.Debug("[UI] New list title: %s", newTitle)
 	}
 }
 
@@ -676,7 +679,7 @@ func (m *listModel) createNotificationMessage(msg tea.Msg) string {
 			}[m.appState.ScreenLayout]
 		}
 	}
-	return message
+	return m.Styles.Title.Render(message)
 }
 
 func (m *listModel) displayNotificationMsg(msg string) tea.Cmd {

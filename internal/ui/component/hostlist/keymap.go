@@ -95,6 +95,7 @@ func (k *keyMap) ShortHelp() []key.Binding {
 		k.clone,
 		k.edit,
 		k.remove,
+		k.selectGroup,
 	}
 
 	// Hide all disabled key shortcuts from the screen
@@ -105,12 +106,12 @@ func (k *keyMap) ShortHelp() []key.Binding {
 
 func (k *keyMap) FullHelp() []key.Binding {
 	return []key.Binding{
-		k.selectGroup,
 		k.connect,
 		k.append,
 		k.clone,
 		k.edit,
 		k.remove,
+		k.selectGroup,
 		k.copyID,
 		k.toggleLayout,
 	}
