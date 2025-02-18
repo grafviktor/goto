@@ -59,6 +59,7 @@ Set Shell "bash"
 Set FontSize 13
 Set Width 600
 Set Height 400
+Set Padding 20
 
 Show
 Sleep 1
@@ -84,10 +85,6 @@ Ctrl+S
 Sleep 3s
 Enter
 Sleep 3s
-Type "xxxx"
-
-Enter
-Sleep 5s
 Type "exit"
 Sleep 1s
 Enter

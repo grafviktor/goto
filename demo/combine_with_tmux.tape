@@ -55,16 +55,15 @@
 Set PlaybackSpeed 1
 Output goto_and_tmux.gif
 Require echo
-Set Shell tmux
+Require tmux
 Set Padding 5
 Set FontSize 13
 Set Width 600
 Set Height 400
+Set Padding 20
 
 Show
 Sleep 1
-
-Require tmux
 
 Hide
   Type "tmux -f /dev/null -L test new-session -- bash" Enter
@@ -79,10 +78,10 @@ Hide
   Sleep 1
 Show
 
-Sleep 1s
 Type "gg"
-Sleep 2s
+Sleep 1s
 Enter
+Sleep 2s
 
 # Create a new host
 Type "n"
@@ -98,7 +97,7 @@ Ctrl+U
 Sleep 1s
 Type '127.0.0.1 '
 Sleep 0.3s
-Type '-t sh -c "tail -n 5 -f .colima/daemon.log"'
+Type 'tail -n 5 -f .colima/daemon.log'
 Sleep 2s
 Down
 

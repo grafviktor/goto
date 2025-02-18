@@ -5,6 +5,8 @@ Set Shell "bash"
 Set FontSize 13
 Set Width 600
 Set Height 400
+Set Padding 20
+
 Sleep 1s
 Type "gg"
 Show
