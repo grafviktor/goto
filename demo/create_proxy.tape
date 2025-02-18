@@ -53,7 +53,7 @@
 #   Show                            Show the subsequent commands in the output
 
 Set PlaybackSpeed 1
-Output use_custom_config.gif
+Output create_proxy.gif
 Require echo
 Set Shell "bash"
 Set FontSize 13
@@ -73,23 +73,20 @@ Sleep 1s
 Type "n"
 Sleep 1s
 # Set Title
-Type "localhost"
+Type "Socks proxy"
 Sleep 1s
 Down
 Sleep 1s
 
-# Replace localhost with 127.0.0.1 in Host input and add additional parameters
+# Put a custom command
 Ctrl+U
 Sleep 1s
-Type '127.0.0.1 '
-Sleep 0.3s
-Type "tail -n 5 -f .colima/daemon.log"
-
+Type 'roman@127.0.0.1 -o ProxyCommand="/usr/bin/nc -x 127.0.0.1:7000 %h %p" -i /Users/roman/.ssh/id_rsa'
 Sleep 2s
 Down
 
 # Set Description field
-Type 'Tail kuber cluster logs on DEV box'
+Type 'Runs a proxy server'
 Sleep 2s
 
 # Save the first host and exit
@@ -98,50 +95,10 @@ Sleep 3s
 
 # Connect to the first host
 Enter
-Sleep 5s
+Sleep 1s
 
-# Interrupt tail -f ... command
+# Interrupt socks proxy command
 Ctrl+C
 Enter
 Down
 Sleep 3s
-
-# Clone first host
-Type c
-Sleep 1s
-
-# Focus on the copied host
-Down
-Sleep 1s
-
-# Edit the copied host
-Type e
-Sleep 1s
-
-# Delete " (1)" from the Title field
-Backspace 4
-Type " 2"
-Sleep 1s
-
-# Focus Host field and type new command
-Down
-Sleep 1s
-Ctrl+U
-Sleep 1s
-Type "127.0.0.1 -t sh -c 'iostat -c5; sh read -p Pause...'"
-Sleep 2s
-
-# Update description field
-Down
-Sleep 1s
-Ctrl+U
-Type "Display IO load"
-Sleep 1s
-
-# Save the second host and exit
-Ctrl+S
-Sleep 3s
-
-# Connect to the second host
-Enter
-Sleep 6s
