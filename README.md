@@ -32,7 +32,7 @@ Supported platforms: macOS, Linux, Windows.
 
 ![Small demo where we open ssh session using goto](demo/search_through_database.gif)
 
-Find mode demos and uses cases [here >>>](demo/README.md)
+Find more demos and uses cases [here](demo/README.md).
 
 ## 3. Configuration ##
 

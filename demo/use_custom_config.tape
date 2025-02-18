@@ -83,7 +83,8 @@ Ctrl+U
 Sleep 1s
 Type '127.0.0.1 '
 Sleep 0.3s
-Type '-t sh -c "tail -f .colima/daemon.log"'
+Type "tail -n 5 -f .colima/daemon.log"
+
 Sleep 2s
 Down
 
