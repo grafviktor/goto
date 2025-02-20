@@ -223,20 +223,7 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, m.keyMap.clone):
 		return m.copyItem()
 	case key.Matches(msg, m.keyMap.toggleLayout):
-		m.updateChildModel(msgToggleLayout{m.appState.ScreenLayout})
-		// When switch between screen layouts, it's required to update pagination.
-		// ListModel's updatePagination method is private and cannot be called from
-		// here. One of the ways to trigger it is to invoke model.SetSize method.
-		m.Model.SetSize(m.Width(), m.Height())
-		// Another hack - need to invoke inner model's private updateKeyBindings method
-		// when screen layout is toggled. If not update keybindings, then pagination
-		// keys stop working properly when switching between compact and normal layouts.
-		// The only way to trigger updateKeyBindings is via SetFilteringEnabled method.
-		// The alternative way is copy and paste the entire updateKeyBindings method into
-		// this file, and invoke it from here.
-		m.SetFilteringEnabled(m.FilteringEnabled())
-		notificationMsg := m.createNotificationMessage(msg)
-		return m.displayNotificationMsg(notificationMsg)
+		return m.onToggleLayout(msg)
 	case msg.Type == tea.KeyEsc:
 		if m.appState.Group != "" {
 			// When user presses Escape key while group is selected,
@@ -271,6 +258,7 @@ func (m *listModel) updateChildModel(msg tea.Msg) tea.Cmd {
 
 func (m *listModel) removeItem() tea.Cmd {
 	m.logger.Debug("[UI] Remove host from the database")
+	// FIXME: Potential bug when filter is enabled as selected item reads from collection duplicate!
 	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		// We should not be here at all, because delete
@@ -348,7 +336,10 @@ func (m *listModel) removeItem() tea.Cmd {
 		m.Select(index - 1)
 	}
 
-	return m.onFocusChanged()
+	return tea.Sequence(
+		m.onFocusChanged(),
+		m.displayNotificationMsg(fmt.Sprintf("deleted \"%s\"", item.Title())),
+	)
 }
 
 func (m *listModel) editItem() tea.Cmd {
@@ -404,7 +395,10 @@ func (m *listModel) copyItem() tea.Cmd {
 	slices.Sort(titles)
 	index := lo.IndexOf(titles, clonedHost.Title)
 	// We should NOT call onFocusChanged here, because we do not change focus when copying an item.
-	return m.Model.InsertItem(index, ListItemHost{Host: clonedHost})
+	return tea.Sequence(
+		m.Model.InsertItem(index, ListItemHost{Host: clonedHost}),
+		m.displayNotificationMsg(fmt.Sprintf("cloned \"%s\"", clonedHost.Title)),
+	)
 }
 
 /*
@@ -436,7 +430,11 @@ func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
 		m.setItemAndReorder(newIndex, currentIndex, updatedHost),
 	)
 
-	return tea.Sequence(cmd, m.onFocusChanged())
+	return tea.Sequence(
+		cmd,
+		m.onFocusChanged(),
+		m.displayNotificationMsg(fmt.Sprintf("saved \"%s\"", updatedHost.Title())),
+	)
 }
 
 func (m *listModel) setItemAndReorder(newIndex, currentIndex int, host ListItemHost) tea.Cmd {
@@ -478,6 +476,7 @@ func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
 		// If host position coincides with other host, then let the underlying model to handle that
 		cmd,
 		m.onFocusChanged(),
+		m.displayNotificationMsg(fmt.Sprintf("created \"%s\"", createdHostItem.Title())),
 	)
 }
 
@@ -506,6 +505,28 @@ func (m *listModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoaded) {
 			break
 		}
 	}
+}
+
+func (m *listModel) onToggleLayout(msg tea.KeyMsg) tea.Cmd {
+	m.updateChildModel(msgToggleLayout{m.appState.ScreenLayout})
+	// When switch between screen layouts, it's required to update pagination.
+	// ListModel's updatePagination method is private and cannot be called from
+	// here. One of the ways to trigger it is to invoke model.SetSize method.
+	m.Model.SetSize(m.Width(), m.Height())
+	// Another hack - need to invoke inner model's private updateKeyBindings method
+	// when screen layout is toggled. If not update keybindings, then pagination
+	// keys stop working properly when switching between compact and normal layouts.
+	// The only way to trigger updateKeyBindings is via SetFilteringEnabled method.
+	// The alternative way is copy and paste the entire updateKeyBindings method into
+	// this file, and invoke it from here.
+	m.SetFilteringEnabled(m.FilteringEnabled())
+	notificationMsg := map[constant.ScreenLayout]string{
+		constant.ScreenLayoutDescription: "show description",
+		constant.ScreenLayoutGroup:       "group view",
+		constant.ScreenLayoutCompact:     "compact view",
+	}[m.appState.ScreenLayout]
+
+	return m.displayNotificationMsg(notificationMsg)
 }
 
 /*
@@ -685,26 +706,12 @@ func (m *listModel) confirmAction() tea.Cmd {
 	return cmd
 }
 
-func (m *listModel) createNotificationMessage(msg tea.Msg) string {
-	var message string
-	if keyMsg, ok := msg.(tea.KeyMsg); ok {
-		if key.Matches(keyMsg, m.keyMap.toggleLayout) {
-			message = map[constant.ScreenLayout]string{
-				constant.ScreenLayoutDescription: "show description",
-				constant.ScreenLayoutGroup:       "group view",
-				constant.ScreenLayoutCompact:     "compact view",
-			}[m.appState.ScreenLayout]
-		}
-	}
-	return m.Styles.Title.Render(message)
-}
-
 func (m *listModel) displayNotificationMsg(msg string) tea.Cmd {
 	if utils.StringEmpty(msg) {
 		return nil
 	}
 
-	m.Title = msg
+	m.Title = m.Styles.Title.Render(msg)
 	if m.notificationMessageTimer != nil {
 		m.notificationMessageTimer.Stop()
 	}
