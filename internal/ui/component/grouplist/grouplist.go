@@ -38,6 +38,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	listDelegate.ShowDescription = false
 	listDelegate.SetSpacing(0)
 	model := list.New(listItems, listDelegate, 0, 0)
+	model.SetFilteringEnabled(false)
 
 	m := ListModel{
 		Model:    model,
