@@ -10,9 +10,8 @@ Set Padding 20
 
 # Run gg
 Type "gg"
+Sleep 300ms
 Enter
-Sleep 1s
-Show
 
 # Modify host
 Sleep 1s
@@ -123,6 +122,6 @@ Type v
 Type v
 Sleep 2
 Escape
-Sleep 500ms
+Sleep 1
 Type y
 Sleep 1
