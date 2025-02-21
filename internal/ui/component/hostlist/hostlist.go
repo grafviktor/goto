@@ -55,7 +55,7 @@ type listModel struct {
 	mode                       string
 	notificationMessageTimer   *time.Timer
 	notificationMessageTimeout time.Duration
-	Styles                     Styles
+	Styles                     styles
 }
 
 // New - creates new host list model.
@@ -67,7 +67,7 @@ type listModel struct {
 func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *listModel {
 	delegate := NewHostDelegate(&appState.ScreenLayout, &appState.Group, log)
 	delegateKeys := newDelegateKeyMap()
-	customStyles := CustomStyles()
+	customStyles := customStyles()
 
 	var listItems []list.Item
 	model := list.New(listItems, delegate, 0, 0)
@@ -194,9 +194,6 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 				selectedID := hostItem.ID
 				return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
 			}
-
-			// TODO: probably should be removed, as we invoke it anyway when exit from "else if" block
-			return m.updateChildModel(msg)
 		}
 		return m.updateChildModel(msg)
 	case key.Matches(msg, m.Model.KeyMap.ClearFilter):
@@ -221,7 +218,7 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, m.keyMap.clone):
 		return m.copyItem()
 	case key.Matches(msg, m.keyMap.toggleLayout):
-		return m.onToggleLayout(msg)
+		return m.onToggleLayout()
 	case msg.Type == tea.KeyEsc:
 		if m.appState.Group != "" {
 			// When user presses Escape key while group is selected,
@@ -256,7 +253,8 @@ func (m *listModel) updateChildModel(msg tea.Msg) tea.Cmd {
 
 func (m *listModel) removeItem() tea.Cmd {
 	m.logger.Debug("[UI] Remove host from the database")
-	// FIXME: Potential bug when filter is enabled as selected item reads from collection duplicate!
+	// Potential bug when filter is enabled as selected item reads from collection duplicate!
+	// Consider taking "item" from m.Items()
 	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		// We should not be here at all, because delete
@@ -505,7 +503,7 @@ func (m *listModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoaded) {
 	}
 }
 
-func (m *listModel) onToggleLayout(msg tea.KeyMsg) tea.Cmd {
+func (m *listModel) onToggleLayout() tea.Cmd {
 	m.updateChildModel(msgToggleLayout{m.appState.ScreenLayout})
 	// When switch between screen layouts, it's required to update pagination.
 	// ListModel's updatePagination method is private and cannot be called from
@@ -582,7 +580,7 @@ func (m *listModel) updateTitle() {
 		newTitle = strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
 		newTitle = utils.RemoveDuplicateSpaces(newTitle)
 		if !utils.StringEmpty(m.appState.Group) {
-			var shortGroupName = utils.StringAbbreviation(m.appState.Group)
+			shortGroupName := utils.StringAbbreviation(m.appState.Group)
 			applyDefaultStyle = false
 			newTitle = fmt.Sprintf("%s%s",
 				m.Styles.Group.Render(shortGroupName),
@@ -691,7 +689,7 @@ func (m *listModel) confirmAction() tea.Cmd {
 	m.logger.Debug("[UI] Exit %s mode. Confirm action.", m.mode)
 
 	var cmd tea.Cmd
-	if m.mode == modeRemoveItem {
+	if m.mode == modeRemoveItem { //nolint:gocritic // better readable without switch
 		m.mode = modeDefault
 		cmd = m.removeItem() // removeItem triggers title and keymap updates. See "onFocusChanged" method.
 	} else if m.mode == modeSSHCopyID {

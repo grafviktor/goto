@@ -435,7 +435,7 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 	}
 
 	// Update index of the focused element
-	if key.Matches(keyMsg, m.keyMap.Up) && m.focusedInput > minFocusIndex { //nolint:gocritic // it's more readable without switch
+	if key.Matches(keyMsg, m.keyMap.Up) && m.focusedInput > minFocusIndex { //nolint:gocritic // readable without switch
 		m.focusedInput--
 		m.viewport.LineUp(inputHeight)
 	} else if key.Matches(keyMsg, m.keyMap.Down) && m.focusedInput < maxFocusIndex {
@@ -488,7 +488,7 @@ func (m *editModel) updateInputFields() {
 	prefix := lo.Ternary(customConnectString, "readonly", "default")
 	m.inputs[inputTitle].Placeholder = "*required*" //nolint:goconst
 	m.inputs[inputAddress].Placeholder = "*required*"
-	m.inputs[inputGroup].Placeholder = "n/a"
+	m.inputs[inputGroup].Placeholder = "n/a" //nolint:goconst
 	m.inputs[inputDescription].Placeholder = "n/a"
 	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.User)
 	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.Port)

@@ -1,3 +1,5 @@
+// Package grouplist implements the group list view. Which user can use to select active group.
+// Based on a selected group different set of hosts will be shown.
 package grouplist
 
 import (
@@ -22,27 +24,31 @@ type iLogger interface {
 	Error(format string, args ...any)
 }
 
-type ListModel struct {
+type model struct {
 	list.Model
 	repo     storage.HostStorage
 	appState *state.ApplicationState
 	logger   iLogger
 }
 
-var docStyle = lipgloss.NewStyle().Margin(1, 2, 1, 0)
-var noGroupSelected = "~ all ~"
+var (
+	docStyle        = lipgloss.NewStyle().Margin(1, 2, 1, 0)
+	noGroupSelected = "~ all ~"
+)
 
-func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *ListModel {
+// New - creates a new UI component which is used to select a host group from a list,
+// with pre-defined initial parameters.
+func New(_ context.Context, repo storage.HostStorage, appState *state.ApplicationState, log iLogger) *model {
 	var listItems []list.Item
-	var listDelegate = list.NewDefaultDelegate()
+	listDelegate := list.NewDefaultDelegate()
 	listDelegate.ShowDescription = false
 	listDelegate.SetSpacing(0)
-	model := list.New(listItems, listDelegate, 0, 0)
-	model.SetFilteringEnabled(false)
+	listModel := list.New(listItems, listDelegate, 0, 0)
+	listModel.SetFilteringEnabled(false)
 
-	m := ListModel{
-		Model:    model,
-		repo:     storage,
+	m := model{
+		Model:    listModel,
+		repo:     repo,
 		appState: appState,
 		logger:   log,
 	}
@@ -53,11 +59,11 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	return &m
 }
 
-func (m *ListModel) Init() tea.Cmd {
+func (m *model) Init() tea.Cmd {
 	return m.loadHostGroups()
 }
 
-func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
@@ -77,11 +83,11 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *ListModel) View() string {
+func (m *model) View() string {
 	return docStyle.Render(m.Model.View())
 }
 
-func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
+func (m *model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	var cmd tea.Cmd
 
 	switch msg.Type {
@@ -112,7 +118,7 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	return cmd
 }
 
-func (m *ListModel) loadHostGroups() tea.Cmd {
+func (m *model) loadHostGroups() tea.Cmd {
 	m.logger.Debug("[UI] Load groups from the database")
 	hosts, err := m.repo.GetAll()
 	if err != nil {

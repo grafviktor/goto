@@ -31,13 +31,13 @@ type (
 		HostID int
 		Config ssh.Config
 	}
-	// Open available host groups form
+	// OpenSelectGroupForm - dispatched when it's required to open group list view.
 	OpenSelectGroupForm struct{}
-	// Close available host groups form
+	// CloseSelectGroupForm - dispatched when it's required to close group list view.
 	CloseSelectGroupForm struct{}
-	// GroupListSelectItem - is dispatched when select a group in grouplist.
+	// GroupListSelectItem - is dispatched when select a group in group list view.
 	GroupListSelectItem struct{ GroupName string }
-	// OpenEditForm fires when user press edit button on a selected host
+	// OpenEditForm fires when user press edit button on a selected host.
 	OpenEditForm struct{ HostID int }
 	// CloseEditForm triggers when users exits from edit form without saving results.
 	CloseEditForm struct{}

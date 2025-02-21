@@ -55,7 +55,7 @@ func Get(appHomePath string, lg iLogger) *ApplicationState {
 		appState = &ApplicationState{
 			appStateFilePath: path.Join(appHomePath, stateFile),
 			logger:           lg,
-			Group:            "", // TODO: Find a better name for this field
+			Group:            "",
 		}
 
 		// If we cannot read previously created application state, that's fine - we can continue execution.

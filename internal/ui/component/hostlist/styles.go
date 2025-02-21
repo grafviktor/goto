@@ -5,18 +5,18 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-type Styles struct {
+type styles struct {
 	list.Styles
 	Group lipgloss.Style
 	Title lipgloss.Style
 }
 
-func CustomStyles() Styles {
-	styles := list.DefaultStyles()
-	styles.Title = lipgloss.NewStyle()
+func customStyles() styles {
+	defaultStyles := list.DefaultStyles()
+	defaultStyles.Title = lipgloss.NewStyle()
 
-	return Styles{
-		Styles: styles,
+	return styles{
+		Styles: defaultStyles,
 		Group: lipgloss.NewStyle().
 			Background(lipgloss.Color("#ffffd7")).
 			Foreground(lipgloss.Color("#5f5fd7")).

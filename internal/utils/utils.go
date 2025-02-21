@@ -19,6 +19,13 @@ func StringEmpty(s string) bool {
 	return len(strings.TrimSpace(s)) == 0
 }
 
+// StringAbbreviation - creates an abbreviation from a string, combining starting letters from first and last words.
+// For example:
+//
+//	"Alexandria, Egypt"      -> "AE"
+//	"Babylon Iraq"           -> "BI"
+//	"Carthage, North Africa" -> "CA"
+//	"Thebes_Greece"          -> "TG"
 func StringAbbreviation(s string) string {
 	s = strings.TrimSpace(s)
 	foundWordBreak := false
@@ -50,6 +57,7 @@ func StringAbbreviation(s string) string {
 
 var ansiRegex = regexp.MustCompile("\x1b\\[[0-9;]*m")
 
+// StripStyles - removes lipgloss styles from a string.
 func StripStyles(input string) string {
 	input = strings.TrimSpace(input)
 	return ansiRegex.ReplaceAllString(input, "")

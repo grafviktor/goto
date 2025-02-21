@@ -17,7 +17,7 @@ const (
 	ScreenLayoutCompact ScreenLayout = "compact"
 	// ScreenLayoutDescription is set when all hosts are shown with description field and a margin.
 	ScreenLayoutDescription ScreenLayout = "description"
-	// ScreenLayoutNormal is set when all hosts are shown with description field and a margin.
+	// ScreenLayoutGroup is set when all hosts are shown with description field and a margin.
 	ScreenLayoutGroup ScreenLayout = "group"
 )
 
