@@ -50,7 +50,8 @@ func StringAbbreviation(s string) string {
 
 var ansiRegex = regexp.MustCompile("\x1b\\[[0-9;]*m")
 
-func StripANSI(input string) string {
+func StripStyles(input string) string {
+	input = strings.TrimSpace(input)
 	return ansiRegex.ReplaceAllString(input, "")
 }
 

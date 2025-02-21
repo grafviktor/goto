@@ -6,6 +6,7 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/model/host"
+	"github.com/grafviktor/goto/internal/model/ssh"
 )
 
 // =============================================== Storage
@@ -18,6 +19,10 @@ func NewMockStorage(shouldFail bool) *mockStorage {
 		host.NewHost(1, "Mock Host 1", "", "localhost", "root", "id_rsa", "2222"),
 		host.NewHost(2, "Mock Host 2", "", "localhost", "root", "id_rsa", "2222"),
 		host.NewHost(3, "Mock Host 3", "", "localhost", "root", "id_rsa", "2222"),
+	}
+
+	for i := 0; i < len(hosts); i++ {
+		hosts[i].SSHClientConfig = &ssh.Config{}
 	}
 
 	return &mockStorage{

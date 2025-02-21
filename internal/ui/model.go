@@ -84,12 +84,12 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.appState.Width = msg.Width
 		m.appState.Height = msg.Height
 		m.updateViewPort(msg.Width, msg.Height)
-	case hostlist.OpenEditForm: // FIXME: CloseEditForm and OpenEditForm are located in different packages
+	case message.OpenEditForm:
 		m.logger.Debug("[UI] Open host edit form")
 		m.appState.CurrentView = state.ViewEditItem
 		ctx := context.WithValue(m.appContext, hostedit.ItemID, msg.HostID)
 		m.modelHostEdit = hostedit.New(ctx, m.hostStorage, m.appState, m.logger)
-	case hostedit.CloseEditForm: // FIXME: CloseEditForm and OpenEditForm are located in different packages
+	case message.CloseEditForm:
 		m.logger.Debug("[UI] Close host edit form")
 		m.appState.CurrentView = state.ViewHostList
 	case message.OpenSelectGroupForm:

@@ -31,8 +31,6 @@ type Size struct {
 }
 
 type (
-	// CloseEditForm triggers when users exits from edit form without saving results.
-	CloseEditForm struct{}
 	// MsgSave triggers when users saves results.
 	MsgSave struct{}
 	// debouncedMessage is used to trigger side effects. For instance dispatch RunProcessSSHLoadConfig
@@ -244,7 +242,7 @@ func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		return m.inputFocusChange(msg)
 	case key.Matches(msg, m.keyMap.Discard):
 		m.logger.Info("[UI] Discard changes for host id: %v", m.host.ID)
-		return message.TeaCmd(CloseEditForm{})
+		return message.TeaCmd(message.CloseEditForm{})
 	default:
 		// Handle all other key events
 		cmd := m.focusedInputProcessKeyEvent(msg)
@@ -315,7 +313,7 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 		message.TeaCmd(message.HostUpdated{Host: host}))
 
 	return tea.Sequence(
-		message.TeaCmd(CloseEditForm{}),
+		message.TeaCmd(message.CloseEditForm{}),
 		// Order matters here! That's why we use tea.Sequence instead of tea.Batch.
 		message.TeaCmd(message.HostListSelectItem{HostID: host.ID}),
 		cmd,
@@ -381,8 +379,8 @@ func (m *editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 	// should be simplified, we only need to assign value to the model when we save it.
 	m.host.setHostAttributeByIndex(m.focusedInput, m.inputs[m.focusedInput].Value())
 
-	// If type in address field
-	if m.focusedInput == inputAddress {
+	// If update address or title field
+	if lo.Contains([]int{inputTitle, inputAddress}, m.focusedInput) {
 		currentValue := m.inputs[inputAddress].Value()
 
 		// And value changed
@@ -437,7 +435,7 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 	}
 
 	// Update index of the focused element
-	if key.Matches(keyMsg, m.keyMap.Up) && m.focusedInput > minFocusIndex { //nolint:gocritic // it's better without switch
+	if key.Matches(keyMsg, m.keyMap.Up) && m.focusedInput > minFocusIndex { //nolint:gocritic // it's more readable without switch
 		m.focusedInput--
 		m.viewport.LineUp(inputHeight)
 	} else if key.Matches(keyMsg, m.keyMap.Down) && m.focusedInput < maxFocusIndex {
@@ -449,7 +447,7 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 	}
 
 	// Should be extracted to "Validate" function
-	for i := 0; i <= len(m.inputs)-1; i++ {
+	for i := 0; i < len(m.inputs); i++ {
 		if m.inputs[i].Validate != nil {
 			m.inputs[i].Err = m.inputs[i].Validate(m.inputs[i].Value())
 			m.logger.Debug("[UI] Input '%v' is valid: %v", m.inputs[i].Label(), m.inputs[i].Err == nil)

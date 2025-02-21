@@ -56,7 +56,7 @@ type appLogger struct {
 func (l *appLogger) print(prefix, format string, args ...any) {
 	msg := fmt.Sprintf("[%s] %s", prefix, format)
 	msg = fmt.Sprintf(msg, args...)
-	l.innerLogger.Print(utils.StripANSI(msg))
+	l.innerLogger.Print(utils.StripStyles(msg))
 }
 
 func (l *appLogger) Debug(format string, args ...any) {

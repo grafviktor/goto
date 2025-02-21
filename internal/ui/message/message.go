@@ -37,6 +37,10 @@ type (
 	CloseSelectGroupForm struct{}
 	// GroupListSelectItem - is dispatched when select a group in grouplist.
 	GroupListSelectItem struct{ GroupName string }
+	// OpenEditForm fires when user press edit button on a selected host
+	OpenEditForm struct{ HostID int }
+	// CloseEditForm triggers when users exits from edit form without saving results.
+	CloseEditForm struct{}
 	// ErrorOccurred - is dispatched when an error occurs.
 	ErrorOccurred struct{ Err error }
 	// RunProcessSSHConnect is dispatched when user wants to connect to a host.

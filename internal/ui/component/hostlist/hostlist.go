@@ -42,8 +42,6 @@ type iLogger interface {
 }
 
 type (
-	// OpenEditForm fires when user press edit button.
-	OpenEditForm        struct{ HostID int }
 	msgToggleLayout     struct{ layout constant.ScreenLayout }
 	msgHideNotification struct{}
 )
@@ -219,7 +217,7 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, m.keyMap.edit):
 		return m.editItem()
 	case key.Matches(msg, m.keyMap.append):
-		return message.TeaCmd(OpenEditForm{}) // When create a new item, jump to edit mode.
+		return message.TeaCmd(message.OpenEditForm{}) // When create a new item, jump to edit mode.
 	case key.Matches(msg, m.keyMap.clone):
 		return m.copyItem()
 	case key.Matches(msg, m.keyMap.toggleLayout):
@@ -351,7 +349,7 @@ func (m *listModel) editItem() tea.Cmd {
 	// m.Model.ResetFilter()
 	m.logger.Info("[UI] Edit item id: %d, title: %s", item.ID, item.Title())
 	return tea.Sequence(
-		message.TeaCmd(OpenEditForm{HostID: item.ID}),
+		message.TeaCmd(message.OpenEditForm{HostID: item.ID}),
 		// Load SSH config for the selected host
 		message.TeaCmd(message.RunProcessSSHLoadConfig{Host: item.Host}),
 	)
@@ -541,6 +539,7 @@ func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 	for _, item := range m.Items() {
 		if listItemHost, ok := item.(ListItemHost); ok && listItemHost.ID == m.appState.Selected {
 			host = &listItemHost.Host
+			break
 		}
 	}
 
