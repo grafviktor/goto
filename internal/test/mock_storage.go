@@ -15,7 +15,7 @@ func NewMockStorage(shouldFail bool) *mockStorage {
 	hosts := []host.Host{
 		// Yaml storage specific: if host has id which is equal to "0"
 		// that means that this host doesn't yet exist. It's a hack,
-		// but simplifies the application. That's why we cound hosts from "1"
+		// but simplifies the application. That's why we count hosts from "1"
 		host.NewHost(1, "Mock Host 1", "", "localhost", "root", "id_rsa", "2222"),
 		host.NewHost(2, "Mock Host 2", "", "localhost", "root", "id_rsa", "2222"),
 		host.NewHost(3, "Mock Host 3", "", "localhost", "root", "id_rsa", "2222"),

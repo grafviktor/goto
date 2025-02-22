@@ -1,4 +1,3 @@
-// Package hostlist implements the host list view.
 package hostlist
 
 import (
@@ -973,7 +972,7 @@ func TestUpdate_HostFocusPreservedAfterClearFilterMessage(t *testing.T) {
 }
 
 // ==============================================
-// ============================================== List Model
+// ============== utility methods ===============
 // ==============================================
 
 func NewMockListModel(storageShouldFail bool) *listModel {
