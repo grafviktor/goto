@@ -2,6 +2,7 @@ package test
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/samber/lo"
 
@@ -23,6 +24,7 @@ func NewMockStorage(shouldFail bool) *mockStorage {
 
 	for i := 0; i < len(hosts); i++ {
 		hosts[i].SSHClientConfig = &ssh.Config{}
+		hosts[i].Group = fmt.Sprintf("Group %d", i+1)
 	}
 
 	return &mockStorage{

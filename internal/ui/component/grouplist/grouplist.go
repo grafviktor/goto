@@ -59,9 +59,7 @@ func New(_ context.Context, repo storage.HostStorage, appState *state.Applicatio
 	return &m
 }
 
-func (m *model) Init() tea.Cmd {
-	return m.loadHostGroups()
-}
+func (m *model) Init() tea.Cmd { return nil }
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
@@ -76,7 +74,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd = m.handleKeyboardEvent(msg)
 		return m, cmd
 	case message.OpenSelectGroupForm:
-		return m, m.loadHostGroups()
+		return m, m.loadItems()
 	}
 
 	m.Model, cmd = m.Model.Update(msg)
@@ -108,7 +106,7 @@ func (m *model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		}
 
 		m.logger.Debug("[UI] Enter key. Select group '%s' and exit from group lust view.")
-		return tea.Batch(
+		return tea.Sequence(
 			message.TeaCmd(message.GroupListSelectItem{GroupName: selected}),
 			message.TeaCmd(message.CloseSelectGroupForm{}),
 		)
@@ -118,7 +116,7 @@ func (m *model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	return cmd
 }
 
-func (m *model) loadHostGroups() tea.Cmd {
+func (m *model) loadItems() tea.Cmd {
 	m.logger.Debug("[UI] Load groups from the database")
 	hosts, err := m.repo.GetAll()
 	if err != nil {

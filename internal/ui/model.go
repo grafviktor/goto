@@ -63,12 +63,8 @@ type mainModel struct {
 func (m *mainModel) Init() tea.Cmd {
 	m.logger.Debug("[UI] Run init function")
 
-	msgs := tea.Batch(
-		// Loads hosts from DB
-		m.modelHostList.Init(),
-		// Build group list
-		m.modelGroupList.Init())
-	return msgs
+	// Loads hosts from DB
+	return m.modelHostList.Init()
 }
 
 func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
