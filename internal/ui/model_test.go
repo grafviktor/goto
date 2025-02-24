@@ -25,7 +25,7 @@ func TestNew(t *testing.T) {
 	var msgs []tea.Msg
 	test.CmdToMessage(cmd, &msgs)
 
-	require.IsType(t, message.HostListSelectItem{}, msgs[0])
+	require.IsType(t, message.HostSelected{}, msgs[0])
 	require.IsType(t, message.RunProcessSSHLoadConfig{}, msgs[1])
 }
 

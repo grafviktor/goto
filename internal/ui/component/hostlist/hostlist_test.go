@@ -30,7 +30,7 @@ func TestListModel_Init(t *testing.T) {
 	var dst []tea.Msg
 	test.CmdToMessage(teaCmd, &dst)
 	require.Equal(t, dst, []tea.Msg{
-		message.HostListSelectItem{HostID: 1},
+		message.HostSelected{HostID: 1},
 		message.RunProcessSSHLoadConfig{
 			Host: host.Host{
 				ID:               1,
@@ -52,6 +52,18 @@ func TestListModel_Init(t *testing.T) {
 	// Check that currently selected item is "1"
 	require.Equal(t, 1, lm.SelectedItem().(ListItemHost).ID)
 
+	// Test loadHosts function when a group is selected
+	storage = test.NewMockStorage(false)
+	lm = New(
+		context.TODO(),
+		storage,
+		&state.ApplicationState{Group: "Group 2"},
+		&test.MockLogger{},
+	)
+	lm.Init()
+	require.Len(t, lm.Items(), 1)
+	require.Equal(t, "Mock Host 2", lm.SelectedItem().(ListItemHost).Title())
+
 	// Now test initialLoad function simulating a broken storage
 	storageShouldFail = true
 	storage = test.NewMockStorage(storageShouldFail)
@@ -61,7 +73,6 @@ func TestListModel_Init(t *testing.T) {
 		&state.ApplicationState{}, // we don't need app state, as error should be reported before we can even use it
 		&test.MockLogger{},
 	)
-	lm.logger = &test.MockLogger{}
 	teaCmd = lm.Init()
 
 	// Check that msgErrorOccurred{} was found among returned messages, which indicate that
@@ -145,7 +156,7 @@ func TestRemoveItem(t *testing.T) {
 			want: []tea.Msg{
 				msgHideNotification{},
 				// Because we remote item "Mock Host 1" (which has index 0), we should ensure that next available item will be focused
-				message.HostListSelectItem{HostID: 2},
+				message.HostSelected{HostID: 2},
 				message.RunProcessSSHLoadConfig{
 					Host: host.Host{
 						ID:               2,
@@ -172,7 +183,7 @@ func TestRemoveItem(t *testing.T) {
 			want: []tea.Msg{
 				msgHideNotification{},
 				// Because we remote item "Mock Host 1" (which has index 0), we should ensure that next available item will be focused
-				message.HostListSelectItem{HostID: 2},
+				message.HostSelected{HostID: 2},
 				message.RunProcessSSHLoadConfig{
 					Host: host.Host{
 						ID:               2,
@@ -345,7 +356,7 @@ func TestExitRemoveItemMode(t *testing.T) {
 
 	expected := []tea.Msg{
 		// Because we remote item "Mock Host 1" (which has index 0), we should ensure that next available item will be focused
-		message.HostListSelectItem{HostID: 1},
+		message.HostSelected{HostID: 1},
 		message.RunProcessSSHLoadConfig{
 			Host: host.Host{
 				ID:               1,
@@ -652,6 +663,47 @@ func TestUpdate_HostCreated(t *testing.T) {
 	require.Equal(t, createdHost2, lm.Items()[lastIndex].(ListItemHost).Host)
 }
 
+func TestUpdate_GroupListSelectItem(t *testing.T) {
+	// Test when select group, the model must reload hosts and reset filter
+	model := New(
+		context.TODO(),
+		test.NewMockStorage(false),
+		&state.ApplicationState{},
+		&test.MockLogger{},
+	)
+	model.loadHosts()
+	// Load All items from the collection
+	require.Len(t, model.Items(), 3)
+	// Enable filter
+	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	require.Equal(t, list.Filtering, model.FilterState())
+
+	// Dispatch message
+	model.Update(message.GroupSelected{Name: "Group 1"})
+
+	// Now test, that there is only a single list in the collection
+	require.Len(t, model.Items(), 1)
+	// Filtering is off
+	require.Equal(t, list.Unfiltered, model.FilterState())
+}
+
+func TestUpdate_msgHideNotification(t *testing.T) {
+	// Test that title resets back to normal when hiding notification
+	model := New(
+		context.TODO(),
+		test.NewMockStorage(false),
+		&state.ApplicationState{},
+		&test.MockLogger{},
+	)
+	model.loadHosts()
+	model.Title = "Mock notification message"
+
+	model.Update(msgHideNotification{})
+
+	// Ensure that notification returned back to normal when hid the notification message.
+	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", utils.StripStyles(model.Title))
+}
+
 func Test_handleKeyboardEvent_cancelWhileFiltering(t *testing.T) {
 	// Test that when user presses 'Esc' key while filtering, the model doesn't lose focus
 	// Create model
@@ -772,6 +824,14 @@ func Test_handleKeyboardEvent_clearFilter(t *testing.T) {
 	require.Len(t, model.VisibleItems(), 3)
 	require.Equal(t, list.Unfiltered, model.FilterState())
 	require.Equal(t, "Mock Host 2", model.SelectedItem().(ListItemHost).Title())
+}
+
+func Test_handleKeyboardEvent_selectGroup(t *testing.T) {
+	model := NewMockListModel(false)
+	model.Init()
+	_, cmd := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'z'}})
+	res := cmd()
+	require.IsType(t, message.OpenSelectGroupForm{}, res)
 }
 
 func Test_handleKeyboardEvent_connect(t *testing.T) {

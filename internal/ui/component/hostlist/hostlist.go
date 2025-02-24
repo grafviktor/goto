@@ -159,7 +159,9 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case message.HostCreated:
 		cmd := m.onHostCreated(msg)
 		return m, cmd
-	case message.GroupListSelectItem:
+	case message.GroupSelected:
+		m.logger.Debug("[UI] Update app state. Active group: '%s'", msg.Name)
+		m.appState.Group = msg.Name
 		// Reset filter when group is selected
 		m.ResetFilter()
 		// We re-load hosts every time a group is selected. This is not the best way
@@ -485,7 +487,7 @@ func (m *listModel) onFocusChanged() tea.Cmd {
 		m.logger.Debug("[UI] Focus changed to host id: %v, title: %s", hostItem.ID, hostItem.Title())
 
 		return tea.Sequence(
-			message.TeaCmd(message.HostListSelectItem{HostID: hostItem.ID}),
+			message.TeaCmd(message.HostSelected{HostID: hostItem.ID}),
 			message.TeaCmd(message.RunProcessSSHLoadConfig{Host: hostItem.Host}),
 		)
 	}

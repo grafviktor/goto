@@ -94,7 +94,7 @@ func (m *model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		return tea.Sequence(
 			// If group view is shown and user presses ESC, we should
 			// deselect the group view and then show the full host list.
-			message.TeaCmd(message.GroupListSelectItem{GroupName: ""}),
+			message.TeaCmd(message.GroupSelected{Name: ""}),
 			message.TeaCmd(message.CloseSelectGroupForm{}),
 		)
 	case tea.KeyEnter:
@@ -107,7 +107,7 @@ func (m *model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 
 		m.logger.Debug("[UI] Enter key. Select group '%s' and exit from group lust view.")
 		return tea.Sequence(
-			message.TeaCmd(message.GroupListSelectItem{GroupName: selected}),
+			message.TeaCmd(message.GroupSelected{Name: selected}),
 			message.TeaCmd(message.CloseSelectGroupForm{}),
 		)
 	}

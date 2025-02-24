@@ -58,7 +58,7 @@ func TestHandleKeyboardEvent_Enter(t *testing.T) {
 	var actualMsgs []tea.Msg
 	test.CmdToMessage(cmd, &actualMsgs)
 	expectedMsgs := []tea.Msg{
-		message.GroupListSelectItem{GroupName: "Group 1"},
+		message.GroupSelected{Name: "Group 1"},
 		message.CloseSelectGroupForm{},
 	}
 
@@ -83,7 +83,7 @@ func TestHandleKeyboardEvent_Esc(t *testing.T) {
 	test.CmdToMessage(cmd, &actualMsgs)
 
 	expectedMsgs := []tea.Msg{
-		message.GroupListSelectItem{GroupName: ""},
+		message.GroupSelected{Name: ""},
 		message.CloseSelectGroupForm{},
 	}
 

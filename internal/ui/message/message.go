@@ -19,8 +19,8 @@ type (
 	InitComplete struct{}
 	// TerminalSizePolling - is a message which is sent when terminal width and/or height changes.
 	TerminalSizePolling struct{ Width, Height int }
-	// HostListSelectItem is required to let host list know that it's time to update title.
-	HostListSelectItem struct{ HostID int }
+	// HostSelected is required to let host list know that it's time to update title.
+	HostSelected struct{ HostID int }
 	// HostCreated - is dispatched when a new host was added to the database.
 	HostCreated struct{ Host host.Host }
 	// HostUpdated - is dispatched when host model is updated.
@@ -35,8 +35,8 @@ type (
 	OpenSelectGroupForm struct{}
 	// CloseSelectGroupForm - dispatched when it's required to close group list view.
 	CloseSelectGroupForm struct{}
-	// GroupListSelectItem - is dispatched when select a group in group list view.
-	GroupListSelectItem struct{ GroupName string }
+	// GroupSelected - is dispatched when select a group in group list view.
+	GroupSelected struct{ Name string }
 	// OpenEditForm fires when user press edit button on a selected host.
 	OpenEditForm struct{ HostID int }
 	// CloseEditForm triggers when users exits from edit form without saving results.

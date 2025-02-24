@@ -95,10 +95,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case message.CloseSelectGroupForm:
 		m.logger.Debug("[UI] Close select group form")
 		m.appState.CurrentView = state.ViewHostList
-	case message.GroupListSelectItem:
-		m.logger.Debug("[UI] Update app state. Active group: '%s'", msg.GroupName)
-		m.appState.Group = msg.GroupName
-	case message.HostListSelectItem:
+	case message.HostSelected:
 		m.logger.Debug("[UI] Update app state. Active host id: %d", msg.HostID)
 		m.appState.Selected = msg.HostID
 	case message.RunProcessSSHConnect:

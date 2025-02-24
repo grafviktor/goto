@@ -101,7 +101,7 @@ func TestSave(t *testing.T) {
 	var dst []tea.Msg
 	test.CmdToMessage(messageSequence, &dst)
 	require.Contains(t, dst, message.CloseEditForm{})
-	require.Contains(t, dst, message.HostListSelectItem{HostID: 0})
+	require.Contains(t, dst, message.HostSelected{HostID: 0})
 }
 
 func TestCopyInputValueFromTo(t *testing.T) {
