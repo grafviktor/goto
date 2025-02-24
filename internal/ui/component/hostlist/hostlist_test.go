@@ -232,7 +232,7 @@ func TestRemoveItem(t *testing.T) {
 
 func TestConfirmAction(t *testing.T) {
 	// Test the fallback option when there is no active mode
-	// Create a new model. There is no special mode (for instance remove item mode)
+	// Create a new model. There is no special mode (like for instance, "remove item" mode)
 	model := NewMockListModel(false)
 	model.logger = &test.MockLogger{}
 	// Imagine that user triggers confirm action
@@ -246,23 +246,34 @@ func TestConfirmAction(t *testing.T) {
 	model = NewMockListModel(false)
 	// Now we enable remove mode
 	model.mode = modeRemoveItem
-	// Imagine that user triggers confirm aciton
+	// Imagine that user triggers confirm action
 	cmd = model.confirmAction()
 	// When confirm action is triggered, we reset mode and return back to normal state
 	require.Equal(t, model.mode, modeDefault)
 	// cmd should not be nil because when we modify storage, some Cmds will be dispatched
 	require.IsType(t, tea.Cmd(nil), cmd)
 
-	// Now test remove item mode
+	// Now test copy ssh ID item mode
 	model = NewMockListModel(false)
-	// Now we enable remove mode
+	// Now we enable copy SSG ID mode
 	model.mode = modeSSHCopyID
-	// Imagine that user triggers confirm aciton
+	// Imagine that user triggers confirm action
 	cmd = model.confirmAction()
 	// When confirm action is triggered, we reset mode and return back to normal state
 	require.Equal(t, model.mode, modeDefault)
 	// cmd should not be nil because when we modify storage, some Cmds will be dispatched
 	require.IsType(t, tea.Cmd(nil), cmd)
+
+	// Now test close app mode
+	model = NewMockListModel(false)
+	// Now we enable close application mode
+	model.mode = modeCloseApp
+	// Imagine that user triggers confirm action
+	cmd = model.confirmAction()
+	// When confirm action is triggered, we reset mode and return back to normal state
+	require.Equal(t, model.mode, modeDefault)
+	// If this mode is confirm the model should dispatch QuitMsg
+	require.IsType(t, tea.QuitMsg{}, cmd())
 }
 
 func TestEnterSSHCopyIDMode(t *testing.T) {
@@ -388,8 +399,30 @@ func TestListTitleUpdate(t *testing.T) {
 	model.Select(0)
 	// Call updateTitle function
 	model.updateTitle()
-	// Check that app is displaying ssh connection string
+	// Check that app is displaying ssh connection string.
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", utils.StripStyles(model.Title))
+
+	// 4 Call updateTitle selected a host and group is selected.
+	model = *NewMockListModel(false)
+	model.logger = &test.MockLogger{}
+	//
+	model.appState.Group = "Group 1"
+	// Select a host by valid index
+	model.Select(0)
+	// Call updateTitle function
+	model.updateTitle()
+	// Check that app is displaying ssh connection string prepended by a group abbreviation.
+	require.Equal(t, "G1  ssh -i id_rsa -p 2222 -l root localhost", utils.StripStyles(model.Title))
+
+	// 5 Call updateTitle when exiting app.
+	model = *NewMockListModel(false)
+	model.logger = &test.MockLogger{}
+	// Enter exit app mode
+	model.enterCloseAppMode()
+	// Call updateTitle function
+	model.updateTitle()
+	// Check that app is asking the user for confirmation.
+	require.Equal(t, "close app ? (y/N)", utils.StripStyles(model.Title))
 }
 
 func TestListModel_title_when_app_just_starts(t *testing.T) {
@@ -910,8 +943,14 @@ func TestUpdate_ToggleBetweenNormalAndCompactLayout(t *testing.T) {
 		Type:  tea.KeyRunes,
 		Runes: []rune{'v'},
 	})
-
 	require.Equal(t, constant.ScreenLayoutDescription, fakeAppState.ScreenLayout)
+
+	// Toggle layout again and check that it's now set to "group"
+	model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune{'v'},
+	})
+	require.Equal(t, constant.ScreenLayoutGroup, fakeAppState.ScreenLayout)
 }
 
 func TestBuildScreenLayout(t *testing.T) {
@@ -921,10 +960,17 @@ func TestBuildScreenLayout(t *testing.T) {
 	require.Equal(t, 1, screenLayoutDelegate.Spacing())
 	require.True(t, screenLayoutDelegate.ShowDescription)
 
+	// Only when screen layout is compact - there is no spacing between
+	// items and no description field is shown.
 	layout = constant.ScreenLayoutCompact
 	screenLayoutDelegate = NewHostDelegate(&layout, &group, &test.MockLogger{})
 	require.Equal(t, 0, screenLayoutDelegate.Spacing())
 	require.False(t, screenLayoutDelegate.ShowDescription)
+
+	layout = constant.ScreenLayoutGroup
+	screenLayoutDelegate = NewHostDelegate(&layout, &group, &test.MockLogger{})
+	require.Equal(t, 1, screenLayoutDelegate.Spacing())
+	require.True(t, screenLayoutDelegate.ShowDescription)
 }
 
 func TestUpdate_HostFocusPreservedAfterClearFilterMessage(t *testing.T) {

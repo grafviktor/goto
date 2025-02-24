@@ -17,6 +17,28 @@ func Test_stringEmpty(t *testing.T) {
 	require.False(t, StringEmpty("test"))
 }
 
+func Test_StringAbbreviation(t *testing.T) {
+	testMap := map[string]string{
+		"":                       "",
+		"11":                     "1",
+		"3 Rivers, Texas":        "3T",
+		"Alexandria, Egypt":      "AE",
+		"Arzamas16":              "A1",
+		"Atomgrad":               "A",
+		"Babylon Iraq":           "BI",
+		"Carthage, North Africa": "CA",
+		"Sverdlovsk 45":          "S4",
+		"NewYork":                "NY",
+		"Rio de Janeiro":         "RJ",
+		"Thebes_Greece":          "TG",
+	}
+
+	for underTest, expected := range testMap {
+		actual := StringAbbreviation(underTest)
+		require.Equal(t, expected, actual)
+	}
+}
+
 func Test_CreateAppDirIfNotExists(t *testing.T) {
 	tmpFile, _ := os.CreateTemp("", "unit_test_tmp*")
 	defer os.RemoveAll(tmpFile.Name()) // clean up

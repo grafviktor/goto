@@ -19,6 +19,9 @@ func StringEmpty(s string) bool {
 	return len(strings.TrimSpace(s)) == 0
 }
 
+// Regex pattern to split at the boundary between letters and numbers.
+var abbreviationRe = regexp.MustCompile(`(\p{L}+|\p{N}+|\p{S}+)`)
+
 // StringAbbreviation - creates an abbreviation from a string, combining starting letters from first and last words.
 // For example:
 //
@@ -27,32 +30,37 @@ func StringEmpty(s string) bool {
 //	"Carthage, North Africa" -> "CA"
 //	"Thebes_Greece"          -> "TG"
 func StringAbbreviation(s string) string {
-	s = strings.TrimSpace(s)
-	foundWordBreak := false
-	var ch1, ch2 rune
-	for index, ch := range s {
-		if index == 0 {
-			ch1 = ch
-			continue
-		}
+	parts := abbreviationRe.FindAllString(s, -1)
+	// If there is more than one word, create abbreviation from first and last words
+	if len(parts) > 1 {
+		wordFirst := []rune(parts[0])
+		wordLast := []rune(parts[len(parts)-1])
 
-		if foundWordBreak && unicode.IsLetter(ch) {
-			foundWordBreak = false
-			ch2 = ch
-			continue
-		}
-
-		if !unicode.IsLetter(ch) {
-			foundWordBreak = true
-			continue
-		}
-
-		if unicode.IsUpper(ch) {
-			ch2 = ch
-		}
+		return fmt.Sprintf("%c%c", unicode.ToUpper(wordFirst[0]), unicode.ToUpper(wordLast[0]))
 	}
 
-	return fmt.Sprintf("%c%c", unicode.ToUpper(ch1), unicode.ToUpper(ch2))
+	// If there is single word only, attempt to build abbreviation assuming it's
+	// in camelCase. Otherwise just fallback on the first letter of the word.
+	if len(parts) == 1 {
+		word := []rune(parts[0])
+		var letterFirst, letterSecond rune
+		for i, r := range word {
+			if i == 0 {
+				letterFirst = unicode.ToUpper(r)
+				letterSecond = ' '
+				continue
+			}
+
+			if unicode.IsUpper(r) {
+				letterSecond = r
+			}
+		}
+
+		result := fmt.Sprintf("%c%c", letterFirst, letterSecond)
+		return strings.TrimSpace(result)
+	}
+
+	return ""
 }
 
 var ansiRegex = regexp.MustCompile("\x1b\\[[0-9;]*m")

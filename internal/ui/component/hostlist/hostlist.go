@@ -116,13 +116,14 @@ func (m *listModel) loadHosts() tea.Cmd {
 		return message.TeaCmd(message.ErrorOccurred{Err: err})
 	}
 
+	// If host group is selected only load hosts from this group.
 	if m.appState.Group != "" {
 		hosts = lo.Filter(hosts, func(h hostModel.Host, index int) bool {
 			return strings.EqualFold(h.Group, m.appState.Group)
 		})
 	}
 
-	// Wrap hosts into List items
+	// Wrap hosts into List items.
 	items := make([]list.Item, 0, len(hosts))
 	for _, h := range hosts {
 		items = append(items, ListItemHost{Host: h})
@@ -697,6 +698,7 @@ func (m *listModel) confirmAction() tea.Cmd {
 		m.updateTitle()
 		cmd = m.constructProcessCmd(constant.ProcessTypeSSHCopyID)
 	} else if m.mode == modeCloseApp {
+		m.mode = modeDefault
 		cmd = tea.Quit
 	}
 
