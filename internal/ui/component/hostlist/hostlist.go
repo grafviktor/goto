@@ -207,7 +207,7 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		// Handle key event when some mode is enabled. For instance "removeMode".
 		return m.handleKeyEventWhenModeEnabled(msg)
 	case key.Matches(msg, m.keyMap.selectGroup):
-		return message.TeaCmd(message.OpenSelectGroupForm{})
+		return message.TeaCmd(message.OpenViewSelectGroup{})
 	case key.Matches(msg, m.keyMap.connect):
 		return m.constructProcessCmd(constant.ProcessTypeSSHConnect)
 	case key.Matches(msg, m.keyMap.copyID):
@@ -217,7 +217,7 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, m.keyMap.edit):
 		return m.editItem()
 	case key.Matches(msg, m.keyMap.append):
-		return message.TeaCmd(message.OpenEditForm{}) // When create a new item, jump to edit mode.
+		return message.TeaCmd(message.OpenViewHostEdit{}) // When create a new item, jump to edit mode.
 	case key.Matches(msg, m.keyMap.clone):
 		return m.copyItem()
 	case key.Matches(msg, m.keyMap.toggleLayout):
@@ -226,8 +226,8 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		if m.appState.Group != "" {
 			// When user presses Escape key while group is selected,
 			// we should open select group form.
-			m.logger.Debug("[UI] Receive Escape key when group selected. Open select group form.")
-			return message.TeaCmd(message.OpenSelectGroupForm{})
+			m.logger.Debug("[UI] Receive Escape key when group selected. Open view select group.")
+			return message.TeaCmd(message.OpenViewSelectGroup{})
 		} else {
 			m.logger.Debug("[UI] Receive Escape key. Ask user for confirmation to close the app.")
 			m.enterCloseAppMode()
@@ -350,7 +350,7 @@ func (m *listModel) editItem() tea.Cmd {
 	// m.Model.ResetFilter()
 	m.logger.Info("[UI] Edit item id: %d, title: %s", item.ID, item.Title())
 	return tea.Sequence(
-		message.TeaCmd(message.OpenEditForm{HostID: item.ID}),
+		message.TeaCmd(message.OpenViewHostEdit{HostID: item.ID}),
 		// Load SSH config for the selected host
 		message.TeaCmd(message.RunProcessSSHLoadConfig{Host: item.Host}),
 	)

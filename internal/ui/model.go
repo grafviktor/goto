@@ -80,19 +80,19 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.appState.Width = msg.Width
 		m.appState.Height = msg.Height
 		m.updateViewPort(msg.Width, msg.Height)
-	case message.OpenEditForm:
+	case message.OpenViewHostEdit:
 		m.logger.Debug("[UI] Open host edit form")
 		m.appState.CurrentView = state.ViewEditItem
 		ctx := context.WithValue(m.appContext, hostedit.ItemID, msg.HostID)
 		m.modelHostEdit = hostedit.New(ctx, m.hostStorage, m.appState, m.logger)
-	case message.CloseEditForm:
+	case message.CloseViewHostEdit:
 		m.logger.Debug("[UI] Close host edit form")
 		m.appState.CurrentView = state.ViewHostList
-	case message.OpenSelectGroupForm:
+	case message.OpenViewSelectGroup:
 		m.logger.Debug("[UI] Open select group form")
 		m.modelGroupList.Update(msg)
 		m.appState.CurrentView = state.ViewGroupList
-	case message.CloseSelectGroupForm:
+	case message.CloseViewSelectGroup:
 		m.logger.Debug("[UI] Close select group form")
 		m.appState.CurrentView = state.ViewHostList
 	case message.HostSelected:

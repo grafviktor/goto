@@ -39,7 +39,7 @@ func TestUpdate(t *testing.T) {
 
 	// Loads hosts when the form is shown
 	listModel = NewMockGroupModel(false)
-	listModel.Update(message.OpenSelectGroupForm{})
+	listModel.Update(message.OpenViewSelectGroup{})
 
 	// Selected group is "no group"
 	require.Equal(t, noGroupSelected, listModel.SelectedItem().(ListItemHostGroup).Title())
@@ -59,7 +59,7 @@ func TestHandleKeyboardEvent_Enter(t *testing.T) {
 	test.CmdToMessage(cmd, &actualMsgs)
 	expectedMsgs := []tea.Msg{
 		message.GroupSelected{Name: "Group 1"},
-		message.CloseSelectGroupForm{},
+		message.CloseViewSelectGroup{},
 	}
 
 	require.ElementsMatch(t, expectedMsgs, actualMsgs)
@@ -84,7 +84,7 @@ func TestHandleKeyboardEvent_Esc(t *testing.T) {
 
 	expectedMsgs := []tea.Msg{
 		message.GroupSelected{Name: ""},
-		message.CloseSelectGroupForm{},
+		message.CloseViewSelectGroup{},
 	}
 
 	// Note that though, Escape key was pressed, the group remains selected inside the group list component.

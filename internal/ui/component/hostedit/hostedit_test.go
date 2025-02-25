@@ -100,7 +100,7 @@ func TestSave(t *testing.T) {
 
 	var dst []tea.Msg
 	test.CmdToMessage(messageSequence, &dst)
-	require.Contains(t, dst, message.CloseEditForm{})
+	require.Contains(t, dst, message.CloseViewHostEdit{})
 	require.Contains(t, dst, message.HostSelected{HostID: 0})
 }
 

@@ -493,7 +493,7 @@ func TestListModel_editItem(t *testing.T) {
 	var dst []tea.Msg
 	test.CmdToMessage(teaCmd, &dst)
 
-	require.Contains(t, dst, message.OpenEditForm{HostID: 1})
+	require.Contains(t, dst, message.OpenViewHostEdit{HostID: 1})
 	require.Contains(t, dst, message.RunProcessSSHLoadConfig{Host: lm.SelectedItem().(ListItemHost).Host})
 }
 
@@ -831,7 +831,7 @@ func Test_handleKeyboardEvent_selectGroup(t *testing.T) {
 	model.Init()
 	_, cmd := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'z'}})
 	res := cmd()
-	require.IsType(t, message.OpenSelectGroupForm{}, res)
+	require.IsType(t, message.OpenViewSelectGroup{}, res)
 }
 
 func Test_handleKeyboardEvent_connect(t *testing.T) {
@@ -969,7 +969,7 @@ func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
 	require.Len(t, model.VisibleItems(), 1)
 }
 
-func TestUpdate_ToggleBetweenNormalAndCompactLayout(t *testing.T) {
+func TestUpdate_ToggleBetweenScreenLayouts(t *testing.T) {
 	// Create mock storage which contains hosts:
 	// "Mock Host 1"
 	// "Mock Host 2"
@@ -1013,24 +1013,22 @@ func TestUpdate_ToggleBetweenNormalAndCompactLayout(t *testing.T) {
 	require.Equal(t, constant.ScreenLayoutGroup, fakeAppState.ScreenLayout)
 }
 
-func TestBuildScreenLayout(t *testing.T) {
-	layout := constant.ScreenLayoutDescription
-	group := ""
-	screenLayoutDelegate := NewHostDelegate(&layout, &group, &test.MockLogger{})
-	require.Equal(t, 1, screenLayoutDelegate.Spacing())
-	require.True(t, screenLayoutDelegate.ShowDescription)
+func Test_HandleKeyboardEvent_Escape(t *testing.T) {
+	// If group is selected and type Escape key, the model
+	// should dispatch open group view message
+	model := NewMockListModel(false)
+	model.appState.Group = "Group 1"
+	_, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	require.IsType(t, message.OpenViewSelectGroup{}, cmd())
 
-	// Only when screen layout is compact - there is no spacing between
-	// items and no description field is shown.
-	layout = constant.ScreenLayoutCompact
-	screenLayoutDelegate = NewHostDelegate(&layout, &group, &test.MockLogger{})
-	require.Equal(t, 0, screenLayoutDelegate.Spacing())
-	require.False(t, screenLayoutDelegate.ShowDescription)
-
-	layout = constant.ScreenLayoutGroup
-	screenLayoutDelegate = NewHostDelegate(&layout, &group, &test.MockLogger{})
-	require.Equal(t, 1, screenLayoutDelegate.Spacing())
-	require.True(t, screenLayoutDelegate.ShowDescription)
+	// If group is NOT selected and press Escape key, the app
+	// should ask the user whether it wants to close the program
+	model = NewMockListModel(false)
+	model.appState.Group = ""
+	_, cmd = model.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	require.Nil(t, cmd)
+	require.Equal(t, modeCloseApp, model.mode)
+	require.Equal(t, "close app ? (y/N)", utils.StripStyles(model.Title))
 }
 
 func TestUpdate_HostFocusPreservedAfterClearFilterMessage(t *testing.T) {

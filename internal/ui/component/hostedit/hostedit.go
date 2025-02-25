@@ -242,7 +242,7 @@ func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		return m.inputFocusChange(msg)
 	case key.Matches(msg, m.keyMap.Discard):
 		m.logger.Info("[UI] Discard changes for host id: %v", m.host.ID)
-		return message.TeaCmd(message.CloseEditForm{})
+		return message.TeaCmd(message.CloseViewHostEdit{})
 	default:
 		// Handle all other key events
 		cmd := m.focusedInputProcessKeyEvent(msg)
@@ -313,7 +313,7 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 		message.TeaCmd(message.HostUpdated{Host: host}))
 
 	return tea.Sequence(
-		message.TeaCmd(message.CloseEditForm{}),
+		message.TeaCmd(message.CloseViewHostEdit{}),
 		// Order matters here! That's why we use tea.Sequence instead of tea.Batch.
 		message.TeaCmd(message.HostSelected{HostID: host.ID}),
 		cmd,
