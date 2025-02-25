@@ -1,0 +1,50 @@
+- host:
+    title: Server
+    description: Zeus
+    address: localhost@localdomain
+    group: "Dev"
+- host:
+    title: Server 1
+    description: Hermes
+    address: localhost@localdomain
+    group: "Dev"
+- host:
+    title: Server 2
+    description: Demeter
+    address: localhost@localdomain
+    group: "Beta"
+- host:
+    title: Server 3
+    description: Cronus
+    address: localhost@localdomain
+    group: "Beta"
+- host:
+    title: Server 4
+    description: Hera
+    address: localhost@localdomain
+    group: "QA"
+- host:
+    title: Server 5
+    description: Artemis
+    address: localhost@localdomain
+    group: "QA"
+- host:
+    title: Server 6
+    description: Athena
+    address: localhost@localdomain
+    group: "UAT"
+- host:
+    title: Server 7
+    description: My server
+    address: localhost@localdomain
+    group: "UAT"
+- host:
+    title: Server 8
+    description: My server
+    address: localhost@localdomain
+    group: "Prod"
+- host:
+    title: Server 9
+    description: Sisyphus
+    address: localhost
+    group: "Prod"
