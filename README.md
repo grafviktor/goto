@@ -37,7 +37,7 @@ yay -S goto-ssh-bin
 
 ![Small demo where we open ssh session using goto](demo/edit_and_connect.gif)
 
-### 2.2. Manipulate easily with your hosts database ###
+### 2.2. Split your hosts into logical groups ###
 
 ![Small demo where duplicate an existing record in goto database](demo/duplicate_existing_record.gif)
 

@@ -13,7 +13,7 @@ function cleanup() {
 }
 
 cleanup
-for file in create_groups.tape; do
+for file in *.tape; do
     basename=${file%.*}
     if [ -f "${basename}.yaml" ]; then
         cp "${basename}.yaml" hosts.yaml

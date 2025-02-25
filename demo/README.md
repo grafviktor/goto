@@ -1,5 +1,9 @@
 ## Demos and usecases ##
 
+### Manipulate easily with your hosts database ###
+
+![Small demo where duplicate an existing record in goto database](duplicate_existing_record.gif)
+
 ### Toggle between full and compact view with `v` shortcut ###
 
 ![A demo where we toggle between full and compact hostlist view](toggle_between_full_and_compact_view.gif)
