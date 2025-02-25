@@ -33,17 +33,17 @@ yay -S goto-ssh-bin
 
 ## 2. Functional demo ##
 
-### 2.1. Edit a host and connect to the remote box ###
+### 2.1. Edit your database and connect to remote machines ###
 
-![Small demo where we open ssh session using goto](demo/edit_and_connect.gif)
+![Shows how to open ssh session using goto](demo/edit_and_connect.gif)
 
-### 2.2. Split your hosts into logical groups ###
+### 2.2. Organize your hostnames into logical groups ###
 
-![Small demo where duplicate an existing record in goto database](demo/duplicate_existing_record.gif)
+![Demonstrates duplicating an existing record in goto database](demo/switch_between_groups.gif)
 
-### 2.3. Find a required host easily among all your records ###
+### 2.3. Search efficiently across all your records ###
 
-![Small demo where we open ssh session using goto](demo/search_through_database.gif)
+![Depicts how to search hosts through the database](demo/search_through_database.gif)
 
 Find more demos and uses cases [here](demo/README.md).
 

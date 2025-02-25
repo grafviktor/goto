@@ -1,26 +1,26 @@
-## Demos and usecases ##
+## Demonstrations and Use Cases ##
 
-### Manipulate easily with your hosts database ###
+### Easily Manage Your Hosts Database ###
 
-![Small demo where duplicate an existing record in goto database](duplicate_existing_record.gif)
+![Demonstrates how to duplicate an existing record in the GOTO database.](duplicate_existing_record.gif)
 
-### Toggle between full and compact view with `v` shortcut ###
+### Switch between different UI layouts with `v` shortcut ###
 
-![A demo where we toggle between full and compact hostlist view](toggle_between_full_and_compact_view.gif)
+![Shows how to toggle between full, group and compact host list views.](toggle_between_full_and_compact_view.gif)
 
-### Copy public ssh-key onto a remote host with `t` shortcut ###
+### Deploy Public SSH Key to a Remote Host Using the `t` Shortcut ###
 
-![A demo where the public ssh key is being copied onto ssh server](copy_ssh_key.gif)
+![Illustrates copying the public SSH key to an SSH server](copy_ssh_key.gif)
 
-### Define custom commands ###
+### Create Custom Commands ###
 
-![A demo where we set custom configuration](use_custom_config.gif)
+![Create Custom Commands](use_custom_config.gif)
 
-![A demo where we setup a socks proxy](create_proxy.gif)
+![Demonstrates setting up custom configurations and establishing a SOCKS proxy](create_proxy.gif)
 
-### Combine goto with tmux for tailing logs side by side ###
+### Integrate GOTO with [tmux](https://github.com/tmux/tmux) for Side-by-Side operations ###
 
-![Small demo where we combine goto and tmux](combine_with_tmux.gif)
+![Shows how to use GOTO alongside tmux for simultaneous log monitoring](combine_with_tmux.gif)
 
 ## Tools info ##
 
