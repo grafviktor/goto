@@ -22,9 +22,9 @@
 
 ![Shows how to use GOTO alongside tmux for simultaneous log monitoring](combine_with_tmux.gif)
 
-## Tools info ##
+## Tools Info ##
 
-_The recordings were made using [VHS](https://github.com/charmbracelet/vhs) utility._
+_The demonstrations were recorded using the [VHS](https://github.com/charmbracelet/vhs) utility._
 
 ```bash
 go install github.com/charmbracelet/vhs@latest
