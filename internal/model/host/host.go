@@ -25,6 +25,7 @@ type Host struct {
 	ID               int         `yaml:"-"`
 	Title            string      `yaml:"title"`
 	Description      string      `yaml:"description,omitempty"`
+	Group            string      `yaml:"group,omitempty"`
 	Address          string      `yaml:"address"`
 	RemotePort       string      `yaml:"network_port,omitempty"`
 	LoginName        string      `yaml:"username,omitempty"`
@@ -36,6 +37,7 @@ type Host struct {
 func (h *Host) Clone() Host {
 	newHost := Host{
 		Title:            h.Title,
+		Group:            h.Group,
 		Description:      h.Description,
 		Address:          h.Address,
 		LoginName:        h.LoginName,

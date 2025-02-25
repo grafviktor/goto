@@ -3,7 +3,7 @@ package hostedit
 import "github.com/charmbracelet/lipgloss"
 
 var (
-	docStyle    = lipgloss.NewStyle().Margin(1, 2)
+	docStyle    = lipgloss.NewStyle().Margin(1, 0)
 	cursorStyle = lipgloss.NewStyle().
 			BorderForeground(lipgloss.AdaptiveColor{Light: "#F793FF", Dark: "#AD58B4"}).
 			Foreground(lipgloss.AdaptiveColor{Light: "#EE6FF8", Dark: "#EE6FF8"})

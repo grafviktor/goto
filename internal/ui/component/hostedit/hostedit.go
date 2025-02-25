@@ -31,8 +31,6 @@ type Size struct {
 }
 
 type (
-	// CloseEditForm triggers when users exits from edit form without saving results.
-	CloseEditForm struct{}
 	// MsgSave triggers when users saves results.
 	MsgSave struct{}
 	// debouncedMessage is used to trigger side effects. For instance dispatch RunProcessSSHLoadConfig
@@ -47,6 +45,7 @@ const (
 	inputTitle int = iota
 	inputAddress
 	inputDescription
+	inputGroup
 	inputLogin
 	inputNetworkPort
 	inputIdentityFile
@@ -67,7 +66,7 @@ type iLogger interface {
 }
 
 func notEmptyValidator(s string) error {
-	if utils.StringEmpty(s) {
+	if utils.StringEmpty(&s) {
 		return fmt.Errorf("value is required")
 	}
 
@@ -75,7 +74,7 @@ func notEmptyValidator(s string) error {
 }
 
 func networkPortValidator(s string) error {
-	if utils.StringEmpty(s) {
+	if utils.StringEmpty(&s) {
 		return nil
 	}
 
@@ -123,12 +122,12 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	host, hostNotFoundErr := storage.Get(hostID)
 	if hostNotFoundErr != nil {
 		// Logger should notify that this is a new host
-		host = hostModel.Host{}
+		host = hostModel.Host{Group: state.Group}
 	}
 	host.SSHClientConfig = ssh.StubConfig()
 
 	m := editModel{
-		inputs:       make([]input.Input, 6),
+		inputs:       make([]input.Input, 7),
 		hostStorage:  storage,
 		host:         wrap(&host),
 		help:         help.New(),
@@ -163,6 +162,10 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 			t.SetLabel("Description")
 			t.CharLimit = 512
 			t.SetValue(host.Description)
+		case inputGroup:
+			t.SetLabel("Group")
+			t.CharLimit = 512
+			t.SetValue(host.Group)
 		case inputLogin:
 			t.SetLabel("Login")
 			t.CharLimit = 128
@@ -239,7 +242,7 @@ func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		return m.inputFocusChange(msg)
 	case key.Matches(msg, m.keyMap.Discard):
 		m.logger.Info("[UI] Discard changes for host id: %v", m.host.ID)
-		return message.TeaCmd(CloseEditForm{})
+		return message.TeaCmd(message.CloseViewHostEdit{})
 	default:
 		// Handle all other key events
 		cmd := m.focusedInputProcessKeyEvent(msg)
@@ -288,6 +291,15 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 				return nil
 			}
 		}
+
+		if i == inputGroup {
+			// When create a new host within specific group, the app pre-populates group value
+			// however, there is a chance that the group field will never be focused by user
+			// and the value will never be copied to the model. This is a workaround for this issue.
+			// Explicitly set group value to the model.
+			groupName := m.inputs[i].Value()
+			m.host.setHostAttributeByIndex(i, strings.TrimSpace(groupName))
+		}
 	}
 
 	host, _ := m.hostStorage.Save(m.host.unwrap())
@@ -301,13 +313,9 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 		message.TeaCmd(message.HostUpdated{Host: host}))
 
 	return tea.Sequence(
-		message.TeaCmd(CloseEditForm{}),
+		message.TeaCmd(message.CloseViewHostEdit{}),
 		// Order matters here! That's why we use tea.Sequence instead of tea.Batch.
-		// 'HostListSelectItem' message should be dispatched
-		// before 'MsgRefreshRepo'. The reasons of that is because
-		// 'MsgRefreshRepo' handler automatically sets focus on previously selected item.
-		message.TeaCmd(message.HostListSelectItem{HostID: host.ID}),
-		// message.TeaCmd(hostlist.MsgRefreshRepo{}),
+		message.TeaCmd(message.HostSelected{HostID: host.ID}),
 		cmd,
 	)
 }
@@ -365,11 +373,14 @@ func (m *editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 		m.copyInputValueFromTo(inputTitle, inputAddress)
 	}
 
-	// When change UI field, update the model as well
+	// When change UI field, update the model as well. We need to update the model on this stage
+	// because we need to know its details(such as username, port number, ssh key) when request SSH config.
+	// We assign value to the model here, then we read it again in "updateInputFields" function. That
+	// should be simplified, we only need to assign value to the model when we save it.
 	m.host.setHostAttributeByIndex(m.focusedInput, m.inputs[m.focusedInput].Value())
 
-	// If type in address field
-	if m.focusedInput == inputAddress {
+	// If update address or title field
+	if lo.Contains([]int{inputTitle, inputAddress}, m.focusedInput) {
 		currentValue := m.inputs[inputAddress].Value()
 
 		// And value changed
@@ -424,7 +435,7 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 	}
 
 	// Update index of the focused element
-	if key.Matches(keyMsg, m.keyMap.Up) && m.focusedInput > minFocusIndex { //nolint:gocritic // it's better without switch
+	if key.Matches(keyMsg, m.keyMap.Up) && m.focusedInput > minFocusIndex { //nolint:gocritic // readable without switch
 		m.focusedInput--
 		m.viewport.LineUp(inputHeight)
 	} else if key.Matches(keyMsg, m.keyMap.Down) && m.focusedInput < maxFocusIndex {
@@ -436,7 +447,7 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 	}
 
 	// Should be extracted to "Validate" function
-	for i := 0; i <= len(m.inputs)-1; i++ {
+	for i := 0; i < len(m.inputs); i++ {
 		if m.inputs[i].Validate != nil {
 			m.inputs[i].Err = m.inputs[i].Validate(m.inputs[i].Value())
 			m.logger.Debug("[UI] Input '%v' is valid: %v", m.inputs[i].Label(), m.inputs[i].Err == nil)
@@ -477,6 +488,7 @@ func (m *editModel) updateInputFields() {
 	prefix := lo.Ternary(customConnectString, "readonly", "default")
 	m.inputs[inputTitle].Placeholder = "*required*" //nolint:goconst
 	m.inputs[inputAddress].Placeholder = "*required*"
+	m.inputs[inputGroup].Placeholder = "n/a" //nolint:goconst
 	m.inputs[inputDescription].Placeholder = "n/a"
 	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.User)
 	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.Port)
@@ -485,6 +497,8 @@ func (m *editModel) updateInputFields() {
 	hostInputLabel := lo.Ternary(customConnectString, "Command", "Host")
 	m.inputs[inputAddress].SetLabel(hostInputLabel)
 	m.inputs[inputAddress].SetDisplayTooltip(customConnectString)
+
+	// Enable or disable inputs based on the custom connect string //
 
 	// Get input fields by pointer to update their state
 	sshParamsInputFields := []*input.Input{

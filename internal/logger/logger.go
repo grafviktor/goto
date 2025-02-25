@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"path"
+
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 // LogLevel is a subject for revising. Probably it's better to have a boolean flag to switch on/off debug logging.
@@ -53,7 +55,8 @@ type appLogger struct {
 
 func (l *appLogger) print(prefix, format string, args ...any) {
 	msg := fmt.Sprintf("[%s] %s", prefix, format)
-	l.innerLogger.Printf(msg, args...)
+	msg = fmt.Sprintf(msg, args...)
+	l.innerLogger.Print(utils.StripStyles(msg))
 }
 
 func (l *appLogger) Debug(format string, args ...any) {

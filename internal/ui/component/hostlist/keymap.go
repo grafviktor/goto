@@ -8,6 +8,7 @@ import (
 type keyMap struct {
 	cursorUp              key.Binding
 	cursorDown            key.Binding
+	selectGroup           key.Binding
 	connect               key.Binding
 	copyID                key.Binding
 	append                key.Binding
@@ -28,6 +29,10 @@ func newDelegateKeyMap() *keyMap {
 		cursorDown: key.NewBinding(
 			key.WithKeys("down", "j", "tab"),
 			key.WithHelp("↓/j", "down"),
+		),
+		selectGroup: key.NewBinding(
+			key.WithKeys("z"),
+			key.WithHelp("z", "group"),
 		),
 		connect: key.NewBinding(
 			key.WithKeys("enter"),
@@ -90,6 +95,7 @@ func (k *keyMap) ShortHelp() []key.Binding {
 		k.clone,
 		k.edit,
 		k.remove,
+		k.selectGroup,
 	}
 
 	// Hide all disabled key shortcuts from the screen
@@ -105,6 +111,7 @@ func (k *keyMap) FullHelp() []key.Binding {
 		k.clone,
 		k.edit,
 		k.remove,
+		k.selectGroup,
 		k.copyID,
 		k.toggleLayout,
 	}

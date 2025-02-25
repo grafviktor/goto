@@ -3,7 +3,7 @@
 set -e
 
 # cd to this file location
-cd $(dirname "$(readlink -f "$0")")
+cd "$(dirname "$(readlink -f "$0")")"
 
 export VHS_PUBLISH=false # disable "Host your GIF on vhs.charm.sh: vhs publish <file>.gif" message
 TMP_HOME=temp

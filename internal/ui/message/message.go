@@ -19,8 +19,8 @@ type (
 	InitComplete struct{}
 	// TerminalSizePolling - is a message which is sent when terminal width and/or height changes.
 	TerminalSizePolling struct{ Width, Height int }
-	// HostListSelectItem is required to let host list know that it's time to update title.
-	HostListSelectItem struct{ HostID int }
+	// HostSelected is required to let host list know that it's time to update title.
+	HostSelected struct{ HostID int }
 	// HostCreated - is dispatched when a new host was added to the database.
 	HostCreated struct{ Host host.Host }
 	// HostUpdated - is dispatched when host model is updated.
@@ -31,6 +31,18 @@ type (
 		HostID int
 		Config ssh.Config
 	}
+	// OpenViewSelectGroup - dispatched when it's required to open group list view.
+	OpenViewSelectGroup struct{}
+	// CloseViewSelectGroup - dispatched when it's required to close group list view.
+	CloseViewSelectGroup struct{}
+	// GroupSelected - is dispatched when select a group in group list view.
+	GroupSelected struct{ Name string }
+	// OpenViewHostEdit fires when user press edit button on a selected host.
+	OpenViewHostEdit struct{ HostID int }
+	// CloseViewHostEdit triggers when users exits from edit form without saving results.
+	CloseViewHostEdit struct{}
+	// ErrorOccurred - is dispatched when an error occurs.
+	ErrorOccurred struct{ Err error }
 	// RunProcessSSHConnect is dispatched when user wants to connect to a host.
 	RunProcessSSHConnect struct{ Host host.Host }
 	// RunProcessSSHLoadConfig is dispatched it's required to read .ssh/config file for a certain host.

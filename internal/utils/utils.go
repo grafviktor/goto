@@ -3,24 +3,78 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 // StringEmpty - checks if string is empty or contains only spaces.
 // s is string to check.
-func StringEmpty(s string) bool {
-	return len(strings.TrimSpace(s)) == 0
+func StringEmpty(s *string) bool {
+	return s == nil || len(strings.TrimSpace(*s)) == 0
+}
+
+// Regex pattern to split at the boundary between letters and numbers.
+var abbreviationRe = regexp.MustCompile(`(\p{L}+|\p{N}+|\p{S}+)`)
+
+// StringAbbreviation - creates an abbreviation from a string, combining starting letters from first and last words.
+// For example:
+//
+//	"Alexandria, Egypt"      -> "AE"
+//	"Babylon Iraq"           -> "BI"
+//	"Carthage, North Africa" -> "CA"
+//	"Thebes_Greece"          -> "TG"
+func StringAbbreviation(s string) string {
+	parts := abbreviationRe.FindAllString(s, -1)
+	// If there is more than one word, create abbreviation from first and last words
+	if len(parts) > 1 {
+		wordFirst := []rune(parts[0])
+		wordLast := []rune(parts[len(parts)-1])
+
+		return fmt.Sprintf("%c%c", unicode.ToUpper(wordFirst[0]), unicode.ToUpper(wordLast[0]))
+	}
+
+	// If there is single word only, attempt to build abbreviation assuming it's
+	// in camelCase. Otherwise just fallback on the first letter of the word.
+	if len(parts) == 1 {
+		word := []rune(parts[0])
+		var letterFirst, letterSecond rune
+		for i, r := range word {
+			if i == 0 {
+				letterFirst = unicode.ToUpper(r)
+				letterSecond = ' '
+				continue
+			}
+
+			if unicode.IsUpper(r) {
+				letterSecond = r
+			}
+		}
+
+		result := fmt.Sprintf("%c%c", letterFirst, letterSecond)
+		return strings.TrimSpace(result)
+	}
+
+	return ""
+}
+
+var ansiRegex = regexp.MustCompile("\x1b\\[[0-9;]*m")
+
+// StripStyles - removes lipgloss styles from a string.
+func StripStyles(input string) string {
+	input = strings.TrimSpace(input)
+	return ansiRegex.ReplaceAllString(input, "")
 }
 
 // CreateAppDirIfNotExists - creates application home folder if it doesn't exist.
 // appConfigDir is application home folder path.
 func CreateAppDirIfNotExists(appConfigDir string) error {
-	if StringEmpty(appConfigDir) {
+	if StringEmpty(&appConfigDir) {
 		return errors.New("bad argument")
 	}
 
@@ -44,7 +98,7 @@ func CreateAppDirIfNotExists(appConfigDir string) error {
 // If userDefinedPath is not empty, it will be used as application home folder
 // Else, userConfigDir will be used, which is system dependent.
 func AppDir(appName, userDefinedPath string) (string, error) {
-	if !StringEmpty(userDefinedPath) {
+	if !StringEmpty(&userDefinedPath) {
 		absolutePath, err := filepath.Abs(userDefinedPath)
 		if err != nil {
 			return "", err
@@ -62,7 +116,7 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 		return absolutePath, nil
 	}
 
-	if StringEmpty(appName) {
+	if StringEmpty(&appName) {
 		return "", errors.New("application home folder name is not provided")
 	}
 

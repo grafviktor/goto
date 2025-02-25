@@ -34,10 +34,22 @@ func Parse(config string) *Config {
 func StubConfig() *Config {
 	return &Config{
 		Hostname:     "Loading, please wait...",
-		IdentityFile: "$HOME/.ssh/id_rsa",
+		IdentityFile: "~/.ssh/id_rsa",
 		Port:         "22",
 		User:         currentUsername(),
 	}
+}
+
+// currentUsername - returns current OS username or "n/a" if it can't be determined.
+func currentUsername() string {
+	// ssh [-vvv] -G <hostname> is used to request settings for a hostname.
+	// for a stub config use u.Current()
+	u, err := user.Current()
+	if err != nil {
+		return "n/a"
+	}
+
+	return u.Username
 }
 
 var (
@@ -53,16 +65,4 @@ func getRegexFirstMatchingGroup(groups []string) string {
 	}
 
 	return ""
-}
-
-// currentUsername - returns current OS username or "n/a" if it can't be determined.
-func currentUsername() string {
-	// ssh [-vvv] -G <hostname> is used to request settings for a hostname.
-	// for a stub config use u.Current()
-	u, err := user.Current()
-	if err != nil {
-		return "n/a"
-	}
-
-	return u.Username
 }

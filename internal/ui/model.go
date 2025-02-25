@@ -14,6 +14,7 @@ import (
 	"github.com/grafviktor/goto/internal/model/ssh"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
+	"github.com/grafviktor/goto/internal/ui/component/grouplist"
 	"github.com/grafviktor/goto/internal/ui/component/hostedit"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
 	"github.com/grafviktor/goto/internal/ui/message"
@@ -35,11 +36,12 @@ func New(
 	log iLogger,
 ) mainModel {
 	m := mainModel{
-		modelHostList: hostlist.New(ctx, storage, appState, log),
-		appContext:    ctx,
-		hostStorage:   storage,
-		appState:      appState,
-		logger:        log,
+		modelHostList:  hostlist.New(ctx, storage, appState, log),
+		modelGroupList: grouplist.New(ctx, storage, appState, log),
+		appContext:     ctx,
+		hostStorage:    storage,
+		appState:       appState,
+		logger:         log,
 	}
 
 	return m
@@ -49,6 +51,7 @@ type mainModel struct {
 	appContext         context.Context
 	hostStorage        storage.HostStorage
 	modelHostList      tea.Model
+	modelGroupList     tea.Model
 	modelHostEdit      tea.Model
 	appState           *state.ApplicationState
 	viewMessageContent string
@@ -59,7 +62,9 @@ type mainModel struct {
 
 func (m *mainModel) Init() tea.Cmd {
 	m.logger.Debug("[UI] Run init function")
-	return m.modelHostList.Init() // Loads hosts from DB
+
+	// Loads hosts from DB
+	return m.modelHostList.Init()
 }
 
 func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -75,15 +80,21 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.appState.Width = msg.Width
 		m.appState.Height = msg.Height
 		m.updateViewPort(msg.Width, msg.Height)
-	case hostlist.OpenEditForm:
+	case message.OpenViewHostEdit:
 		m.logger.Debug("[UI] Open host edit form")
 		m.appState.CurrentView = state.ViewEditItem
 		ctx := context.WithValue(m.appContext, hostedit.ItemID, msg.HostID)
 		m.modelHostEdit = hostedit.New(ctx, m.hostStorage, m.appState, m.logger)
-	case hostedit.CloseEditForm:
+	case message.CloseViewHostEdit:
 		m.logger.Debug("[UI] Close host edit form")
 		m.appState.CurrentView = state.ViewHostList
-	case message.HostListSelectItem:
+	case message.OpenViewSelectGroup:
+		m.logger.Debug("[UI] Open select group form")
+		m.appState.CurrentView = state.ViewGroupList
+	case message.CloseViewSelectGroup:
+		m.logger.Debug("[UI] Close select group form")
+		m.appState.CurrentView = state.ViewHostList
+	case message.HostSelected:
 		m.logger.Debug("[UI] Update app state. Active host id: %d", msg.HostID)
 		m.appState.Selected = msg.HostID
 	case message.RunProcessSSHConnect:
@@ -106,6 +117,8 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	m.modelHostList, cmd = m.modelHostList.Update(msg)
 	cmds = append(cmds, cmd)
+	m.modelGroupList, cmd = m.modelGroupList.Update(msg)
+	cmds = append(cmds, cmd)
 
 	if m.appState.CurrentView == state.ViewEditItem {
 		// Edit host receives messages only if it's active. We re-create this component every time we go to edit mode
@@ -122,6 +135,8 @@ func (m *mainModel) View() string {
 	switch m.appState.CurrentView {
 	case state.ViewHostList:
 		content = m.modelHostList.View()
+	case state.ViewGroupList:
+		content = m.modelGroupList.View()
 	case state.ViewMessage:
 		content = m.viewMessageContent
 	case state.ViewEditItem:
@@ -153,6 +168,8 @@ func (m *mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.appState.CurrentView = state.ViewHostList
 	case state.ViewHostList:
 		m.modelHostList, cmd = m.modelHostList.Update(msg)
+	case state.ViewGroupList:
+		m.modelGroupList, cmd = m.modelGroupList.Update(msg)
 	case state.ViewEditItem:
 		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
 	}
@@ -193,7 +210,7 @@ func (m *mainModel) dispatchProcess(
 
 		// This callback triggers when external process exits
 		if err != nil {
-			if utils.StringEmpty(readableStdErr) {
+			if utils.StringEmpty(&readableStdErr) {
 				readableStdErr = err.Error()
 			}
 
@@ -246,7 +263,7 @@ func (m *mainModel) dispatchProcessSSHConnect(msg message.RunProcessSSHConnect) 
 }
 
 func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadConfig) tea.Cmd {
-	m.logger.Debug("[EXEC] Read ssh configuration for host: %+v", msg.Host)
+	m.logger.Debug("[EXEC] Read ssh configuration for host: '%+v'", msg.Host)
 	process := utils.BuildProcessInterceptStdAll(msg.Host.CmdSSHConfig())
 	m.logger.Info("[EXEC] Run process: '%s'", process.String())
 
@@ -291,7 +308,7 @@ func (m *mainModel) handleProcessSuccess(msg message.RunProcessSuccess) tea.Cmd 
 
 func (m *mainModel) handleProcessError(msg message.RunProcessErrorOccurred) {
 	var errMsg string
-	if !utils.StringEmpty(msg.StdOut) {
+	if !utils.StringEmpty(&msg.StdOut) {
 		errMsg = fmt.Sprintf("%s\nDetails: %s", msg.StdErr, msg.StdOut)
 	} else {
 		errMsg = msg.StdErr

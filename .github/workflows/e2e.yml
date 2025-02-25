@@ -7,29 +7,25 @@ on:
   workflow_dispatch:
 jobs:
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: VHS Action
-        uses: charmbracelet/vhs-action@v2.1.0
-        with:
-          version: v0.8.0
       - name: Install Go
         uses: actions/setup-go@v3
         with:
           go-version: 1.23
           cache: true
+      # Fails: because ffmpeg can't be downloaded anymore. Installing VHS and its deps manually. Longer, but works.
+      # - name: VHS Action
+      #   uses: charmbracelet/vhs-action@v2.1.0
+      #   with:
+      #     version: v0.9.0
+      - name: Install VHS dependencies
+        run: sudo apt update > /dev/null && sudo apt-get install -y ffmpeg jq > /dev/null && sudo snap install ttyd --classic > /dev/null
+      - name: Install VHS utility
+        run: go install github.com/charmbracelet/vhs@v0.9.0 > /dev/null && vhs -v
       - name: Build Binary
         run: go build -o gg ./cmd/goto/*.go && cp gg /usr/local/bin && gg -v
       - name: Run integration tests
         run: ./e2e/run.sh
-      # Following tasks are only required if you want to install vhs manually
-      # - name: Set up Node
-      #   uses: actions/setup-node@v3
-      #   with:
-      #     node-version: 16
-      # - name: Install system packages
-      #   run: sudo apt-get update && sudo apt-get install -y ffmpeg jq && sudo snap install ttyd --classic && go install github.com/charmbracelet/vhs@v0.8
-      # - name: Install VHS utility
-      #   run: go install github.com/charmbracelet/vhs@v0.8

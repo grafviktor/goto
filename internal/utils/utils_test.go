@@ -7,14 +7,37 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_stringEmpty(t *testing.T) {
-	require.True(t, StringEmpty(""))
-	require.True(t, StringEmpty(" "))
-	require.False(t, StringEmpty("test"))
+	require.True(t, StringEmpty(lo.ToPtr("")))
+	require.True(t, StringEmpty(lo.ToPtr(" ")))
+	require.False(t, StringEmpty(lo.ToPtr("test")))
+}
+
+func Test_StringAbbreviation(t *testing.T) {
+	testMap := map[string]string{
+		"":                       "",
+		"11":                     "1",
+		"3 Rivers, Texas":        "3T",
+		"Alexandria, Egypt":      "AE",
+		"Arzamas16":              "A1",
+		"Atomgrad":               "A",
+		"Babylon Iraq":           "BI",
+		"Carthage, North Africa": "CA",
+		"Sverdlovsk 45":          "S4",
+		"NewYork":                "NY",
+		"Rio de Janeiro":         "RJ",
+		"Thebes_Greece":          "TG",
+	}
+
+	for underTest, expected := range testMap {
+		actual := StringAbbreviation(underTest)
+		require.Equal(t, expected, actual)
+	}
 }
 
 func Test_CreateAppDirIfNotExists(t *testing.T) {
