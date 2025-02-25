@@ -90,7 +90,6 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.appState.CurrentView = state.ViewHostList
 	case message.OpenViewSelectGroup:
 		m.logger.Debug("[UI] Open select group form")
-		m.modelGroupList.Update(msg)
 		m.appState.CurrentView = state.ViewGroupList
 	case message.CloseViewSelectGroup:
 		m.logger.Debug("[UI] Close select group form")

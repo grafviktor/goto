@@ -334,7 +334,7 @@ func TestEnterRemoveItemMode(t *testing.T) {
 	require.Nil(t, cmd, "Wrong message type")
 	// Ensure that we entered remove mode and title is updated
 	require.Equal(t, modeRemoveItem, model.mode)
-	require.Equal(t, "delete \"Mock Host 1\" ? (y/N)", utils.StripStyles(model.Title))
+	require.Equal(t, "delete \"Mock Host 1\"? (y/N)", utils.StripStyles(model.Title))
 }
 
 func TestExitRemoveItemMode(t *testing.T) {
@@ -401,7 +401,7 @@ func TestListTitleUpdate(t *testing.T) {
 	// Call updateTitle function
 	model.updateTitle()
 	// Check that app is now asking for a confirmation before delete
-	require.Equal(t, "delete \"Mock Host 1\" ? (y/N)", utils.StripStyles(model.Title))
+	require.Equal(t, "delete \"Mock Host 1\"? (y/N)", utils.StripStyles(model.Title))
 
 	// 3 Call updateTitle selected a host
 	model = *NewMockListModel(false)
@@ -433,7 +433,7 @@ func TestListTitleUpdate(t *testing.T) {
 	// Call updateTitle function
 	model.updateTitle()
 	// Check that app is asking the user for confirmation.
-	require.Equal(t, "close app ? (y/N)", utils.StripStyles(model.Title))
+	require.Equal(t, "close app? (y/N)", utils.StripStyles(model.Title))
 }
 
 func TestListModel_title_when_app_just_starts(t *testing.T) {
@@ -441,7 +441,7 @@ func TestListModel_title_when_app_just_starts(t *testing.T) {
 	model := *NewMockListModel(false)
 	model.logger = &test.MockLogger{}
 	// When app just starts, it should display "press 'n' to add a new host"
-	require.Equal(t, "press 'n' to add a new host", model.Title)
+	require.Equal(t, "press 'n' to add a new host", utils.StripStyles(model.Title))
 	// When press 'down' key, it should display a proper ssh connection string
 	model.Update(tea.KeyMsg{Type: tea.KeyDown})
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", utils.StripStyles(model.Title))
@@ -503,7 +503,7 @@ func TestListModel_copyItem(t *testing.T) {
 	storage := test.NewMockStorage(storageShouldFail)
 	lm := New(context.TODO(), storage, &state.ApplicationState{}, &test.MockLogger{})
 	teaCmd := lm.copyItem()
-	require.Equal(t, itemNotSelectedMessage, teaCmd().(message.ErrorOccurred).Err.Error())
+	require.Equal(t, itemNotSelectedErrMsg, teaCmd().(message.ErrorOccurred).Err.Error())
 
 	// Second case: storage is OK, and we have to ensure that copied host title as we expect it to be:
 	lm = NewMockListModel(false)
@@ -1028,7 +1028,7 @@ func Test_HandleKeyboardEvent_Escape(t *testing.T) {
 	_, cmd = model.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	require.Nil(t, cmd)
 	require.Equal(t, modeCloseApp, model.mode)
-	require.Equal(t, "close app ? (y/N)", utils.StripStyles(model.Title))
+	require.Equal(t, "close app? (y/N)", utils.StripStyles(model.Title))
 }
 
 func TestUpdate_HostFocusPreservedAfterClearFilterMessage(t *testing.T) {

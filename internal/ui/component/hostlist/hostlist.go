@@ -26,13 +26,13 @@ import (
 )
 
 var (
-	styleDoc               = lipgloss.NewStyle().Margin(1, 2, 1, 0)
-	itemNotSelectedMessage = "you must select an item"
-	modeCloseApp           = "closeApp"
-	modeDefault            = ""
-	modeRemoveItem         = "removeItem"
-	modeSSHCopyID          = "sshCopyID"
-	defaultListTitle       = "press 'n' to add a new host"
+	styleDoc              = lipgloss.NewStyle().Margin(1, 2, 1, 0)
+	itemNotSelectedErrMsg = "you must select an item"
+	modeCloseApp          = "closeApp"
+	modeDefault           = ""
+	modeRemoveItem        = "removeItem"
+	modeSSHCopyID         = "sshCopyID"
+	defaultListTitle      = "press 'n' to add a new host"
 )
 
 type iLogger interface {
@@ -97,7 +97,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	m.AdditionalShortHelpKeys = delegateKeys.ShortHelp
 	m.AdditionalFullHelpKeys = delegateKeys.FullHelp
 
-	m.Title = defaultListTitle
+	m.Title = m.Styles.Title.Render(defaultListTitle)
 	m.notificationMessageTimeout = time.Second
 
 	return &m
@@ -263,7 +263,7 @@ func (m *listModel) removeItem() tea.Cmd {
 		// We should not be here at all, because delete
 		// button isn't available when a host is not selected.
 		m.logger.Error("[UI] Cannot cast selected item to host model")
-		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedMessage)})
+		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedErrMsg)})
 	}
 
 	err := m.repo.Delete(item.ID)
@@ -344,7 +344,7 @@ func (m *listModel) removeItem() tea.Cmd {
 func (m *listModel) editItem() tea.Cmd {
 	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
-		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedMessage)})
+		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedErrMsg)})
 	}
 
 	// m.Model.ResetFilter()
@@ -360,7 +360,7 @@ func (m *listModel) copyItem() tea.Cmd {
 	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Error("[UI] Cannot cast selected item to host model")
-		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedMessage)})
+		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedErrMsg)})
 	}
 
 	originalHost := item.Host
@@ -546,7 +546,7 @@ func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 
 	if host == nil {
 		m.logger.Error("[UI] Could not find host with ID='%d'", m.appState.Selected)
-		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedMessage)})
+		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedErrMsg)})
 	}
 
 	if host.SSHClientConfig == nil {
@@ -566,35 +566,39 @@ func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 
 func (m *listModel) updateTitle() {
 	var newTitle string
-	item, ok := m.SelectedItem().(ListItemHost)
-	applyDefaultStyle := true
+	item, isHost := m.SelectedItem().(ListItemHost)
 
 	switch {
-	case !ok:
-		newTitle = defaultListTitle
-	case m.mode == modeSSHCopyID:
-		newTitle = "copy ssh key to the remote host? (y/N)"
-	case m.mode == modeRemoveItem:
-		newTitle = fmt.Sprintf("delete \"%s\" ? (y/N)", item.Title())
+	case m.mode == modeSSHCopyID && isHost:
+		newTitle = m.Styles.Title.Render("copy ssh key to the remote host? (y/N)")
+	case m.mode == modeRemoveItem && isHost:
+		newTitle = fmt.Sprintf("delete \"%s\"? (y/N)", item.Title())
+		newTitle = m.Styles.Title.Render(newTitle)
 	case m.mode == modeCloseApp:
-		newTitle = "close app ? (y/N)"
-	default:
+		newTitle = m.Styles.Title.Render("close app? (y/N)")
+	case isHost:
 		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
-		newTitle = strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
-		newTitle = utils.RemoveDuplicateSpaces(newTitle)
-		if !utils.StringEmpty(&m.appState.Group) {
-			shortGroupName := utils.StringAbbreviation(m.appState.Group)
-			applyDefaultStyle = false
-			newTitle = fmt.Sprintf("%s%s",
-				m.Styles.Group.Render(shortGroupName),
-				m.Styles.Title.Render(newTitle))
-		}
+		connectCmd := strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
+		newTitle = m.prefixWithGroupName(connectCmd)
+	default:
+		// If it's NOT a host list item, then probably the list is just empty
+		newTitle = m.prefixWithGroupName(defaultListTitle)
 	}
 
 	if m.Title != newTitle {
-		m.Title = lo.Ternary(applyDefaultStyle, m.Styles.Title.Render(newTitle), newTitle)
+		m.Title = newTitle
 		m.logger.Debug("[UI] New list title: %s", newTitle)
 	}
+}
+
+func (m *listModel) prefixWithGroupName(title string) string {
+	if !utils.StringEmpty(&m.appState.Group) {
+		shortGroupName := utils.StringAbbreviation(m.appState.Group)
+		shortGroupName = m.Styles.Group.Render(shortGroupName)
+		return fmt.Sprintf("%s%s", shortGroupName, m.Styles.Title.Render(title))
+	}
+
+	return m.Styles.Title.Render(title)
 }
 
 func (m *listModel) updateKeyMap() {
@@ -638,7 +642,7 @@ func (m *listModel) enterSSHCopyIDMode() tea.Cmd {
 	_, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Debug("[UI] Cannot copy id. Host is not selected.")
-		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedMessage)})
+		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedErrMsg)})
 	}
 
 	m.mode = modeSSHCopyID
@@ -653,7 +657,7 @@ func (m *listModel) enterRemoveItemMode() tea.Cmd {
 	_, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Debug("[UI] Cannot remove. Host is not selected.")
-		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedMessage)})
+		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedErrMsg)})
 	}
 
 	m.mode = modeRemoveItem
@@ -685,6 +689,7 @@ func (m *listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
 
 	m.logger.Error("[UI] Exit %s mode, but cannot set focus on an item in the list of hosts.", m.mode)
 	m.mode = modeDefault
+	m.updateTitle()
 	return nil
 }
 
@@ -712,6 +717,7 @@ func (m *listModel) displayNotificationMsg(msg string) tea.Cmd {
 		return nil
 	}
 
+	m.logger.Debug("[UI] Notification message: %s", msg)
 	m.Title = m.Styles.Title.Render(msg)
 	if m.notificationMessageTimer != nil {
 		m.notificationMessageTimer.Stop()

@@ -105,7 +105,7 @@ func (m *model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 			selected = ""
 		}
 
-		m.logger.Debug("[UI] Enter key. Select group '%s' and exit from group lust view.")
+		m.logger.Debug("[UI] Enter key. Select group '%s' and exit from group list view.", selected)
 		return tea.Sequence(
 			message.TeaCmd(message.GroupSelected{Name: selected}),
 			message.TeaCmd(message.CloseViewSelectGroup{}),
