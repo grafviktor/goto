@@ -15,8 +15,8 @@ import (
 
 // StringEmpty - checks if string is empty or contains only spaces.
 // s is string to check.
-func StringEmpty(s string) bool {
-	return len(strings.TrimSpace(s)) == 0
+func StringEmpty(s *string) bool {
+	return s == nil || len(strings.TrimSpace(*s)) == 0
 }
 
 // Regex pattern to split at the boundary between letters and numbers.
@@ -74,7 +74,7 @@ func StripStyles(input string) string {
 // CreateAppDirIfNotExists - creates application home folder if it doesn't exist.
 // appConfigDir is application home folder path.
 func CreateAppDirIfNotExists(appConfigDir string) error {
-	if StringEmpty(appConfigDir) {
+	if StringEmpty(&appConfigDir) {
 		return errors.New("bad argument")
 	}
 
@@ -98,7 +98,7 @@ func CreateAppDirIfNotExists(appConfigDir string) error {
 // If userDefinedPath is not empty, it will be used as application home folder
 // Else, userConfigDir will be used, which is system dependent.
 func AppDir(appName, userDefinedPath string) (string, error) {
-	if !StringEmpty(userDefinedPath) {
+	if !StringEmpty(&userDefinedPath) {
 		absolutePath, err := filepath.Abs(userDefinedPath)
 		if err != nil {
 			return "", err
@@ -116,7 +116,7 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 		return absolutePath, nil
 	}
 
-	if StringEmpty(appName) {
+	if StringEmpty(&appName) {
 		return "", errors.New("application home folder name is not provided")
 	}
 

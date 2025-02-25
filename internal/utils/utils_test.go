@@ -7,14 +7,15 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_stringEmpty(t *testing.T) {
-	require.True(t, StringEmpty(""))
-	require.True(t, StringEmpty(" "))
-	require.False(t, StringEmpty("test"))
+	require.True(t, StringEmpty(lo.ToPtr("")))
+	require.True(t, StringEmpty(lo.ToPtr(" ")))
+	require.False(t, StringEmpty(lo.ToPtr("test")))
 }
 
 func Test_StringAbbreviation(t *testing.T) {

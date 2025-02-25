@@ -68,21 +68,26 @@ func (hd *hostDelegate) updateLayout() {
 }
 
 func (hd *hostDelegate) isHostMovedToAnotherGroup(hostGroup string) bool {
-	appStatedGroup := hd.selectedGroup
-	return appStatedGroup != nil &&
-		*appStatedGroup != "" &&
-		!strings.EqualFold(hostGroup, *appStatedGroup)
+	// Return false if group is not selected, as all hosts should be displayed.
+	if utils.StringEmpty(hd.selectedGroup) {
+		return false
+	}
+
+	return !strings.EqualFold(*hd.selectedGroup, hostGroup)
 }
 
 func (hd *hostDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
-	hostItem, ok := item.(ListItemHost)
-	if *hd.layout == constant.ScreenLayoutGroup {
-		hostItem.Host.Description = hostItem.Group
-	} else if ok && hd.isHostMovedToAnotherGroup(hostItem.Group) {
-		groupIsEmpty := utils.StringEmpty(hostItem.Group)
-		groupName := lo.Ternary(groupIsEmpty, "[no group]", fmt.Sprintf("(%s)", hostItem.Group))
-		hostItem.Host.Title = fmt.Sprintf("%s %s", hostItem.Title(), groupHint.Render(groupName))
-	}
+	if itemCopy, ok := item.(ListItemHost); ok {
+		if hd.layout != nil && *hd.layout == constant.ScreenLayoutGroup {
+			itemCopy.Host.Description = itemCopy.Group
+		} else if hd.isHostMovedToAnotherGroup(itemCopy.Group) {
+			groupIsEmpty := utils.StringEmpty(&itemCopy.Group)
+			groupName := lo.Ternary(groupIsEmpty, "[no group]", fmt.Sprintf("(%s)", itemCopy.Group))
+			itemCopy.Host.Title = fmt.Sprintf("%s %s", itemCopy.Title(), groupHint.Render(groupName))
+		}
 
-	hd.DefaultDelegate.Render(w, m, index, hostItem)
+		hd.DefaultDelegate.Render(w, m, index, itemCopy)
+	} else {
+		hd.DefaultDelegate.Render(w, m, index, item)
+	}
 }

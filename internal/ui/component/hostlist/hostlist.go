@@ -582,7 +582,7 @@ func (m *listModel) updateTitle() {
 		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
 		newTitle = strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
 		newTitle = utils.RemoveDuplicateSpaces(newTitle)
-		if !utils.StringEmpty(m.appState.Group) {
+		if !utils.StringEmpty(&m.appState.Group) {
 			shortGroupName := utils.StringAbbreviation(m.appState.Group)
 			applyDefaultStyle = false
 			newTitle = fmt.Sprintf("%s%s",
@@ -708,7 +708,7 @@ func (m *listModel) confirmAction() tea.Cmd {
 }
 
 func (m *listModel) displayNotificationMsg(msg string) tea.Cmd {
-	if utils.StringEmpty(msg) {
+	if utils.StringEmpty(&msg) {
 		return nil
 	}
 

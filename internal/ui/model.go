@@ -211,7 +211,7 @@ func (m *mainModel) dispatchProcess(
 
 		// This callback triggers when external process exits
 		if err != nil {
-			if utils.StringEmpty(readableStdErr) {
+			if utils.StringEmpty(&readableStdErr) {
 				readableStdErr = err.Error()
 			}
 
@@ -309,7 +309,7 @@ func (m *mainModel) handleProcessSuccess(msg message.RunProcessSuccess) tea.Cmd 
 
 func (m *mainModel) handleProcessError(msg message.RunProcessErrorOccurred) {
 	var errMsg string
-	if !utils.StringEmpty(msg.StdOut) {
+	if !utils.StringEmpty(&msg.StdOut) {
 		errMsg = fmt.Sprintf("%s\nDetails: %s", msg.StdErr, msg.StdOut)
 	} else {
 		errMsg = msg.StdErr

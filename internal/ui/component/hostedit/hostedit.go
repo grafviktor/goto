@@ -66,7 +66,7 @@ type iLogger interface {
 }
 
 func notEmptyValidator(s string) error {
-	if utils.StringEmpty(s) {
+	if utils.StringEmpty(&s) {
 		return fmt.Errorf("value is required")
 	}
 
@@ -74,7 +74,7 @@ func notEmptyValidator(s string) error {
 }
 
 func networkPortValidator(s string) error {
-	if utils.StringEmpty(s) {
+	if utils.StringEmpty(&s) {
 		return nil
 	}
 
