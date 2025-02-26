@@ -1,5 +1,12 @@
 # Changelog #
 
+**[v1.3.0](https://github.com/grafviktor/goto/compare/v1.2.0...v1.3.0) - 2025-02-25**
+
+* Can now organize hosts into groups using `Group` input field [[details](https://github.com/grafviktor/goto/issues/66)].
+* Resolve various issues on Windows platform; remove polling cycle which was used to track terminal size [[details](https://github.com/grafviktor/goto/issues/78)].
+* Fix filtering mode issue when duplicate host appeared in the list [[details](https://github.com/grafviktor/goto/issues/84)].
+* Various minor improvements and bugfixes.
+
 **[v1.2.0](https://github.com/grafviktor/goto/compare/v1.1.0...v1.2.0) - 2024-09-30**
 
 * Description field is now collapsible, press `v` to toggle the layout [[details](https://github.com/grafviktor/goto/issues/61)].
