@@ -39,7 +39,7 @@ yay -S goto-ssh-bin
 
 ### 2.2. Organize your hostnames into logical groups ###
 
-![Demonstrates duplicating an existing record in goto database](demo/switch_between_groups.gif)
+![Shows how to switch between hosts groups](demo/switch_between_groups.gif)
 
 ### 2.3. Search efficiently across all your records ###
 

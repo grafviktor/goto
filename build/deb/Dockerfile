@@ -1,12 +1,12 @@
 # Build stage
-FROM debian:12.4 as deb-build-stage
+FROM debian:trixie-20250224 as deb-build-stage
 ARG VERSION
 ARG BRANCH
 ENV LANG=C
 ENV CGO_ENABLED=0
 ENV WORK_DIR="/build"
 ENV PACKAGE_SRC_ROOT="${WORK_DIR}/goto_${VERSION}_amd64"
-RUN apt update && apt install git build-essential golang-go -y
+RUN apt update >/dev/null && apt install git build-essential golang-go -y >/dev/null
 WORKDIR "$WORK_DIR"
 RUN \
   git clone --depth 1 --branch ${BRANCH} https://github.com/grafviktor/goto.git . && \
@@ -22,7 +22,8 @@ RUN \
   dpkg-deb -v --build "${WORK_DIR}/goto_${VERSION}_amd64"
 RUN \
   dpkg -i goto_${VERSION}_amd64.deb && \
-  gg -v
+  echo -e "\033[0;92mDEB build complete!\033[0m" && \
+  echo -e "\033[0;92m$(gg -v)\033[0m"
 
 
 # Export stage

@@ -3,7 +3,7 @@ FROM almalinux:9.3-20231124 as rpm-build-stage
 ARG VERSION
 ARG BRANCH
 ENV LANG=C
-RUN yum install -y rpmdevtools rpmlint golang git
+RUN yum install -y rpmdevtools rpmlint golang git >/dev/null
 ADD build/rpm/goto.spec /tmp/
 RUN rpmdev-setuptree && \
   # rpmbuild should use XZ compression for packages, to avoid "rpmlib(PayloadIsZstd) <= 5.4.18-1 is needed" error
@@ -13,7 +13,8 @@ RUN rpmdev-setuptree && \
   spectool -gR --define "_version $VERSION" --define "_date $(date '+%a %b %d %Y')" --define "_branch $BRANCH" ~/rpmbuild/SPECS/goto.spec && \
   rpmbuild -ba --define "_version $VERSION" --define "_date $(date '+%a %b %d %Y')" --define "_branch $BRANCH" ~/rpmbuild/SPECS/goto.spec && \
   rpm -ivh ~/rpmbuild/RPMS/x86_64/goto-${VERSION}.x86_64.rpm && \
-  gg -v
+  echo -e "\033[0;92mRPM build complete!\033[0m" && \
+  echo -e "\033[0;92m$(gg -v)\033[0m"
 
 # Export stage
 # Copy from build container to host file system.
