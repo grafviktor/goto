@@ -1,6 +1,6 @@
-## Demonstrations and Use Cases ##
+## Demonstrations and use cases ##
 
-### Easily Manage Your Hosts Database ###
+### Easily manage your hosts database ###
 
 ![Demonstrates how to duplicate an existing record in the GOTO database.](duplicate_existing_record.gif)
 
@@ -8,17 +8,17 @@
 
 ![Shows how to toggle between full, group and compact host list views.](toggle_between_full_and_compact_view.gif)
 
-### Deploy Public SSH Key to a Remote Host Using the `t` Shortcut ###
+### Deploy public SSH key to a remote host using the `t` shortcut ###
 
 ![Illustrates copying the public SSH key to an SSH server](copy_ssh_key.gif)
 
-### Create Custom Commands ###
+### Create custom commands ###
 
 ![Create Custom Commands](use_custom_config.gif)
 
 ![Demonstrates setting up custom configurations and establishing a SOCKS proxy](create_proxy.gif)
 
-### Integrate GOTO with [tmux](https://github.com/tmux/tmux) for Side-by-Side operations ###
+### Run GOTO along with [tmux](https://github.com/tmux/tmux) for side-by-side operations ###
 
 ![Shows how to use GOTO alongside tmux for simultaneous log monitoring](combine_with_tmux.gif)
 
