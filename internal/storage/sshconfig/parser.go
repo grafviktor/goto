@@ -1,0 +1,82 @@
+package sshconfig
+
+import (
+	"errors"
+	"strings"
+
+	model "github.com/grafviktor/goto/internal/model/host"
+)
+
+type Lexer interface {
+	Tokenize() []Token
+}
+
+type Parser struct {
+	lexer       Lexer
+	currentHost *model.Host
+	foundHosts  []model.Host
+}
+
+func NewParser(lexer Lexer) *Parser {
+	return &Parser{
+		lexer: lexer,
+	}
+}
+
+func (p *Parser) hostValid() bool {
+	if p.currentHost == nil {
+		return false
+	}
+
+	if strings.TrimSpace(p.currentHost.Title) == "" || strings.Contains(p.currentHost.Title, "*") {
+		return false
+	}
+
+	if strings.TrimSpace(p.currentHost.Address) == "" {
+		return false
+	}
+
+	return true
+}
+
+func (p *Parser) Parse() ([]model.Host, error) {
+	if p.lexer == nil {
+		return nil, errors.New("Lexer is not set")
+	}
+
+	hostTokens := p.lexer.Tokenize()
+
+	for _, token := range hostTokens {
+		switch token.Type {
+		case TokenType.HOST:
+			// New host found, append current host if it is valid.
+			p.appendLastHostIfValid()
+			p.currentHost = &model.Host{
+				Title: token.Value(),
+			}
+		case TokenType.HOSTNAME:
+			p.currentHost.Address = token.Value()
+		case TokenType.NETWORK_PORT:
+			p.currentHost.RemotePort = token.Value()
+		case TokenType.IDENTITY_FILE:
+			p.currentHost.IdentityFilePath = token.Value()
+		case TokenType.USER:
+			p.currentHost.LoginName = token.Value()
+		case TokenType.GROUP:
+			p.currentHost.Group = token.Value()
+		case TokenType.DESCRIPTION:
+			p.currentHost.Description = token.Value()
+		}
+	}
+
+	// Append last host if it is valid
+	p.appendLastHostIfValid()
+
+	return p.foundHosts, nil
+}
+
+func (p *Parser) appendLastHostIfValid() {
+	if p.hostValid() {
+		p.foundHosts = append(p.foundHosts, *p.currentHost)
+	}
+}
