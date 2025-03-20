@@ -15,7 +15,7 @@ import (
 	model "github.com/grafviktor/goto/internal/model/host"
 )
 
-var _ HostStorage = &yamlStorage{}
+var _ HostStorage = &yamlFile{}
 
 const (
 	hostsFile = "hosts.yaml"
@@ -31,19 +31,19 @@ type iLogger interface {
 	Error(format string, args ...any)
 }
 
-// NewYAML creates new YAML storage.
-func NewYAML(ctx context.Context, appFolder string, logger iLogger) (*yamlStorage, error) {
+// newYAMLStorage creates new YAML storage.
+func newYAMLStorage(ctx context.Context, appFolder string, logger iLogger) (*yamlFile, error) {
 	logger.Debug("[STORAGE] Init YAML storage. Config folder %s", appFolder)
 	fsDataPath := path.Join(appFolder, hostsFile)
 
-	return &yamlStorage{
+	return &yamlFile{
 		innerStorage: make(map[int]yamlHostWrapper),
 		fsDataPath:   fsDataPath,
 		logger:       logger,
 	}, nil
 }
 
-type yamlStorage struct {
+type yamlFile struct {
 	innerStorage map[int]yamlHostWrapper
 	nextID       int
 	fsDataPath   string
@@ -54,7 +54,7 @@ type yamlHostWrapper struct {
 	Host model.Host `yaml:"host"`
 }
 
-func (s *yamlStorage) flushToDisk() error {
+func (s *yamlFile) flushToDisk() error {
 	// map contains values in shuffled order
 	mapValues := lo.Values(s.innerStorage)
 	// sorting slice by index
@@ -78,7 +78,7 @@ func (s *yamlStorage) flushToDisk() error {
 	return nil
 }
 
-func (s *yamlStorage) Save(host model.Host) (model.Host, error) {
+func (s *yamlFile) Save(host model.Host) (model.Host, error) {
 	if host.ID == idEmpty {
 		s.logger.Debug("[STORAGE] Generate new id for new host with title: %s", host.Title)
 		s.nextID++
@@ -96,7 +96,7 @@ func (s *yamlStorage) Save(host model.Host) (model.Host, error) {
 	return host, err
 }
 
-func (s *yamlStorage) Delete(hostID int) error {
+func (s *yamlFile) Delete(hostID int) error {
 	s.logger.Info("[STORAGE] Delete host with id: %d", hostID)
 	delete(s.innerStorage, hostID)
 
@@ -107,7 +107,7 @@ func (s *yamlStorage) Delete(hostID int) error {
 	return err
 }
 
-func (s *yamlStorage) GetAll() ([]model.Host, error) {
+func (s *yamlFile) GetAll() ([]model.Host, error) {
 	// re-create innerStorage before reading file data
 	s.innerStorage = make(map[int]yamlHostWrapper)
 	s.logger.Debug("[STORAGE] Read hosts from file: %s\n", s.fsDataPath)
@@ -149,7 +149,7 @@ func (s *yamlStorage) GetAll() ([]model.Host, error) {
 	return hosts, nil
 }
 
-func (s *yamlStorage) Get(hostID int) (model.Host, error) {
+func (s *yamlFile) Get(hostID int) (model.Host, error) {
 	s.logger.Debug("[STORAGE] Read host with id %d from the database", hostID)
 	found, ok := s.innerStorage[hostID]
 
@@ -160,4 +160,8 @@ func (s *yamlStorage) Get(hostID int) (model.Host, error) {
 
 	s.logger.Debug("[STORAGE] Host id %d found in the database", hostID)
 	return found.Host, nil
+}
+
+func (s *yamlFile) Type() StorageEnum {
+	return storageType.YAML_FILE
 }

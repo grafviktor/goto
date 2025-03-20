@@ -8,6 +8,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/model/ssh"
+	"github.com/grafviktor/goto/internal/storage"
 )
 
 // =============================================== Storage
@@ -44,7 +45,7 @@ func (ms *mockStorage) Delete(id int) error {
 		return errors.New("mock error")
 	}
 
-	_, id, found := lo.FindIndexOf[host.Host](ms.Hosts, func(h host.Host) bool {
+	_, id, found := lo.FindIndexOf(ms.Hosts, func(h host.Host) bool {
 		return h.ID == id
 	})
 
@@ -84,4 +85,8 @@ func (ms *mockStorage) Save(m host.Host) (host.Host, error) {
 	ms.Hosts = append(ms.Hosts, m)
 
 	return m, nil
+}
+
+func (ms *mockStorage) Type() storage.StorageEnum {
+	return "MOCK STORAGE"
 }
