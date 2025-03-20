@@ -31,6 +31,7 @@ type Host struct {
 	LoginName        string      `yaml:"username,omitempty"`
 	IdentityFilePath string      `yaml:"identity_file_path,omitempty"`
 	SSHClientConfig  *ssh.Config `yaml:"-"`
+	SourceStorage    string      `yaml:"-"`
 }
 
 // Clone host model.

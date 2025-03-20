@@ -17,6 +17,7 @@ type iLogger interface {
 type User struct {
 	AppHome  string `env:"GG_HOME"`
 	LogLevel string `env:"GG_LOG_LEVEL" envDefault:"info"`
+	SSHHome  string `env:"SSH_HOME"`
 }
 
 // Print outputs user-definable parameters in the console.
