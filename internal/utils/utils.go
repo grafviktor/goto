@@ -130,6 +130,14 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 	return path.Join(userConfigDir, appName), nil
 }
 
+func UserHomeDir() string {
+	if userHomeDir, err := os.UserHomeDir(); err == nil {
+		return userHomeDir
+	}
+
+	return "~"
+}
+
 // CheckAppInstalled - checks if application is installed and can be found in executable path
 // appName - name of the application to be looked for in $PATH.
 func CheckAppInstalled(appName string) error {

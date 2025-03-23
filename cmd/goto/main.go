@@ -32,9 +32,15 @@ func main() {
 	// Set application version and build details
 	version.Set(buildVersion, buildCommit, buildBranch, buildDate)
 
+	appDefaultHome, _ := utils.AppDir(appName, "")
 	environmentParams := config.User{}
 	// Parse environment parameters. These parameters have lower precedence than command line flags
-	if err := env.Parse(&environmentParams); err != nil {
+	if err := env.ParseWithOptions(&environmentParams, env.Options{
+		Environment: map[string]string{
+			"APP_DEFAULT_HOME":   appDefaultHome,
+			"SSH_DEFAULT_CONFIG": fmt.Sprintf("%s/.ssh/config", utils.UserHomeDir()),
+		},
+	}); err != nil {
 		fmt.Printf("%+v\n", err)
 	}
 
@@ -49,6 +55,7 @@ func main() {
 	flag.BoolVar(&displayApplicationDetailsAndExit, "v", false, "Display application details")
 	flag.StringVar(&commandLineParams.AppHome, "f", environmentParams.AppHome, "Application home folder")
 	flag.StringVar(&commandLineParams.LogLevel, "l", environmentParams.LogLevel, "Log verbosity level: debug, info")
+	flag.StringVar(&commandLineParams.SSHConfig, "s", environmentParams.SSHConfig, "Specifies an alternative per-user SSH configuration file path")
 	flag.Parse()
 
 	var err error
