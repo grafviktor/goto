@@ -32,3 +32,15 @@ const (
 	// ProcessTypeSSHConnect is used when we want to connect to a remote host.
 	ProcessTypeSSHConnect ProcessType = "ssh-connect"
 )
+
+type HostStorageEnum string
+
+var HostStorageType = struct {
+	COMBINED   HostStorageEnum
+	SSH_CONFIG HostStorageEnum
+	YAML_FILE  HostStorageEnum
+}{
+	COMBINED:   "COMBINED",
+	SSH_CONFIG: "SSH_CONFIG",
+	YAML_FILE:  "YAML_FILE",
+}

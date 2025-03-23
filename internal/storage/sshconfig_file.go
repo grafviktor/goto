@@ -3,8 +3,8 @@ package storage
 import (
 	"context"
 	"errors"
-	"fmt"
 
+	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/storage/sshconfig"
 )
@@ -18,22 +18,21 @@ type SSHParser interface {
 }
 
 type SSHConfigFile struct {
-	sshconfig SSHParser
-	hosts     []model.Host
+	parser SSHParser
+	hosts  []model.Host
 }
 
 // newSSHConfigStorage - constructs new SSHStorage.
-func newSSHConfigStorage(_ context.Context, sshHome string, logger iLogger) (*SSHConfigFile, error) {
-	sshConfigPath := fmt.Sprintf("%s/ssh_config", sshHome)
-	lexer := sshconfig.NewFileLexer(sshConfigPath)
-	parser := sshconfig.NewParser(lexer)
-	return &SSHConfigFile{sshconfig: parser}, nil
+func newSSHConfigStorage(_ context.Context, sshConfigPath string, logger iLogger) (*SSHConfigFile, error) {
+	lexer := sshconfig.NewFileLexer(sshConfigPath, logger)
+	parser := sshconfig.NewParser(lexer, logger)
+	return &SSHConfigFile{parser: parser}, nil
 }
 
 // GetAll - returns all hosts.
 func (s *SSHConfigFile) GetAll() ([]model.Host, error) {
 	var err error
-	s.hosts, err = s.sshconfig.Parse()
+	s.hosts, err = s.parser.Parse()
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +46,7 @@ func (s *SSHConfigFile) GetAll() ([]model.Host, error) {
 
 // Get - returns host by ID.
 func (s *SSHConfigFile) Get(hostID int) (model.Host, error) {
-	return model.Host{}, nil
+	return s.hosts[hostID], nil
 }
 
 // Save - throws not supported error.
@@ -60,6 +59,6 @@ func (s *SSHConfigFile) Delete(id int) error {
 	return ErrNotSupported
 }
 
-func (s *SSHConfigFile) Type() StorageEnum {
-	return storageType.SSH_CONFIG
+func (s *SSHConfigFile) Type() constant.HostStorageEnum {
+	return constant.HostStorageType.SSH_CONFIG
 }

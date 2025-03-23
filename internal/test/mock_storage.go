@@ -6,9 +6,9 @@ import (
 
 	"github.com/samber/lo"
 
+	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/model/ssh"
-	"github.com/grafviktor/goto/internal/storage"
 )
 
 // =============================================== Storage
@@ -87,6 +87,6 @@ func (ms *mockStorage) Save(m host.Host) (host.Host, error) {
 	return m, nil
 }
 
-func (ms *mockStorage) Type() storage.StorageEnum {
+func (ms *mockStorage) Type() constant.HostStorageEnum {
 	return "MOCK STORAGE"
 }

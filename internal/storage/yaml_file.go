@@ -25,12 +25,6 @@ const (
 	idEmpty = 0
 )
 
-type iLogger interface {
-	Debug(format string, args ...any)
-	Info(format string, args ...any)
-	Error(format string, args ...any)
-}
-
 // newYAMLStorage creates new YAML storage.
 func newYAMLStorage(ctx context.Context, appFolder string, logger iLogger) (*yamlFile, error) {
 	logger.Debug("[STORAGE] Init YAML storage. Config folder %s", appFolder)
@@ -162,6 +156,6 @@ func (s *yamlFile) Get(hostID int) (model.Host, error) {
 	return found.Host, nil
 }
 
-func (s *yamlFile) Type() StorageEnum {
-	return storageType.YAML_FILE
+func (s *yamlFile) Type() constant.HostStorageEnum {
+	return constant.HostStorageType.YAML_FILE
 }

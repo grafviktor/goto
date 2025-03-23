@@ -8,6 +8,12 @@ import (
 	"strings"
 )
 
+type iLogger interface {
+	Debug(format string, args ...any)
+	Info(format string, args ...any)
+	Error(format string, args ...any)
+}
+
 // Regex to validate SSH usernames
 // tests:
 // "admin",          // ✅ Valid

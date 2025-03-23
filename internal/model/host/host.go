@@ -4,6 +4,7 @@ package host
 import (
 	"strings"
 
+	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/ssh"
 )
 
@@ -22,16 +23,16 @@ func NewHost(id int, title, description, address, loginName, identityFilePath, r
 
 // Host model definition.
 type Host struct {
-	ID               int         `yaml:"-"`
-	Title            string      `yaml:"title"`
-	Description      string      `yaml:"description,omitempty"`
-	Group            string      `yaml:"group,omitempty"`
-	Address          string      `yaml:"address"`
-	RemotePort       string      `yaml:"network_port,omitempty"`
-	LoginName        string      `yaml:"username,omitempty"`
-	IdentityFilePath string      `yaml:"identity_file_path,omitempty"`
-	SSHClientConfig  *ssh.Config `yaml:"-"`
-	SourceStorage    string      `yaml:"-"`
+	ID               int                      `yaml:"-"`
+	Title            string                   `yaml:"title"`
+	Description      string                   `yaml:"description,omitempty"`
+	Group            string                   `yaml:"group,omitempty"`
+	Address          string                   `yaml:"address"`
+	RemotePort       string                   `yaml:"network_port,omitempty"`
+	LoginName        string                   `yaml:"username,omitempty"`
+	IdentityFilePath string                   `yaml:"identity_file_path,omitempty"`
+	SSHClientConfig  *ssh.Config              `yaml:"-"`
+	StorageType      constant.HostStorageEnum `yaml:"-"`
 }
 
 // Clone host model.
