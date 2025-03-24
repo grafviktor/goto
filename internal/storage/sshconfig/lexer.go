@@ -2,8 +2,6 @@ package sshconfig
 
 import (
 	"bufio"
-	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,11 +12,13 @@ const MAX_DEPTH = 16
 
 type FileLexer struct {
 	filePath string
+	logger   iLogger
 }
 
-func NewFileLexer(filePath string) *FileLexer {
+func NewFileLexer(filePath string, log iLogger) *FileLexer {
 	return &FileLexer{
 		filePath: filePath,
+		logger:   log,
 	}
 }
 
@@ -36,7 +36,7 @@ func (fl *FileLexer) Tokenize() []Token {
 func (fl *FileLexer) loadFromFile(includeToken Token, children []Token, currentDepth int) []Token {
 	currentDepth++
 	if currentDepth > MAX_DEPTH {
-		log.Println("MAX DEPTH EXCEEDED")
+		fl.logger.Error("[STORAGE]: Max include depth reached")
 
 		return children
 	}
@@ -47,8 +47,8 @@ func (fl *FileLexer) loadFromFile(includeToken Token, children []Token, currentD
 
 	file, err := os.Open(includeToken.value)
 	if err != nil {
-		fmt.Println("Error opening file:", err)
-		return children
+		fl.logger.Error("[STORAGE] Error opening file: %+v", err)
+		panic(err)
 	}
 	defer file.Close()
 
@@ -71,18 +71,17 @@ func (fl *FileLexer) loadFromFile(includeToken Token, children []Token, currentD
 		case strings.HasPrefix(line, "IdentityFile"):
 			token = fl.identityFileToken(line)
 		case strings.HasPrefix(line, "# GG:GROUP"):
-			token = fl.metaInfoToken(TokenType.GROUP, line)
+			token = fl.metaDataToken(TokenType.GROUP, line)
 		case strings.HasPrefix(line, "# GG:DESCRIPTION"):
-			token = fl.metaInfoToken(TokenType.DESCRIPTION, line)
+			token = fl.metaDataToken(TokenType.DESCRIPTION, line)
 		default:
 			token = Token{Type: TokenType.UNSUPPORTED}
 		}
 
 		if token.Type == TokenType.INCLUDE_FILE {
-			includeTokens := fl.parseIncludeTokens(token) // TODO: rename to handleIncludeStatement
+			includeTokens := fl.handleIncludeToken(token)
 			for _, includeToken := range includeTokens {
-				includedTokens := fl.loadFromFile(includeToken, children, currentDepth)
-				children = append(children, includedTokens...)
+				children = fl.loadFromFile(includeToken, children, currentDepth)
 			}
 
 			continue
@@ -95,7 +94,8 @@ func (fl *FileLexer) loadFromFile(includeToken Token, children []Token, currentD
 
 	if err := scanner.Err(); err != nil {
 		// TODO: Add line number to error message
-		fmt.Println("Error reading file:", err)
+		fl.logger.Error("[STORAGE] Error reading file %+v", err)
+		panic(err)
 	}
 
 	return children
@@ -192,13 +192,18 @@ func (fl *FileLexer) identityFileToken(line string) Token {
 	}
 }
 
-func (fl *FileLexer) parseIncludeTokens(token Token) []Token {
+func (fl *FileLexer) handleIncludeToken(token Token) []Token {
 	tokens := []Token{}
 	if token.Type != TokenType.INCLUDE_FILE {
 		return tokens
 	}
 
-	matches, err := filepath.Glob(token.value)
+	filePath := token.value
+	if !filepath.IsAbs(filePath) {
+		filePath = filepath.Join(filepath.Dir(fl.filePath), filePath)
+	}
+
+	matches, err := filepath.Glob(filePath)
 	if err != nil {
 		return tokens
 	}
@@ -220,14 +225,14 @@ func (fl *FileLexer) parseIncludeTokens(token Token) []Token {
 		tokens = append(tokens, Token{
 			Type:  TokenType.INCLUDE_FILE,
 			key:   "Include",
-			value: token.value,
+			value: path,
 		})
 	}
 
 	return tokens
 }
 
-func (fl *FileLexer) metaInfoToken(tokenType tokenEnum, line string) Token {
+func (fl *FileLexer) metaDataToken(tokenType tokenEnum, line string) Token {
 	tokenFound := false
 	line, tokenFound = strings.CutPrefix(line, "# GG:")
 	if !tokenFound {
