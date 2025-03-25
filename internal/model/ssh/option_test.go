@@ -123,17 +123,17 @@ func Test_ConnectCommand(t *testing.T) {
 func Test_LoadConfigCommand(t *testing.T) {
 	tests := []struct {
 		name           string
-		option         OptionReadConfig
+		option         OptionReadHostConfig
 		expectedResult string
 	}{
 		{
 			name:           "Command with ReadConfig Option",
-			option:         OptionReadConfig{Value: "example.com"},
+			option:         OptionReadHostConfig{Value: "example.com"},
 			expectedResult: "ssh -G example.com",
 		},
 		{
 			name:           "Command with empty ReadConfig Option",
-			option:         OptionReadConfig{Value: ""},
+			option:         OptionReadHostConfig{Value: ""},
 			expectedResult: "ssh",
 		},
 	}

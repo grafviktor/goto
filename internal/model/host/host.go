@@ -78,14 +78,14 @@ func (h *Host) CmdSSHConnect() string {
 // CmdSSHConfig - returns SSH command for loading host default configuration.
 func (h *Host) CmdSSHConfig() string {
 	if h.IsUserDefinedSSHCommand() {
-		return ssh.LoadConfigCommand(ssh.OptionReadConfig{Value: h.Address})
+		return ssh.LoadConfigCommand(ssh.OptionReadHostConfig{Value: h.Address})
 	}
 
 	return ssh.LoadConfigCommand([]ssh.Option{
 		ssh.OptionPrivateKey{Value: h.IdentityFilePath},
 		ssh.OptionRemotePort{Value: h.RemotePort},
 		ssh.OptionLoginName{Value: h.LoginName},
-		ssh.OptionReadConfig{Value: h.Address},
+		ssh.OptionReadHostConfig{Value: h.Address},
 	}...)
 }
 

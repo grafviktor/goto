@@ -19,8 +19,10 @@ type (
 	OptionLoginName struct{ Value string }
 	// OptionAddress - is a remote host address. Example: somehost.com.
 	OptionAddress struct{ Value string }
-	// OptionReadConfig - is used to read config file from ssh_config.
-	OptionReadConfig struct{ Value string }
+	// OptionReadHostConfig - is used to read config file from ssh_config.
+	OptionReadHostConfig struct{ Value string }
+	// OptionConfigFilePath - is a path to ssh_config file.
+	OptionConfigFilePath struct{ Value string }
 )
 
 func constructKeyValueOption(optionFlag, optionValue string) string {
@@ -40,7 +42,9 @@ func addOption(sb *strings.Builder, rawParameter Option) {
 		option = constructKeyValueOption("-p", p.Value)
 	case OptionLoginName:
 		option = constructKeyValueOption("-l", p.Value)
-	case OptionReadConfig:
+	case OptionConfigFilePath:
+		option = constructKeyValueOption("-F", p.Value)
+	case OptionReadHostConfig:
 		option = constructKeyValueOption("-G", utils.RemoveDuplicateSpaces(p.Value))
 	case OptionAddress:
 		if p.Value != "" {

@@ -33,12 +33,13 @@ func main() {
 	version.Set(buildVersion, buildCommit, buildBranch, buildDate)
 
 	appDefaultHome, _ := utils.AppDir(appName, "")
+	sshDefaultConf := fmt.Sprintf("%s/.ssh/config", utils.UserHomeDir())
 	environmentParams := config.User{}
 	// Parse environment parameters. These parameters have lower precedence than command line flags
 	if err := env.ParseWithOptions(&environmentParams, env.Options{
 		Environment: map[string]string{
 			"APP_DEFAULT_HOME":   appDefaultHome,
-			"SSH_DEFAULT_CONFIG": fmt.Sprintf("%s/.ssh/config", utils.UserHomeDir()),
+			"SSH_DEFAULT_CONFIG": sshDefaultConf,
 		},
 	}); err != nil {
 		fmt.Printf("%+v\n", err)
@@ -100,7 +101,7 @@ func main() {
 	// Create application state
 	ctx := context.Background()
 	application := config.NewApplication(ctx, appConfig, &lg)
-	appState := state.Get(application.Config.AppHome, &lg)
+	appState := state.Get(application.Config.AppHome, application.Config.SSHConfig, &lg)
 	storage, err := storage.Get(ctx, application)
 	if err != nil {
 		lg.Error("[MAIN] Error running application: %v", err)

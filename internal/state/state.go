@@ -46,16 +46,18 @@ type ApplicationState struct {
 	Height           int                   `yaml:"-"`
 	ScreenLayout     constant.ScreenLayout `yaml:"screenLayout,omitempty"`
 	Group            string                `yaml:"group,omitempty"`
+	SSHConfigPath    string                `yaml:"-"`
 }
 
 // Get - reads application state from disk.
-func Get(appHomePath string, lg iLogger) *ApplicationState {
+func Get(appHomePath, sshConfigPath string, lg iLogger) *ApplicationState {
 	lg.Debug("[APPSTATE] Get application state")
 	once.Do(func() {
 		appState = &ApplicationState{
 			appStateFilePath: path.Join(appHomePath, stateFile),
 			logger:           lg,
 			Group:            "",
+			SSHConfigPath:    sshConfigPath,
 		}
 
 		// If we cannot read previously created application state, that's fine - we can continue execution.
