@@ -49,9 +49,9 @@ type ApplicationState struct {
 	SSHConfigPath    string                `yaml:"-"`
 }
 
-// Get - reads application state from disk.
-func Get(appHomePath, sshConfigPath string, lg iLogger) *ApplicationState {
-	lg.Debug("[APPSTATE] Get application state")
+// Create - creates application state.
+func Create(appHomePath, sshConfigPath string, lg iLogger) *ApplicationState {
+	lg.Debug("[APPSTATE] Create application state")
 	once.Do(func() {
 		appState = &ApplicationState{
 			appStateFilePath: path.Join(appHomePath, stateFile),
@@ -65,6 +65,12 @@ func Get(appHomePath, sshConfigPath string, lg iLogger) *ApplicationState {
 		_ = appState.readFromFile()
 	})
 
+	return appState
+}
+
+// Get - returns application state.
+func Get() *ApplicationState {
+	appState.logger.Debug("[APPSTATE] Create application state")
 	return appState
 }
 

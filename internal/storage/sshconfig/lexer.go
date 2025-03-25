@@ -29,7 +29,7 @@ func (fl *FileLexer) Tokenize() []Token {
 		value: fl.filePath,
 	}
 
-	var tokens = []Token{}
+	tokens := []Token{}
 	return fl.loadFromFile(parent, tokens, 0)
 }
 

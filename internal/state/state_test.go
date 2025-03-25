@@ -14,7 +14,7 @@ import (
 
 // That's a wrapper function for state.Get which is required to overcome sync.Once restrictions
 func stateGet(tempDir string, mockLogger *test.MockLogger) *ApplicationState {
-	appState := Get(tempDir, mockLogger)
+	appState := Create(tempDir, "", mockLogger)
 
 	// We need this hack because state.Get function utilizes `sync.once`. That means, if all unit tests
 	// are ran by a single process, instead of the new tmpDir, the old one will be used. In other words

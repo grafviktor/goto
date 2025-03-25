@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"strings"
+	// "github.com/grafviktor/goto/internal/state"
 )
 
 var baseCmd = BaseCMD()
@@ -15,6 +16,8 @@ func ConnectCommand(options ...Option) string {
 		addOption(&sb, option)
 	}
 
+	// addOption(&sb, OptionConfigFilePath{state.Get().SSHConfigPath})
+
 	return sb.String()
 }
 
@@ -26,6 +29,8 @@ func LoadConfigCommand(options ...Option) string {
 	for _, option := range options {
 		addOption(&sb, option)
 	}
+
+	// addOption(&sb, OptionConfigFilePath{state.Get().SSHConfigPath})
 
 	return sb.String()
 }
