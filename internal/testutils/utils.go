@@ -1,5 +1,5 @@
 // Package test contains utility methods for unit tests.
-package test
+package testutils_test
 
 import (
 	"reflect"

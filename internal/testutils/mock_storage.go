@@ -1,4 +1,4 @@
-package test
+package testutils_test
 
 import (
 	"errors"

@@ -10,25 +10,25 @@ import (
 
 	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/host"
-	"github.com/grafviktor/goto/internal/test"
+	testutils "github.com/grafviktor/goto/internal/testutils"
 )
 
 func TestBuildScreenLayout(t *testing.T) {
 	layout := constant.ScreenLayoutDescription
 	group := ""
-	screenLayoutDelegate := NewHostDelegate(&layout, &group, &test.MockLogger{})
+	screenLayoutDelegate := NewHostDelegate(&layout, &group, &testutils.MockLogger{})
 	require.Equal(t, 1, screenLayoutDelegate.Spacing())
 	require.True(t, screenLayoutDelegate.ShowDescription)
 
 	// Only when screen layout is compact - there is no spacing between
 	// items and no description field is shown.
 	layout = constant.ScreenLayoutCompact
-	screenLayoutDelegate = NewHostDelegate(&layout, &group, &test.MockLogger{})
+	screenLayoutDelegate = NewHostDelegate(&layout, &group, &testutils.MockLogger{})
 	require.Equal(t, 0, screenLayoutDelegate.Spacing())
 	require.False(t, screenLayoutDelegate.ShowDescription)
 
 	layout = constant.ScreenLayoutGroup
-	screenLayoutDelegate = NewHostDelegate(&layout, &group, &test.MockLogger{})
+	screenLayoutDelegate = NewHostDelegate(&layout, &group, &testutils.MockLogger{})
 	require.Equal(t, 1, screenLayoutDelegate.Spacing())
 	require.True(t, screenLayoutDelegate.ShowDescription)
 }
@@ -36,18 +36,18 @@ func TestBuildScreenLayout(t *testing.T) {
 func Test_IsHostMovedToAnotherGroup(t *testing.T) {
 	// Group is not selected and host is not assigned to any group
 	layout := constant.ScreenLayoutDescription
-	hostDelegate := NewHostDelegate(&layout, lo.ToPtr(""), &test.MockLogger{})
+	hostDelegate := NewHostDelegate(&layout, lo.ToPtr(""), &testutils.MockLogger{})
 	require.False(t, hostDelegate.isHostMovedToAnotherGroup(""))
 
 	// Group is not selected and host is assigned to "Group 1". Because group is not selected
 	// the host is NOT in a different group
 	layout = constant.ScreenLayoutDescription
-	hostDelegate = NewHostDelegate(&layout, nil, &test.MockLogger{})
+	hostDelegate = NewHostDelegate(&layout, nil, &testutils.MockLogger{})
 	require.False(t, hostDelegate.isHostMovedToAnotherGroup("Group 1"))
 
 	// Group is selected and host is assigned to "Group 1"
 	layout = constant.ScreenLayoutDescription
-	hostDelegate = NewHostDelegate(&layout, lo.ToPtr("Group 1"), &test.MockLogger{})
+	hostDelegate = NewHostDelegate(&layout, lo.ToPtr("Group 1"), &testutils.MockLogger{})
 	require.True(t, hostDelegate.isHostMovedToAnotherGroup("Group 2"))
 }
 
@@ -104,7 +104,7 @@ func TestHostDelegate_Render(t *testing.T) {
 		var buf bytes.Buffer
 		mockModel := NewMockListModel(false)
 		mockModel.Update(tea.WindowSizeMsg{Width: 100, Height: 100}) // required, otherwise the model does not render anything
-		hostDelegate := NewHostDelegate(&tc.layout, &tc.appStateGroup, &test.MockLogger{})
+		hostDelegate := NewHostDelegate(&tc.layout, &tc.appStateGroup, &testutils.MockLogger{})
 		hostDelegate.Render(&buf, mockModel.Model, 0, tc.listItemHost)
 		require.Contains(t, buf.String(), tc.expectedDesc)
 	}

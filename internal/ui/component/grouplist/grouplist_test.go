@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/grafviktor/goto/internal/state"
-	"github.com/grafviktor/goto/internal/test"
+	testutils "github.com/grafviktor/goto/internal/testutils"
 	"github.com/grafviktor/goto/internal/ui/message"
 )
 
@@ -56,7 +56,7 @@ func TestHandleKeyboardEvent_Enter(t *testing.T) {
 	_, cmd := listModel.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
 	var actualMsgs []tea.Msg
-	test.CmdToMessage(cmd, &actualMsgs)
+	testutils.CmdToMessage(cmd, &actualMsgs)
 	expectedMsgs := []tea.Msg{
 		message.GroupSelected{Name: "Group 1"},
 		message.CloseViewSelectGroup{},
@@ -80,7 +80,7 @@ func TestHandleKeyboardEvent_Esc(t *testing.T) {
 	// Now press Escape key and ensure that Model will send group unselect message and closed the form
 	_, cmd := listModel.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	var actualMsgs []tea.Msg
-	test.CmdToMessage(cmd, &actualMsgs)
+	testutils.CmdToMessage(cmd, &actualMsgs)
 
 	expectedMsgs := []tea.Msg{
 		message.GroupSelected{Name: ""},
@@ -113,6 +113,6 @@ func TestLoadItems(t *testing.T) {
 
 func NewMockGroupModel(storageShouldFail bool) *model {
 	mockState := state.ApplicationState{Selected: 1}
-	storage := test.NewMockStorage(storageShouldFail)
-	return New(context.TODO(), storage, &mockState, &test.MockLogger{})
+	storage := testutils.NewMockStorage(storageShouldFail)
+	return New(context.TODO(), storage, &mockState, &testutils.MockLogger{})
 }
