@@ -15,16 +15,16 @@ type iLogger interface {
 
 // User structs contains user-definable parameters.
 type User struct {
-	AppHome   string `env:"GG_HOME,expand" envDefault:"${APP_DEFAULT_HOME}"` // expand is used to parse placeholders
-	LogLevel  string `env:"GG_LOG_LEVEL" envDefault:"info"`
-	SSHConfig string `env:"SSH_CONFIG,expand" envDefault:"${SSH_DEFAULT_CONFIG}"`
+	AppHome       string `env:"GG_HOME"`
+	LogLevel      string `env:"GG_LOG_LEVEL" envDefault:"info"`
+	SSHConfigFile string `env:"SSH_CONFIG_FILE"`
 }
 
 // Print outputs user-definable parameters in the console.
 func (userConfig User) Print() {
 	fmt.Printf("App home:   %s\n", userConfig.AppHome)
 	fmt.Printf("Log level:  %s\n", userConfig.LogLevel)
-	fmt.Printf("SSH config: %s\n", userConfig.SSHConfig)
+	fmt.Printf("SSH config: %s\n", userConfig.SSHConfigFile)
 }
 
 // Merge builds application configuration from user parameters and common objects. For instance - logger.
@@ -39,10 +39,10 @@ func Merge(envParams, cmdParams User, logger iLogger) User {
 	}
 	logger.Debug("[CONFIG] Set application log level to '%s'\n", envParams.LogLevel)
 
-	if len(cmdParams.SSHConfig) > 0 {
-		envParams.SSHConfig = cmdParams.SSHConfig
+	if len(cmdParams.SSHConfigFile) > 0 {
+		envParams.SSHConfigFile = cmdParams.SSHConfigFile
 	}
-	logger.Debug("[CONFIG] Set SSH config path to '%s'\n", envParams.SSHConfig)
+	logger.Debug("[CONFIG] Set SSH config path to '%s'\n", envParams.SSHConfigFile)
 
 	return envParams
 }

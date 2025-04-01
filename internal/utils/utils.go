@@ -130,12 +130,32 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 	return path.Join(userConfigDir, appName), nil
 }
 
-func UserHomeDir() string {
-	if userHomeDir, err := os.UserHomeDir(); err == nil {
-		return userHomeDir
+func SSHConfigFilePath(userDefinedPath string) (string, error) {
+	if !StringEmpty(&userDefinedPath) {
+		absolutePath, err := filepath.Abs(userDefinedPath)
+		if err != nil {
+			return "", err
+		}
+
+		stat, err := os.Stat(absolutePath)
+		if err != nil {
+			return "", err
+		}
+
+		if stat.IsDir() {
+			return "", errors.New("SSH config file path is a directory")
+		}
+
+		return absolutePath, nil
 	}
 
-	return "~"
+	// FIXME: This is wrong, we should not explicitly set ssh config path
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s/.ssh/config", userHomeDir), nil
 }
 
 // CheckAppInstalled - checks if application is installed and can be found in executable path

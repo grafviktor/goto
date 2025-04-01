@@ -16,7 +16,7 @@ import (
 	"github.com/samber/lo"
 
 	hostModel "github.com/grafviktor/goto/internal/model/host"
-	"github.com/grafviktor/goto/internal/model/ssh"
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/input"
@@ -124,7 +124,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		// Logger should notify that this is a new host
 		host = hostModel.Host{Group: state.Group}
 	}
-	host.SSHClientConfig = ssh.StubConfig()
+	host.SSHClientConfig = sshconfig.StubConfig()
 
 	m := editModel{
 		inputs:       make([]input.Input, 7),

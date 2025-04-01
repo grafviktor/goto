@@ -2,18 +2,45 @@
 package state
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"testing"
 
-	testutils "github.com/grafviktor/goto/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 )
 
+type MockLogger struct {
+	Logs []string
+}
+
+func (ml *MockLogger) print(format string, args ...interface{}) {
+	logMessage := format
+	if len(args) > 0 {
+		logMessage = fmt.Sprintf(format, args...)
+	}
+	ml.Logs = append(ml.Logs, logMessage)
+}
+
+func (l *MockLogger) Debug(format string, args ...any) {
+	l.print(format, args...)
+}
+
+func (l *MockLogger) Info(format string, args ...any) {
+	l.print(format, args...)
+}
+
+func (l *MockLogger) Error(format string, args ...any) {
+	l.print(format, args...)
+}
+
+func (l *MockLogger) Close() {
+}
+
 // That's a wrapper function for state.Get which is required to overcome sync.Once restrictions
-func stateGet(tempDir string, mockLogger *testutils.MockLogger) *ApplicationState {
-	appState := Create(tempDir, "", mockLogger)
+func stateGet(tempDir string, mockLogger MockLogger) *ApplicationState {
+	appState := Create(tempDir, "", &mockLogger)
 
 	// We need this hack because state.Get function utilizes `sync.once`. That means, if all unit tests
 	// are ran by a single process, instead of the new tmpDir, the old one will be used. In other words
@@ -33,7 +60,7 @@ func Test_GetApplicationState(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// Create a mock logger for testing
-	mockLogger := &testutils.MockLogger{}
+	mockLogger := MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
 	appState := stateGet(tempDir, mockLogger)
@@ -56,7 +83,7 @@ func Test_PersistApplicationState(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// Create a mock logger for testing
-	mockLogger := &testutils.MockLogger{}
+	mockLogger := MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
 	appState := stateGet(tempDir, mockLogger)

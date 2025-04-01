@@ -1,4 +1,4 @@
-package ssh
+package sshcommand
 
 import (
 	"fmt"

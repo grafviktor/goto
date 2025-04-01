@@ -11,7 +11,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/host"
-	"github.com/grafviktor/goto/internal/model/ssh"
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 )
 
 type (
@@ -29,7 +29,7 @@ type (
 	// The config is stored in main model: m.appState.HostSSHConfig.
 	HostSSHConfigLoaded struct {
 		HostID int
-		Config ssh.Config
+		Config sshconfig.Config
 	}
 	// OpenViewSelectGroup - dispatched when it's required to open group list view.
 	OpenViewSelectGroup struct{}

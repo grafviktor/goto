@@ -5,7 +5,8 @@ import (
 	"strings"
 
 	"github.com/grafviktor/goto/internal/constant"
-	"github.com/grafviktor/goto/internal/model/ssh"
+	"github.com/grafviktor/goto/internal/model/sshcommand"
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 )
 
 // NewHost - constructs new Host model.
@@ -31,7 +32,7 @@ type Host struct {
 	RemotePort       string                   `yaml:"network_port,omitempty"`
 	LoginName        string                   `yaml:"username,omitempty"`
 	IdentityFilePath string                   `yaml:"identity_file_path,omitempty"`
-	SSHClientConfig  *ssh.Config              `yaml:"-"`
+	SSHClientConfig  *sshconfig.Config        `yaml:"-"` // TODO: Must be renamed to SSHHostConfig
 	StorageType      constant.HostStorageEnum `yaml:"-"`
 }
 
@@ -64,28 +65,28 @@ func (h *Host) IsUserDefinedSSHCommand() bool {
 // CmdSSHConnect - returns SSH command for connecting to a remote host.
 func (h *Host) CmdSSHConnect() string {
 	if h.IsUserDefinedSSHCommand() {
-		return ssh.ConnectCommand(ssh.OptionAddress{Value: h.Address})
+		return sshcommand.ConnectCommand(sshcommand.OptionAddress{Value: h.Address})
 	}
 
-	return ssh.ConnectCommand([]ssh.Option{
-		ssh.OptionPrivateKey{Value: h.IdentityFilePath},
-		ssh.OptionRemotePort{Value: h.RemotePort},
-		ssh.OptionLoginName{Value: h.LoginName},
-		ssh.OptionAddress{Value: h.Address},
+	return sshcommand.ConnectCommand([]sshcommand.Option{
+		sshcommand.OptionPrivateKey{Value: h.IdentityFilePath},
+		sshcommand.OptionRemotePort{Value: h.RemotePort},
+		sshcommand.OptionLoginName{Value: h.LoginName},
+		sshcommand.OptionAddress{Value: h.Address},
 	}...)
 }
 
 // CmdSSHConfig - returns SSH command for loading host default configuration.
 func (h *Host) CmdSSHConfig() string {
 	if h.IsUserDefinedSSHCommand() {
-		return ssh.LoadConfigCommand(ssh.OptionReadHostConfig{Value: h.Address})
+		return sshcommand.LoadConfigCommand(sshcommand.OptionReadHostConfig{Value: h.Address})
 	}
 
-	return ssh.LoadConfigCommand([]ssh.Option{
-		ssh.OptionPrivateKey{Value: h.IdentityFilePath},
-		ssh.OptionRemotePort{Value: h.RemotePort},
-		ssh.OptionLoginName{Value: h.LoginName},
-		ssh.OptionReadHostConfig{Value: h.Address},
+	return sshcommand.LoadConfigCommand([]sshcommand.Option{
+		sshcommand.OptionPrivateKey{Value: h.IdentityFilePath},
+		sshcommand.OptionRemotePort{Value: h.RemotePort},
+		sshcommand.OptionLoginName{Value: h.LoginName},
+		sshcommand.OptionReadHostConfig{Value: h.Address},
 	}...)
 }
 
@@ -96,10 +97,10 @@ func (h *Host) CmdSSHCopyID() string {
 	port := h.SSHClientConfig.Port
 	user := h.SSHClientConfig.User
 
-	return ssh.CopyIDCommand(
-		ssh.OptionLoginName{Value: user},
-		ssh.OptionRemotePort{Value: port},
-		ssh.OptionPrivateKey{Value: identityFile},
-		ssh.OptionAddress{Value: hostname},
+	return sshcommand.CopyIDCommand(
+		sshcommand.OptionLoginName{Value: user},
+		sshcommand.OptionRemotePort{Value: port},
+		sshcommand.OptionPrivateKey{Value: identityFile},
+		sshcommand.OptionAddress{Value: hostname},
 	)
 }

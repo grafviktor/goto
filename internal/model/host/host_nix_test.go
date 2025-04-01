@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/grafviktor/goto/internal/model/ssh"
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 )
 
 func TestIsUserDefinedSSHCommand(t *testing.T) {
@@ -105,7 +105,7 @@ func TestCmdSSHCopyID(t *testing.T) {
 		{
 			name: "NOT user defined ssh command",
 			host: Host{
-				SSHClientConfig: &ssh.Config{
+				SSHClientConfig: &sshconfig.Config{
 					Hostname:     "localhost",
 					IdentityFile: "/tmp",
 					Port:         "2222",

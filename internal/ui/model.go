@@ -11,7 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/grafviktor/goto/internal/constant"
-	"github.com/grafviktor/goto/internal/model/ssh"
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/grouplist"
@@ -283,7 +283,7 @@ func (m *mainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) te
 
 func (m *mainModel) handleProcessSuccess(msg message.RunProcessSuccess) tea.Cmd {
 	if msg.ProcessType == constant.ProcessTypeSSHLoadConfig {
-		parsedSSHConfig := ssh.Parse(msg.StdOut)
+		parsedSSHConfig := sshconfig.Parse(msg.StdOut)
 		m.logger.Debug("[EXEC] Host SSH config loaded: %+v", *parsedSSHConfig)
 		return message.TeaCmd(message.HostSSHConfigLoaded{
 			HostID: m.appState.Selected,

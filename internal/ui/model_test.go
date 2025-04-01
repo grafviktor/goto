@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/grafviktor/goto/internal/constant"
-	"github.com/grafviktor/goto/internal/model/ssh"
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
 	testutils "github.com/grafviktor/goto/internal/testutils"
 	"github.com/grafviktor/goto/internal/ui/message"
@@ -119,7 +119,7 @@ func TestHandleProcessSuccess_SSH_load_config(t *testing.T) {
 
 	expected := message.HostSSHConfigLoaded{
 		HostID: 0,
-		Config: ssh.Config{
+		Config: sshconfig.Config{
 			Hostname:     "localhost",
 			IdentityFile: "/tmp",
 			Port:         "2222",

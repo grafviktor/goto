@@ -1,6 +1,6 @@
 //go:build !windows
 
-package ssh
+package sshcommand
 
 import (
 	"os"

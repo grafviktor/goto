@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/grafviktor/goto/internal/model/ssh"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
 	testutils "github.com/grafviktor/goto/internal/testutils"
 	"github.com/grafviktor/goto/internal/ui/message"
@@ -269,7 +268,7 @@ func TestUpdateInputPlaceHolders(t *testing.T) {
 	// Make sure that placeholders have correct values once ssh config is changed.
 	appState := MockAppState()
 	model := New(context.TODO(), testutils.NewMockStorage(false), appState, &testutils.MockLogger{})
-	model.host.SSHClientConfig = &ssh.Config{
+	model.host.SSHClientConfig = &sshconfig.Config{
 		IdentityFile: "Mock Identity File",
 		User:         "Mock User",
 		Port:         "Mock Port",

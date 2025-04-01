@@ -1,9 +1,12 @@
-// Package ssh contains SSH related models and methods.
-package ssh
+// Package sshconfig contains SSH related models and methods.
+package sshconfig
 
 import (
 	"os/user"
 	"regexp"
+
+	"github.com/grafviktor/goto/internal/state"
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 // Config struct contains values loaded from ~/.ssh_config file.
@@ -65,4 +68,12 @@ func getRegexFirstMatchingGroup(groups []string) string {
 	}
 
 	return ""
+}
+
+func IsAlternativeFilePathDefined() bool {
+	return !utils.StringEmpty(&state.Get().SSHConfigPath)
+}
+
+func GetFilePath() string {
+	return state.Get().SSHConfigPath
 }

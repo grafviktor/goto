@@ -41,7 +41,7 @@ func Get(ctx context.Context, appConfig config.Application) (HostStorage, error)
 	}
 
 	// TODO: This storage type should be enabled by config flag
-	sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.Config.SSHConfig, appConfig.Logger)
+	sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.Config.SSHConfigFile, appConfig.Logger)
 	if err != nil {
 		return nil, err
 	}

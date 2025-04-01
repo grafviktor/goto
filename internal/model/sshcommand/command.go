@@ -1,8 +1,9 @@
-package ssh
+package sshcommand
 
 import (
 	"strings"
-	// "github.com/grafviktor/goto/internal/state"
+
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 )
 
 var baseCmd = BaseCMD()
@@ -16,7 +17,9 @@ func ConnectCommand(options ...Option) string {
 		addOption(&sb, option)
 	}
 
-	// addOption(&sb, OptionConfigFilePath{state.Get().SSHConfigPath})
+	if sshconfig.IsAlternativeFilePathDefined() {
+		addOption(&sb, OptionConfigFilePath{Value: sshconfig.GetFilePath()})
+	}
 
 	return sb.String()
 }
@@ -30,7 +33,9 @@ func LoadConfigCommand(options ...Option) string {
 		addOption(&sb, option)
 	}
 
-	// addOption(&sb, OptionConfigFilePath{state.Get().SSHConfigPath})
+	if sshconfig.IsAlternativeFilePathDefined() {
+		addOption(&sb, OptionConfigFilePath{Value: sshconfig.GetFilePath()})
+	}
 
 	return sb.String()
 }

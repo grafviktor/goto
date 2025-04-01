@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/grafviktor/goto/internal/model/ssh"
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 )
 
 // The only difference between Unix and Windows version tests is that Windows
@@ -112,7 +112,7 @@ func TestCmdSSHCopyID(t *testing.T) {
 		{
 			name: "NOT user defined ssh command",
 			host: Host{
-				SSHClientConfig: &ssh.Config{
+				SSHClientConfig: &sshconfig.Config{
 					Hostname:     "localhost",
 					IdentityFile: "~/.ssh/test",
 					Port:         "2222",

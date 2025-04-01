@@ -12,7 +12,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/host"
-	"github.com/grafviktor/goto/internal/model/ssh"
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
 	testutils "github.com/grafviktor/goto/internal/testutils"
 	"github.com/grafviktor/goto/internal/ui/message"
@@ -41,7 +41,7 @@ func TestListModel_Init(t *testing.T) {
 				RemotePort:       "2222",
 				LoginName:        "root",
 				IdentityFilePath: "id_rsa",
-				SSHClientConfig:  &ssh.Config{},
+				SSHClientConfig:  &sshconfig.Config{},
 			},
 		},
 	})
@@ -167,7 +167,7 @@ func TestRemoveItem(t *testing.T) {
 						RemotePort:       "2222",
 						LoginName:        "root",
 						IdentityFilePath: "id_rsa",
-						SSHClientConfig:  &ssh.Config{},
+						SSHClientConfig:  &sshconfig.Config{},
 					},
 				},
 			},
@@ -194,7 +194,7 @@ func TestRemoveItem(t *testing.T) {
 						RemotePort:       "2222",
 						LoginName:        "root",
 						IdentityFilePath: "id_rsa",
-						SSHClientConfig:  &ssh.Config{},
+						SSHClientConfig:  &sshconfig.Config{},
 					},
 				},
 			},
@@ -367,7 +367,7 @@ func TestExitRemoveItemMode(t *testing.T) {
 				RemotePort:       "2222",
 				LoginName:        "root",
 				IdentityFilePath: "id_rsa",
-				SSHClientConfig:  &ssh.Config{},
+				SSHClientConfig:  &sshconfig.Config{},
 			},
 		},
 	}
@@ -568,7 +568,7 @@ func TestUpdate_HostSSHConfigLoaded(t *testing.T) {
 	// Test that host receives SSH expectedConfig once HostConfigLoaded message is dispatched
 	lm := *NewMockListModel(false)
 	lm.Init()
-	expectedConfig := ssh.Config{
+	expectedConfig := sshconfig.Config{
 		Hostname:     "mock_hostname",
 		IdentityFile: "/tmp",
 		Port:         "9999",

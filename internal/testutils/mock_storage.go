@@ -8,7 +8,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/host"
-	"github.com/grafviktor/goto/internal/model/ssh"
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 )
 
 // =============================================== Storage
@@ -24,7 +24,7 @@ func NewMockStorage(shouldFail bool) *mockStorage {
 	}
 
 	for i := 0; i < len(hosts); i++ {
-		hosts[i].SSHClientConfig = &ssh.Config{}
+		hosts[i].SSHClientConfig = &sshconfig.Config{}
 		hosts[i].Group = fmt.Sprintf("Group %d", i+1)
 	}
 

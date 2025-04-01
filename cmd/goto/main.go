@@ -32,16 +32,9 @@ func main() {
 	// Set application version and build details
 	version.Set(buildVersion, buildCommit, buildBranch, buildDate)
 
-	appDefaultHome, _ := utils.AppDir(appName, "")
-	sshDefaultConf := fmt.Sprintf("%s/.ssh/config", utils.UserHomeDir())
 	environmentParams := config.User{}
 	// Parse environment parameters. These parameters have lower precedence than command line flags
-	if err := env.ParseWithOptions(&environmentParams, env.Options{
-		Environment: map[string]string{
-			"APP_DEFAULT_HOME":   appDefaultHome,
-			"SSH_DEFAULT_CONFIG": sshDefaultConf,
-		},
-	}); err != nil {
+	if err := env.Parse(&environmentParams); err != nil {
 		fmt.Printf("%+v\n", err)
 	}
 
@@ -56,14 +49,20 @@ func main() {
 	flag.BoolVar(&displayApplicationDetailsAndExit, "v", false, "Display application details")
 	flag.StringVar(&commandLineParams.AppHome, "f", environmentParams.AppHome, "Application home folder")
 	flag.StringVar(&commandLineParams.LogLevel, "l", environmentParams.LogLevel, "Log verbosity level: debug, info")
-	flag.StringVar(&commandLineParams.SSHConfig, "s", environmentParams.SSHConfig, "Specifies an alternative per-user SSH configuration file path")
+	flag.StringVar(&commandLineParams.SSHConfigFile, "s", environmentParams.SSHConfigFile, "Specifies an alternative per-user SSH configuration file path")
 	flag.Parse()
 
 	var err error
-	// Get application home folder path
+	// Set application home folder path
 	commandLineParams.AppHome, err = utils.AppDir(appName, commandLineParams.AppHome)
 	if err != nil {
-		log.Fatalf("[MAIN] Can't get application home folder: %v", err)
+		log.Fatalf("[MAIN] Can't set application home folder: %v", err)
+	}
+
+	// Set ssh config file path
+	commandLineParams.SSHConfigFile, err = utils.SSHConfigFilePath(commandLineParams.SSHConfigFile)
+	if err != nil {
+		log.Fatalf("[MAIN] Can't set SSH config file path: %v", err)
 	}
 
 	// Create application folder
@@ -101,7 +100,7 @@ func main() {
 	// Create application state
 	ctx := context.Background()
 	application := config.NewApplication(ctx, appConfig, &lg)
-	appState := state.Create(application.Config.AppHome, application.Config.SSHConfig, &lg)
+	appState := state.Create(application.Config.AppHome, application.Config.SSHConfigFile, &lg)
 	storage, err := storage.Get(ctx, application)
 	if err != nil {
 		lg.Error("[MAIN] Error running application: %v", err)
