@@ -149,7 +149,6 @@ func SSHConfigFilePath(userDefinedPath string) (string, error) {
 		return absolutePath, nil
 	}
 
-	// FIXME: This is wrong, we should not explicitly set ssh config path
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err

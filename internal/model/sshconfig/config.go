@@ -71,7 +71,10 @@ func getRegexFirstMatchingGroup(groups []string) string {
 }
 
 func IsAlternativeFilePathDefined() bool {
-	return !utils.StringEmpty(&state.Get().SSHConfigPath)
+	userDefinedConfig := state.Get().SSHConfigPath
+	defaultConfig, _ := utils.SSHConfigFilePath("")
+
+	return userDefinedConfig != defaultConfig
 }
 
 func GetFilePath() string {
