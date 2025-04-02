@@ -43,7 +43,7 @@ func addOption(sb *strings.Builder, rawParameter Option) {
 	case OptionLoginName:
 		option = constructKeyValueOption("-l", p.Value)
 	case OptionConfigFilePath:
-		option = constructKeyValueOption("-F", p.Value)
+		option = constructKeyValueOption("-F", fmt.Sprintf("%q", p.Value))
 	case OptionReadHostConfig:
 		option = constructKeyValueOption("-G", utils.RemoveDuplicateSpaces(p.Value))
 	case OptionAddress:

@@ -58,21 +58,21 @@ func (fl *FileLexer) loadFromFile(includeToken Token, children []Token, currentD
 		line := strings.TrimSpace(scanner.Text())
 		var token Token
 		switch {
-		case strings.HasPrefix(line, "User"):
+		case hasPrefixIgnoreCase(line, "User"):
 			token = fl.usernameToken(line)
-		case strings.HasPrefix(line, "HostName"):
+		case hasPrefixIgnoreCase(line, "HostName"):
 			token = fl.hostnameToken(line)
-		case strings.HasPrefix(line, "Host"): // Host should be checked after HostName
+		case hasPrefixIgnoreCase(line, "Host"): // Host should be checked after HostName
 			token = fl.hostToken(line)
-		case strings.HasPrefix(line, "Port"):
+		case hasPrefixIgnoreCase(line, "Port"):
 			token = fl.networkPortToken(line)
-		case strings.HasPrefix(line, "Include"):
+		case hasPrefixIgnoreCase(line, "Include"):
 			token = fl.keyValuesToken(TokenType.INCLUDE_FILE, line)
-		case strings.HasPrefix(line, "IdentityFile"):
+		case hasPrefixIgnoreCase(line, "IdentityFile"):
 			token = fl.identityFileToken(line)
-		case strings.HasPrefix(line, "# GG:GROUP"):
+		case hasPrefixIgnoreCase(line, "# GG:GROUP"):
 			token = fl.metaDataToken(TokenType.GROUP, line)
-		case strings.HasPrefix(line, "# GG:DESCRIPTION"):
+		case hasPrefixIgnoreCase(line, "# GG:DESCRIPTION"):
 			token = fl.metaDataToken(TokenType.DESCRIPTION, line)
 		default:
 			token = Token{Type: TokenType.UNSUPPORTED}
@@ -99,6 +99,11 @@ func (fl *FileLexer) loadFromFile(includeToken Token, children []Token, currentD
 	}
 
 	return children
+}
+
+func hasPrefixIgnoreCase(str, prefix string) bool {
+	// TODO: Should check regex for prefix
+	return strings.HasPrefix(strings.ToLower(str), strings.ToLower(prefix))
 }
 
 func (fl *FileLexer) hostToken(line string) Token {
