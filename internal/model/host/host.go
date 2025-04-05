@@ -68,6 +68,12 @@ func (h *Host) CmdSSHConnect() string {
 		return sshcommand.ConnectCommand(sshcommand.OptionAddress{Value: h.Address})
 	}
 
+	if h.StorageType == constant.HostStorageType.SSH_CONFIG {
+		// When it's SSH_CONFIG storage type, we need to use the title as a host name.
+		// This is because the by addressing the host by alias, we get all its settings from ssh_config.
+		return sshcommand.ConnectCommand(sshcommand.OptionAddress{Value: h.Title})
+	}
+
 	return sshcommand.ConnectCommand([]sshcommand.Option{
 		sshcommand.OptionPrivateKey{Value: h.IdentityFilePath},
 		sshcommand.OptionRemotePort{Value: h.RemotePort},
@@ -78,6 +84,10 @@ func (h *Host) CmdSSHConnect() string {
 
 // CmdSSHConfig - returns SSH command for loading host default configuration.
 func (h *Host) CmdSSHConfig() string {
+	if h.StorageType == constant.HostStorageType.SSH_CONFIG {
+		return sshcommand.LoadConfigCommand(sshcommand.OptionReadHostConfig{Value: h.Title})
+	}
+
 	if h.IsUserDefinedSSHCommand() {
 		return sshcommand.LoadConfigCommand(sshcommand.OptionReadHostConfig{Value: h.Address})
 	}
@@ -92,15 +102,15 @@ func (h *Host) CmdSSHConfig() string {
 
 // CmdSSHCopyID - returns SSH command for copying SSH key to a remote host (see ssh-copy-id).
 func (h *Host) CmdSSHCopyID() string {
-	hostname := h.SSHClientConfig.Hostname
-	identityFile := h.SSHClientConfig.IdentityFile
-	port := h.SSHClientConfig.Port
-	user := h.SSHClientConfig.User
+	// Though ssh-copy-id respects ssh_config, it's impossible to specify alternative ssh config file.
+	if h.StorageType == constant.HostStorageType.SSH_CONFIG {
+		return sshcommand.CopyIDCommand(sshcommand.OptionAddress{Value: h.Title})
+	}
 
 	return sshcommand.CopyIDCommand(
-		sshcommand.OptionLoginName{Value: user},
-		sshcommand.OptionRemotePort{Value: port},
-		sshcommand.OptionPrivateKey{Value: identityFile},
-		sshcommand.OptionAddress{Value: hostname},
+		sshcommand.OptionLoginName{Value: h.SSHClientConfig.User},
+		sshcommand.OptionRemotePort{Value: h.SSHClientConfig.Port},
+		sshcommand.OptionPrivateKey{Value: h.SSHClientConfig.IdentityFile},
+		sshcommand.OptionAddress{Value: h.SSHClientConfig.Hostname},
 	)
 }

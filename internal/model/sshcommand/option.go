@@ -19,7 +19,7 @@ type (
 	OptionLoginName struct{ Value string }
 	// OptionAddress - is a remote host address. Example: somehost.com.
 	OptionAddress struct{ Value string }
-	// OptionReadHostConfig - is used to read config file from ssh_config.
+	// OptionReadHostConfig - is used to read host config from ssh_config.
 	OptionReadHostConfig struct{ Value string }
 	// OptionConfigFilePath - is a path to ssh_config file.
 	OptionConfigFilePath struct{ Value string }

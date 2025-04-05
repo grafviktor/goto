@@ -26,7 +26,7 @@ func CopyIDCommand(options ...Option) string {
 		case OptionAddress:
 			hostname = opt.Value
 		case OptionLoginName:
-			username = opt.Value
+			username = fmt.Sprintf("%s@", opt.Value)
 		case OptionPrivateKey:
 			if strings.HasPrefix(opt.Value, "~") {
 				// Replace "~" with "$HOME" environment variable
@@ -38,5 +38,5 @@ func CopyIDCommand(options ...Option) string {
 		}
 	}
 
-	return fmt.Sprintf("%s %s@%s", sb.String(), username, hostname)
+	return fmt.Sprintf("%s %s%s", sb.String(), username, hostname)
 }

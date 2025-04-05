@@ -58,7 +58,6 @@ func (p *Parser) Parse() ([]model.Host, error) {
 		}
 	}
 
-	// Append LAST host if it is valid
 	p.appendLastHostIfValid()
 	p.setDefaults()
 
@@ -87,12 +86,12 @@ func (p *Parser) hostValid() bool {
 	return true
 }
 
-const SSH_CONFIG_DEFAULT_GROUP = "ssh_config"
+const PUT_SSH_CONFIG_HOSTS_INTO_GROUP_NAME = "ssh_config"
 
 func (p *Parser) setDefaults() {
 	for i, host := range p.foundHosts {
 		if utils.StringEmpty(&host.Group) {
-			p.foundHosts[i].Group = SSH_CONFIG_DEFAULT_GROUP
+			p.foundHosts[i].Group = PUT_SSH_CONFIG_HOSTS_INTO_GROUP_NAME
 		}
 	}
 }
