@@ -85,6 +85,7 @@ func (c *CombinedStorage) GetAll() ([]model.Host, error) {
 
 		for i := 0; i < len(hosts); i++ {
 			hosts[i].ID = c.fromInnerStorageID(storage.Type(), hosts[i].ID)
+			hosts[i].StorageType = storage.Type()
 			c.hosts = append(c.hosts, hosts[i])
 		}
 	}

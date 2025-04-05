@@ -51,8 +51,8 @@ type ApplicationState struct {
 
 // Create - creates application state.
 func Create(appHomePath, sshConfigPath string, lg iLogger) *ApplicationState {
-	lg.Debug("[APPSTATE] Create application state")
 	once.Do(func() {
+		lg.Debug("[APPSTATE] Create application state")
 		appState = &ApplicationState{
 			appStateFilePath: path.Join(appHomePath, stateFile),
 			logger:           lg,
@@ -70,7 +70,6 @@ func Create(appHomePath, sshConfigPath string, lg iLogger) *ApplicationState {
 
 // Get - returns application state.
 func Get() *ApplicationState {
-	appState.logger.Debug("[APPSTATE] Create application state")
 	return appState
 }
 
