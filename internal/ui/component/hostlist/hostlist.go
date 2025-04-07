@@ -26,13 +26,14 @@ import (
 )
 
 var (
-	styleDoc              = lipgloss.NewStyle().Margin(1, 2, 1, 0)
-	itemNotSelectedErrMsg = "you must select an item"
-	modeCloseApp          = "closeApp"
-	modeDefault           = ""
-	modeRemoveItem        = "removeItem"
-	modeSSHCopyID         = "sshCopyID"
-	defaultListTitle      = "press 'n' to add a new host"
+	styleDoc                   = lipgloss.NewStyle().Margin(1, 2, 1, 0)
+	itemNotSelectedErrMsg      = "you must select an item"
+	modeCloseApp               = "closeApp"
+	modeDefault                = ""
+	modeRemoveItem             = "removeItem"
+	modeSSHCopyID              = "sshCopyID"
+	defaultListTitle           = "press 'n' to add a new host"
+	notificationMessageTimeout = time.Second * 3
 )
 
 type iLogger interface {
@@ -98,7 +99,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	m.AdditionalFullHelpKeys = delegateKeys.FullHelp
 
 	m.Title = m.Styles.Title.Render(defaultListTitle)
-	m.notificationMessageTimeout = time.Second
+	m.notificationMessageTimeout = notificationMessageTimeout
 
 	return &m
 }
@@ -171,6 +172,8 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case msgHideNotification:
 		m.updateTitle()
 		return m, nil
+	case message.ErrorOccurred:
+		return m, m.displayNotificationMsg(msg.Err.Error())
 	default:
 		m.SetShowStatusBar(m.FilterState() != list.Unfiltered)
 		return m, m.updateChildModel(msg)

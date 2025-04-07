@@ -11,7 +11,7 @@ import (
 
 var _ HostStorage = &SSHConfigFile{}
 
-var ErrNotSupported = errors.New("operation not supported")
+var ErrNotSupported = errors.New("readonly storage, edit ssh config directly")
 
 type SSHParser interface {
 	Parse() ([]model.Host, error)

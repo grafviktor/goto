@@ -101,7 +101,7 @@ func main() {
 	ctx := context.Background()
 	application := config.NewApplication(ctx, appConfig, &lg)
 	appState := state.Create(application.Config.AppHome, application.Config.SSHConfigFile, &lg)
-	storage, err := storage.Get(ctx, application)
+	storage, err := storage.Get(ctx, application, &lg)
 	if err != nil {
 		lg.Error("[MAIN] Error running application: %v", err)
 		os.Exit(1)

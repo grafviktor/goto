@@ -61,6 +61,7 @@ var (
 )
 
 type iLogger interface {
+	Error(format string, args ...any)
 	Debug(format string, args ...any)
 	Info(format string, args ...any)
 }
@@ -302,15 +303,16 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 		}
 	}
 
-	host, _ := m.hostStorage.Save(m.host.unwrap())
-	// Need to check storage error and update application status:
-	// if err != nil { return message.TeaCmd(message.Error{StdErr: err}) }
-	// or
-	// m.title = err
-
-	cmd := lo.Ternary(m.isNewHost,
-		message.TeaCmd(message.HostCreated{Host: host}),
-		message.TeaCmd(message.HostUpdated{Host: host}))
+	var cmd tea.Cmd
+	host, err := m.hostStorage.Save(m.host.unwrap())
+	if err != nil {
+		m.logger.Error("[UI] Cannot save host with id %v. Reason: %s", m.host.ID, err.Error())
+		cmd = message.TeaCmd(message.ErrorOccurred{Err: err})
+	} else {
+		cmd = lo.Ternary(m.isNewHost,
+			message.TeaCmd(message.HostCreated{Host: host}),
+			message.TeaCmd(message.HostUpdated{Host: host}))
+	}
 
 	return tea.Sequence(
 		message.TeaCmd(message.CloseViewHostEdit{}),

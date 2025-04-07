@@ -24,16 +24,16 @@ func NewHost(id int, title, description, address, loginName, identityFilePath, r
 
 // Host model definition.
 type Host struct {
-	ID               int                      `yaml:"-"`
-	Title            string                   `yaml:"title"`
+	Address          string                   `yaml:"address"`
 	Description      string                   `yaml:"description,omitempty"`
 	Group            string                   `yaml:"group,omitempty"`
-	Address          string                   `yaml:"address"`
-	RemotePort       string                   `yaml:"network_port,omitempty"`
-	LoginName        string                   `yaml:"username,omitempty"`
+	ID               int                      `yaml:"-"`
 	IdentityFilePath string                   `yaml:"identity_file_path,omitempty"`
+	LoginName        string                   `yaml:"username,omitempty"`
+	RemotePort       string                   `yaml:"network_port,omitempty"`
 	SSHClientConfig  *sshconfig.Config        `yaml:"-"` // TODO: Must be renamed to SSHHostConfig
 	StorageType      constant.HostStorageEnum `yaml:"-"`
+	Title            string                   `yaml:"title"`
 }
 
 // Clone host model.
@@ -46,6 +46,7 @@ func (h *Host) Clone() Host {
 		LoginName:        h.LoginName,
 		IdentityFilePath: h.IdentityFilePath,
 		RemotePort:       h.RemotePort,
+		StorageType:      h.StorageType,
 	}
 
 	return newHost
@@ -113,4 +114,9 @@ func (h *Host) CmdSSHCopyID() string {
 		sshcommand.OptionPrivateKey{Value: h.SSHClientConfig.IdentityFile},
 		sshcommand.OptionAddress{Value: h.SSHClientConfig.Hostname},
 	)
+}
+
+// CmdSSHCopyID - returns SSH command for copying SSH key to a remote host (see ssh-copy-id).
+func (h *Host) IsReadOnly() bool {
+	return h.StorageType == constant.HostStorageType.SSH_CONFIG
 }
