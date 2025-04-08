@@ -38,7 +38,9 @@ func (s *SSHConfigFile) GetAll() ([]model.Host, error) {
 	}
 
 	for i := 0; i < len(s.hosts); i++ {
-		s.hosts[i].ID = i
+		// Make sure that not assigning '0' as host id, because '0' is empty host identifier.
+		// Consider to use '-1' for all new hostnames.
+		s.hosts[i].ID = i+1
 	}
 
 	return s.hosts, nil

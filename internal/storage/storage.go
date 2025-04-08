@@ -4,7 +4,6 @@ package storage
 import (
 	"context"
 	"fmt"
-	"maps"
 	"slices"
 
 	"github.com/grafviktor/goto/internal/config"
@@ -12,6 +11,8 @@ import (
 	model "github.com/grafviktor/goto/internal/model/host"
 	"github.com/samber/lo"
 )
+
+var defaultHostStorageType = constant.HostStorageType.YAML_FILE
 
 type iLogger interface {
 	Debug(format string, args ...any)
@@ -28,10 +29,14 @@ type HostStorage interface {
 	Delete(id int) error
 }
 
+// type HostWrapper struct {
+// 	host.
+// }
+
 var _ HostStorage = &CombinedStorage{}
 
 type CombinedStorage struct {
-	// hosts    []model.Host
+	hosts    map[int]model.Host
 	storages map[constant.HostStorageEnum]HostStorage
 	logger   iLogger
 }
@@ -69,15 +74,19 @@ func newCombinedStorage(logger iLogger, storages ...HostStorage) HostStorage {
 
 // Delete implements HostStorage.
 func (c *CombinedStorage) Delete(hostID int) error {
-	storageType := c.GetHostById(hostID).StorageType
+	storageType := c.hosts[hostID].StorageType
 	storage := c.storages[storageType]
+	if storage == nil {
+		return fmt.Errorf("storage type %q not found", storageType)
+	}
+
+	delete(c.hosts, hostID)
 	return storage.Delete(c.toInnerStorageID(hostID))
 }
 
 // Get implements HostStorage.
 func (c *CombinedStorage) Get(hostID int) (model.Host, error) {
-	storageType := c.GetHostById(hostID).StorageType
-	storage := c.storages[storageType]
+	storage := c.getHostOrDefaultStorage(c.hosts[hostID])
 	host, err := storage.Get(c.toInnerStorageID(hostID))
 	if err != nil {
 		return model.Host{}, err
@@ -90,10 +99,9 @@ func (c *CombinedStorage) Get(hostID int) (model.Host, error) {
 	return host, nil
 }
 
-// GetAll implements HostStorage.
+// GetAll implements HostStorage. Warning: this method rebuilds the IDs.
 func (c *CombinedStorage) GetAll() ([]model.Host, error) {
-	// c.hosts = nil
-	hosts := make([]model.Host, 0)
+	c.hosts = make(map[int]model.Host, 0)
 	for _, storage := range c.storages {
 		storageHosts, err := storage.GetAll()
 		if err != nil {
@@ -103,22 +111,25 @@ func (c *CombinedStorage) GetAll() ([]model.Host, error) {
 		for i := 0; i < len(storageHosts); i++ {
 			storageHosts[i].ID = c.fromInnerStorageID(storage.Type(), storageHosts[i].ID)
 			storageHosts[i].StorageType = storage.Type()
-			hosts = append(hosts, storageHosts[i])
+			c.hosts[storageHosts[i].ID] = storageHosts[i]
 
 			c.logger.Debug("[STORAGE] Storage type: %s -> host id: %d", storage.Type(), storageHosts[i].ID)
 		}
 	}
 
-	// return c.hosts, nil
-	return hosts, nil
+	return lo.Values(c.hosts), nil
 }
 
 // Save implements HostStorage.
 func (c *CombinedStorage) Save(host model.Host) (model.Host, error) {
-	storage := c.storages[host.StorageType]
+	storage := c.getHostOrDefaultStorage(host)
+	// Save host using internal ID
 	host.ID = c.toInnerStorageID(host.ID)
 	host, err := storage.Save(host)
-	host.ID = c.fromInnerStorageID(host.StorageType, host.ID)
+	// Assign external ID
+	host.ID = c.fromInnerStorageID(storage.Type(), host.ID)
+	host.StorageType = storage.Type()
+	c.hosts[host.ID] = host
 	return host, err
 }
 
@@ -130,12 +141,9 @@ func (c *CombinedStorage) Type() constant.HostStorageEnum {
 const HOST_ID_SHIFT_PER_STORAGE = 10000
 
 func (c *CombinedStorage) fromInnerStorageID(storageEnum constant.HostStorageEnum, hostID int) int {
-	// Sort the storage types to ensure consistent ordering
-	storageTypes := make([]constant.HostStorageEnum, 0, len(c.storages))
-	for k := range maps.Keys(c.storages) {
-		storageTypes = append(storageTypes, k)
-	}
+	storageTypes := lo.Keys(c.storages)
 
+	// Sort the storage types to ensure consistent ordering
 	slices.SortFunc(storageTypes, func(a, b constant.HostStorageEnum) int {
 		return lo.Ternary(string(a) < string(b), -1, 1)
 	})
@@ -156,23 +164,12 @@ func (c *CombinedStorage) toInnerStorageID(hostID int) int {
 	return hostID % HOST_ID_SHIFT_PER_STORAGE
 }
 
-func (c *CombinedStorage) GetHostById(hostID int) model.Host {
-	hosts, err := c.GetAll()
-	// FIXME: BUG - unsyncs with internal storage when copy and delete host several times
-	if err != nil {
-		c.logger.Error("Failed to get all hosts: %v", err)
-		panic(err)
+func (c *CombinedStorage) getHostOrDefaultStorage(host model.Host) HostStorage {
+	storageType := host.StorageType
+	if storageType != "" {
+		return c.storages[host.StorageType]
 	}
 
-	host, found := lo.Find(hosts, func(host model.Host) bool {
-		return host.ID == hostID
-	})
-
-	if !found {
-		errMsg := fmt.Sprintf("Host with id %d not found", hostID)
-		c.logger.Error(errMsg)
-		panic(errMsg)
-	}
-
-	return host
+	// Falling back to yaml file if storage is not set
+	return c.storages[defaultHostStorageType]
 }

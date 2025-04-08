@@ -26,7 +26,7 @@ const (
 )
 
 // newYAMLStorage creates new YAML storage.
-func newYAMLStorage(ctx context.Context, appFolder string, logger iLogger) (*yamlFile, error) {
+func newYAMLStorage(_ context.Context, appFolder string, logger iLogger) (*yamlFile, error) {
 	logger.Debug("[STORAGE] Init YAML storage. Config folder %s", appFolder)
 	fsDataPath := path.Join(appFolder, hostsFile)
 
