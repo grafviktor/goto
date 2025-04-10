@@ -4,7 +4,6 @@ package storage
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
@@ -12,6 +11,7 @@ import (
 	"github.com/samber/lo"
 )
 
+var _ HostStorage = &CombinedStorage{}
 var defaultHostStorageType = constant.HostStorageType.YAML_FILE
 
 type iLogger interface {
@@ -29,16 +29,18 @@ type HostStorage interface {
 	Delete(id int) error
 }
 
-// type HostWrapper struct {
-// 	host.
-// }
-
-var _ HostStorage = &CombinedStorage{}
+type hostStorageMapping struct {
+	storageType       constant.HostStorageEnum
+	combinedStorageID int
+	innerStorageID    int
+}
 
 type CombinedStorage struct {
-	hosts    map[int]model.Host
-	storages map[constant.HostStorageEnum]HostStorage
-	logger   iLogger
+	hosts          map[int]model.Host
+	storages       map[constant.HostStorageEnum]HostStorage
+	logger         iLogger
+	nextID         int
+	hostStorageMap map[int]hostStorageMapping
 }
 
 // Get returns new data service.
@@ -109,11 +111,11 @@ func (c *CombinedStorage) GetAll() ([]model.Host, error) {
 		}
 
 		for i := 0; i < len(storageHosts); i++ {
-			storageHosts[i].ID = c.fromInnerStorageID(storage.Type(), storageHosts[i].ID)
-			storageHosts[i].StorageType = storage.Type()
-			c.hosts[storageHosts[i].ID] = storageHosts[i]
-
-			c.logger.Debug("[STORAGE] Storage type: %s -> host id: %d", storage.Type(), storageHosts[i].ID)
+			// storageHosts[i].ID = c.fromInnerStorageID(storage.Type(), storageHosts[i].ID)
+			// storageHosts[i].StorageType = storage.Type()
+			// c.hosts[storageHosts[i].ID] = storageHosts[i]
+			// c.hosts[c.nextID] = HostWrapper{storageHosts[i]}
+			c.createHostStorageMapping(storageHosts[i], storage.Type())
 		}
 	}
 
@@ -123,14 +125,18 @@ func (c *CombinedStorage) GetAll() ([]model.Host, error) {
 // Save implements HostStorage.
 func (c *CombinedStorage) Save(host model.Host) (model.Host, error) {
 	storage := c.getHostOrDefaultStorage(host)
-	// Save host using internal ID
-	host.ID = c.toInnerStorageID(host.ID)
-	host, err := storage.Save(host)
-	// Assign external ID
-	host.ID = c.fromInnerStorageID(storage.Type(), host.ID)
-	host.StorageType = storage.Type()
-	c.hosts[host.ID] = host
-	return host, err
+	if isNewHost(host) {
+		host, err := storage.Save(host)
+		combinedStorageID := c.createHostStorageMapping(host, storage.Type())
+		host.ID = combinedStorageID
+		return host, err
+	} else {
+		mapping := c.hostStorageMap[host.ID]
+		host.ID = mapping.innerStorageID
+		host, err := storage.Save(host)
+		host.ID = mapping.combinedStorageID
+		return host, err
+	}
 }
 
 // Type implements HostStorage.
@@ -138,31 +144,31 @@ func (c *CombinedStorage) Type() constant.HostStorageEnum {
 	return constant.HostStorageType.COMBINED
 }
 
-const HOST_ID_SHIFT_PER_STORAGE = 10000
+// const HOST_ID_SHIFT_PER_STORAGE = 10000
 
-func (c *CombinedStorage) fromInnerStorageID(storageEnum constant.HostStorageEnum, hostID int) int {
-	storageTypes := lo.Keys(c.storages)
+// func (c *CombinedStorage) fromInnerStorageID(storageEnum constant.HostStorageEnum, hostID int) int {
+// 	storageTypes := lo.Keys(c.storages)
 
-	// Sort the storage types to ensure consistent ordering
-	slices.SortFunc(storageTypes, func(a, b constant.HostStorageEnum) int {
-		return lo.Ternary(string(a) < string(b), -1, 1)
-	})
+// 	// Sort the storage types to ensure consistent ordering
+// 	slices.SortFunc(storageTypes, func(a, b constant.HostStorageEnum) int {
+// 		return lo.Ternary(string(a) < string(b), -1, 1)
+// 	})
 
-	// Loop through the sorted storage types to find the index of the current storage type
-	for n, v := range storageTypes { // iterate over keys in insertion order
-		if storageEnum == v {
-			return n*HOST_ID_SHIFT_PER_STORAGE + hostID
-		}
+// 	// Loop through the sorted storage types to find the index of the current storage type
+// 	for n, v := range storageTypes { // iterate over keys in insertion order
+// 		if storageEnum == v {
+// 			return n*HOST_ID_SHIFT_PER_STORAGE + hostID
+// 		}
 
-		n++
-	}
+// 		n++
+// 	}
 
-	return hostID
-}
+// 	return hostID
+// }
 
-func (c *CombinedStorage) toInnerStorageID(hostID int) int {
-	return hostID % HOST_ID_SHIFT_PER_STORAGE
-}
+// func (c *CombinedStorage) toInnerStorageID(hostID int) int {
+// 	return hostID % HOST_ID_SHIFT_PER_STORAGE
+// }
 
 func (c *CombinedStorage) getHostOrDefaultStorage(host model.Host) HostStorage {
 	storageType := host.StorageType
@@ -172,4 +178,20 @@ func (c *CombinedStorage) getHostOrDefaultStorage(host model.Host) HostStorage {
 
 	// Falling back to yaml file if storage is not set
 	return c.storages[defaultHostStorageType]
+}
+
+func isNewHost(host model.Host) bool {
+	return host.ID == 0
+}
+
+func (c *CombinedStorage) createHostStorageMapping(host model.Host, storageType constant.HostStorageEnum) int {
+	c.nextID++
+	c.hostStorageMap[c.nextID] = hostStorageMapping{
+		storageType:       storageType,
+		combinedStorageID: c.nextID,
+		innerStorageID:    host.ID,
+	}
+	c.logger.Debug("[STORAGE] Storage type: %s -> host id: %d", host.StorageType, c.nextID)
+
+	return c.nextID
 }
