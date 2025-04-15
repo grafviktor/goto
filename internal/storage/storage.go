@@ -45,19 +45,26 @@ type CombinedStorage struct {
 
 // Get returns new data service.
 func Get(ctx context.Context, appConfig config.Application, logger iLogger) (HostStorage, error) {
+	var storages = []HostStorage{}
 	// TODO: Merge Get and newCombinedStorage into one function.
 	yamlStorage, err := newYAMLStorage(ctx, appConfig.Config.AppHome, appConfig.Logger)
 	if err != nil {
 		return nil, err
 	}
 
+	storages = append(storages, yamlStorage)
+
 	// TODO: This storage type should be enabled by config flag
-	sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.Config.SSHConfigFile, appConfig.Logger)
-	if err != nil {
-		return nil, err
+	if false {
+		sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.Config.SSHConfigFile, appConfig.Logger)
+		if err != nil {
+			return nil, err
+		}
+
+		storages = append(storages, sshConfigStorage)
 	}
 
-	return newCombinedStorage(logger, yamlStorage, sshConfigStorage), nil
+	return newCombinedStorage(logger, storages...), nil
 }
 
 func newCombinedStorage(logger iLogger, storages ...HostStorage) HostStorage {
@@ -151,32 +158,6 @@ func (c *CombinedStorage) Type() constant.HostStorageEnum {
 	return constant.HostStorageType.COMBINED
 }
 
-// const HOST_ID_SHIFT_PER_STORAGE = 10000
-
-// func (c *CombinedStorage) fromInnerStorageID(storageEnum constant.HostStorageEnum, hostID int) int {
-// 	storageTypes := lo.Keys(c.storages)
-
-// 	// Sort the storage types to ensure consistent ordering
-// 	slices.SortFunc(storageTypes, func(a, b constant.HostStorageEnum) int {
-// 		return lo.Ternary(string(a) < string(b), -1, 1)
-// 	})
-
-// 	// Loop through the sorted storage types to find the index of the current storage type
-// 	for n, v := range storageTypes { // iterate over keys in insertion order
-// 		if storageEnum == v {
-// 			return n*HOST_ID_SHIFT_PER_STORAGE + hostID
-// 		}
-
-// 		n++
-// 	}
-
-// 	return hostID
-// }
-
-// func (c *CombinedStorage) toInnerStorageID(hostID int) int {
-// 	return hostID % HOST_ID_SHIFT_PER_STORAGE
-// }
-
 func (c *CombinedStorage) getHostOrDefaultStorage(host model.Host) HostStorage {
 	storageType := c.hostStorageMap[host.ID].storageType
 	if storageType != "" {
@@ -200,7 +181,7 @@ func (c *CombinedStorage) addHost(host model.Host, storageType constant.HostStor
 	}
 	c.logger.Debug("[STORAGE] Storage type: %s -> host id: %d", host.StorageType, c.nextID)
 
-	// BUG: Overrides host ID for new hosts
+	// BUG? - Overrides host ID for new hosts
 	host.ID = c.nextID
 	c.hosts[c.nextID] = host
 

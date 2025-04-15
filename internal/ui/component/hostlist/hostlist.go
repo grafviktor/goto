@@ -33,7 +33,7 @@ var (
 	modeRemoveItem             = "removeItem"
 	modeSSHCopyID              = "sshCopyID"
 	defaultListTitle           = "press 'n' to add a new host"
-	notificationMessageTimeout = time.Second * 3
+	notificationMessageTimeout = time.Second * 2
 )
 
 type iLogger interface {
@@ -130,6 +130,8 @@ func (m *listModel) loadHosts() tea.Cmd {
 		items = append(items, ListItemHost{Host: h})
 	}
 
+	// BUG: This sorting is different from one which is used to insert a new host.
+	// See sorting in copyItem() method
 	sort.Slice(items, func(i, j int) bool {
 		uniqueName1 := items[i].(ListItemHost).uniqueName()
 		uniqueName2 := items[j].(ListItemHost).uniqueName()
