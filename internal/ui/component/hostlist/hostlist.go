@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
@@ -130,17 +129,14 @@ func (m *listModel) loadHosts() tea.Cmd {
 		items = append(items, ListItemHost{Host: h})
 	}
 
-	// BUG: This sorting is different from one which is used to insert a new host.
-	// See sorting in copyItem() method
-	sort.Slice(items, func(i, j int) bool {
-		uniqueName1 := items[i].(ListItemHost).uniqueName()
-		uniqueName2 := items[j].(ListItemHost).uniqueName()
-		return uniqueName1 < uniqueName2
-	})
-
+	slices.SortFunc(items, hostComparator)
 	setItemsCmd := m.SetItems(items)
 	selectHostByIDCmd := m.selectHostByID(m.appState.Selected)
 	return tea.Sequence(setItemsCmd, selectHostByIDCmd)
+}
+
+func hostComparator(a, b list.Item) int {
+	return a.(ListItemHost).CompareTo(b.(ListItemHost))
 }
 
 func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -414,13 +410,15 @@ func (m *listModel) copyItem() tea.Cmd {
 func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
 	updatedHost := ListItemHost{Host: msg.Host}
 	// Get all item titles, replacing the updated host's title
-	allTitles := lo.Map(m.Items(), func(item list.Item, _ int) string {
+	allItems := lo.Map(m.Items(), func(item list.Item, _ int) list.Item {
 		host := item.(ListItemHost)
-		return lo.Ternary(host.ID == updatedHost.ID, updatedHost.uniqueName(), host.uniqueName())
+		return lo.Ternary(host.ID == updatedHost.ID, updatedHost, host)
 	})
 
-	slices.Sort(allTitles)
-	newIndex := lo.IndexOf(allTitles, updatedHost.uniqueName())
+	slices.SortFunc(allItems, hostComparator)
+	_, newIndex, _ := lo.FindIndexOf(allItems, func(item list.Item) bool {
+		return updatedHost.ID == item.(ListItemHost).ID
+	})
 
 	_, currentIndex, _ := lo.FindIndexOf(m.Items(), func(item list.Item) bool {
 		return updatedHost.ID == item.(ListItemHost).ID
@@ -441,38 +439,43 @@ func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
 	)
 }
 
-func (m *listModel) setItemAndReorder(newIndex, currentIndex int, host ListItemHost) tea.Cmd {
+func (m *listModel) setItemAndReorder(newIndex, currentIndex int, updatedHost ListItemHost) tea.Cmd {
 	m.Model.RemoveItem(currentIndex)
-	cmd := m.Model.InsertItem(newIndex, host)
+	cmd := m.Model.InsertItem(newIndex, updatedHost)
 
 	// The collection is not yet updated and m.VisibleItems() may NOT contain the updated host yet,
-	// filtering is enabled. However, we must predict the new index.
-	visibleTitles := lo.Reduce(m.VisibleItems(), func(agg []string, item list.Item, index int) []string {
-		i := item.(ListItemHost)
-		return lo.Ternary(i.ID == host.ID, agg, append(agg, i.uniqueName()))
-	}, []string{host.uniqueName()})
+	// filtering is enabled. However, we must predict the new host index.
+	visibleItems := lo.Map(m.VisibleItems(), func(item list.Item, _ int) list.Item {
+		host := item.(ListItemHost)
+		return lo.Ternary(host.ID == updatedHost.ID, updatedHost, host)
+	})
 
-	slices.Sort(visibleTitles)
-	newVisibleItemsIndex := slices.Index(visibleTitles, host.uniqueName())
+	slices.SortFunc(visibleItems, hostComparator)
+	_, newVisibleItemsIndex, _ := lo.FindIndexOf(visibleItems, func(item list.Item) bool {
+		return updatedHost.ID == item.(ListItemHost).ID
+	})
 
 	m.Select(newVisibleItemsIndex)
-
 	return cmd
 }
 
 func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
-	createdHostItem := ListItemHost{Host: msg.Host}
-	titles := lo.Reduce(m.Items(), func(agg []string, item list.Item, index int) []string {
-		return append(agg, item.(ListItemHost).uniqueName())
-	}, []string{createdHostItem.uniqueName()})
-
-	slices.Sort(titles)
-	index := lo.IndexOf(titles, createdHostItem.uniqueName())
-	cmd := m.Model.InsertItem(index, createdHostItem)
-
 	// ResetFilter is required here because, user can create a new Item which will be filtered out,
 	// therefore the user will not see any changes in the UI which is confusing.
+	// ResetFilter must be done before calculating index of the new item.
+	// Consider checking if the item will be filtered out or not before deciding whether to reset the filter.
 	m.ResetFilter()
+	createdHostItem := ListItemHost{Host: msg.Host}
+
+	// Create a safe copy of visible items to avoid modifying the original collection
+	items := append([]list.Item{createdHostItem}, m.VisibleItems()...)
+	slices.SortFunc(items, hostComparator)
+	_, index, _ := lo.FindIndexOf(items, func(item list.Item) bool {
+		return createdHostItem.ID == item.(ListItemHost).ID
+	})
+
+	cmd := m.Model.InsertItem(index, createdHostItem)
+
 	// m.Select requires a visible item index, but because we reset filter VisibleItems array equals to Items
 	m.Select(index)
 
