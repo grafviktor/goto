@@ -135,10 +135,6 @@ func (m *listModel) loadHosts() tea.Cmd {
 	return tea.Sequence(setItemsCmd, selectHostByIDCmd)
 }
 
-func hostComparator(a, b list.Item) int {
-	return a.(ListItemHost).CompareTo(b.(ListItemHost))
-}
-
 func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -639,6 +635,10 @@ func (m *listModel) selectHostByID(id int) tea.Cmd {
 
 	// This is a side effect. Ideally, it should not be here.
 	return m.onFocusChanged()
+}
+
+func hostComparator(a, b list.Item) int {
+	return a.(ListItemHost).CompareTo(b.(ListItemHost))
 }
 
 /*

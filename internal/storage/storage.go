@@ -55,7 +55,7 @@ func Get(ctx context.Context, appConfig config.Application, logger iLogger) (Hos
 	storages = append(storages, yamlStorage)
 
 	// TODO: This storage type should be enabled by config flag
-	if false {
+	if true {
 		sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.Config.SSHConfigFile, appConfig.Logger)
 		if err != nil {
 			return nil, err
@@ -91,10 +91,6 @@ func (c *CombinedStorage) Delete(hostID int) error {
 	// storageType := c.hosts[hostID].StorageType
 	// storage := c.storages[storageType]
 	storage := c.getHostOrDefaultStorage(c.hosts[hostID])
-	if storage == nil {
-		return fmt.Errorf("storage type %q not found", storage.Type())
-	}
-
 	delete(c.hosts, hostID)
 	return storage.Delete(c.hostStorageMap[hostID].innerStorageID)
 }
@@ -129,6 +125,7 @@ func (c *CombinedStorage) GetAll() ([]model.Host, error) {
 			// storageHosts[i].StorageType = storage.Type()
 			// c.hosts[storageHosts[i].ID] = storageHosts[i]
 			// c.hosts[c.nextID] = HostWrapper{storageHosts[i]}
+			storageHosts[i].StorageType = storage.Type()
 			c.addHost(storageHosts[i], storage.Type())
 		}
 	}

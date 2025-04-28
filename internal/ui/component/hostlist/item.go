@@ -1,6 +1,7 @@
 package hostlist
 
 import (
+	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/host"
 	"github.com/samber/lo"
 )
@@ -26,4 +27,9 @@ func (l ListItemHost) CompareTo(host ListItemHost) int {
 	}
 
 	return lo.Ternary(l.Host.Title < host.Title(), -1, 1)
+}
+
+// ReadOnly - returns boolean. Overall, it is used to determine if user can edit host details.
+func (l ListItemHost) ReadOnly() bool {
+	return l.Host.StorageType == constant.HostStorageType.SSH_CONFIG
 }
