@@ -606,12 +606,8 @@ func (m *listModel) prefixWithGroupName(title string) string {
 }
 
 func (m *listModel) updateKeyMap() {
-	shouldShowEditButtons := m.SelectedItem() != nil
-
-	if shouldShowEditButtons != m.keyMap.ShouldShowEditButtons() {
-		m.logger.Debug("[UI] Show edit keyboard shortcuts: %v", shouldShowEditButtons)
-		m.keyMap.SetShouldShowEditButtons(shouldShowEditButtons)
-	}
+	keyMapState := m.keyMap.UpdateKeyVisibility(m.SelectedItem())
+	m.logger.Debug("[UI] Edit keyboard shortcuts: %v", keyMapState)
 }
 
 func (m *listModel) selectHostByID(id int) tea.Cmd {

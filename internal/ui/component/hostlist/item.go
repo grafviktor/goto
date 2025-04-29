@@ -1,9 +1,10 @@
 package hostlist
 
 import (
+	"github.com/samber/lo"
+
 	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/host"
-	"github.com/samber/lo"
 )
 
 // ListItemHost is an adaptor between host model and bubbletea list model.

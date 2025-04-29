@@ -2,22 +2,35 @@ package hostlist
 
 import (
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/samber/lo"
 )
 
+type keyMapStateEnum string
+
+var keyMapState = struct {
+	EDITKEYS_HIDDEN          keyMapStateEnum
+	EDITKEYS_PARTIALLY_SHOWN keyMapStateEnum
+	EDITKEYS_SHOWN           keyMapStateEnum
+}{
+	EDITKEYS_HIDDEN:          "hidden",
+	EDITKEYS_PARTIALLY_SHOWN: "partially shown",
+	EDITKEYS_SHOWN:           "shown",
+}
+
 type keyMap struct {
-	cursorUp              key.Binding
-	cursorDown            key.Binding
-	selectGroup           key.Binding
-	connect               key.Binding
-	copyID                key.Binding
-	append                key.Binding
-	clone                 key.Binding
-	edit                  key.Binding
-	remove                key.Binding
-	toggleLayout          key.Binding
-	confirm               key.Binding
-	shouldShowEditButtons bool
+	cursorUp     key.Binding
+	cursorDown   key.Binding
+	selectGroup  key.Binding
+	connect      key.Binding
+	copyID       key.Binding
+	append       key.Binding
+	clone        key.Binding
+	edit         key.Binding
+	remove       key.Binding
+	toggleLayout key.Binding
+	confirm      key.Binding
+	keyMapState  keyMapStateEnum
 }
 
 func newDelegateKeyMap() *keyMap {
@@ -68,15 +81,40 @@ func newDelegateKeyMap() *keyMap {
 		),
 	}
 
-	km.shouldShowEditButtons = true
+	km.keyMapState = keyMapState.EDITKEYS_HIDDEN
 	return &km
 }
 
-func (k *keyMap) SetShouldShowEditButtons(val bool) {
-	k.shouldShowEditButtons = val
+func (k *keyMap) keysForNullHost() {
+	if k.keyMapState != keyMapState.EDITKEYS_HIDDEN {
+		k.keyMapState = keyMapState.EDITKEYS_HIDDEN
+		k.keysSetEnabled(false)
+	}
+}
+
+func (k *keyMap) keysForReadonlyHost() {
+	if k.keyMapState != keyMapState.EDITKEYS_PARTIALLY_SHOWN {
+		k.keyMapState = keyMapState.EDITKEYS_PARTIALLY_SHOWN
+		k.clone.SetEnabled(false)
+		k.connect.SetEnabled(true)
+		k.copyID.SetEnabled(true)
+		k.cursorDown.SetEnabled(true)
+		k.cursorUp.SetEnabled(true)
+		k.edit.SetEnabled(true)
+		k.remove.SetEnabled(false)
+	}
+}
+
+func (k *keyMap) keysForWritableHost() {
+	if k.keyMapState != keyMapState.EDITKEYS_SHOWN {
+		k.keyMapState = keyMapState.EDITKEYS_SHOWN
+		k.keysSetEnabled(true)
+	}
+}
+
+func (k *keyMap) keysSetEnabled(val bool) {
 	k.clone.SetEnabled(val)
 	k.connect.SetEnabled(val)
-	k.copyID.SetEnabled(val)
 	k.cursorDown.SetEnabled(val)
 	k.cursorUp.SetEnabled(val)
 	k.edit.SetEnabled(val)
@@ -84,8 +122,17 @@ func (k *keyMap) SetShouldShowEditButtons(val bool) {
 	k.copyID.SetEnabled(val)
 }
 
-func (k *keyMap) ShouldShowEditButtons() bool {
-	return k.shouldShowEditButtons
+func (k *keyMap) UpdateKeyVisibility(item list.Item) string {
+	host, ok := item.(ListItemHost)
+	if !ok {
+		k.keysForNullHost()
+	} else if host.IsReadOnly() {
+		k.keysForReadonlyHost()
+	} else {
+		k.keysForWritableHost()
+	}
+
+	return string(k.keyMapState)
 }
 
 func (k *keyMap) ShortHelp() []key.Binding {

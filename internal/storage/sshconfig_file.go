@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/samber/lo"
+
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/storage/sshconfig"
@@ -19,7 +21,7 @@ type SSHParser interface {
 
 type SSHConfigFile struct {
 	parser SSHParser
-	hosts  []model.Host
+	innerStorage map[int]model.Host
 }
 
 // newSSHConfigStorage - constructs new SSHStorage.
@@ -31,24 +33,25 @@ func newSSHConfigStorage(_ context.Context, sshConfigPath string, logger iLogger
 
 // GetAll - returns all hosts.
 func (s *SSHConfigFile) GetAll() ([]model.Host, error) {
-	var err error
-	s.hosts, err = s.parser.Parse()
+	hosts, err := s.parser.Parse()
 	if err != nil {
 		return nil, err
 	}
 
-	for i := 0; i < len(s.hosts); i++ {
+	s.innerStorage = make(map[int]model.Host, len(hosts))
+	for i := 0; i < len(hosts); i++ {
 		// Make sure that not assigning '0' as host id, because '0' is empty host identifier.
 		// Consider to use '-1' for all new hostnames.
-		s.hosts[i].ID = i+1
+		hosts[i].ID = i + 1
+		s.innerStorage[i+1] = hosts[i]
 	}
 
-	return s.hosts, nil
+	return lo.Values(s.innerStorage), nil
 }
 
 // Get - returns host by ID.
 func (s *SSHConfigFile) Get(hostID int) (model.Host, error) {
-	return s.hosts[hostID], nil
+	return s.innerStorage[hostID], nil
 }
 
 // Save - throws not supported error.

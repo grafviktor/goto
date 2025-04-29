@@ -5,10 +5,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/samber/lo"
+
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
-	"github.com/samber/lo"
 )
 
 var _ HostStorage = &CombinedStorage{}
@@ -45,7 +46,7 @@ type CombinedStorage struct {
 
 // Get returns new data service.
 func Get(ctx context.Context, appConfig config.Application, logger iLogger) (HostStorage, error) {
-	var storages = []HostStorage{}
+	storages := []HostStorage{}
 	// TODO: Merge Get and newCombinedStorage into one function.
 	yamlStorage, err := newYAMLStorage(ctx, appConfig.Config.AppHome, appConfig.Logger)
 	if err != nil {
