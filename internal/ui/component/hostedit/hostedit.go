@@ -88,11 +88,25 @@ func networkPortValidator(s string) error {
 	return nil
 }
 
-func getKeyMap(focusedInput int) keyMap {
-	if focusedInput == inputTitle || focusedInput == inputAddress {
+func getKeyMap(host hostModel.Host, focusedInput int) keyMap {
+	if host.IsReadOnly() {
+		keys.CopyInputValue.SetEnabled(false)
+		keys.Save.SetEnabled(false)
+		keys.Up.SetEnabled(false)
+		keys.Down.SetEnabled(false)
+		keys.Discard.SetHelp("esc", "close")
+	} else if focusedInput == inputTitle || focusedInput == inputAddress {
 		keys.CopyInputValue.SetEnabled(true)
+		keys.Save.SetEnabled(true)
+		keys.Up.SetEnabled(true)
+		keys.Down.SetEnabled(true)
+		keys.Discard.SetHelp("esc", "discard")
 	} else {
 		keys.CopyInputValue.SetEnabled(false)
+		keys.Save.SetEnabled(true)
+		keys.Up.SetEnabled(true)
+		keys.Down.SetEnabled(true)
+		keys.Discard.SetHelp("esc", "discard")
 	}
 
 	return keys
@@ -132,7 +146,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		hostStorage:  storage,
 		host:         wrap(&host),
 		help:         help.New(),
-		keyMap:       getKeyMap(initialFocusedInput),
+		keyMap:       getKeyMap(host, initialFocusedInput),
 		appState:     state,
 		logger:       log,
 		focusedInput: initialFocusedInput,
@@ -233,6 +247,11 @@ func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	m.title = defaultTitle
 
 	switch {
+	case key.Matches(msg, m.keyMap.Discard):
+		m.logger.Info("[UI] Discard changes for host id: %v", m.host.ID)
+		return message.TeaCmd(message.CloseViewHostEdit{})
+	case m.host.IsReadOnly():
+		return nil
 	case key.Matches(msg, m.keyMap.Save):
 		m.logger.Info("[UI] Save changes for host id: %v", m.host.ID)
 		return m.save(msg)
@@ -241,9 +260,6 @@ func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		return nil
 	case key.Matches(msg, m.keyMap.Down) || key.Matches(msg, m.keyMap.Up):
 		return m.inputFocusChange(msg)
-	case key.Matches(msg, m.keyMap.Discard):
-		m.logger.Info("[UI] Discard changes for host id: %v", m.host.ID)
-		return message.TeaCmd(message.CloseViewHostEdit{})
 	default:
 		// Handle all other key events
 		cmd := m.focusedInputProcessKeyEvent(msg)
@@ -458,7 +474,7 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 		if i == m.focusedInput {
 			// KeyMap depends on focused input - when address is focused, we allow
 			// a user to copy address value to title.
-			m.keyMap = getKeyMap(i)
+			m.keyMap = getKeyMap(m.host.unwrap(), i)
 			m.logger.Debug("[UI] Focus input: '%s'", m.inputs[i].Label())
 
 			// Set focused state
@@ -484,6 +500,23 @@ func (m *editModel) handleCopyInputValueShortcut() {
 }
 
 func (m *editModel) updateInputFields() {
+	if m.host.IsReadOnly() {
+		m.handleReadonlyHost()
+	} else {
+		m.handleEditableHost()
+	}
+}
+
+func (m *editModel) handleReadonlyHost() {
+	m.logger.Debug("[UI] Update input components. All parameters are disabled.")
+	lo.ForEach(m.inputs, func(i input.Input, n int) {
+		m.inputs[n].Placeholder = fmt.Sprintf("%s: %s", "readonly", m.host.getHostAttributeValueByIndex(n))
+		m.inputs[n].SetValue("")
+		m.inputs[n].SetEnabled(false)
+	})
+}
+
+func (m *editModel) handleEditableHost() {
 	customConnectString := m.host.IsUserDefinedSSHCommand()
 	m.logger.Debug("[UI] Update input components. Additional SSH parameters disabled: %v", customConnectString)
 

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -568,6 +569,8 @@ func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 	return nil
 }
 
+var sshConfigPathRe = regexp.MustCompile(`-F "([^"]+)"`)
+
 func (m *listModel) updateTitle() {
 	var newTitle string
 	item, isHost := m.SelectedItem().(ListItemHost)
@@ -583,6 +586,8 @@ func (m *listModel) updateTitle() {
 	case isHost:
 		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
 		connectCmd := strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
+		// Remove ssh config file path (if present)
+		connectCmd = sshConfigPathRe.ReplaceAllString(connectCmd, "")
 		newTitle = m.prefixWithGroupName(connectCmd)
 	default:
 		// If it's NOT a host list item, then probably the list is just empty
