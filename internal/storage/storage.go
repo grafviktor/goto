@@ -94,8 +94,6 @@ func getStorages(ctx context.Context, appConfig config.Application) ([]HostStora
 
 // Delete implements HostStorage.
 func (c *CombinedStorage) Delete(hostID int) error {
-	// storageType := c.hosts[hostID].StorageType
-	// storage := c.storages[storageType]
 	storage := c.getHostOrDefaultStorage(c.hosts[hostID])
 	delete(c.hosts, hostID)
 	return storage.Delete(c.hostStorageMap[hostID].innerStorageID)
@@ -119,10 +117,11 @@ func (c *CombinedStorage) Get(hostID int) (model.Host, error) {
 
 // GetAll implements HostStorage. Warning: this method rebuilds the IDs.
 func (c *CombinedStorage) GetAll() ([]model.Host, error) {
+	storageTypes := lo.Keys(c.storages)
+	slices.Sort(storageTypes)
 	c.hosts = make(map[int]model.Host, 0)
-	// TODO: Sort storages!
-	for _, storage := range c.storages {
-		storageHosts, err := storage.GetAll()
+	for _, storageType := range storageTypes {
+		storageHosts, err := c.storages[storageType].GetAll()
 		if err != nil {
 			return nil, err
 		}
@@ -132,14 +131,19 @@ func (c *CombinedStorage) GetAll() ([]model.Host, error) {
 		 * If omit this, then almost every app restart loaded hosts will receive random IDs,
 		 * thus it won't be possible to focus on previously selected host in the UI.
 		 * In other words appState.Selected will point to different host with almost every restart.
+		 *
+		 * The reason why hosts come in different order is that the underlying storage contains
+		 * all hosts in a map, because ... storage there is a hack which indicates that
+		 * all new hosts IDs are equal to 0. Once this hack is removed, the sorting
+		 * will be removed as well.
 		 */
-		slices.SortFunc(storageHosts, func (a, b model.Host) int {
+		slices.SortFunc(storageHosts, func(a, b model.Host) int {
 			return lo.Ternary(a.Title < b.Title, -1, 1)
 		})
 
 		for i := 0; i < len(storageHosts); i++ {
-			storageHosts[i].StorageType = storage.Type()
-			c.addHost(storageHosts[i], storage.Type())
+			storageHosts[i].StorageType = storageType
+			c.addHost(storageHosts[i], storageType)
 		}
 	}
 
