@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/samber/lo"
+	"golang.org/x/exp/slices"
 
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
@@ -119,17 +120,24 @@ func (c *CombinedStorage) Get(hostID int) (model.Host, error) {
 // GetAll implements HostStorage. Warning: this method rebuilds the IDs.
 func (c *CombinedStorage) GetAll() ([]model.Host, error) {
 	c.hosts = make(map[int]model.Host, 0)
+	// TODO: Sort storages!
 	for _, storage := range c.storages {
 		storageHosts, err := storage.GetAll()
 		if err != nil {
 			return nil, err
 		}
 
+		/*
+		 * This sorting is required to preserve ID order between application restarts.
+		 * If omit this, then almost every app restart loaded hosts will receive random IDs,
+		 * thus it won't be possible to focus on previously selected host in the UI.
+		 * In other words appState.Selected will point to different host with almost every restart.
+		 */
+		slices.SortFunc(storageHosts, func (a, b model.Host) int {
+			return lo.Ternary(a.Title < b.Title, -1, 1)
+		})
+
 		for i := 0; i < len(storageHosts); i++ {
-			// storageHosts[i].ID = c.fromInnerStorageID(storage.Type(), storageHosts[i].ID)
-			// storageHosts[i].StorageType = storage.Type()
-			// c.hosts[storageHosts[i].ID] = storageHosts[i]
-			// c.hosts[c.nextID] = HostWrapper{storageHosts[i]}
 			storageHosts[i].StorageType = storage.Type()
 			c.addHost(storageHosts[i], storage.Type())
 		}
@@ -181,7 +189,6 @@ func (c *CombinedStorage) addHost(host model.Host, storageType constant.HostStor
 		combinedStorageID: c.nextID,
 		innerStorageID:    host.ID,
 	}
-	c.logger.Debug("[STORAGE] Storage type: %s -> host id: %d", host.StorageType, c.nextID)
 
 	// BUG? - Overrides host ID for new hosts
 	host.ID = c.nextID
