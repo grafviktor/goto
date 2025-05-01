@@ -93,7 +93,7 @@ func (fl *FileLexer) loadFromFile(includeToken Token, children []Token, currentD
 	}
 
 	if err := scanner.Err(); err != nil {
-		// TODO: Add line number to error message
+		// Ideally, should add a line number which is failing to the error message
 		fl.logger.Error("[STORAGE] Error reading file %+v", err)
 		panic(err)
 	}
@@ -102,7 +102,6 @@ func (fl *FileLexer) loadFromFile(includeToken Token, children []Token, currentD
 }
 
 func hasPrefixIgnoreCase(str, prefix string) bool {
-	// TODO: Should check regex for prefix
 	return strings.HasPrefix(strings.ToLower(str), strings.ToLower(prefix))
 }
 

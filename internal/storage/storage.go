@@ -46,8 +46,31 @@ type CombinedStorage struct {
 
 // Get returns new data service.
 func Get(ctx context.Context, appConfig config.Application, logger iLogger) (HostStorage, error) {
+	storages, err := getStorages(ctx, appConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	combinedStorage := CombinedStorage{
+		storages:       make(map[constant.HostStorageEnum]HostStorage),
+		hostStorageMap: make(map[int]hostStorageMapping),
+		hosts:          make(map[int]model.Host),
+		nextID:         0,
+	}
+	combinedStorage.logger = logger
+	for _, storage := range storages {
+		if storage.Type() == constant.HostStorageType.COMBINED {
+			errMsg := fmt.Sprintf("cannot use %s in combineStorages method", storage.Type())
+			panic(errMsg)
+		}
+		combinedStorage.storages[storage.Type()] = storage
+	}
+
+	return &combinedStorage, nil
+}
+
+func getStorages(ctx context.Context, appConfig config.Application) ([]HostStorage, error) {
 	storages := []HostStorage{}
-	// TODO: Merge Get and newCombinedStorage into one function.
 	yamlStorage, err := newYAMLStorage(ctx, appConfig.Config.AppHome, appConfig.Logger)
 	if err != nil {
 		return nil, err
@@ -65,26 +88,7 @@ func Get(ctx context.Context, appConfig config.Application, logger iLogger) (Hos
 		storages = append(storages, sshConfigStorage)
 	}
 
-	return newCombinedStorage(logger, storages...), nil
-}
-
-func newCombinedStorage(logger iLogger, storages ...HostStorage) HostStorage {
-	combinedStorage := CombinedStorage{
-		storages:       make(map[constant.HostStorageEnum]HostStorage),
-		hostStorageMap: make(map[int]hostStorageMapping),
-		hosts:          make(map[int]model.Host),
-		nextID:         0,
-	}
-	combinedStorage.logger = logger
-	for _, storage := range storages {
-		if storage.Type() == constant.HostStorageType.COMBINED {
-			errMsg := fmt.Sprintf("cannot use %s in combineStorages method", storage.Type())
-			panic(errMsg)
-		}
-		combinedStorage.storages[storage.Type()] = storage
-	}
-
-	return &combinedStorage
+	return storages, nil
 }
 
 // Delete implements HostStorage.
@@ -162,7 +166,7 @@ func (c *CombinedStorage) getHostOrDefaultStorage(host model.Host) HostStorage {
 		return c.storages[storageType]
 	}
 
-	// Falling back to yaml file if storage is not set
+	// Falling back to yaml file if storage is not set. This is a new host.
 	return c.storages[defaultHostStorageType]
 }
 
