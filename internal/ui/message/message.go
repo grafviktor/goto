@@ -2,10 +2,7 @@
 package message
 
 import (
-	"os"
 	"time"
-
-	"golang.org/x/term"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -37,6 +34,8 @@ type (
 	CloseViewSelectGroup struct{}
 	// GroupSelected - is dispatched when select a group in group list view.
 	GroupSelected struct{ Name string }
+	// HideUINotification - is dispatched when it's time to hide UI notification and display normal component's title.
+	HideUINotification struct{ ComponentName string }
 	// OpenViewHostEdit fires when user press edit button on a selected host.
 	OpenViewHostEdit struct{ HostID int }
 	// CloseViewHostEdit triggers when users exits from edit form without saving results.
@@ -63,20 +62,34 @@ type (
 	}
 )
 
-var terminalSizePollingInterval = time.Second / 2
-
-// TerminalSizePollingMsg - is a tea.Msg which is used to poll terminal size.
-func TerminalSizePollingMsg() tea.Msg {
-	time.Sleep(terminalSizePollingInterval)
-	terminalFd := int(os.Stdout.Fd())
-	Width, Height, _ := term.GetSize(terminalFd)
-
-	return TerminalSizePolling{Width, Height}
-}
-
 // TeaCmd - is a helper function which creates tea.Cmd from tea.Msg object.
 func TeaCmd(msg any) func() tea.Msg {
 	return func() tea.Msg {
 		return msg
+	}
+}
+
+type titledUIModel interface {
+	SetTitle(title string)
+}
+
+var timers map[string]*time.Timer
+var notificationMessageDisplayTime = time.Second * 2
+
+func DisplayNotification(targetComponentName string, text string, titledModel titledUIModel) tea.Cmd {
+	if timers == nil {
+		timers = make(map[string]*time.Timer)
+	}
+
+	if timer, ok := timers[targetComponentName]; ok {
+		timer.Stop()
+	}
+
+	titledModel.SetTitle(text)
+	timers[targetComponentName] = time.NewTimer(notificationMessageDisplayTime)
+
+	return func() tea.Msg {
+		<-timers[targetComponentName].C
+		return HideUINotification{ComponentName: targetComponentName}
 	}
 }

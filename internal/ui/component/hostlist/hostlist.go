@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
 	"golang.org/x/exp/slices"
 
@@ -26,14 +25,13 @@ import (
 )
 
 var (
-	styleDoc                   = lipgloss.NewStyle().Margin(1, 2, 1, 0)
-	itemNotSelectedErrMsg      = "you must select an item"
-	modeCloseApp               = "closeApp"
-	modeDefault                = ""
-	modeRemoveItem             = "removeItem"
-	modeSSHCopyID              = "sshCopyID"
-	defaultListTitle           = "press 'n' to add a new host"
-	notificationMessageTimeout = time.Second * 2
+	styleDoc              = lipgloss.NewStyle().Margin(1, 2, 1, 0)
+	itemNotSelectedErrMsg = "you must select an item"
+	modeCloseApp          = "closeApp"
+	modeDefault           = ""
+	modeRemoveItem        = "removeItem"
+	modeSSHCopyID         = "sshCopyID"
+	defaultListTitle      = "press 'n' to add a new host"
 )
 
 type iLogger interface {
@@ -42,21 +40,16 @@ type iLogger interface {
 	Error(format string, args ...any)
 }
 
-type (
-	msgToggleLayout     struct{ layout constant.ScreenLayout }
-	msgHideNotification struct{}
-)
+type msgToggleLayout struct{ layout constant.ScreenLayout }
 
 type listModel struct {
 	list.Model
-	repo                       storage.HostStorage
-	keyMap                     *keyMap
-	appState                   *state.ApplicationState
-	logger                     iLogger
-	mode                       string
-	notificationMessageTimer   *time.Timer
-	notificationMessageTimeout time.Duration
-	Styles                     styles
+	repo     storage.HostStorage
+	keyMap   *keyMap
+	appState *state.ApplicationState
+	logger   iLogger
+	mode     string
+	Styles   styles
 }
 
 // New - creates new host list model.
@@ -99,7 +92,6 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	m.AdditionalFullHelpKeys = delegateKeys.FullHelp
 
 	m.Title = m.Styles.Title.Render(defaultListTitle)
-	m.notificationMessageTimeout = notificationMessageTimeout
 
 	return &m
 }
@@ -164,8 +156,12 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// to handle this, as it leads to series of hacks here and there. But it's the
 		// simplest way to implement it.
 		return m, m.loadHosts()
-	case msgHideNotification:
-		m.updateTitle()
+	case message.HideUINotification:
+		if msg.ComponentName == "hostlist" {
+			m.logger.Debug("[UI] Hide notification message")
+			m.updateTitle()
+		}
+
 		return m, nil
 	case message.ErrorOccurred:
 		return m, m.displayNotificationMsg(msg.Err.Error())
@@ -721,21 +717,15 @@ func (m *listModel) confirmAction() tea.Cmd {
 	return cmd
 }
 
+func (m *listModel) SetTitle(title string) {
+	m.Title = m.Styles.Title.Render(title)
+}
+
 func (m *listModel) displayNotificationMsg(msg string) tea.Cmd {
 	if utils.StringEmpty(&msg) {
 		return nil
 	}
 
 	m.logger.Debug("[UI] Notification message: %s", msg)
-	m.Title = m.Styles.Title.Render(msg)
-	if m.notificationMessageTimer != nil {
-		m.notificationMessageTimer.Stop()
-	}
-
-	m.notificationMessageTimer = time.NewTimer(m.notificationMessageTimeout)
-
-	return func() tea.Msg {
-		<-m.notificationMessageTimer.C
-		return msgHideNotification{}
-	}
+	return message.DisplayNotification("hostlist", msg, m)
 }

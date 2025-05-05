@@ -225,6 +225,13 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.host.SSHClientConfig = &msg.Config
 		m.updateInputFields()
 		m.viewport.SetContent(m.inputsView())
+	case message.HideUINotification:
+		if msg.ComponentName == "hostedit" {
+			m.logger.Debug("[UI] Hide notification message")
+			m.title = defaultTitle
+		}
+
+		return m, nil
 	}
 
 	return m, cmd
@@ -251,7 +258,8 @@ func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		m.logger.Info("[UI] Discard changes for host id: %v", m.host.ID)
 		return message.TeaCmd(message.CloseViewHostEdit{})
 	case m.host.IsReadOnly():
-		return nil
+		m.logger.Debug("[UI] Received a key event. Cannot modify a readonly host.")
+		return m.displayNotificationMsg("host loaded from SSH config is readonly")
 	case key.Matches(msg, m.keyMap.Save):
 		m.logger.Info("[UI] Save changes for host id: %v", m.host.ID)
 		return m.save(msg)
@@ -573,4 +581,17 @@ func (m *editModel) headerView() string {
 
 func (m *editModel) helpView() string {
 	return menuStyle.Render(m.help.View(m.keyMap))
+}
+
+func (m *editModel) SetTitle(title string) {
+	m.title = title
+}
+
+func (m *editModel) displayNotificationMsg(msg string) tea.Cmd {
+	if utils.StringEmpty(&msg) {
+		return nil
+	}
+
+	m.logger.Debug("[UI] Notification message: %s", msg)
+	return message.DisplayNotification("hostedit", msg, m)
 }
