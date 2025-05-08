@@ -45,9 +45,11 @@ type User struct {
 
 // Print outputs user-definable parameters in the console.
 func (userConfig User) Print() {
-	fmt.Printf("App home:   %s\n", userConfig.AppHome)
-	fmt.Printf("Log level:  %s\n", userConfig.LogLevel)
-	fmt.Printf("SSH config: %s\n", userConfig.SSHConfigFile)
+	fmt.Printf("App home:           %s\n", userConfig.AppHome)
+	fmt.Printf("Log level:          %s\n", userConfig.LogLevel)
+	// FIXME: This is not right. Should display whether a concrete feature is enabled or not.
+	fmt.Printf("SSH config enabled: %s\n", userConfig.EnableFeature)
+	fmt.Printf("SSH config path:    %s\n", userConfig.SSHConfigFile)
 }
 
 // Merge builds application configuration from user parameters and common objects. For instance - logger.
@@ -61,6 +63,11 @@ func Merge(envParams, cmdParams User, logger iLogger) User {
 		envParams.LogLevel = cmdParams.LogLevel
 	}
 	logger.Debug("[CONFIG] Set application log level to '%s'\n", envParams.LogLevel)
+
+	if len(cmdParams.EnableFeature) > 0 {
+		envParams.EnableFeature = cmdParams.EnableFeature
+	}
+	logger.Debug("[CONFIG] Set SSH config path to '%s'\n", envParams.SSHConfigFile)
 
 	if len(cmdParams.SSHConfigFile) > 0 {
 		envParams.SSHConfigFile = cmdParams.SSHConfigFile

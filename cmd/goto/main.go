@@ -99,8 +99,8 @@ func main() {
 	// If "-e" parameter provided, display enabled features and exit
 	if appConfig.EnableFeature != "" {
 		lg.Debug("[MAIN] Display enabled feature name")
-		fmt.Println("Enabled feature: ", appConfig.EnableFeature)
-		appConfig.Print()
+		fmt.Println("Enabled: ", appConfig.EnableFeature)
+		appState.SSHConfigEnabled = appConfig.EnableFeature == "ssh_config"
 		appState.Persist()
 
 		lg.Debug("[MAIN] Exit application")

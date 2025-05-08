@@ -46,6 +46,7 @@ type ApplicationState struct {
 	Height           int                   `yaml:"-"`
 	ScreenLayout     constant.ScreenLayout `yaml:"screenLayout,omitempty"`
 	Group            string                `yaml:"group,omitempty"`
+	SSHConfigEnabled bool                  `yaml:"ssh_config,omitempty"`
 	SSHConfigPath    string                `yaml:"-"`
 }
 
@@ -57,6 +58,7 @@ func Create(appHomePath, sshConfigPath string, lg iLogger) *ApplicationState {
 			appStateFilePath: path.Join(appHomePath, stateFile),
 			logger:           lg,
 			Group:            "",
+			SSHConfigEnabled: false,
 			SSHConfigPath:    sshConfigPath,
 		}
 
