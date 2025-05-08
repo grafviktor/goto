@@ -50,6 +50,7 @@ func main() {
 	flag.StringVar(&commandLineParams.AppHome, "f", environmentParams.AppHome, "Application home folder")
 	flag.StringVar(&commandLineParams.LogLevel, "l", environmentParams.LogLevel, "Log verbosity level: debug, info")
 	flag.StringVar(&commandLineParams.SSHConfigFile, "s", environmentParams.SSHConfigFile, "Specifies an alternative per-user SSH configuration file path")
+	flag.Var(&commandLineParams.EnableFeature, "e", "Enable feature: ssh_config")
 	flag.Parse()
 
 	var err error
@@ -90,6 +91,22 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Create application state
+	ctx := context.Background()
+	application := config.NewApplication(ctx, appConfig, &lg)
+	appState := state.Create(application.Config.AppHome, application.Config.SSHConfigFile, &lg)
+
+	// If "-e" parameter provided, display enabled features and exit
+	if appConfig.EnableFeature != "" {
+		lg.Debug("[MAIN] Display enabled feature name")
+		fmt.Println("Enabled feature: ", appConfig.EnableFeature)
+		appConfig.Print()
+		appState.Persist()
+
+		lg.Debug("[MAIN] Exit application")
+		os.Exit(0)
+	}
+
 	// Logger created. Immediately print application version
 	lg.Info("[MAIN] Start application")
 	lg.Info("[MAIN] Version:    %s", version.Number())
@@ -97,10 +114,6 @@ func main() {
 	lg.Info("[MAIN] Branch:     %s", version.BuildBranch())
 	lg.Info("[MAIN] Build date: %s", version.BuildDate())
 
-	// Create application state
-	ctx := context.Background()
-	application := config.NewApplication(ctx, appConfig, &lg)
-	appState := state.Create(application.Config.AppHome, application.Config.SSHConfigFile, &lg)
 	storage, err := storage.Get(ctx, application, &lg)
 	if err != nil {
 		lg.Error("[MAIN] Error running application: %v", err)

@@ -3,7 +3,9 @@ package config
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 )
 
 type iLogger interface {
@@ -13,11 +15,32 @@ type iLogger interface {
 	Close()
 }
 
+var supportedFeatures = []string{"ssh_config"}
+
+type EnableFeature string
+
+func (e *EnableFeature) String() string {
+	return string(*e)
+}
+
+func (e *EnableFeature) Set(value string) error {
+	for _, supported := range supportedFeatures {
+		if value == supported {
+			*e = EnableFeature(value)
+			return nil
+		}
+	}
+
+	errMsg := fmt.Sprintf("\nsupported values: %s", strings.Join(supportedFeatures, ", "))
+	return errors.New(errMsg)
+}
+
 // User structs contains user-definable parameters.
 type User struct {
 	AppHome       string `env:"GG_HOME"`
 	LogLevel      string `env:"GG_LOG_LEVEL" envDefault:"info"`
 	SSHConfigFile string `env:"SSH_CONFIG_FILE"`
+	EnableFeature EnableFeature
 }
 
 // Print outputs user-definable parameters in the console.
