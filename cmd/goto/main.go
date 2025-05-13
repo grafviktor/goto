@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/caarlos0/env/v10"
 
@@ -50,7 +51,8 @@ func main() {
 	flag.StringVar(&commandLineParams.AppHome, "f", environmentParams.AppHome, "Application home folder")
 	flag.StringVar(&commandLineParams.LogLevel, "l", environmentParams.LogLevel, "Log verbosity level: debug, info")
 	flag.StringVar(&commandLineParams.SSHConfigFile, "s", environmentParams.SSHConfigFile, "Specifies an alternative per-user SSH configuration file path")
-	flag.Var(&commandLineParams.EnableFeature, "e", "Enable feature: ssh_config")
+	flag.Var(&commandLineParams.EnableFeature, "e", fmt.Sprintf("Enable feature. Supported values: %s", strings.Join(config.SupportedFeatures, "|")))
+	flag.Var(&commandLineParams.DisableFeature, "e", fmt.Sprintf("Disable feature. Supported values: %s", strings.Join(config.SupportedFeatures, "|")))
 	flag.Parse()
 
 	var err error
@@ -80,6 +82,11 @@ func main() {
 	// Create application configuration and set application home folder
 	appConfig := config.Merge(environmentParams, commandLineParams, &lg)
 
+	// Create application state
+	ctx := context.Background()
+	application := config.NewApplication(ctx, appConfig, &lg)
+	appState := state.Create(application.Config.AppHome, application.Config.SSHConfigFile, &lg)
+
 	// If "-v" parameter provided, display application version configuration and exit
 	if displayApplicationDetailsAndExit {
 		lg.Debug("[MAIN] Display application version")
@@ -91,15 +98,10 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Create application state
-	ctx := context.Background()
-	application := config.NewApplication(ctx, appConfig, &lg)
-	appState := state.Create(application.Config.AppHome, application.Config.SSHConfigFile, &lg)
-
 	// If "-e" parameter provided, display enabled features and exit
 	if appConfig.EnableFeature != "" {
 		lg.Debug("[MAIN] Display enabled feature name")
-		fmt.Println("Enabled: ", appConfig.EnableFeature)
+		fmt.Printf("Enabled: %q\n", appConfig.EnableFeature)
 		appState.SSHConfigEnabled = appConfig.EnableFeature == "ssh_config"
 		appState.Persist()
 

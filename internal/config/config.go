@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/grafviktor/goto/internal/state"
 )
 
 type iLogger interface {
@@ -15,7 +17,7 @@ type iLogger interface {
 	Close()
 }
 
-var supportedFeatures = []string{"ssh_config"}
+var SupportedFeatures = []string{"ssh_config"}
 
 type EnableFeature string
 
@@ -24,14 +26,14 @@ func (e *EnableFeature) String() string {
 }
 
 func (e *EnableFeature) Set(value string) error {
-	for _, supported := range supportedFeatures {
+	for _, supported := range SupportedFeatures {
 		if value == supported {
 			*e = EnableFeature(value)
 			return nil
 		}
 	}
 
-	errMsg := fmt.Sprintf("\nsupported values: %s", strings.Join(supportedFeatures, ", "))
+	errMsg := fmt.Sprintf("\nsupported values: %s", strings.Join(SupportedFeatures, ", "))
 	return errors.New(errMsg)
 }
 
@@ -48,8 +50,11 @@ func (userConfig User) Print() {
 	fmt.Printf("App home:           %s\n", userConfig.AppHome)
 	fmt.Printf("Log level:          %s\n", userConfig.LogLevel)
 	// FIXME: This is not right. Should display whether a concrete feature is enabled or not.
-	fmt.Printf("SSH config enabled: %s\n", userConfig.EnableFeature)
-	fmt.Printf("SSH config path:    %s\n", userConfig.SSHConfigFile)
+	appState := state.Get()
+	if appState.SSHConfigEnabled {
+		fmt.Printf("SSH config enabled: %t\n", appState.SSHConfigEnabled)
+		fmt.Printf("SSH config path:    %s\n", appState.SSHConfigPath)
+	}
 }
 
 // Merge builds application configuration from user parameters and common objects. For instance - logger.
