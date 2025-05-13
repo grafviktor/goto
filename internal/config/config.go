@@ -19,16 +19,16 @@ type iLogger interface {
 
 var SupportedFeatures = []string{"ssh_config"}
 
-type EnableFeature string
+type FeatureFlag string
 
-func (e *EnableFeature) String() string {
-	return string(*e)
+func (ff *FeatureFlag) String() string {
+	return string(*ff)
 }
 
-func (e *EnableFeature) Set(value string) error {
+func (ff *FeatureFlag) Set(value string) error {
 	for _, supported := range SupportedFeatures {
 		if value == supported {
-			*e = EnableFeature(value)
+			*ff = FeatureFlag(value)
 			return nil
 		}
 	}
@@ -39,21 +39,21 @@ func (e *EnableFeature) Set(value string) error {
 
 // User structs contains user-definable parameters.
 type User struct {
-	AppHome       string `env:"GG_HOME"`
-	LogLevel      string `env:"GG_LOG_LEVEL" envDefault:"info"`
-	SSHConfigFile string `env:"SSH_CONFIG_FILE"`
-	EnableFeature EnableFeature
+	AppHome           string `env:"GG_HOME"`
+	LogLevel          string `env:"GG_LOG_LEVEL" envDefault:"info"`
+	SSHConfigFilePath string `env:"SSH_CONFIG_FILE_PATH"`
+	EnableFeature     FeatureFlag
+	DisableFeature    FeatureFlag
 }
 
 // Print outputs user-definable parameters in the console.
 func (userConfig User) Print() {
 	fmt.Printf("App home:           %s\n", userConfig.AppHome)
 	fmt.Printf("Log level:          %s\n", userConfig.LogLevel)
-	// FIXME: This is not right. Should display whether a concrete feature is enabled or not.
 	appState := state.Get()
 	if appState.SSHConfigEnabled {
 		fmt.Printf("SSH config enabled: %t\n", appState.SSHConfigEnabled)
-		fmt.Printf("SSH config path:    %s\n", appState.SSHConfigPath)
+		fmt.Printf("SSH config path:    %s\n", userConfig.SSHConfigFilePath)
 	}
 }
 
@@ -72,12 +72,17 @@ func Merge(envParams, cmdParams User, logger iLogger) User {
 	if len(cmdParams.EnableFeature) > 0 {
 		envParams.EnableFeature = cmdParams.EnableFeature
 	}
-	logger.Debug("[CONFIG] Set SSH config path to '%s'\n", envParams.SSHConfigFile)
+	logger.Debug("[CONFIG] Enable feature '%s'\n", envParams.EnableFeature)
 
-	if len(cmdParams.SSHConfigFile) > 0 {
-		envParams.SSHConfigFile = cmdParams.SSHConfigFile
+	if len(cmdParams.DisableFeature) > 0 {
+		envParams.DisableFeature = cmdParams.DisableFeature
 	}
-	logger.Debug("[CONFIG] Set SSH config path to '%s'\n", envParams.SSHConfigFile)
+	logger.Debug("[CONFIG] Disable feature '%s'\n", envParams.DisableFeature)
+
+	if len(cmdParams.SSHConfigFilePath) > 0 {
+		envParams.SSHConfigFilePath = cmdParams.SSHConfigFilePath
+	}
+	logger.Debug("[CONFIG] Set SSH config path to '%s'\n", envParams.SSHConfigFilePath)
 
 	return envParams
 }

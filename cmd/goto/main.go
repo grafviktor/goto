@@ -50,9 +50,9 @@ func main() {
 	flag.BoolVar(&displayApplicationDetailsAndExit, "v", false, "Display application details")
 	flag.StringVar(&commandLineParams.AppHome, "f", environmentParams.AppHome, "Application home folder")
 	flag.StringVar(&commandLineParams.LogLevel, "l", environmentParams.LogLevel, "Log verbosity level: debug, info")
-	flag.StringVar(&commandLineParams.SSHConfigFile, "s", environmentParams.SSHConfigFile, "Specifies an alternative per-user SSH configuration file path")
+	flag.StringVar(&commandLineParams.SSHConfigFilePath, "s", environmentParams.SSHConfigFilePath, "Specifies an alternative per-user SSH configuration file path")
 	flag.Var(&commandLineParams.EnableFeature, "e", fmt.Sprintf("Enable feature. Supported values: %s", strings.Join(config.SupportedFeatures, "|")))
-	flag.Var(&commandLineParams.DisableFeature, "e", fmt.Sprintf("Disable feature. Supported values: %s", strings.Join(config.SupportedFeatures, "|")))
+	flag.Var(&commandLineParams.DisableFeature, "d", fmt.Sprintf("Disable feature. Supported values: %s", strings.Join(config.SupportedFeatures, "|")))
 	flag.Parse()
 
 	var err error
@@ -63,7 +63,7 @@ func main() {
 	}
 
 	// Set ssh config file path
-	commandLineParams.SSHConfigFile, err = utils.SSHConfigFilePath(commandLineParams.SSHConfigFile)
+	commandLineParams.SSHConfigFilePath, err = utils.SSHConfigFilePath(commandLineParams.SSHConfigFilePath)
 	if err != nil {
 		log.Fatalf("[MAIN] Can't set SSH config file path: %v", err)
 	}
@@ -85,7 +85,7 @@ func main() {
 	// Create application state
 	ctx := context.Background()
 	application := config.NewApplication(ctx, appConfig, &lg)
-	appState := state.Create(application.Config.AppHome, application.Config.SSHConfigFile, &lg)
+	appState := state.Create(application.Config.AppHome, application.Config.SSHConfigFilePath, &lg)
 
 	// If "-v" parameter provided, display application version configuration and exit
 	if displayApplicationDetailsAndExit {
@@ -100,9 +100,20 @@ func main() {
 
 	// If "-e" parameter provided, display enabled features and exit
 	if appConfig.EnableFeature != "" {
-		lg.Debug("[MAIN] Display enabled feature name")
+		lg.Debug("[MAIN] Enable feature: %q", appConfig.EnableFeature)
 		fmt.Printf("Enabled: %q\n", appConfig.EnableFeature)
 		appState.SSHConfigEnabled = appConfig.EnableFeature == "ssh_config"
+		appState.Persist()
+
+		lg.Debug("[MAIN] Exit application")
+		os.Exit(0)
+	}
+
+	// If "-d" parameter provided, display disabled features and exit
+	if appConfig.DisableFeature != "" {
+		lg.Debug("[MAIN] Disable feature: %q", appConfig.DisableFeature)
+		fmt.Printf("Disabled: %q\n", appConfig.DisableFeature)
+		appState.SSHConfigEnabled = !(appConfig.DisableFeature == "ssh_config")
 		appState.Persist()
 
 		lg.Debug("[MAIN] Exit application")

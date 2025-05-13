@@ -46,8 +46,12 @@ type ApplicationState struct {
 	Height           int                   `yaml:"-"`
 	ScreenLayout     constant.ScreenLayout `yaml:"screenLayout,omitempty"`
 	Group            string                `yaml:"group,omitempty"`
-	SSHConfigEnabled bool                  `yaml:"ssh_config,omitempty"`
-	SSHConfigPath    string                `yaml:"-"`
+	// SSHConfigEnabled is a part of ApplicationState, not user config, because it is a feature flag
+	// which is persisted across application restarts. In other words, once defined, it will be
+	// persisted in the state.yaml file and will be used in the next application run.
+	SSHConfigEnabled bool `yaml:"ssh_config"`
+	// TODO: Should be stored in user-config, not here
+	SSHConfigPath string `yaml:"-"`
 }
 
 // Create - creates application state.
@@ -58,7 +62,7 @@ func Create(appHomePath, sshConfigPath string, lg iLogger) *ApplicationState {
 			appStateFilePath: path.Join(appHomePath, stateFile),
 			logger:           lg,
 			Group:            "",
-			SSHConfigEnabled: false,
+			SSHConfigEnabled: true,
 			SSHConfigPath:    sshConfigPath,
 		}
 

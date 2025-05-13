@@ -11,6 +11,7 @@ import (
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
+	"github.com/grafviktor/goto/internal/state"
 )
 
 var _ HostStorage = &CombinedStorage{}
@@ -47,7 +48,7 @@ type CombinedStorage struct {
 
 // Get returns new data service.
 func Get(ctx context.Context, appConfig config.Application, logger iLogger) (HostStorage, error) {
-	storages, err := getStorages(ctx, appConfig)
+	storages, err := getStorages(ctx, appConfig, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +71,7 @@ func Get(ctx context.Context, appConfig config.Application, logger iLogger) (Hos
 	return &combinedStorage, nil
 }
 
-func getStorages(ctx context.Context, appConfig config.Application) ([]HostStorage, error) {
+func getStorages(ctx context.Context, appConfig config.Application, logger iLogger) ([]HostStorage, error) {
 	storages := []HostStorage{}
 	yamlStorage, err := newYAMLStorage(ctx, appConfig.Config.AppHome, appConfig.Logger)
 	if err != nil {
@@ -79,9 +80,11 @@ func getStorages(ctx context.Context, appConfig config.Application) ([]HostStora
 
 	storages = append(storages, yamlStorage)
 
-	// TODO: This storage type should be enabled by config flag
-	if true {
-		sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.Config.SSHConfigFile, appConfig.Logger)
+	sshConfigEnabled := state.Get().SSHConfigEnabled
+	logger.Debug("[STORAGE] SSH config storage enable: '%t'", sshConfigEnabled)
+	if sshConfigEnabled {
+		logger.Info("[STORAGE] Load ssh hosts from ssh config file: %q", appConfig.Config.SSHConfigFilePath)
+		sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.Config.SSHConfigFilePath, logger)
 		if err != nil {
 			return nil, err
 		}
