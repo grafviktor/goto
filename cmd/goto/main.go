@@ -55,28 +55,28 @@ func main() {
 	flag.Var(&commandLineParams.DisableFeature, "d", fmt.Sprintf("Disable feature. Supported values: %s", strings.Join(config.SupportedFeatures, "|")))
 	flag.Parse()
 
-	var err error
+	var fatalErr error
 	// Set application home folder path
-	commandLineParams.AppHome, err = utils.AppDir(appName, commandLineParams.AppHome)
-	if err != nil {
-		log.Fatalf("[MAIN] Can't set application home folder: %v", err)
+	commandLineParams.AppHome, fatalErr = utils.AppDir(appName, commandLineParams.AppHome)
+	if fatalErr != nil {
+		log.Printf("[MAIN] Can't set application home folder: %v\n", fatalErr)
 	}
 
 	// Set ssh config file path
-	commandLineParams.SSHConfigFilePath, err = utils.SSHConfigFilePath(commandLineParams.SSHConfigFilePath)
-	if err != nil {
-		log.Fatalf("[MAIN] Can't set SSH config file path: %v", err)
+	commandLineParams.SSHConfigFilePath, fatalErr = utils.SSHConfigFilePath(commandLineParams.SSHConfigFilePath)
+	if fatalErr != nil {
+		log.Printf("[MAIN] Can't set SSH config path. Error: %v\n", fatalErr)
 	}
 
 	// Create application folder
-	if err = utils.CreateAppDirIfNotExists(commandLineParams.AppHome); err != nil {
-		log.Fatalf("[MAIN] Can't create application home folder: %v", err)
+	if fatalErr = utils.CreateAppDirIfNotExists(commandLineParams.AppHome); fatalErr != nil {
+		log.Printf("[MAIN] Can't create application home folder: %v\n", fatalErr)
 	}
 
 	// Create application logger
-	lg, err := logger.New(commandLineParams.AppHome, commandLineParams.LogLevel)
-	if err != nil {
-		log.Fatalf("[MAIN] Can't create log file: %v", err)
+	lg, fatalErr := logger.New(commandLineParams.AppHome, commandLineParams.LogLevel)
+	if fatalErr != nil {
+		log.Printf("[MAIN] Can't create log file: %v\n", fatalErr)
 	}
 
 	// Create application configuration and set application home folder
@@ -85,17 +85,22 @@ func main() {
 	// Create application state
 	ctx := context.Background()
 	application := config.NewApplication(ctx, appConfig, &lg)
-	appState := state.Create(application.Config.AppHome, application.Config.SSHConfigFilePath, &lg)
+	appState := state.Create(appConfig, &lg)
 
 	// If "-v" parameter provided, display application version configuration and exit
 	if displayApplicationDetailsAndExit {
 		lg.Debug("[MAIN] Display application version")
 		version.Print()
 		fmt.Println()
-		appConfig.Print()
+		appState.PrintConfig()
 
 		lg.Debug("[MAIN] Exit application")
 		os.Exit(0)
+	}
+
+	if fatalErr != nil {
+		lg.Error("[MAIN] Fatal error: ", fatalErr)
+		os.Exit(1)
 	}
 
 	// If "-e" parameter provided, display enabled features and exit
@@ -127,9 +132,9 @@ func main() {
 	lg.Info("[MAIN] Branch:     %s", version.BuildBranch())
 	lg.Info("[MAIN] Build date: %s", version.BuildDate())
 
-	storage, err := storage.Get(ctx, application, &lg)
-	if err != nil {
-		lg.Error("[MAIN] Error running application: %v", err)
+	storage, fatalErr := storage.Get(ctx, application, &lg)
+	if fatalErr != nil {
+		lg.Error("[MAIN] Cannot access application storage: %v\n", fatalErr)
 		os.Exit(1)
 	}
 
@@ -140,9 +145,9 @@ func main() {
 	// additional switch-case block with an appropriate checks. Leaving this message here.
 	lg.Debug("[MAIN] Receive quit signal")
 	lg.Debug("[MAIN] Save application state")
-	err = appState.Persist()
-	if err != nil {
-		lg.Error("[MAIN] Can't save application state before closing %v", err)
+	fatalErr = appState.Persist()
+	if fatalErr != nil {
+		lg.Error("[MAIN] Can't save application state before closing %v", fatalErr)
 	}
 
 	lg.Info("[MAIN] Close application")

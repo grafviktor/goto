@@ -2,12 +2,14 @@
 package state
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"sync"
 
 	"gopkg.in/yaml.v2"
 
+	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
 )
 
@@ -51,19 +53,19 @@ type ApplicationState struct {
 	// persisted in the state.yaml file and will be used in the next application run.
 	SSHConfigEnabled bool `yaml:"ssh_config"`
 	// TODO: Should be stored in user-config, not here
-	SSHConfigPath string `yaml:"-"`
+	ApplicationConfig config.User `yaml:"-"`
 }
 
 // Create - creates application state.
-func Create(appHomePath, sshConfigPath string, lg iLogger) *ApplicationState {
+func Create(appConfig config.User, lg iLogger) *ApplicationState {
 	once.Do(func() {
 		lg.Debug("[APPSTATE] Create application state")
 		appState = &ApplicationState{
-			appStateFilePath: path.Join(appHomePath, stateFile),
-			logger:           lg,
-			Group:            "",
-			SSHConfigEnabled: true,
-			SSHConfigPath:    sshConfigPath,
+			appStateFilePath:  path.Join(appConfig.AppHome, stateFile),
+			logger:            lg,
+			Group:             "",
+			SSHConfigEnabled:  true,
+			ApplicationConfig: appConfig,
 		}
 
 		// If we cannot read previously created application state, that's fine - we can continue execution.
@@ -114,4 +116,14 @@ func (as *ApplicationState) Persist() error {
 	}
 
 	return nil
+}
+
+// Print outputs user-definable parameters in the console.
+func (as *ApplicationState) PrintConfig() {
+	fmt.Printf("App home:           %s\n", as.ApplicationConfig.AppHome)
+	fmt.Printf("Log level:          %s\n", as.ApplicationConfig.LogLevel)
+	if as.SSHConfigEnabled {
+		fmt.Printf("SSH config enabled: %t\n", as.SSHConfigEnabled)
+		fmt.Printf("SSH config path:    %s\n", as.ApplicationConfig.SSHConfigFilePath)
+	}
 }

@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-
-	"github.com/grafviktor/goto/internal/state"
 )
 
 type iLogger interface {
@@ -44,17 +42,6 @@ type User struct {
 	SSHConfigFilePath string `env:"SSH_CONFIG_FILE_PATH"`
 	EnableFeature     FeatureFlag
 	DisableFeature    FeatureFlag
-}
-
-// Print outputs user-definable parameters in the console.
-func (userConfig User) Print() {
-	fmt.Printf("App home:           %s\n", userConfig.AppHome)
-	fmt.Printf("Log level:          %s\n", userConfig.LogLevel)
-	appState := state.Get()
-	if appState.SSHConfigEnabled {
-		fmt.Printf("SSH config enabled: %t\n", appState.SSHConfigEnabled)
-		fmt.Printf("SSH config path:    %s\n", userConfig.SSHConfigFilePath)
-	}
 }
 
 // Merge builds application configuration from user parameters and common objects. For instance - logger.
