@@ -11,6 +11,7 @@ import (
 type iLogger interface {
 	Debug(format string, args ...any)
 	Info(format string, args ...any)
+	Warn(format string, args ...any)
 	Error(format string, args ...any)
 	Close()
 }
@@ -76,17 +77,17 @@ func Merge(envParams, cmdParams User, logger iLogger) User {
 
 // Application is a struct which contains logger, application context and user parameters.
 type Application struct {
-	Context context.Context
-	Logger  iLogger
-	Config  User
+	Context    context.Context
+	Logger     iLogger
+	UserConfig User
 }
 
-// NewApplication constructs application configuration.
-func NewApplication(ctx context.Context, userConfig User, logger iLogger) Application {
+// New constructs application configuration.
+func New(ctx context.Context, userConfig User, logger iLogger) Application {
 	app := Application{
-		Context: ctx,
-		Config:  userConfig,
-		Logger:  logger,
+		Context:    ctx,
+		UserConfig: userConfig,
+		Logger:     logger,
 	}
 
 	return app

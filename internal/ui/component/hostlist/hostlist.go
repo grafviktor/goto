@@ -46,7 +46,7 @@ type listModel struct {
 	list.Model
 	repo     storage.HostStorage
 	keyMap   *keyMap
-	appState *state.ApplicationState
+	appState *state.Application
 	logger   iLogger
 	mode     string
 	Styles   styles
@@ -58,7 +58,7 @@ type listModel struct {
 // appState - is the application state, usually we want to restore previous state when application restarts,
 // for instance focus previously selected host.
 // log - application logger.
-func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *listModel {
+func New(_ context.Context, storage storage.HostStorage, appState *state.Application, log iLogger) *listModel {
 	delegate := NewHostDelegate(&appState.ScreenLayout, &appState.Group, log)
 	delegateKeys := newDelegateKeyMap()
 	customStyles := customStyles()

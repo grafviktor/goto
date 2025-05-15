@@ -112,7 +112,7 @@ func TestLoadItems(t *testing.T) {
 // ==============================================
 
 func NewMockGroupModel(storageShouldFail bool) *model {
-	mockState := state.ApplicationState{Selected: 1}
+	mockState := state.Application{Selected: 1}
 	storage := testutils.NewMockStorage(storageShouldFail)
 	return New(context.TODO(), storage, &mockState, &testutils.MockLogger{})
 }

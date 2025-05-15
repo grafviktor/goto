@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	appState  *ApplicationState
+	appState  *Application
 	once      sync.Once
 	stateFile = "state.yaml"
 )
@@ -38,8 +38,8 @@ type iLogger interface {
 	Error(format string, args ...any)
 }
 
-// ApplicationState stores application state.
-type ApplicationState struct {
+// Application stores application state.
+type Application struct {
 	Selected         int `yaml:"selected"`
 	appStateFilePath string
 	logger           iLogger
@@ -51,17 +51,16 @@ type ApplicationState struct {
 	// SSHConfigEnabled is a part of ApplicationState, not user config, because it is a feature flag
 	// which is persisted across application restarts. In other words, once defined, it will be
 	// persisted in the state.yaml file and will be used in the next application run.
-	SSHConfigEnabled bool `yaml:"ssh_config"`
-	// TODO: Should be stored in user-config, not here
-	ApplicationConfig config.User `yaml:"-"`
+	SSHConfigEnabled  bool               `yaml:"ssh_config"`
+	ApplicationConfig config.Application `yaml:"-"`
 }
 
 // Create - creates application state.
-func Create(appConfig config.User, lg iLogger) *ApplicationState {
+func Create(appConfig config.Application, lg iLogger) *Application {
 	once.Do(func() {
 		lg.Debug("[APPSTATE] Create application state")
-		appState = &ApplicationState{
-			appStateFilePath:  path.Join(appConfig.AppHome, stateFile),
+		appState = &Application{
+			appStateFilePath:  path.Join(appConfig.UserConfig.AppHome, stateFile),
 			logger:            lg,
 			Group:             "",
 			SSHConfigEnabled:  true,
@@ -77,11 +76,11 @@ func Create(appConfig config.User, lg iLogger) *ApplicationState {
 }
 
 // Get - returns application state.
-func Get() *ApplicationState {
+func Get() *Application {
 	return appState
 }
 
-func (as *ApplicationState) readFromFile() error {
+func (as *Application) readFromFile() error {
 	as.logger.Debug("[APPSTATE] Read application state from: '%s'", as.appStateFilePath)
 	fileData, err := os.ReadFile(as.appStateFilePath)
 	if err != nil {
@@ -101,7 +100,7 @@ func (as *ApplicationState) readFromFile() error {
 }
 
 // Persist saves app state to disk.
-func (as *ApplicationState) Persist() error {
+func (as *Application) Persist() error {
 	as.logger.Debug("[APPSTATE] Persist application state to file: %s", as.appStateFilePath)
 	result, err := yaml.Marshal(as)
 	if err != nil {
@@ -119,11 +118,12 @@ func (as *ApplicationState) Persist() error {
 }
 
 // Print outputs user-definable parameters in the console.
-func (as *ApplicationState) PrintConfig() {
-	fmt.Printf("App home:           %s\n", as.ApplicationConfig.AppHome)
-	fmt.Printf("Log level:          %s\n", as.ApplicationConfig.LogLevel)
+func (as *Application) PrintConfig() {
+	userConfig := as.ApplicationConfig.UserConfig
+	fmt.Printf("App home:           %s\n", userConfig.AppHome)
+	fmt.Printf("Log level:          %s\n", userConfig.LogLevel)
 	if as.SSHConfigEnabled {
 		fmt.Printf("SSH config enabled: %t\n", as.SSHConfigEnabled)
-		fmt.Printf("SSH config path:    %s\n", as.ApplicationConfig.SSHConfigFilePath)
+		fmt.Printf("SSH config path:    %s\n", userConfig.SSHConfigFilePath)
 	}
 }

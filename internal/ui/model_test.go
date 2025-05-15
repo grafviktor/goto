@@ -248,6 +248,6 @@ func TestHandleProcessError(t *testing.T) {
 
 // ---------------------------------
 
-func MockAppState() *state.ApplicationState {
-	return &state.ApplicationState{}
+func MockAppState() *state.Application {
+	return &state.Application{}
 }

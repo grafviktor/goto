@@ -27,7 +27,7 @@ type iLogger interface {
 type model struct {
 	list.Model
 	repo     storage.HostStorage
-	appState *state.ApplicationState
+	appState *state.Application
 	logger   iLogger
 }
 
@@ -38,7 +38,7 @@ var (
 
 // New - creates a new UI component which is used to select a host group from a list,
 // with pre-defined initial parameters.
-func New(_ context.Context, repo storage.HostStorage, appState *state.ApplicationState, log iLogger) *model {
+func New(_ context.Context, repo storage.HostStorage, appState *state.Application, log iLogger) *model {
 	var listItems []list.Item
 	listDelegate := list.NewDefaultDelegate()
 	listDelegate.ShowDescription = false

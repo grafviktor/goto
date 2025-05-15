@@ -71,6 +71,10 @@ func (l *appLogger) Info(format string, args ...any) {
 	}
 }
 
+func (l *appLogger) Warn(format string, args ...any) {
+	l.print("WARN", format, args...)
+}
+
 func (l *appLogger) Error(format string, args ...any) {
 	l.print("ERRO", format, args...)
 }

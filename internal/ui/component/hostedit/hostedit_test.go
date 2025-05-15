@@ -319,6 +319,6 @@ func TestUpdateInputPlaceHolders(t *testing.T) {
 	), model.inputs[inputIdentityFile].Placeholder)
 }
 
-func MockAppState() *state.ApplicationState {
-	return &state.ApplicationState{}
+func MockAppState() *state.Application {
+	return &state.Application{}
 }

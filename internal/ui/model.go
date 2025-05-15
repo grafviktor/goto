@@ -24,6 +24,7 @@ import (
 type iLogger interface {
 	Debug(format string, args ...any)
 	Info(format string, args ...any)
+	Warn(format string, args ...any)
 	Error(format string, args ...any)
 }
 
@@ -32,7 +33,7 @@ type iLogger interface {
 func New(
 	ctx context.Context,
 	storage storage.HostStorage,
-	appState *state.ApplicationState,
+	appState *state.Application,
 	log iLogger,
 ) mainModel {
 	m := mainModel{
@@ -53,7 +54,7 @@ type mainModel struct {
 	modelHostList      tea.Model
 	modelGroupList     tea.Model
 	modelHostEdit      tea.Model
-	appState           *state.ApplicationState
+	appState           *state.Application
 	viewMessageContent string
 	logger             iLogger
 	viewport           viewport.Model
@@ -274,10 +275,10 @@ func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadCo
 func (m *mainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) tea.Cmd {
 	identityFile, hostname := msg.Host.SSHClientConfig.IdentityFile, msg.Host.SSHClientConfig.Hostname
 	m.logger.Debug("[EXEC] Copy ssh-key '%s.pub' to host '%s'", identityFile, hostname)
-	// TODO: Add warning
-	// if m.appState.alternativeSSHConfigUsed {
-	// 	m.logger.Warning("[EXEC] copy ssh key key when alternative ssh config file is used: %q. ssh config file is ignored.", m.appState.SSHConfigPath)
-	// }
+	if sshconfig.IsAlternativeFilePathDefined() {
+		m.logger.Warn("[EXEC] copy ssh key key when alternative ssh config file is used: %q. ssh config file is ignored.",
+			m.appState.ApplicationConfig.UserConfig.SSHConfigFilePath)
+	}
 	process := utils.BuildProcessInterceptStdAll(msg.Host.CmdSSHCopyID())
 	m.logger.Info("[EXEC] Run process: '%s'", process.String())
 

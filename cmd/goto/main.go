@@ -33,6 +33,38 @@ func main() {
 	// Set application version and build details
 	version.Set(buildVersion, buildCommit, buildBranch, buildDate)
 
+	appState := createApplicationOrExit()
+	appConfig := appState.ApplicationConfig
+
+	// Logger created. Immediately print application version
+	appConfig.Logger.Info("[MAIN] Start application")
+	appConfig.Logger.Info("[MAIN] Version:    %s", version.Number())
+	appConfig.Logger.Info("[MAIN] Commit:     %s", version.CommitHash())
+	appConfig.Logger.Info("[MAIN] Branch:     %s", version.BuildBranch())
+	appConfig.Logger.Info("[MAIN] Build date: %s", version.BuildDate())
+
+	storage, fatalErr := storage.Get(appConfig.Context, appConfig, appConfig.Logger)
+	if fatalErr != nil {
+		appConfig.Logger.Error("[MAIN] Cannot access application storage: %v\n", fatalErr)
+		os.Exit(1)
+	}
+
+	// Run user interface
+	ui.Start(appConfig.Context, storage, &appState, appConfig.Logger)
+
+	// Quit signal should be intercepted on the UI level, however it will require an
+	// additional switch-case block with an appropriate checks. Leaving this message here.
+	appConfig.Logger.Debug("[MAIN] Receive quit signal")
+	appConfig.Logger.Debug("[MAIN] Save application state")
+	fatalErr = appState.Persist()
+	if fatalErr != nil {
+		appConfig.Logger.Error("[MAIN] Can't save application state before closing %v", fatalErr)
+	}
+
+	appConfig.Logger.Info("[MAIN] Close application")
+}
+
+func createApplicationOrExit() state.Application {
 	environmentParams := config.User{}
 	// Parse environment parameters. These parameters have lower precedence than command line flags
 	if err := env.Parse(&environmentParams); err != nil {
@@ -79,76 +111,51 @@ func main() {
 		log.Printf("[MAIN] Can't create log file: %v\n", fatalErr)
 	}
 
-	// Create application configuration and set application home folder
-	appConfig := config.Merge(environmentParams, commandLineParams, &lg)
+	userDefinedConfiguration := config.Merge(environmentParams, commandLineParams, &lg)
 
-	// Create application state
-	ctx := context.Background()
-	application := config.NewApplication(ctx, appConfig, &lg)
-	appState := state.Create(appConfig, &lg)
+	// Create applicationConfiguration state
+	applicationConfiguration := config.New(context.Background(), userDefinedConfiguration, &lg)
+	applicationState := state.Create(applicationConfiguration, &lg)
 
 	// If "-v" parameter provided, display application version configuration and exit
 	if displayApplicationDetailsAndExit {
 		lg.Debug("[MAIN] Display application version")
 		version.Print()
 		fmt.Println()
-		appState.PrintConfig()
+		applicationState.PrintConfig()
 
 		lg.Debug("[MAIN] Exit application")
 		os.Exit(0)
 	}
 
 	if fatalErr != nil {
-		lg.Error("[MAIN] Fatal error: ", fatalErr)
+		lg.Error("[MAIN] Fatal error:", fatalErr)
 		os.Exit(1)
 	}
 
 	// If "-e" parameter provided, display enabled features and exit
-	if appConfig.EnableFeature != "" {
-		lg.Debug("[MAIN] Enable feature: %q", appConfig.EnableFeature)
-		fmt.Printf("Enabled: %q\n", appConfig.EnableFeature)
-		appState.SSHConfigEnabled = appConfig.EnableFeature == "ssh_config"
-		appState.Persist()
+	if userDefinedConfiguration.EnableFeature != "" {
+		lg.Debug("[MAIN] Enable feature: '%s'", userDefinedConfiguration.EnableFeature)
+		fmt.Printf("Enabled: '%s'\n", userDefinedConfiguration.EnableFeature)
+		applicationState.SSHConfigEnabled = userDefinedConfiguration.EnableFeature == "ssh_config"
+		applicationState.Persist()
 
 		lg.Debug("[MAIN] Exit application")
 		os.Exit(0)
 	}
 
 	// If "-d" parameter provided, display disabled features and exit
-	if appConfig.DisableFeature != "" {
-		lg.Debug("[MAIN] Disable feature: %q", appConfig.DisableFeature)
-		fmt.Printf("Disabled: %q\n", appConfig.DisableFeature)
-		appState.SSHConfigEnabled = !(appConfig.DisableFeature == "ssh_config")
-		appState.Persist()
+	if userDefinedConfiguration.DisableFeature != "" {
+		lg.Debug("[MAIN] Disable feature: '%s'", userDefinedConfiguration.DisableFeature)
+		fmt.Printf("Disabled: '%s'\n", userDefinedConfiguration.DisableFeature)
+		applicationState.SSHConfigEnabled = !(userDefinedConfiguration.DisableFeature == "ssh_config")
+		applicationState.Persist()
 
 		lg.Debug("[MAIN] Exit application")
 		os.Exit(0)
 	}
 
-	// Logger created. Immediately print application version
-	lg.Info("[MAIN] Start application")
-	lg.Info("[MAIN] Version:    %s", version.Number())
-	lg.Info("[MAIN] Commit:     %s", version.CommitHash())
-	lg.Info("[MAIN] Branch:     %s", version.BuildBranch())
-	lg.Info("[MAIN] Build date: %s", version.BuildDate())
-
-	storage, fatalErr := storage.Get(ctx, application, &lg)
-	if fatalErr != nil {
-		lg.Error("[MAIN] Cannot access application storage: %v\n", fatalErr)
-		os.Exit(1)
-	}
-
-	// Run user interface
-	ui.Start(ctx, storage, appState, &lg)
-
-	// Quit signal should be intercepted on the UI level, however it will require an
-	// additional switch-case block with an appropriate checks. Leaving this message here.
-	lg.Debug("[MAIN] Receive quit signal")
-	lg.Debug("[MAIN] Save application state")
-	fatalErr = appState.Persist()
-	if fatalErr != nil {
-		lg.Error("[MAIN] Can't save application state before closing %v", fatalErr)
-	}
-
-	lg.Info("[MAIN] Close application")
+	// config.application, state.application
+	// return application, *appState
+	return *applicationState
 }

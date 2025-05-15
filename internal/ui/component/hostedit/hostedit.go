@@ -113,7 +113,7 @@ func getKeyMap(host hostModel.Host, focusedInput int) keyMap {
 }
 
 type editModel struct {
-	appState     *state.ApplicationState
+	appState     *state.Application
 	focusedInput int
 	help         help.Model
 	host         hostModelWrapper
@@ -129,7 +129,7 @@ type editModel struct {
 }
 
 // New - returns new edit host form.
-func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState, log iLogger) *editModel {
+func New(ctx context.Context, storage storage.HostStorage, state *state.Application, log iLogger) *editModel {
 	initialFocusedInput := inputTitle
 
 	// If we can't cast host id to int, that means we're adding a new host. Ignore the error

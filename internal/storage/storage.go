@@ -73,7 +73,7 @@ func Get(ctx context.Context, appConfig config.Application, logger iLogger) (Hos
 
 func getStorages(ctx context.Context, appConfig config.Application, logger iLogger) ([]HostStorage, error) {
 	storages := []HostStorage{}
-	yamlStorage, err := newYAMLStorage(ctx, appConfig.Config.AppHome, appConfig.Logger)
+	yamlStorage, err := newYAMLStorage(ctx, appConfig.UserConfig.AppHome, appConfig.Logger)
 	if err != nil {
 		return nil, err
 	}
@@ -83,8 +83,8 @@ func getStorages(ctx context.Context, appConfig config.Application, logger iLogg
 	sshConfigEnabled := state.Get().SSHConfigEnabled
 	logger.Debug("[STORAGE] SSH config storage enable: '%t'", sshConfigEnabled)
 	if sshConfigEnabled {
-		logger.Info("[STORAGE] Load ssh hosts from ssh config file: %q", appConfig.Config.SSHConfigFilePath)
-		sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.Config.SSHConfigFilePath, logger)
+		logger.Info("[STORAGE] Load ssh hosts from ssh config file: '%s'", appConfig.UserConfig.SSHConfigFilePath)
+		sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.UserConfig.SSHConfigFilePath, logger)
 		if err != nil {
 			return nil, err
 		}

@@ -39,7 +39,7 @@ func (l *MockLogger) Close() {
 }
 
 // That's a wrapper function for state.Get which is required to overcome sync.Once restrictions
-func stateGet(tempDir string, mockLogger MockLogger) *ApplicationState {
+func stateGet(tempDir string, mockLogger MockLogger) *Application {
 	appState := Create(tempDir, "", &mockLogger)
 
 	// We need this hack because state.Get function utilizes `sync.once`. That means, if all unit tests
@@ -96,7 +96,7 @@ func Test_PersistApplicationState(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Read the persisted state from disk
-	persistedState := &ApplicationState{}
+	persistedState := &Application{}
 	fileData, err := os.ReadFile(path.Join(tempDir, stateFile))
 	assert.NoError(t, err)
 
