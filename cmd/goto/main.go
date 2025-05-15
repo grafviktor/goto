@@ -11,7 +11,7 @@ import (
 
 	"github.com/caarlos0/env/v10"
 
-	"github.com/grafviktor/goto/internal/config"
+	"github.com/grafviktor/goto/internal/application"
 	"github.com/grafviktor/goto/internal/logger"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
@@ -33,92 +33,53 @@ func main() {
 	// Set application version and build details
 	version.Set(buildVersion, buildCommit, buildBranch, buildDate)
 
+	// Create the backbone of the application
 	appState := createApplicationOrExit()
-	appConfig := appState.ApplicationConfig
 
-	// Logger created. Immediately print application version
-	appConfig.Logger.Info("[MAIN] Start application")
-	appConfig.Logger.Info("[MAIN] Version:    %s", version.Number())
-	appConfig.Logger.Info("[MAIN] Commit:     %s", version.CommitHash())
-	appConfig.Logger.Info("[MAIN] Branch:     %s", version.BuildBranch())
-	appConfig.Logger.Info("[MAIN] Build date: %s", version.BuildDate())
-
-	storage, fatalErr := storage.Get(appConfig.Context, appConfig, appConfig.Logger)
+	// Init storage
+	storage, fatalErr := storage.Get(appState.Context, appState.ApplicationConfig, appState.Logger)
 	if fatalErr != nil {
-		appConfig.Logger.Error("[MAIN] Cannot access application storage: %v\n", fatalErr)
+		appState.Logger.Error("[MAIN] Cannot access application storage: %v\n", fatalErr)
 		os.Exit(1)
 	}
 
 	// Run user interface
-	ui.Start(appConfig.Context, storage, &appState, appConfig.Logger)
+	ui.Start(appState.Context, storage, &appState)
 
 	// Quit signal should be intercepted on the UI level, however it will require an
 	// additional switch-case block with an appropriate checks. Leaving this message here.
-	appConfig.Logger.Debug("[MAIN] Receive quit signal")
-	appConfig.Logger.Debug("[MAIN] Save application state")
+	appState.Logger.Debug("[MAIN] Receive quit signal")
+	appState.Logger.Debug("[MAIN] Save application state")
 	fatalErr = appState.Persist()
 	if fatalErr != nil {
-		appConfig.Logger.Error("[MAIN] Can't save application state before closing %v", fatalErr)
+		appState.Logger.Error("[MAIN] Can't save application state before closing %v", fatalErr)
 	}
 
-	appConfig.Logger.Info("[MAIN] Close application")
+	appState.Logger.Info("[MAIN] Close application")
 }
 
 func createApplicationOrExit() state.Application {
-	environmentParams := config.User{}
-	// Parse environment parameters. These parameters have lower precedence than command line flags
-	if err := env.Parse(&environmentParams); err != nil {
-		fmt.Printf("%+v\n", err)
+	// Create application configuration
+	applicationConfiguration, success := createConfigurationOrExit()
+
+	// Create application logger.
+	lg, err := logger.Create(applicationConfiguration.AppHome, applicationConfiguration.LogLevel)
+	if err != nil {
+		log.Printf("[MAIN] Can't create log file: %v\n", err)
+		success = false
 	}
 
-	// Check if "ssh" utility is in application path
-	if err := utils.CheckAppInstalled("ssh"); err != nil {
-		log.Fatalf("[MAIN] ssh utility is not installed or cannot be found in the executable path: %v", err)
-	}
+	lg.Debug("[CONFIG] Set application home folder to '%s'\n", applicationConfiguration.AppHome)
+	lg.Debug("[CONFIG] Set application log level to '%s'\n", applicationConfiguration.LogLevel)
+	lg.Debug("[CONFIG] Enable feature '%s'\n", applicationConfiguration.EnableFeature)
+	lg.Debug("[CONFIG] Disable feature '%s'\n", applicationConfiguration.DisableFeature)
+	lg.Debug("[CONFIG] Set SSH config path to '%s'\n", applicationConfiguration.SSHConfigFilePath)
 
-	commandLineParams := config.User{}
-	displayApplicationDetailsAndExit := false
-	// Command line parameters have the highest precedence
-	flag.BoolVar(&displayApplicationDetailsAndExit, "v", false, "Display application details")
-	flag.StringVar(&commandLineParams.AppHome, "f", environmentParams.AppHome, "Application home folder")
-	flag.StringVar(&commandLineParams.LogLevel, "l", environmentParams.LogLevel, "Log verbosity level: debug, info")
-	flag.StringVar(&commandLineParams.SSHConfigFilePath, "s", environmentParams.SSHConfigFilePath, "Specifies an alternative per-user SSH configuration file path")
-	flag.Var(&commandLineParams.EnableFeature, "e", fmt.Sprintf("Enable feature. Supported values: %s", strings.Join(config.SupportedFeatures, "|")))
-	flag.Var(&commandLineParams.DisableFeature, "d", fmt.Sprintf("Disable feature. Supported values: %s", strings.Join(config.SupportedFeatures, "|")))
-	flag.Parse()
-
-	var fatalErr error
-	// Set application home folder path
-	commandLineParams.AppHome, fatalErr = utils.AppDir(appName, commandLineParams.AppHome)
-	if fatalErr != nil {
-		log.Printf("[MAIN] Can't set application home folder: %v\n", fatalErr)
-	}
-
-	// Set ssh config file path
-	commandLineParams.SSHConfigFilePath, fatalErr = utils.SSHConfigFilePath(commandLineParams.SSHConfigFilePath)
-	if fatalErr != nil {
-		log.Printf("[MAIN] Can't set SSH config path. Error: %v\n", fatalErr)
-	}
-
-	// Create application folder
-	if fatalErr = utils.CreateAppDirIfNotExists(commandLineParams.AppHome); fatalErr != nil {
-		log.Printf("[MAIN] Can't create application home folder: %v\n", fatalErr)
-	}
-
-	// Create application logger
-	lg, fatalErr := logger.New(commandLineParams.AppHome, commandLineParams.LogLevel)
-	if fatalErr != nil {
-		log.Printf("[MAIN] Can't create log file: %v\n", fatalErr)
-	}
-
-	userDefinedConfiguration := config.Merge(environmentParams, commandLineParams, &lg)
-
-	// Create applicationConfiguration state
-	applicationConfiguration := config.New(context.Background(), userDefinedConfiguration, &lg)
-	applicationState := state.Create(applicationConfiguration, &lg)
+	// Create applicationContext state
+	applicationState := state.Create(context.Background(), applicationConfiguration, lg)
 
 	// If "-v" parameter provided, display application version configuration and exit
-	if displayApplicationDetailsAndExit {
+	if applicationConfiguration.DisplayVersionAndExit {
 		lg.Debug("[MAIN] Display application version")
 		version.Print()
 		fmt.Println()
@@ -128,16 +89,11 @@ func createApplicationOrExit() state.Application {
 		os.Exit(0)
 	}
 
-	if fatalErr != nil {
-		lg.Error("[MAIN] Fatal error:", fatalErr)
-		os.Exit(1)
-	}
-
 	// If "-e" parameter provided, display enabled features and exit
-	if userDefinedConfiguration.EnableFeature != "" {
-		lg.Debug("[MAIN] Enable feature: '%s'", userDefinedConfiguration.EnableFeature)
-		fmt.Printf("Enabled: '%s'\n", userDefinedConfiguration.EnableFeature)
-		applicationState.SSHConfigEnabled = userDefinedConfiguration.EnableFeature == "ssh_config"
+	if applicationConfiguration.EnableFeature != "" {
+		lg.Debug("[MAIN] Enable feature: '%s'", applicationConfiguration.EnableFeature)
+		fmt.Printf("Enabled: '%s'\n", applicationConfiguration.EnableFeature)
+		applicationState.SSHConfigEnabled = applicationConfiguration.EnableFeature == "ssh_config"
 		applicationState.Persist()
 
 		lg.Debug("[MAIN] Exit application")
@@ -145,17 +101,79 @@ func createApplicationOrExit() state.Application {
 	}
 
 	// If "-d" parameter provided, display disabled features and exit
-	if userDefinedConfiguration.DisableFeature != "" {
-		lg.Debug("[MAIN] Disable feature: '%s'", userDefinedConfiguration.DisableFeature)
-		fmt.Printf("Disabled: '%s'\n", userDefinedConfiguration.DisableFeature)
-		applicationState.SSHConfigEnabled = !(userDefinedConfiguration.DisableFeature == "ssh_config")
+	if applicationConfiguration.DisableFeature != "" {
+		lg.Debug("[MAIN] Disable feature: '%s'", applicationConfiguration.DisableFeature)
+		fmt.Printf("Disabled: '%s'\n", applicationConfiguration.DisableFeature)
+		applicationState.SSHConfigEnabled = !(applicationConfiguration.DisableFeature == "ssh_config")
 		applicationState.Persist()
 
 		lg.Debug("[MAIN] Exit application")
 		os.Exit(0)
 	}
 
-	// config.application, state.application
-	// return application, *appState
+	// Check errors in the very end. That allows to check application version and enable/disable
+	// features, even if something is not right with the app.
+	if !success {
+		os.Exit(1)
+	}
+
+	// Log application version
+	lg.Info("[MAIN] Start application")
+	lg.Info("[MAIN] Version:    %s", version.Number())
+	lg.Info("[MAIN] Commit:     %s", version.CommitHash())
+	lg.Info("[MAIN] Branch:     %s", version.BuildBranch())
+	lg.Info("[MAIN] Build date: %s", version.BuildDate())
+
 	return *applicationState
+}
+
+func createConfigurationOrExit() (application.Configuration, bool) {
+	var fatalErr error
+	success := true
+
+	fallbackParams := application.Configuration{}
+	// Parse environment parameters. These parameters have lower precedence than command line flags
+	if err := env.Parse(&fallbackParams); err != nil {
+		fmt.Printf("%+v\n", err)
+	}
+
+	// Check if "ssh" utility is in application path
+	if err := utils.CheckAppInstalled("ssh"); err != nil {
+		log.Fatalf("[MAIN] ssh utility is not installed or cannot be found in the executable path: %v", err)
+	}
+
+	commandLineParams := application.Configuration{}
+	// Command line parameters have the highest precedence
+	flag.BoolVar(&commandLineParams.DisplayVersionAndExit, "v", false, "Display application details")
+	flag.StringVar(&commandLineParams.AppHome, "f", fallbackParams.AppHome, "Application home folder")
+	flag.StringVar(&commandLineParams.LogLevel, "l", fallbackParams.LogLevel, "Log verbosity level: debug, info")
+	flag.StringVar(&commandLineParams.SSHConfigFilePath, "s", fallbackParams.SSHConfigFilePath, "Specifies an alternative per-user SSH configuration file path")
+	flag.Var(&commandLineParams.EnableFeature, "e", fmt.Sprintf("Enable feature. Supported values: %s", strings.Join(application.SupportedFeatures, "|")))
+	flag.Var(&commandLineParams.DisableFeature, "d", fmt.Sprintf("Disable feature. Supported values: %s", strings.Join(application.SupportedFeatures, "|")))
+	flag.Parse()
+
+	// Set application home folder path
+	commandLineParams.AppHome, fatalErr = utils.AppDir(appName, commandLineParams.AppHome)
+	if fatalErr != nil {
+		log.Printf("[MAIN] Can't set application home folder: %v\n", fatalErr)
+		success = false
+	}
+
+	// Set ssh config file path
+	commandLineParams.SSHConfigFilePath, fatalErr = utils.SSHConfigFilePath(commandLineParams.SSHConfigFilePath)
+	if fatalErr != nil {
+		log.Printf("[MAIN] Can't set SSH config path. Error: %v\n", fatalErr)
+		success = false
+	}
+
+	// Create application folder
+	if fatalErr = utils.CreateAppDirIfNotExists(commandLineParams.AppHome); fatalErr != nil {
+		log.Printf("[MAIN] Can't create application home folder: %v\n", fatalErr)
+		success = false
+	}
+
+	// Merge environment params with command line arguments. Command line arguments win!
+	// applicationConfiguration := application.Merge(fallbackParams, commandLineParams)
+
+	return commandLineParams, success
 }

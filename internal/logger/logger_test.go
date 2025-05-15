@@ -34,7 +34,7 @@ func TestLoggerConstructor(t *testing.T) {
 	// Run tests
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			logger, err := New(tc.appPath, tc.userSetLogLevel)
+			logger, err := Create(tc.appPath, tc.userSetLogLevel)
 
 			if tc.expectError {
 				if err == nil {
@@ -75,7 +75,7 @@ func TestLoggerMethods(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Create an appLogger instance for testing
-	logger, err := New(tmpDir, "debug")
+	logger, err := Create(tmpDir, "debug")
 	if err != nil {
 		t.Fatalf("Failed to create appLogger: %v", err)
 	}

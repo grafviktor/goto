@@ -8,7 +8,7 @@ import (
 	"github.com/samber/lo"
 	"golang.org/x/exp/slices"
 
-	"github.com/grafviktor/goto/internal/config"
+	"github.com/grafviktor/goto/internal/application"
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/state"
@@ -47,7 +47,7 @@ type CombinedStorage struct {
 }
 
 // Get returns new data service.
-func Get(ctx context.Context, appConfig config.Application, logger iLogger) (HostStorage, error) {
+func Get(ctx context.Context, appConfig application.Configuration, logger iLogger) (HostStorage, error) {
 	storages, err := getStorages(ctx, appConfig, logger)
 	if err != nil {
 		return nil, err
@@ -71,9 +71,9 @@ func Get(ctx context.Context, appConfig config.Application, logger iLogger) (Hos
 	return &combinedStorage, nil
 }
 
-func getStorages(ctx context.Context, appConfig config.Application, logger iLogger) ([]HostStorage, error) {
+func getStorages(ctx context.Context, appConfig application.Configuration, logger iLogger) ([]HostStorage, error) {
 	storages := []HostStorage{}
-	yamlStorage, err := newYAMLStorage(ctx, appConfig.UserConfig.AppHome, appConfig.Logger)
+	yamlStorage, err := newYAMLStorage(ctx, appConfig.AppHome, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -83,8 +83,8 @@ func getStorages(ctx context.Context, appConfig config.Application, logger iLogg
 	sshConfigEnabled := state.Get().SSHConfigEnabled
 	logger.Debug("[STORAGE] SSH config storage enable: '%t'", sshConfigEnabled)
 	if sshConfigEnabled {
-		logger.Info("[STORAGE] Load ssh hosts from ssh config file: '%s'", appConfig.UserConfig.SSHConfigFilePath)
-		sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.UserConfig.SSHConfigFilePath, logger)
+		logger.Info("[STORAGE] Load ssh hosts from ssh config file: '%s'", appConfig.SSHConfigFilePath)
+		sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.SSHConfigFilePath, logger)
 		if err != nil {
 			return nil, err
 		}
