@@ -12,7 +12,6 @@ require (
 	github.com/samber/lo v1.47.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20241004190924-225e2abe05e6
-	golang.org/x/term v0.25.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
