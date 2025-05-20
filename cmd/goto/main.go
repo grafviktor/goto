@@ -131,9 +131,9 @@ func createConfigurationOrExit() (application.Configuration, bool) {
 	var fatalErr error
 	success := true
 
-	fallbackParams := application.Configuration{}
+	envConfig := application.Configuration{}
 	// Parse environment parameters. These parameters have lower precedence than command line flags
-	if err := env.Parse(&fallbackParams); err != nil {
+	if err := env.Parse(&envConfig); err != nil {
 		fmt.Printf("%+v\n", err)
 	}
 
@@ -142,32 +142,32 @@ func createConfigurationOrExit() (application.Configuration, bool) {
 		log.Fatalf("[MAIN] ssh utility is not installed or cannot be found in the executable path: %v", err)
 	}
 
-	commandLineParams := application.Configuration{}
+	cmdConfig := application.Configuration{}
 	// Command line parameters have the highest precedence
-	flag.BoolVar(&commandLineParams.DisplayVersionAndExit, "v", false, "Display application details")
-	flag.StringVar(&commandLineParams.AppHome, "f", fallbackParams.AppHome, "Application home folder")
-	flag.StringVar(&commandLineParams.LogLevel, "l", fallbackParams.LogLevel, "Log verbosity level: debug, info")
-	flag.StringVar(&commandLineParams.SSHConfigFilePath, "s", fallbackParams.SSHConfigFilePath, "Specifies an alternative per-user SSH configuration file path")
-	flag.Var(&commandLineParams.EnableFeature, "e", fmt.Sprintf("Enable feature. Supported values: %s", strings.Join(application.SupportedFeatures, "|")))
-	flag.Var(&commandLineParams.DisableFeature, "d", fmt.Sprintf("Disable feature. Supported values: %s", strings.Join(application.SupportedFeatures, "|")))
+	flag.BoolVar(&cmdConfig.DisplayVersionAndExit, "v", false, "Display application details")
+	flag.StringVar(&cmdConfig.AppHome, "f", envConfig.AppHome, "Application home folder")
+	flag.StringVar(&cmdConfig.LogLevel, "l", envConfig.LogLevel, "Log verbosity level: debug, info")
+	flag.StringVar(&cmdConfig.SSHConfigFilePath, "s", envConfig.SSHConfigFilePath, "Specifies an alternative per-user SSH configuration file path")
+	flag.Var(&cmdConfig.EnableFeature, "e", fmt.Sprintf("Enable feature. Supported values: %s", strings.Join(application.SupportedFeatures, "|")))
+	flag.Var(&cmdConfig.DisableFeature, "d", fmt.Sprintf("Disable feature. Supported values: %s", strings.Join(application.SupportedFeatures, "|")))
 	flag.Parse()
 
 	// Set application home folder path
-	commandLineParams.AppHome, fatalErr = utils.AppDir(appName, commandLineParams.AppHome)
+	cmdConfig.AppHome, fatalErr = utils.AppDir(appName, cmdConfig.AppHome)
 	if fatalErr != nil {
 		log.Printf("[MAIN] Can't set application home folder: %v\n", fatalErr)
 		success = false
 	}
 
 	// Set ssh config file path
-	commandLineParams.SSHConfigFilePath, fatalErr = utils.SSHConfigFilePath(commandLineParams.SSHConfigFilePath)
+	cmdConfig.SSHConfigFilePath, fatalErr = utils.SSHConfigFilePath(cmdConfig.SSHConfigFilePath)
 	if fatalErr != nil {
 		log.Printf("[MAIN] Can't set SSH config path. Error: %v\n", fatalErr)
 		success = false
 	}
 
 	// Create application folder
-	if fatalErr = utils.CreateAppDirIfNotExists(commandLineParams.AppHome); fatalErr != nil {
+	if fatalErr = utils.CreateAppDirIfNotExists(cmdConfig.AppHome); fatalErr != nil {
 		log.Printf("[MAIN] Can't create application home folder: %v\n", fatalErr)
 		success = false
 	}
@@ -175,5 +175,5 @@ func createConfigurationOrExit() (application.Configuration, bool) {
 	// Merge environment params with command line arguments. Command line arguments win!
 	// applicationConfiguration := application.Merge(fallbackParams, commandLineParams)
 
-	return commandLineParams, success
+	return cmdConfig, success
 }

@@ -27,8 +27,6 @@ func (ff *FeatureFlag) Set(value string) error {
 	return errors.New(errMsg)
 }
 
-// TODO: Rename from application.Configuration to config.Parameter
-
 // Configuration structs contains user-definable parameters.
 type Configuration struct {
 	AppHome               string `env:"GG_HOME"`
