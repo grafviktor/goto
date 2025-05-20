@@ -7,6 +7,11 @@ This tiny app helps to maintain a list of ssh servers. Unlike PuTTY it doesn't i
 
 Supported platforms: macOS, Linux, Windows.
 
+## Pre-Release v1.4.0 with ssh_config support is available ##
+
+* Forthcoming release introduces `ssh_config` file support. Test build can be taken from the [releases page](https://github.com/grafviktor/goto/releases/tag/v1.4.0-beta).
+* Latest stable version is v1.3.0.
+
 ## 1. Installation ##
 
 ### 1.1 Manual ###
