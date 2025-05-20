@@ -14,8 +14,10 @@ import (
 	"github.com/grafviktor/goto/internal/state"
 )
 
-var _ HostStorage = &CombinedStorage{}
-var defaultHostStorageType = constant.HostStorageType.YAML_FILE
+var (
+	_                      HostStorage = &CombinedStorage{}
+	defaultHostStorageType             = constant.HostStorageType.YAML_FILE
+)
 
 type iLogger interface {
 	Debug(format string, args ...any)

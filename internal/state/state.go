@@ -61,7 +61,8 @@ type Application struct {
 // Create - creates application state.
 func Create(appContext context.Context,
 	appConfig application.Configuration,
-	lg iLogger) *Application {
+	lg iLogger,
+) *Application {
 	once.Do(func() {
 		lg.Debug("[APPSTATE] Create application state")
 		appState = &Application{

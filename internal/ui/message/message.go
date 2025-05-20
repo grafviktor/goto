@@ -73,10 +73,12 @@ type titledUIModel interface {
 	SetTitle(title string)
 }
 
-var timers map[string]*time.Timer
-var notificationMessageDisplayTime = time.Second * 2
+var (
+	timers                         map[string]*time.Timer
+	notificationMessageDisplayTime = time.Second * 2
+)
 
-func DisplayNotification(targetComponentName string, text string, titledModel titledUIModel) tea.Cmd {
+func DisplayNotification(targetComponentName, text string, titledModel titledUIModel) tea.Cmd {
 	if timers == nil {
 		timers = make(map[string]*time.Timer)
 	}

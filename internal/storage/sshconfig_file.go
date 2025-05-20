@@ -20,7 +20,7 @@ type SSHParser interface {
 }
 
 type SSHConfigFile struct {
-	parser SSHParser
+	parser       SSHParser
 	innerStorage map[int]model.Host
 }
 

@@ -8,8 +8,9 @@ import (
 	"path"
 	"sync"
 
-	"github.com/grafviktor/goto/internal/utils"
 	"github.com/samber/lo"
+
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 // LogLevel is a subject for revising. Probably it's better to have a boolean flag to switch on/off debug logging.
