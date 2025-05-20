@@ -109,7 +109,7 @@ func (s *yamlFile) GetAll() ([]model.Host, error) {
 	if err != nil {
 		var pathErr *os.PathError
 		if errors.As(err, &pathErr) {
-			s.logger.Info("[STORAGE] Path no found: %s. Assuming it's not created yet", s.fsDataPath)
+			s.logger.Info("[STORAGE] Path not found: %s. Assuming it's not created yet", s.fsDataPath)
 
 			return make([]model.Host, 0), nil
 		}
