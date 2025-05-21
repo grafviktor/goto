@@ -88,10 +88,10 @@ func getStorages(ctx context.Context, appConfig application.Configuration, logge
 		logger.Info("[STORAGE] Load ssh hosts from ssh config file: '%s'", appConfig.SSHConfigFilePath)
 		sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.SSHConfigFilePath, logger)
 		if err != nil {
-			return nil, err
+			logger.Error("[STORAGE] Cannot load ssh hosts from file: '%s'. Error: %v", appConfig.SSHConfigFilePath, err)
+		} else {
+			storages = append(storages, sshConfigStorage)
 		}
-
-		storages = append(storages, sshConfigStorage)
 	}
 
 	return storages, nil

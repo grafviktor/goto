@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"os"
 
 	"github.com/samber/lo"
 
@@ -26,6 +27,11 @@ type SSHConfigFile struct {
 
 // newSSHConfigStorage - constructs new SSHStorage.
 func newSSHConfigStorage(_ context.Context, sshConfigPath string, logger iLogger) (*SSHConfigFile, error) {
+	_, err := os.Stat(sshConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
 	lexer := sshconfig.NewFileLexer(sshConfigPath, logger)
 	parser := sshconfig.NewParser(lexer, logger)
 	return &SSHConfigFile{parser: parser}, nil
