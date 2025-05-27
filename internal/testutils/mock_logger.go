@@ -22,6 +22,10 @@ func (l *MockLogger) Info(format string, args ...any) {
 	l.print(format, args...)
 }
 
+func (l *MockLogger) Warn(format string, args ...any) {
+	l.print(format, args...)
+}
+
 func (l *MockLogger) Error(format string, args ...any) {
 	l.print(format, args...)
 }

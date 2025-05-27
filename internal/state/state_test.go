@@ -2,11 +2,13 @@
 package state
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
 	"testing"
 
+	"github.com/grafviktor/goto/internal/application"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 )
@@ -31,6 +33,10 @@ func (l *MockLogger) Info(format string, args ...any) {
 	l.print(format, args...)
 }
 
+func (l *MockLogger) Warn(format string, args ...any) {
+	l.print(format, args...)
+}
+
 func (l *MockLogger) Error(format string, args ...any) {
 	l.print(format, args...)
 }
@@ -39,8 +45,8 @@ func (l *MockLogger) Close() {
 }
 
 // That's a wrapper function for state.Get which is required to overcome sync.Once restrictions
-func stateGet(tempDir string, mockLogger MockLogger) *Application {
-	appState := Create(tempDir, "", &mockLogger)
+func stateGet(tempDir string, mockLogger *MockLogger) *Application {
+	appState := Create(context.TODO(), application.Configuration{}, mockLogger)
 
 	// We need this hack because state.Get function utilizes `sync.once`. That means, if all unit tests
 	// are ran by a single process, instead of the new tmpDir, the old one will be used. In other words
@@ -63,14 +69,14 @@ func Test_GetApplicationState(t *testing.T) {
 	mockLogger := MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
-	appState := stateGet(tempDir, mockLogger)
+	appState := stateGet(tempDir, &mockLogger)
 
 	// Ensure that the application state is not nil
 	assert.NotNil(t, appState)
 
 	// Ensure that the logger was called during the initialization.
 	// The first line always contains "Get application state"
-	assert.Contains(t, mockLogger.Logs[0], "Get application state")
+	assert.Contains(t, mockLogger.Logs[0], "Create application state")
 }
 
 // Test persisting app state
@@ -86,7 +92,7 @@ func Test_PersistApplicationState(t *testing.T) {
 	mockLogger := MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
-	appState := stateGet(tempDir, mockLogger)
+	appState := stateGet(tempDir, &mockLogger)
 
 	// Modify the application state
 	appState.Selected = 42

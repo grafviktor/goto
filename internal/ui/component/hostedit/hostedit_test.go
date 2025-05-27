@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	model "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
 	testutils "github.com/grafviktor/goto/internal/testutils"
@@ -64,14 +65,15 @@ func TestNetworkPortValidator(t *testing.T) {
 }
 
 func TestGetKeyMap(t *testing.T) {
+	host := model.Host{}
 	// When title or address is selected, we can copy its values between each other using a shortcut
-	keyMap := getKeyMap(inputTitle)
+	keyMap := getKeyMap(host, inputTitle)
 	require.True(t, keyMap.CopyInputValue.Enabled())
-	keyMap = getKeyMap(inputTitle)
+	keyMap = getKeyMap(host, inputTitle)
 	require.True(t, keyMap.CopyInputValue.Enabled())
 
 	// However, when any other input selected, this keyboard shortcut should NOT be available.
-	keyMap = getKeyMap(inputDescription)
+	keyMap = getKeyMap(host, inputDescription)
 	require.False(t, keyMap.CopyInputValue.Enabled())
 }
 
