@@ -10,7 +10,15 @@ import (
 	"testing"
 )
 
+type mockOnce struct{}
+
+func (m *mockOnce) Do(f func()) {
+	f()
+}
+
 func TestLoggerConstructor(t *testing.T) {
+	// Use a mock to avoid sync.Once restrictions in tests
+	once = &mockOnce{}
 	// Create a temporary directory for testing
 	tmpDir, err := os.MkdirTemp("", "testlog")
 	if err != nil {

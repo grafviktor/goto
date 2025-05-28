@@ -154,7 +154,7 @@ func TestRemoveItem(t *testing.T) {
 			mode:          modeRemoveItem,
 			preselectItem: 0, // It's already '0' by default. Just to be more explicit
 			want: []tea.Msg{
-				msgHideNotification{},
+				message.HideUINotification{ComponentName: "hostlist"},
 				// Because we remote item "Mock Host 1" (which has index 0), we should ensure that next available item will be focused
 				message.HostSelected{HostID: 2},
 				message.RunProcessSSHLoadConfig{
@@ -181,7 +181,7 @@ func TestRemoveItem(t *testing.T) {
 			mode:          modeRemoveItem,
 			preselectItem: 2, // We have 3 items in the mock storage. Selecting the last one
 			want: []tea.Msg{
-				msgHideNotification{},
+				message.HideUINotification{ComponentName: "hostlist"},
 				// Because we remote item "Mock Host 1" (which has index 0), we should ensure that next available item will be focused
 				message.HostSelected{HostID: 2},
 				message.RunProcessSSHLoadConfig{
@@ -698,7 +698,7 @@ func TestUpdate_msgHideNotification(t *testing.T) {
 	model.loadHosts()
 	model.Title = "Mock notification message"
 
-	model.Update(msgHideNotification{})
+	model.Update(message.HideUINotification{ComponentName: "hostlist"})
 
 	// Ensure that notification returned back to normal when hid the notification message.
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", utils.StripStyles(model.Title))

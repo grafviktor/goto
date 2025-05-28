@@ -23,10 +23,15 @@ const (
 	LevelInfo
 )
 
+// This interface is used to avoid sync.Once restrictions in unit-tests.
+type Once interface {
+	Do(func())
+}
+
 var (
 	appLogger   *AppLogger
-	once        sync.Once
-	logFileName = "app.log"
+	once        Once = &sync.Once{}
+	logFileName      = "app.log"
 )
 
 // Create - creates a new logger with a specific log level.
