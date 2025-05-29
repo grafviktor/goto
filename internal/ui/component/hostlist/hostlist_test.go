@@ -647,7 +647,7 @@ func TestUpdate_HostCreated(t *testing.T) {
 
 	// Also check that host is inserted into a correct position of the hostlist model
 	createdHost2 := host.Host{
-		ID:               1,
+		ID:               666,
 		Title:            "ZZZ new host", // Should be positioned at last index
 		Description:      "Mock Host Updated",
 		Address:          "mock_hostname",
