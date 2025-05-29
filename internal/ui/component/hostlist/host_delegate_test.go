@@ -2,8 +2,9 @@ package hostlist
 
 import (
 	"bytes"
-	testutils "github.com/grafviktor/goto/internal/testutils"
 	"testing"
+
+	testutils "github.com/grafviktor/goto/internal/testutils"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/samber/lo"

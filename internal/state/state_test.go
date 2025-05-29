@@ -8,9 +8,10 @@ import (
 	"path"
 	"testing"
 
-	"github.com/grafviktor/goto/internal/application"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
+
+	"github.com/grafviktor/goto/internal/application"
 )
 
 type MockLogger struct {
