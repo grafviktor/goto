@@ -87,6 +87,11 @@ func Get() *Application {
 	return appState
 }
 
+// IsInitialized - checks if the application state is initialized.
+func IsInitialized() bool {
+	return appState != nil
+}
+
 func (as *Application) readFromFile() error {
 	as.Logger.Debug("[APPSTATE] Read application state from: '%s'", as.appStateFilePath)
 	fileData, err := os.ReadFile(as.appStateFilePath)

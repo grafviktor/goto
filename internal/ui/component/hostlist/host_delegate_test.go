@@ -2,6 +2,7 @@ package hostlist
 
 import (
 	"bytes"
+	testutils "github.com/grafviktor/goto/internal/testutils"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/host"
-	testutils "github.com/grafviktor/goto/internal/testutils"
 )
 
 func TestBuildScreenLayout(t *testing.T) {
