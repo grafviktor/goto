@@ -222,11 +222,11 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 			// we should open select group form.
 			m.logger.Debug("[UI] Receive Escape key when group selected. Open view select group.")
 			return message.TeaCmd(message.OpenViewSelectGroup{})
-		} else {
-			m.logger.Debug("[UI] Receive Escape key. Ask user for confirmation to close the app.")
-			m.enterCloseAppMode()
-			return nil
 		}
+
+		m.logger.Debug("[UI] Receive Escape key. Ask user for confirmation to close the app.")
+		m.enterCloseAppMode()
+		return nil
 	default:
 		cmd := m.updateChildModel(msg)
 		return tea.Sequence(cmd, m.onFocusChanged())
@@ -500,7 +500,7 @@ func (m *listModel) onFocusChanged() tea.Cmd {
 func (m *listModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoaded) {
 	for index, item := range m.Items() {
 		if hostListItem, ok := item.(ListItemHost); ok && hostListItem.ID == msg.HostID {
-			hostListItem.SSHClientConfig = &msg.Config
+			hostListItem.SSHHostConfig = &msg.Config
 			m.SetItem(index, hostListItem)
 			break
 		}
@@ -550,7 +550,7 @@ func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedErrMsg)})
 	}
 
-	if host.SSHClientConfig == nil {
+	if host.SSHHostConfig == nil {
 		errorText := fmt.Sprintf("[UI] SSH config is not set for host ID='%d', Title='%s'", host.ID, host.Title)
 		m.logger.Error(errorText)
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(errorText)})

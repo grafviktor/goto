@@ -9,13 +9,13 @@ import (
 type keyMapStateEnum string
 
 var keyMapState = struct {
-	EDITKEYS_HIDDEN          keyMapStateEnum
-	EDITKEYS_PARTIALLY_SHOWN keyMapStateEnum
-	EDITKEYS_SHOWN           keyMapStateEnum
+	EditkeysHidden         keyMapStateEnum
+	EditkeysPartiallyShown keyMapStateEnum
+	EditkeysShown          keyMapStateEnum
 }{
-	EDITKEYS_HIDDEN:          "hidden",
-	EDITKEYS_PARTIALLY_SHOWN: "partially shown",
-	EDITKEYS_SHOWN:           "shown",
+	EditkeysHidden:         "hidden",
+	EditkeysPartiallyShown: "partially shown",
+	EditkeysShown:          "shown",
 }
 
 type keyMap struct {
@@ -81,20 +81,20 @@ func newDelegateKeyMap() *keyMap {
 		),
 	}
 
-	km.keyMapState = keyMapState.EDITKEYS_HIDDEN
+	km.keyMapState = keyMapState.EditkeysHidden
 	return &km
 }
 
 func (k *keyMap) keysForNullHost() {
-	if k.keyMapState != keyMapState.EDITKEYS_HIDDEN {
-		k.keyMapState = keyMapState.EDITKEYS_HIDDEN
+	if k.keyMapState != keyMapState.EditkeysHidden {
+		k.keyMapState = keyMapState.EditkeysHidden
 		k.keysSetEnabled(false)
 	}
 }
 
 func (k *keyMap) keysForReadonlyHost() {
-	if k.keyMapState != keyMapState.EDITKEYS_PARTIALLY_SHOWN {
-		k.keyMapState = keyMapState.EDITKEYS_PARTIALLY_SHOWN
+	if k.keyMapState != keyMapState.EditkeysPartiallyShown {
+		k.keyMapState = keyMapState.EditkeysPartiallyShown
 		k.clone.SetEnabled(false)
 		k.connect.SetEnabled(true)
 		k.copyID.SetEnabled(true)
@@ -106,8 +106,8 @@ func (k *keyMap) keysForReadonlyHost() {
 }
 
 func (k *keyMap) keysForWritableHost() {
-	if k.keyMapState != keyMapState.EDITKEYS_SHOWN {
-		k.keyMapState = keyMapState.EDITKEYS_SHOWN
+	if k.keyMapState != keyMapState.EditkeysShown {
+		k.keyMapState = keyMapState.EditkeysShown
 		k.keysSetEnabled(true)
 	}
 }
@@ -124,7 +124,7 @@ func (k *keyMap) keysSetEnabled(val bool) {
 
 func (k *keyMap) UpdateKeyVisibility(item list.Item) string {
 	host, ok := item.(ListItemHost)
-	if !ok {
+	if !ok { //nolint:gocritic // it's more readable in if-else, then in switch-case block
 		k.keysForNullHost()
 	} else if host.IsReadOnly() {
 		k.keysForReadonlyHost()

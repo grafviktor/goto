@@ -273,10 +273,10 @@ func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadCo
 }
 
 func (m *mainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) tea.Cmd {
-	identityFile, hostname := msg.Host.SSHClientConfig.IdentityFile, msg.Host.SSHClientConfig.Hostname
+	identityFile, hostname := msg.Host.SSHHostConfig.IdentityFile, msg.Host.SSHHostConfig.Hostname
 	m.logger.Debug("[EXEC] Copy ssh-key '%s.pub' to host '%s'", identityFile, hostname)
 	if sshconfig.IsAlternativeFilePathDefined() {
-		m.logger.Warn("[EXEC] copy ssh key key when alternative ssh config file is used: %q. ssh config file is ignored.",
+		m.logger.Warn("[EXEC] copy ssh key when alternative ssh config file is used: %q. ssh config file is ignored.",
 			m.appState.ApplicationConfig.SSHConfigFilePath)
 	}
 	process := utils.BuildProcessInterceptStdAll(msg.Host.CmdSSHCopyID())

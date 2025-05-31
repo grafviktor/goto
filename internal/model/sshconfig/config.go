@@ -70,6 +70,7 @@ func getRegexFirstMatchingGroup(groups []string) string {
 	return ""
 }
 
+// IsAlternativeFilePathDefined - checks if user re-defined SSH config file path.
 func IsAlternativeFilePathDefined() bool {
 	if !state.IsInitialized() {
 		// We should only be here during unit tests.
@@ -86,6 +87,7 @@ func IsAlternativeFilePathDefined() bool {
 	return userDefinedConfig != defaultConfig
 }
 
+// GetFilePath - returns SSH config file path which is defined in application configuration.
 func GetFilePath() string {
 	return state.Get().ApplicationConfig.SSHConfigFilePath
 }

@@ -14,14 +14,17 @@ import (
 
 var _ HostStorage = &SSHConfigFile{}
 
+// ErrNotSupported - is an error which is returned when trying to save or
+// delete host in SSHConfigFile storage.
 var ErrNotSupported = errors.New("readonly storage, edit ssh config directly")
 
-type SSHParser interface {
+type sshParser interface {
 	Parse() ([]model.Host, error)
 }
 
+// SSHConfigFile - is a storage which contains hosts loaded from SSH config file.
 type SSHConfigFile struct {
-	parser       SSHParser
+	parser       sshParser
 	innerStorage map[int]model.Host
 }
 
@@ -70,6 +73,7 @@ func (s *SSHConfigFile) Delete(id int) error {
 	return ErrNotSupported
 }
 
+// Type - returns storage type.
 func (s *SSHConfigFile) Type() constant.HostStorageEnum {
-	return constant.HostStorageType.SSH_CONFIG
+	return constant.HostStorageType.SSHConfig
 }

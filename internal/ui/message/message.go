@@ -78,6 +78,7 @@ var (
 	notificationMessageDisplayTime = time.Second * 2
 )
 
+// DisplayNotification - dispatches UI event to display a notification in the UI for a specific component.
 func DisplayNotification(targetComponentName, text string, titledModel titledUIModel) tea.Cmd {
 	if timers == nil {
 		timers = make(map[string]*time.Timer)

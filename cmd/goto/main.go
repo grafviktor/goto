@@ -1,4 +1,6 @@
 // Package main contains application entry point
+//
+//nolint:lll // disable line length check
 package main
 
 import (
@@ -27,7 +29,10 @@ var (
 	buildBranch  string
 )
 
-const appName = "goto"
+const (
+	appName          = "goto"
+	featureSSHConfig = "ssh_config"
+)
 
 func main() {
 	// Set application version and build details
@@ -56,6 +61,7 @@ func main() {
 	}
 
 	appState.Logger.Info("[MAIN] Close application")
+	appState.Logger.Close()
 }
 
 func createApplicationOrExit() state.Application {
@@ -93,8 +99,10 @@ func createApplicationOrExit() state.Application {
 	if applicationConfiguration.EnableFeature != "" {
 		lg.Debug("[MAIN] Enable feature: '%s'", applicationConfiguration.EnableFeature)
 		fmt.Printf("Enabled: '%s'\n", applicationConfiguration.EnableFeature)
-		applicationState.SSHConfigEnabled = applicationConfiguration.EnableFeature == "ssh_config"
-		applicationState.Persist()
+		applicationState.SSHConfigEnabled = applicationConfiguration.EnableFeature == featureSSHConfig
+		if err != nil {
+			lg.Debug("[MAIN] Cannot save application configuration: %v", err)
+		}
 
 		lg.Debug("[MAIN] Exit application")
 		os.Exit(0)
@@ -104,8 +112,11 @@ func createApplicationOrExit() state.Application {
 	if applicationConfiguration.DisableFeature != "" {
 		lg.Debug("[MAIN] Disable feature: '%s'", applicationConfiguration.DisableFeature)
 		fmt.Printf("Disabled: '%s'\n", applicationConfiguration.DisableFeature)
-		applicationState.SSHConfigEnabled = !(applicationConfiguration.DisableFeature == "ssh_config")
-		applicationState.Persist()
+		applicationState.SSHConfigEnabled = !(applicationConfiguration.DisableFeature == featureSSHConfig)
+		err = applicationState.Persist()
+		if err != nil {
+			lg.Debug("[MAIN] Cannot save application configuration: %v", err)
+		}
 
 		lg.Debug("[MAIN] Exit application")
 		os.Exit(0)

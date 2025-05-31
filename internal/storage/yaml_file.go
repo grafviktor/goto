@@ -26,7 +26,7 @@ const (
 )
 
 // newYAMLStorage creates new YAML storage.
-func newYAMLStorage(_ context.Context, appFolder string, logger iLogger) (*yamlFile, error) {
+func newYAMLStorage(_ context.Context, appFolder string, logger iLogger) *yamlFile {
 	logger.Debug("[STORAGE] Init YAML storage. Config folder %s", appFolder)
 	fsDataPath := path.Join(appFolder, hostsFile)
 
@@ -34,7 +34,7 @@ func newYAMLStorage(_ context.Context, appFolder string, logger iLogger) (*yamlF
 		innerStorage: make(map[int]yamlHostWrapper),
 		fsDataPath:   fsDataPath,
 		logger:       logger,
-	}, nil
+	}
 }
 
 type yamlFile struct {
@@ -157,5 +157,5 @@ func (s *yamlFile) Get(hostID int) (model.Host, error) {
 }
 
 func (s *yamlFile) Type() constant.HostStorageEnum {
-	return constant.HostStorageType.YAML_FILE
+	return constant.HostStorageType.YAMLFile
 }

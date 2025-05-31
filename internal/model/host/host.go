@@ -31,7 +31,7 @@ type Host struct {
 	IdentityFilePath string                   `yaml:"identity_file_path,omitempty"`
 	LoginName        string                   `yaml:"username,omitempty"`
 	RemotePort       string                   `yaml:"network_port,omitempty"`
-	SSHClientConfig  *sshconfig.Config        `yaml:"-"` // TODO: Must be renamed to SSHHostConfig
+	SSHHostConfig    *sshconfig.Config        `yaml:"-"`
 	StorageType      constant.HostStorageEnum `yaml:"-"`
 	Title            string                   `yaml:"title"`
 }
@@ -69,8 +69,8 @@ func (h *Host) CmdSSHConnect() string {
 		return sshcommand.ConnectCommand(sshcommand.OptionAddress{Value: h.Address})
 	}
 
-	if h.StorageType == constant.HostStorageType.SSH_CONFIG {
-		// When it's SSH_CONFIG storage type, we need to use the title as a host name.
+	if h.StorageType == constant.HostStorageType.SSHConfig {
+		// When it's SSHConfig storage type, we need to use the title as a host name.
 		// This is because the by addressing the host by alias, we get all its settings from ssh_config.
 		return sshcommand.ConnectCommand(sshcommand.OptionAddress{Value: h.Title})
 	}
@@ -85,7 +85,7 @@ func (h *Host) CmdSSHConnect() string {
 
 // CmdSSHConfig - returns SSH command for loading host default configuration.
 func (h *Host) CmdSSHConfig() string {
-	if h.StorageType == constant.HostStorageType.SSH_CONFIG {
+	if h.StorageType == constant.HostStorageType.SSHConfig {
 		return sshcommand.LoadConfigCommand(sshcommand.OptionReadHostConfig{Value: h.Title})
 	}
 
@@ -104,19 +104,19 @@ func (h *Host) CmdSSHConfig() string {
 // CmdSSHCopyID - returns SSH command for copying SSH key to a remote host (see ssh-copy-id).
 func (h *Host) CmdSSHCopyID() string {
 	// Though ssh-copy-id respects ssh_config, it's impossible to specify alternative ssh config file.
-	if h.StorageType == constant.HostStorageType.SSH_CONFIG {
+	if h.StorageType == constant.HostStorageType.SSHConfig {
 		return sshcommand.CopyIDCommand(sshcommand.OptionAddress{Value: h.Title})
 	}
 
 	return sshcommand.CopyIDCommand(
-		sshcommand.OptionLoginName{Value: h.SSHClientConfig.User},
-		sshcommand.OptionRemotePort{Value: h.SSHClientConfig.Port},
-		sshcommand.OptionPrivateKey{Value: h.SSHClientConfig.IdentityFile},
-		sshcommand.OptionAddress{Value: h.SSHClientConfig.Hostname},
+		sshcommand.OptionLoginName{Value: h.SSHHostConfig.User},
+		sshcommand.OptionRemotePort{Value: h.SSHHostConfig.Port},
+		sshcommand.OptionPrivateKey{Value: h.SSHHostConfig.IdentityFile},
+		sshcommand.OptionAddress{Value: h.SSHHostConfig.Hostname},
 	)
 }
 
-// CmdSSHCopyID - returns SSH command for copying SSH key to a remote host (see ssh-copy-id).
+// IsReadOnly - returns true if host storage does not support modification.
 func (h *Host) IsReadOnly() bool {
-	return h.StorageType == constant.HostStorageType.SSH_CONFIG
+	return h.StorageType == constant.HostStorageType.SSHConfig
 }

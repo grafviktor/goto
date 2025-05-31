@@ -6,9 +6,6 @@ import "errors"
 // ErrNotFound is used by data layer.
 var ErrNotFound = errors.New("not found")
 
-// ProtocolSSH - is only supported protocol.
-const ProtocolSSH = "ssh"
-
 // ScreenLayout is used to determine how the hostlist should be displayed.
 type ScreenLayout string
 
@@ -33,14 +30,16 @@ const (
 	ProcessTypeSSHConnect ProcessType = "ssh-connect"
 )
 
+// HostStorageEnum defines the enum options for HostStorageType.
 type HostStorageEnum string
 
+// HostStorageType defines the type of the underlying storage of a host.
 var HostStorageType = struct {
-	COMBINED   HostStorageEnum
-	SSH_CONFIG HostStorageEnum
-	YAML_FILE  HostStorageEnum
+	Combined  HostStorageEnum
+	SSHConfig HostStorageEnum
+	YAMLFile  HostStorageEnum
 }{
-	COMBINED:   "COMBINED",
-	SSH_CONFIG: "SSH_CONFIG",
-	YAML_FILE:  "YAML_FILE",
+	Combined:  "COMBINED",
+	SSHConfig: "SSH_CONFIG",
+	YAMLFile:  "YAML_FILE",
 }

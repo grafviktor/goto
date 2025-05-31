@@ -38,6 +38,7 @@ type iLogger interface {
 	Warn(format string, args ...any)
 	Info(format string, args ...any)
 	Error(format string, args ...any)
+	Close()
 }
 
 // Application stores application state.
@@ -129,7 +130,7 @@ func (as *Application) Persist() error {
 	return nil
 }
 
-// Print outputs user-definable parameters in the console.
+// PrintConfig outputs user-definable parameters in the console.
 func (as *Application) PrintConfig() {
 	fmt.Printf("App home:           %s\n", as.ApplicationConfig.AppHome)
 	fmt.Printf("Log level:          %s\n", as.ApplicationConfig.LogLevel)

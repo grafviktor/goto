@@ -23,7 +23,7 @@ const (
 	LevelInfo
 )
 
-// This interface is used to avoid sync.Once restrictions in unit-tests.
+// Once - this interface is used to avoid sync.Once restrictions in unit-tests.
 type Once interface {
 	Do(func())
 }
@@ -61,6 +61,7 @@ func Get() *AppLogger {
 	return appLogger
 }
 
+// AppLogger is a simple logger that writes messages to a file.
 type AppLogger struct {
 	logFile     *os.File
 	logLevel    LogLevel
@@ -73,26 +74,31 @@ func (l *AppLogger) print(prefix, format string, args ...any) {
 	l.innerLogger.Print(utils.StripStyles(msg))
 }
 
+// Debug - prints debug message if log level is set to debug.
 func (l *AppLogger) Debug(format string, args ...any) {
 	if l.logLevel <= LevelDebug {
 		l.print("DEBG", format, args...)
 	}
 }
 
+// Info - prints info message if log level is set to debug or info.
 func (l *AppLogger) Info(format string, args ...any) {
 	if l.logLevel <= LevelInfo {
 		l.print("INFO", format, args...)
 	}
 }
 
+// Warn - prints a warning message regardless of the log level.
 func (l *AppLogger) Warn(format string, args ...any) {
 	l.print("WARN", format, args...)
 }
 
+// Error - prints an error message regardless of the log level.
 func (l *AppLogger) Error(format string, args ...any) {
 	l.print("ERRO", format, args...)
 }
 
+// Close - closes the log file.
 func (l *AppLogger) Close() {
 	//nolint:errcheck // we don't care if log file wasn't closed properly
 	l.logFile.Close()

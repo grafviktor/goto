@@ -1,4 +1,4 @@
-// Package config contains application configuration
+// Package application config contains configuration struct
 package application
 
 import (
@@ -7,14 +7,17 @@ import (
 	"strings"
 )
 
+// SupportedFeatures contains a list of application features that can be enabled or disabled.
 var SupportedFeatures = []string{"ssh_config"}
 
+// FeatureFlag represents application feature flag that can be enabled or disabled.
 type FeatureFlag string
 
 func (ff *FeatureFlag) String() string {
 	return string(*ff)
 }
 
+// Set validates and sets the feature flag value.
 func (ff *FeatureFlag) Set(value string) error {
 	for _, supported := range SupportedFeatures {
 		if value == supported {

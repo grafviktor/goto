@@ -41,7 +41,7 @@ func TestListModel_Init(t *testing.T) {
 				RemotePort:       "2222",
 				LoginName:        "root",
 				IdentityFilePath: "id_rsa",
-				SSHClientConfig:  &sshconfig.Config{},
+				SSHHostConfig:    &sshconfig.Config{},
 			},
 		},
 	})
@@ -167,7 +167,7 @@ func TestRemoveItem(t *testing.T) {
 						RemotePort:       "2222",
 						LoginName:        "root",
 						IdentityFilePath: "id_rsa",
-						SSHClientConfig:  &sshconfig.Config{},
+						SSHHostConfig:    &sshconfig.Config{},
 					},
 				},
 			},
@@ -194,7 +194,7 @@ func TestRemoveItem(t *testing.T) {
 						RemotePort:       "2222",
 						LoginName:        "root",
 						IdentityFilePath: "id_rsa",
-						SSHClientConfig:  &sshconfig.Config{},
+						SSHHostConfig:    &sshconfig.Config{},
 					},
 				},
 			},
@@ -367,7 +367,7 @@ func TestExitRemoveItemMode(t *testing.T) {
 				RemotePort:       "2222",
 				LoginName:        "root",
 				IdentityFilePath: "id_rsa",
-				SSHClientConfig:  &sshconfig.Config{},
+				SSHHostConfig:    &sshconfig.Config{},
 			},
 		},
 	}
@@ -579,7 +579,7 @@ func TestUpdate_HostSSHConfigLoaded(t *testing.T) {
 		Config: expectedConfig,
 	})
 
-	actualConfig := lm.Items()[0].(ListItemHost).SSHClientConfig
+	actualConfig := lm.Items()[0].(ListItemHost).SSHHostConfig
 	require.Equal(t, &expectedConfig, actualConfig)
 }
 
@@ -599,7 +599,7 @@ func TestUpdate_HostUpdated(t *testing.T) {
 		RemotePort:       "9999",
 		LoginName:        "mock_username",
 		IdentityFilePath: "/tmp",
-		SSHClientConfig:  nil,
+		SSHHostConfig:    nil,
 	}
 
 	lm.Update(message.HostUpdated{Host: updatedHost})
@@ -614,7 +614,7 @@ func TestUpdate_HostUpdated(t *testing.T) {
 		RemotePort:       "9999",
 		LoginName:        "mock_username",
 		IdentityFilePath: "/tmp",
-		SSHClientConfig:  nil,
+		SSHHostConfig:    nil,
 	}
 
 	lm.Update(message.HostUpdated{Host: updatedHost})
@@ -638,7 +638,7 @@ func TestUpdate_HostCreated(t *testing.T) {
 		RemotePort:       "9999",
 		LoginName:        "mock_username",
 		IdentityFilePath: "/tmp",
-		SSHClientConfig:  nil,
+		SSHHostConfig:    nil,
 	}
 
 	lm.Update(message.HostCreated{Host: createdHost1})
@@ -654,7 +654,7 @@ func TestUpdate_HostCreated(t *testing.T) {
 		RemotePort:       "9999",
 		LoginName:        "mock_username",
 		IdentityFilePath: "/tmp",
-		SSHClientConfig:  nil,
+		SSHHostConfig:    nil,
 	}
 
 	lm.Update(message.HostCreated{Host: createdHost2})

@@ -89,19 +89,20 @@ func networkPortValidator(s string) error {
 }
 
 func getKeyMap(host hostModel.Host, focusedInput int) keyMap {
-	if host.IsReadOnly() {
+	switch {
+	case host.IsReadOnly():
 		keys.CopyInputValue.SetEnabled(false)
 		keys.Save.SetEnabled(false)
 		keys.Up.SetEnabled(false)
 		keys.Down.SetEnabled(false)
 		keys.Discard.SetHelp("esc", "close")
-	} else if focusedInput == inputTitle || focusedInput == inputAddress {
+	case focusedInput == inputTitle || focusedInput == inputAddress:
 		keys.CopyInputValue.SetEnabled(true)
 		keys.Save.SetEnabled(true)
 		keys.Up.SetEnabled(true)
 		keys.Down.SetEnabled(true)
 		keys.Discard.SetHelp("esc", "discard")
-	} else {
+	default:
 		keys.CopyInputValue.SetEnabled(false)
 		keys.Save.SetEnabled(true)
 		keys.Up.SetEnabled(true)
@@ -139,7 +140,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		// Logger should notify that this is a new host
 		host = hostModel.Host{Group: state.Group}
 	}
-	host.SSHClientConfig = sshconfig.StubConfig()
+	host.SSHHostConfig = sshconfig.StubConfig()
 
 	m := editModel{
 		inputs:       make([]input.Input, 7),
@@ -222,7 +223,7 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case debouncedMessage:
 		cmd = m.handleDebouncedMessage(msg)
 	case message.HostSSHConfigLoaded:
-		m.host.SSHClientConfig = &msg.Config
+		m.host.SSHHostConfig = &msg.Config
 		m.updateInputFields()
 		m.viewport.SetContent(m.inputsView())
 	case message.HideUINotification:
@@ -533,9 +534,9 @@ func (m *editModel) handleEditableHost() {
 	m.inputs[inputAddress].Placeholder = "*required*"
 	m.inputs[inputGroup].Placeholder = "n/a" //nolint:goconst
 	m.inputs[inputDescription].Placeholder = "n/a"
-	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.User)
-	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.Port)
-	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.IdentityFile)
+	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHHostConfig.User)
+	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHHostConfig.Port)
+	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHHostConfig.IdentityFile)
 
 	hostInputLabel := lo.Ternary(customConnectString, "Command", "Host")
 	m.inputs[inputAddress].SetLabel(hostInputLabel)

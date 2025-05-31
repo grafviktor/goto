@@ -6,15 +6,19 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/grafviktor/goto/internal/logger"
 )
 
-const MAX_DEPTH = 16
+const maxFileIncludeDepth = 16
 
+// FileLexer is responsible for reading and tokenizing an SSH config file.
 type FileLexer struct {
 	filePath string
 	logger   iLogger
 }
 
+// NewFileLexer creates a new instance of FileLexer for the given SSH config file path.
 func NewFileLexer(filePath string, log iLogger) *FileLexer {
 	return &FileLexer{
 		filePath: filePath,
@@ -22,26 +26,27 @@ func NewFileLexer(filePath string, log iLogger) *FileLexer {
 	}
 }
 
-func (fl *FileLexer) Tokenize() []Token {
-	parent := Token{
-		Type:  TokenType.INCLUDE_FILE,
+// Tokenize reads the SSH config file and returns a slice of tokens representing the contents.
+func (fl *FileLexer) Tokenize() []sshToken {
+	parent := sshToken{
+		kind:  tokenKind.IncludeFile,
 		key:   "Include",
 		value: fl.filePath,
 	}
 
-	tokens := []Token{}
+	tokens := []sshToken{}
 	return fl.loadFromFile(parent, tokens, 0)
 }
 
-func (fl *FileLexer) loadFromFile(includeToken Token, children []Token, currentDepth int) []Token {
+func (fl *FileLexer) loadFromFile(includeToken sshToken, children []sshToken, currentDepth int) []sshToken {
 	currentDepth++
-	if currentDepth > MAX_DEPTH {
+	if currentDepth > maxFileIncludeDepth {
 		fl.logger.Error("[STORAGE]: Max include depth reached")
 
 		return children
 	}
 
-	if includeToken.Type != TokenType.INCLUDE_FILE {
+	if includeToken.kind != tokenKind.IncludeFile {
 		return children
 	}
 
@@ -50,13 +55,19 @@ func (fl *FileLexer) loadFromFile(includeToken Token, children []Token, currentD
 		fl.logger.Error("[STORAGE] Error opening file: %+v", err)
 		panic(err)
 	}
-	defer file.Close()
+
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			logger := logger.Get()
+			logger.Error("[SSHCONFIG] Error closing file %s: %v", includeToken.value, closeErr)
+		}
+	}()
 
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		var token Token
+		var token sshToken
 		switch {
 		case hasPrefixIgnoreCase(line, "User"):
 			token = fl.usernameToken(line)
@@ -67,18 +78,18 @@ func (fl *FileLexer) loadFromFile(includeToken Token, children []Token, currentD
 		case hasPrefixIgnoreCase(line, "Port"):
 			token = fl.networkPortToken(line)
 		case hasPrefixIgnoreCase(line, "Include"):
-			token = fl.keyValuesToken(TokenType.INCLUDE_FILE, line)
+			token = fl.keyValuesToken(tokenKind.IncludeFile, line)
 		case hasPrefixIgnoreCase(line, "IdentityFile"):
 			token = fl.identityFileToken(line)
 		case hasPrefixIgnoreCase(line, "# GG:GROUP"):
-			token = fl.metaDataToken(TokenType.GROUP, line)
+			token = fl.metaDataToken(tokenKind.Group, line)
 		case hasPrefixIgnoreCase(line, "# GG:DESCRIPTION"):
-			token = fl.metaDataToken(TokenType.DESCRIPTION, line)
+			token = fl.metaDataToken(tokenKind.Description, line)
 		default:
-			token = Token{Type: TokenType.UNSUPPORTED}
+			token = sshToken{kind: tokenKind.Unsupported}
 		}
 
-		if token.Type == TokenType.INCLUDE_FILE {
+		if token.kind == tokenKind.IncludeFile {
 			includeTokens := fl.handleIncludeToken(token)
 			for _, includeToken := range includeTokens {
 				children = fl.loadFromFile(includeToken, children, currentDepth)
@@ -87,7 +98,7 @@ func (fl *FileLexer) loadFromFile(includeToken Token, children []Token, currentD
 			continue
 		}
 
-		if token.Type != TokenType.UNSUPPORTED {
+		if token.kind != tokenKind.Unsupported {
 			children = append(children, token)
 		}
 	}
@@ -105,100 +116,100 @@ func hasPrefixIgnoreCase(str, prefix string) bool {
 	return strings.HasPrefix(strings.ToLower(str), strings.ToLower(prefix))
 }
 
-func (fl *FileLexer) hostToken(line string) Token {
+func (fl *FileLexer) hostToken(line string) sshToken {
 	key, value, err := parseKeyValuesLine(line)
 	if err != nil {
-		return Token{Type: TokenType.UNSUPPORTED}
+		return sshToken{kind: tokenKind.Unsupported}
 	}
 
-	return Token{
-		Type:  TokenType.HOST,
+	return sshToken{
+		kind:  tokenKind.Host,
 		key:   key,
 		value: value,
 	}
 }
 
-func (fl *FileLexer) usernameToken(rawLine string) Token {
+func (fl *FileLexer) usernameToken(rawLine string) sshToken {
 	line := strings.TrimSpace(rawLine)
 	key, value, err := parseKeyValuesLine(line)
 	if err != nil {
-		return Token{Type: TokenType.UNSUPPORTED}
+		return sshToken{kind: tokenKind.Unsupported}
 	}
 
 	if !sshUsernameRegex.MatchString(value) {
-		return Token{Type: TokenType.UNSUPPORTED}
+		return sshToken{kind: tokenKind.Unsupported}
 	}
 
-	return Token{
-		Type:  TokenType.USER,
+	return sshToken{
+		kind:  tokenKind.User,
 		key:   key,
 		value: value,
 	}
 }
 
-const MAX_HOSTNAME_LENGTH = 253
+const maxHostnameLength = 253
 
-func (fl *FileLexer) hostnameToken(rawLine string) Token {
+func (fl *FileLexer) hostnameToken(rawLine string) sshToken {
 	line := strings.TrimSpace(rawLine)
 	key, value, err := parseKeyValuesLine(line)
 	if err != nil {
-		return Token{Type: TokenType.UNSUPPORTED}
+		return sshToken{kind: tokenKind.Unsupported}
 	}
 
-	if len(value) > MAX_HOSTNAME_LENGTH {
-		return Token{Type: TokenType.UNSUPPORTED}
+	if len(value) > maxHostnameLength {
+		return sshToken{kind: tokenKind.Unsupported}
 	}
 
 	if !hostnameRegex.MatchString(value) {
-		return Token{Type: TokenType.UNSUPPORTED}
+		return sshToken{kind: tokenKind.Unsupported}
 	}
 
-	return Token{
-		Type:  TokenType.HOSTNAME,
+	return sshToken{
+		kind:  tokenKind.Hostname,
 		key:   key,
 		value: value,
 	}
 }
 
-func (fl *FileLexer) networkPortToken(rawLine string) Token {
+func (fl *FileLexer) networkPortToken(rawLine string) sshToken {
 	line := strings.TrimSpace(rawLine)
 	key, value, err := parseKeyValuesLine(line)
 	if err != nil {
-		return Token{Type: TokenType.UNSUPPORTED}
+		return sshToken{kind: tokenKind.Unsupported}
 	}
 
 	networkPort, err := strconv.ParseInt(value, 10, 32)
 	if err != nil {
-		return Token{Type: TokenType.UNSUPPORTED}
+		return sshToken{kind: tokenKind.Unsupported}
 	}
 
 	if !isNetworkPortNumberValid(int(networkPort)) {
-		return Token{Type: TokenType.UNSUPPORTED}
+		return sshToken{kind: tokenKind.Unsupported}
 	}
 
-	return Token{
-		Type:  TokenType.NETWORK_PORT,
+	return sshToken{
+		kind:  tokenKind.NetworkPort,
 		key:   key,
 		value: value,
 	}
 }
 
-func (fl *FileLexer) identityFileToken(line string) Token {
+func (fl *FileLexer) identityFileToken(line string) sshToken {
 	key, value, err := parseKeyValuesLine(line)
 	if err != nil {
-		return Token{Type: TokenType.UNSUPPORTED}
+		return sshToken{kind: tokenKind.Unsupported}
 	}
 
-	return Token{
-		Type:  TokenType.IDENTITY_FILE,
+	return sshToken{
+		kind:  tokenKind.IdentityFile,
 		key:   key,
 		value: value,
 	}
 }
 
-func (fl *FileLexer) handleIncludeToken(token Token) []Token {
-	tokens := []Token{}
-	if token.Type != TokenType.INCLUDE_FILE {
+func (fl *FileLexer) handleIncludeToken(token sshToken) []sshToken {
+	tokens := []sshToken{}
+	if token.kind != tokenKind.IncludeFile {
 		return tokens
 	}
 
@@ -226,8 +237,8 @@ func (fl *FileLexer) handleIncludeToken(token Token) []Token {
 			continue
 		}
 
-		tokens = append(tokens, Token{
-			Type:  TokenType.INCLUDE_FILE,
+		tokens = append(tokens, sshToken{
+			kind:  tokenKind.IncludeFile,
 			key:   "Include",
 			value: path,
 		})
@@ -236,24 +247,24 @@ func (fl *FileLexer) handleIncludeToken(token Token) []Token {
 	return tokens
 }
 
-func (fl *FileLexer) metaDataToken(tokenType tokenEnum, line string) Token {
+func (fl *FileLexer) metaDataToken(kind tokenEnum, line string) sshToken {
 	tokenFound := false
 	line, tokenFound = strings.CutPrefix(line, "# GG:")
 	if !tokenFound {
-		return Token{Type: TokenType.UNSUPPORTED}
+		return sshToken{kind: tokenKind.Unsupported}
 	}
 
-	return fl.keyValuesToken(tokenType, line)
+	return fl.keyValuesToken(kind, line)
 }
 
-func (fl *FileLexer) keyValuesToken(tokenType tokenEnum, line string) Token {
+func (fl *FileLexer) keyValuesToken(kind tokenEnum, line string) sshToken {
 	key, value, err := parseKeyValuesLine(line)
 	if err != nil {
-		return Token{Type: TokenType.UNSUPPORTED}
+		return sshToken{kind: tokenKind.Unsupported}
 	}
 
-	return Token{
-		Type:  tokenType,
+	return sshToken{
+		kind:  kind,
 		key:   key,
 		value: value,
 	}

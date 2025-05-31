@@ -270,7 +270,7 @@ func TestUpdateInputPlaceHolders(t *testing.T) {
 	// Make sure that placeholders have correct values once ssh config is changed.
 	appState := MockAppState()
 	model := New(context.TODO(), testutils.NewMockStorage(false), appState, &testutils.MockLogger{})
-	model.host.SSHClientConfig = &sshconfig.Config{
+	model.host.SSHHostConfig = &sshconfig.Config{
 		IdentityFile: "Mock Identity File",
 		User:         "Mock User",
 		Port:         "Mock Port",

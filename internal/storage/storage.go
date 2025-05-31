@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	_                      HostStorage = &CombinedStorage{}
-	defaultHostStorageType             = constant.HostStorageType.YAML_FILE
+	_                      HostStorage = &combinedStorage{}
+	defaultHostStorageType             = constant.HostStorageType.YAMLFile
 )
 
 type iLogger interface {
@@ -40,7 +40,7 @@ type hostStorageMapping struct {
 	innerStorageID    int
 }
 
-type CombinedStorage struct {
+type combinedStorage struct {
 	hosts          map[int]model.Host
 	storages       map[constant.HostStorageEnum]HostStorage
 	logger         iLogger
@@ -50,35 +50,29 @@ type CombinedStorage struct {
 
 // Get returns new data service.
 func Get(ctx context.Context, appConfig application.Configuration, logger iLogger) (HostStorage, error) {
-	storages, err := getStorages(ctx, appConfig, logger)
-	if err != nil {
-		return nil, err
-	}
+	storages := getStorages(ctx, appConfig, logger)
 
-	combinedStorage := CombinedStorage{
+	cs := combinedStorage{
 		storages:       make(map[constant.HostStorageEnum]HostStorage),
 		hostStorageMap: make(map[int]hostStorageMapping),
 		hosts:          make(map[int]model.Host),
 		nextID:         0,
 	}
-	combinedStorage.logger = logger
+	cs.logger = logger
 	for _, storage := range storages {
-		if storage.Type() == constant.HostStorageType.COMBINED {
+		if storage.Type() == constant.HostStorageType.Combined {
 			errMsg := fmt.Sprintf("cannot use %s in combineStorages method", storage.Type())
 			panic(errMsg)
 		}
-		combinedStorage.storages[storage.Type()] = storage
+		cs.storages[storage.Type()] = storage
 	}
 
-	return &combinedStorage, nil
+	return &cs, nil
 }
 
-func getStorages(ctx context.Context, appConfig application.Configuration, logger iLogger) ([]HostStorage, error) {
-	storages := []HostStorage{}
-	yamlStorage, err := newYAMLStorage(ctx, appConfig.AppHome, logger)
-	if err != nil {
-		return nil, err
-	}
+func getStorages(ctx context.Context, appConfig application.Configuration, logger iLogger) []HostStorage {
+	var storages []HostStorage
+	yamlStorage := newYAMLStorage(ctx, appConfig.AppHome, logger)
 
 	storages = append(storages, yamlStorage)
 
@@ -94,18 +88,18 @@ func getStorages(ctx context.Context, appConfig application.Configuration, logge
 		}
 	}
 
-	return storages, nil
+	return storages
 }
 
 // Delete implements HostStorage.
-func (c *CombinedStorage) Delete(hostID int) error {
+func (c *combinedStorage) Delete(hostID int) error {
 	storage := c.getHostOrDefaultStorage(c.hosts[hostID])
 	delete(c.hosts, hostID)
 	return storage.Delete(c.hostStorageMap[hostID].innerStorageID)
 }
 
 // Get implements HostStorage.
-func (c *CombinedStorage) Get(hostID int) (model.Host, error) {
+func (c *combinedStorage) Get(hostID int) (model.Host, error) {
 	storage := c.getHostOrDefaultStorage(c.hosts[hostID])
 	storageID := c.hostStorageMap[hostID].innerStorageID
 	host, err := storage.Get(storageID)
@@ -121,7 +115,7 @@ func (c *CombinedStorage) Get(hostID int) (model.Host, error) {
 }
 
 // GetAll implements HostStorage. Warning: this method rebuilds the IDs.
-func (c *CombinedStorage) GetAll() ([]model.Host, error) {
+func (c *combinedStorage) GetAll() ([]model.Host, error) {
 	storageTypes := lo.Keys(c.storages)
 	slices.Sort(storageTypes)
 	c.hosts = make(map[int]model.Host, 0)
@@ -156,28 +150,28 @@ func (c *CombinedStorage) GetAll() ([]model.Host, error) {
 }
 
 // Save implements HostStorage.
-func (c *CombinedStorage) Save(host model.Host) (model.Host, error) {
+func (c *combinedStorage) Save(host model.Host) (model.Host, error) {
 	storage := c.getHostOrDefaultStorage(host)
 	if isNewHost(host) {
 		host, err := storage.Save(host)
 		combinedStorageID := c.addHost(host, storage.Type())
 		host.ID = combinedStorageID
 		return host, err
-	} else {
-		mapping := c.hostStorageMap[host.ID]
-		host.ID = mapping.innerStorageID
-		host, err := storage.Save(host)
-		host.ID = mapping.combinedStorageID
-		return host, err
 	}
+
+	mapping := c.hostStorageMap[host.ID]
+	host.ID = mapping.innerStorageID
+	host, err := storage.Save(host)
+	host.ID = mapping.combinedStorageID
+	return host, err
 }
 
 // Type implements HostStorage.
-func (c *CombinedStorage) Type() constant.HostStorageEnum {
-	return constant.HostStorageType.COMBINED
+func (c *combinedStorage) Type() constant.HostStorageEnum {
+	return constant.HostStorageType.Combined
 }
 
-func (c *CombinedStorage) getHostOrDefaultStorage(host model.Host) HostStorage {
+func (c *combinedStorage) getHostOrDefaultStorage(host model.Host) HostStorage {
 	storageType := c.hostStorageMap[host.ID].storageType
 	if storageType != "" {
 		return c.storages[storageType]
@@ -191,7 +185,7 @@ func isNewHost(host model.Host) bool {
 	return host.ID == 0
 }
 
-func (c *CombinedStorage) addHost(host model.Host, storageType constant.HostStorageEnum) int {
+func (c *combinedStorage) addHost(host model.Host, storageType constant.HostStorageEnum) int {
 	c.nextID++
 	c.hostStorageMap[c.nextID] = hostStorageMapping{
 		storageType:       storageType,
@@ -199,7 +193,6 @@ func (c *CombinedStorage) addHost(host model.Host, storageType constant.HostStor
 		innerStorageID:    host.ID,
 	}
 
-	// BUG? - Overrides host ID for new hosts
 	host.ID = c.nextID
 	c.hosts[c.nextID] = host
 

@@ -105,7 +105,7 @@ func TestCmdSSHCopyID(t *testing.T) {
 		{
 			name: "NOT user defined ssh command",
 			host: Host{
-				SSHClientConfig: &sshconfig.Config{
+				SSHHostConfig: &sshconfig.Config{
 					Hostname:     "localhost",
 					IdentityFile: "/tmp",
 					Port:         "2222",

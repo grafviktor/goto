@@ -130,6 +130,7 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 	return path.Join(userConfigDir, appName), nil
 }
 
+// SSHConfigFilePath - returns ssh_config path or error.
 func SSHConfigFilePath(userDefinedPath string) (string, error) {
 	if !StringEmpty(&userDefinedPath) {
 		absolutePath, err := filepath.Abs(userDefinedPath)

@@ -24,7 +24,7 @@ func NewMockStorage(shouldFail bool) *mockStorage {
 	}
 
 	for i := 0; i < len(hosts); i++ {
-		hosts[i].SSHClientConfig = &sshconfig.Config{}
+		hosts[i].SSHHostConfig = &sshconfig.Config{}
 		hosts[i].Group = fmt.Sprintf("Group %d", i+1)
 	}
 

@@ -32,5 +32,5 @@ func (l ListItemHost) CompareTo(host ListItemHost) int {
 
 // ReadOnly - returns boolean. Overall, it is used to determine if user can edit host details.
 func (l ListItemHost) ReadOnly() bool {
-	return l.Host.StorageType == constant.HostStorageType.SSH_CONFIG
+	return l.Host.StorageType == constant.HostStorageType.SSHConfig
 }
