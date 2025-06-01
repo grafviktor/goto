@@ -1,8 +1,8 @@
 - host:
+    address: 127.0.0.1
+    description: network host description
     title: network host
-    description: network host description
-    address: 127.0.0.1
 - host:
-    title: network host (1)
-    description: network host description
     address: 127.0.0.1
+    description: network host description
+    title: network host (1)

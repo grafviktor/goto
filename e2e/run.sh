@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+ffmpeg -version >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echo "Error: 'ffmpeg' is not installed or not found in path."
+fi
+
 set -e
 
 # cd to this file location

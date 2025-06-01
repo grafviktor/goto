@@ -1,4 +1,4 @@
 - host:
-    title: network host (1)
-    description: network host description
     address: 127.0.0.1
+    description: network host description
+    title: network host (1)
