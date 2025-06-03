@@ -372,6 +372,47 @@ func TestUpdateInputPlaceHolders(t *testing.T) {
 }
 
 func TestUpdate_KeyDiscard(t *testing.T) {
+	// When press escape, should receive close form cmd
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &testutils.MockLogger{})
+	_, cmd := model.Update(tea.KeyMsg{
+		Type: tea.KeyEscape,
+	})
+
+	require.Equal(t, cmd(), message.CloseViewHostEdit{})
+}
+
+func TestUpdate_KeyEventWhenHostIsReadOnly(t *testing.T) {
+	// When host is read-only, then all key events should be ignored except 'Discard'
+	// A warning notification message should be displayed
+	storage := testutils.NewMockStorage(false)
+	// simulate that we have a host which is read-only
+	storage.Hosts[0].StorageType = constant.HostStorageType.SSHConfig
+	model := New(context.TODO(), storage, MockAppState(), &testutils.MockLogger{})
+
+	_, cmd := model.Update(tea.KeyMsg{
+		// Save host shortcut
+		Type: tea.KeyCtrlS,
+	})
+
+	// When host is read-only, the title should display a warning message
+	require.Equal(t, "host loaded from SSH config is readonly", model.title)
+
+	done := make(chan tea.Msg, 1)
+	go func() {
+		done <- cmd()
+	}()
+
+	// Wait for notification message timeout
+	select {
+	case msg := <-done:
+		require.Equal(t, message.HideUINotification{ComponentName: "hostedit"}, msg)
+	case <-time.After(5 * time.Second):
+		// If nothing happens within 5 seconds, then the test failed
+		t.Fatal("timeout waiting for message on channel")
+	}
+}
+
+func TestDisplayNotificationMsg(t *testing.T) {
 	// In progress
 	t.Skip()
 }
