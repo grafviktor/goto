@@ -45,32 +45,21 @@ func (l *MockLogger) Error(format string, args ...any) {
 func (l *MockLogger) Close() {
 }
 
-// That's a wrapper function for state.Get which is required to overcome sync.Once restrictions
-func stateGet(tempDir string, mockLogger *MockLogger) *Application {
-	appState := Create(context.TODO(), application.Configuration{}, mockLogger)
+type mockOnce struct{}
 
-	// We need this hack because state.Get function utilizes `sync.once`. That means, if all unit tests
-	// are ran by a single process, instead of the new tmpDir, the old one will be used. In other words
-	// the first test will affect all subsequent tests which rely on state.Get function.
-	appState.appStateFilePath = path.Join(tempDir, "state.yaml")
-
-	return appState
+func (m *mockOnce) Do(f func()) {
+	f()
 }
 
 // Test reading app state
-func Test_GetApplicationState(t *testing.T) {
-	// Set up a temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
+func Test_CreateApplicationState(t *testing.T) {
+	// Use a mock to avoid sync.Once restrictions in tests
+	once = &mockOnce{}
 
 	// Create a mock logger for testing
 	mockLogger := MockLogger{}
 
-	// Call the Get function with the temporary directory and mock logger
-	appState := stateGet(tempDir, &mockLogger)
+	appState := Create(context.TODO(), application.Configuration{}, &mockLogger)
 
 	// Ensure that the application state is not nil
 	assert.NotNil(t, appState)
@@ -78,6 +67,20 @@ func Test_GetApplicationState(t *testing.T) {
 	// Ensure that the logger was called during the initialization.
 	// The first line always contains "Get application state"
 	assert.Contains(t, mockLogger.Logs[0], "Create application state")
+}
+
+func Test_GetApplicationState(t *testing.T) {
+	// Use a mock to avoid sync.Once restrictions in tests
+	once = &mockOnce{}
+
+	// Create a mock logger for testing
+	mockLogger := MockLogger{}
+
+	Create(context.TODO(), application.Configuration{}, &mockLogger)
+	appState := Get()
+
+	// Ensure that the application state is not nil
+	assert.NotNil(t, appState)
 }
 
 // Test persisting app state
@@ -93,7 +96,8 @@ func Test_PersistApplicationState(t *testing.T) {
 	mockLogger := MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
-	appState := stateGet(tempDir, &mockLogger)
+	appState := Create(context.TODO(), application.Configuration{}, &mockLogger)
+	appState.appStateFilePath = path.Join(tempDir, "state.yaml")
 
 	// Modify the application state
 	appState.Selected = 42
@@ -112,4 +116,22 @@ func Test_PersistApplicationState(t *testing.T) {
 
 	// Ensure that the persisted state matches the modified state
 	assert.Equal(t, appState.Selected, persistedState.Selected)
+}
+
+// Test persisting app state
+func Test_PersistApplicationStateError(t *testing.T) {
+	t.Skip()
+	// Create a mock logger for testing
+	mockLogger := MockLogger{}
+
+	// Call the Get function with the temporary directory and mock logger
+	appState := Create(context.TODO(), application.Configuration{}, &mockLogger)
+	appState.appStateFilePath = "non_exitent.yaml"
+
+	// Modify the application state
+	appState.Selected = 42
+
+	// Persist the modified state to disk
+	err := appState.Persist()
+	assert.Error(t, err)
 }

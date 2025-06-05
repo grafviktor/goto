@@ -27,10 +27,15 @@ const (
 	ViewMessage
 )
 
+// Once - this interface is used to avoid sync.Once restrictions in unit-tests.
+type Once interface {
+	Do(func())
+}
+
 var (
 	appState  *Application
-	once      sync.Once
-	stateFile = "state.yaml"
+	once      Once = &sync.Once{}
+	stateFile      = "state.yaml"
 )
 
 type iLogger interface {
