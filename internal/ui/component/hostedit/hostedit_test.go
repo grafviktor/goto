@@ -381,6 +381,31 @@ func TestUpdate_KeyDiscard(t *testing.T) {
 	require.Equal(t, cmd(), message.CloseViewHostEdit{})
 }
 
+func TestUpdate_KeySave(t *testing.T) {
+	// When press escape, should receive close form cmd
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &testutils.MockLogger{})
+	_, cmd := model.Update(tea.KeyMsg{
+		Type: tea.KeyCtrlS,
+	})
+
+	var msgs []tea.Msg
+	testutils.CmdToMessage(cmd, &msgs)
+
+	for _, msg := range msgs {
+		if _, ok := msg.(message.HostSelected); ok {
+			continue
+		}
+		if _, ok := msg.(message.CloseViewHostEdit); ok {
+			continue
+		}
+		if _, ok := msg.(message.HostUpdated); ok {
+			continue
+		}
+
+		require.Fail(t, "One or more messages is missing or unexpected message is found")
+	}
+}
+
 func TestUpdate_KeyEventWhenHostIsReadOnly(t *testing.T) {
 	// When host is read-only, then all key events should be ignored except 'Discard'
 	// A warning notification message should be displayed
@@ -413,8 +438,9 @@ func TestUpdate_KeyEventWhenHostIsReadOnly(t *testing.T) {
 }
 
 func TestDisplayNotificationMsg(t *testing.T) {
-	// In progress
-	t.Skip()
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &testutils.MockLogger{})
+	cmd := model.displayNotificationMsg("")
+	require.Nil(t, cmd)
 }
 
 func MockAppState() *state.Application {
