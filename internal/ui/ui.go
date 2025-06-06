@@ -15,7 +15,7 @@ import (
 // it's hard to use mock objects in unit tests of the child components. Search for 'MockAppState'.
 func Start(ctx context.Context, storage storage.HostStorage, appState *state.ApplicationState, logger iLogger) {
 	uiComponent := New(ctx, storage, appState, logger)
-	p := tea.NewProgram(&uiComponent, tea.WithAltScreen())
+	p := tea.NewProgram(&uiComponent, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
 	logger.Debug("[UI] Start user interface")
 	if _, err := p.Run(); err != nil {
