@@ -90,14 +90,24 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				visibleItems := hostList.VisibleItems()
 				if clickedIndex >= 0 && clickedIndex < len(visibleItems) {
 					if hostItem, ok := visibleItems[clickedIndex].(hostlist.ListItemHost); ok {
+						now := time.Now()
+						if m.lastClickedID == hostItem.ID && now.Sub(m.lastClickTime) < 500*time.Millisecond {
+							m.logger.Debug("[UI] Double click detected. Connecting to SSH")
+							return m, message.TeaCmd(message.RunProcessSSHConnect{Host: hostItem.Host})
+						}
+
+						m.lastClickTime = now
+						m.lastClickedID = hostItem.ID
 						m.logger.Debug("[UI] Clicked host index: %d, ID: %d", clickedIndex, hostItem.ID)
 						hostList.Select(clickedIndex)
-						return m, nil
+						m.appState.Selected = hostItem.ID
+						return m, m.onFocusChanged()
 					}
 				}
 			}
 		}
 	}
+
 
 	case tea.WindowSizeMsg:
 		m.logger.Debug("[UI] Set terminal window size: %d %d", msg.Width, msg.Height)
