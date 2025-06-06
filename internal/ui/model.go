@@ -80,40 +80,38 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleKeyEvent(msg)
 	case tea.MouseMsg:
 	if msg.Type == tea.MouseLeft {
-		m.logger.Debug("[UI] Mouse click at X: %d, Y: %d", msg.X, msg.Y)
+	m.logger.Debug("[UI] Mouse click at X: %d, Y: %d", msg.X, msg.Y)
 
-		listOffset := 2
-		itemHeight := 3
-		clickedIndex := (msg.Y - listOffset) / itemHeight
+	listOffset := 2
+	itemHeight := 3
+	clickedIndex := (msg.Y - listOffset) / itemHeight
 
-		if m.appState.CurrentView == state.ViewHostList {
-			if hostList, ok := m.modelHostList.(*hostlist.ListModel); ok {
-				visibleItems := hostList.VisibleItems()
-				if clickedIndex >= 0 && clickedIndex < len(visibleItems) {
-					if hostItem, ok := visibleItems[clickedIndex].(hostlist.ListItemHost); ok {
-						now := time.Now()
-						m.logger.Debug("[UI] Clicked host index: %d, ID: %d", clickedIndex, hostItem.ID)
+	if m.appState.CurrentView == state.ViewHostList {
+		if hostList, ok := m.modelHostList.(*hostlist.ListModel); ok {
+			visibleItems := hostList.VisibleItems()
+			if clickedIndex >= 0 && clickedIndex < len(visibleItems) {
+				if hostItem, ok := visibleItems[clickedIndex].(hostlist.ListItemHost); ok {
+					now := time.Now()
+					m.logger.Debug("[UI] Clicked host index: %d, ID: %d", clickedIndex, hostItem.ID)
 
-						isSameAsSelected := m.appState.Selected == hostItem.ID
-						isDoubleClick := now.Sub(m.lastClickTime) < 500*time.Millisecond
+					isDoubleClick := m.appState.Selected == hostItem.ID &&
+						now.Sub(m.lastClickTime) < 500*time.Millisecond
 
-						m.lastClickTime = now
-						m.lastClickedID = hostItem.ID
-
-						hostList.Select(clickedIndex)
-						m.appState.Selected = hostItem.ID
-
-						if isSameAsSelected && isDoubleClick {
-							m.logger.Debug("[UI] Double click detected. Connecting to SSH")
-							return m, message.TeaCmd(message.RunProcessSSHConnect{Host: hostItem.Host})
-						}
-
-						return m, nil
+					if isDoubleClick {
+						m.logger.Debug("[UI] Double click detected. Connecting to SSH")
+						return m, message.TeaCmd(message.RunProcessSSHConnect{Host: hostItem.Host})
 					}
+
+					hostList.Select(clickedIndex)
+					m.appState.Selected = hostItem.ID
+					m.lastClickTime = now
+					return m, nil
 				}
 			}
 		}
 	}
+}
+
 
 
 
