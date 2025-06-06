@@ -146,7 +146,15 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleKeyboardEvent(msg)
         case tea.MouseMsg:
 		if msg.Type == tea.MouseLeft {
-			m.logger.Debug("[UI] Mouse click at X: %d, Y: %d", msg.X, msg.Y)
+		   m.logger.Debug("[UI] Mouse click at X: %d, Y: %d", msg.X, msg.Y)
+                   listOffset := 2
+		   clickedIndex := msg.Y - listOffset
+
+		if clickedIndex >= 0 && clickedIndex < len(m.VisibleItems()) {
+			m.Select(clickedIndex)
+			m.logger.Debug("[UI] Selected host index: %d", clickedIndex)
+			return m, m.onFocusChanged()
+		        }  
 		}
 		return m, nil
 	
