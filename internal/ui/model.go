@@ -61,6 +61,7 @@ type mainModel struct {
 	ready              bool
 	lastClickTime time.Time
 	lastClickedID int
+	prevSelectedID int
 }
 
 func (m *mainModel) Init() tea.Cmd {
@@ -101,9 +102,9 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.logger.Debug("[UI] Double click detected. Connecting to SSH")
 						return m, message.TeaCmd(message.RunProcessSSHConnect{Host: hostItem.Host})
 					}
-
-					hostList.Select(clickedIndex)
+                                        m.prevSelectedID = m.appState.Selected
 					m.appState.Selected = hostItem.ID
+					hostList.Select(clickedIndex)
 					m.lastClickTime = now
 					return m, nil
 				}
