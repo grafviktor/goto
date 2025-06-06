@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-
+        "time"
+	
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -101,7 +102,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.logger.Debug("[UI] Clicked host index: %d, ID: %d", clickedIndex, hostItem.ID)
 						hostList.Select(clickedIndex)
 						m.appState.Selected = hostItem.ID
-						return m, m.onFocusChanged()
+						return m, nil
 					}
 				}
 			}
