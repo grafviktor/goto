@@ -80,7 +80,8 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Mouse click at X: %d, Y: %d", msg.X, msg.Y)
 
 		listOffset := 2
-		clickedIndex := msg.Y - listOffset
+		itemHeight := 3
+		clickedIndex := (msg.Y - listOffset) / itemHeight
 
 		if m.appState.CurrentView == state.ViewHostList {
 			if hostList, ok := m.modelHostList.(*hostlist.ListModel); ok {
