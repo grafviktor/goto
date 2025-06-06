@@ -76,23 +76,25 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Keyboard event: '%v'", msg)
 		return m.handleKeyEvent(msg)
 	case tea.MouseMsg:
-		if msg.Type == tea.MouseLeft {
+	if msg.Type == tea.MouseLeft {
 		m.logger.Debug("[UI] Mouse click at X: %d, Y: %d", msg.X, msg.Y)
-		}
-		listOffset := 2
-                clickedIndex := msg.Y - listOffset
 
-                if m.appState.CurrentView == state.ViewHostList {
-		if hostList, ok := m.modelHostList.(*hostlist.listModel); ok {
-			visibleItems := hostList.VisibleItems()
-			if clickedIndex >= 0 && clickedIndex < len(visibleItems) {
-				if hostItem, ok := visibleItems[clickedIndex].(hostlist.ListItemHost); ok {
-					m.logger.Debug("[UI] Clicked host index: %d, ID: %d", clickedIndex, hostItem.ID)
-					return m, hostList.Select(clickedIndex)
+		listOffset := 2
+		clickedIndex := msg.Y - listOffset
+
+		if m.appState.CurrentView == state.ViewHostList {
+			if hostList, ok := m.modelHostList.(*hostlist.listModel); ok {
+				visibleItems := hostList.VisibleItems()
+				if clickedIndex >= 0 && clickedIndex < len(visibleItems) {
+					if hostItem, ok := visibleItems[clickedIndex].(hostlist.ListItemHost); ok {
+						m.logger.Debug("[UI] Clicked host index: %d, ID: %d", clickedIndex, hostItem.ID)
+						return m, hostList.Select(clickedIndex)
+					}
 				}
 			}
 		}
 	}
+
 	case tea.WindowSizeMsg:
 		m.logger.Debug("[UI] Set terminal window size: %d %d", msg.Width, msg.Height)
 		m.appState.Width = msg.Width
