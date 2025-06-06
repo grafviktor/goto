@@ -64,7 +64,7 @@ type Listmodel struct {
 // appState - is the application state, usually we want to restore previous state when application restarts,
 // for instance focus previously selected host.
 // log - application logger.
-func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *Listmodel {
+func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *ListModel {
 	delegate := NewHostDelegate(&appState.ScreenLayout, &appState.Group, log)
 	delegateKeys := newDelegateKeyMap()
 	customStyles := customStyles()
@@ -77,7 +77,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	model.Filter = list.UnsortedFilter
 	model.Styles = customStyles.Styles
 
-	m := Listmodel{
+	m := ListModel{
 		Model:    model,
 		keyMap:   delegateKeys,
 		repo:     storage,
