@@ -76,6 +76,9 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Keyboard event: '%v'", msg)
 		return m.handleKeyEvent(msg)
 	case tea.MouseMsg:
+		if msg.Type == tea.MouseLeft {
+		m.logger.Debug("[UI] Mouse click at X: %d, Y: %d", msg.X, msg.Y)
+	}
 	case tea.WindowSizeMsg:
 		m.logger.Debug("[UI] Set terminal window size: %d %d", msg.Width, msg.Height)
 		m.appState.Width = msg.Width
