@@ -145,18 +145,29 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		return m, m.handleKeyboardEvent(msg)
         case tea.MouseMsg:
-		if msg.Type == tea.MouseLeft {
-		   m.logger.Debug("[UI] Mouse click at X: %d, Y: %d", msg.X, msg.Y)
-                   listOffset := 2
-		   clickedIndex := msg.Y - listOffset
+	if msg.Type == tea.MouseLeft {
+		m.logger.Debug("[UI] Mouse click at X: %d, Y: %d", msg.X, msg.Y)
+
+		listOffset := 2
+		clickedIndex := msg.Y - listOffset
 
 		if clickedIndex >= 0 && clickedIndex < len(m.VisibleItems()) {
 			m.Select(clickedIndex)
 			m.logger.Debug("[UI] Selected host index: %d", clickedIndex)
-			return m, m.onFocusChanged()
-		        }  
+
+			// 클릭된 항목이 hostListItem인 경우 SSH 연결 시도
+			if hostItem, ok := m.VisibleItems()[clickedIndex].(ListItemHost); ok {
+				m.logger.Debug("[UI] Clicked host ID: %d, Title: %s", hostItem.ID, hostItem.Title())
+				// appState 업데이트까지 처리됨
+				return m, tea.Sequence(
+					m.onFocusChanged(),
+					m.constructProcessCmd(constant.ProcessTypeSSHConnect),
+				)
+			}
 		}
-		return m, nil
+	}
+	return m, nil
+
 	
 	case tea.WindowSizeMsg:
 		// Triggers immediately after app start because we render this component by default
