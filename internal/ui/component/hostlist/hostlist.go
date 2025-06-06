@@ -46,7 +46,7 @@ type (
 	msgHideNotification struct{}
 )
 
-type Listmodel struct {
+type ListModel struct {
 	list.Model
 	repo                       storage.HostStorage
 	keyMap                     *keyMap
