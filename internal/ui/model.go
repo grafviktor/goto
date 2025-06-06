@@ -83,12 +83,13 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		clickedIndex := msg.Y - listOffset
 
 		if m.appState.CurrentView == state.ViewHostList {
-			if hostList, ok := m.modelHostList.(*hostlist.listModel); ok {
+			if hostList, ok := m.modelHostList.(*hostlist.ListModel); ok {
 				visibleItems := hostList.VisibleItems()
 				if clickedIndex >= 0 && clickedIndex < len(visibleItems) {
 					if hostItem, ok := visibleItems[clickedIndex].(hostlist.ListItemHost); ok {
 						m.logger.Debug("[UI] Clicked host index: %d, ID: %d", clickedIndex, hostItem.ID)
-						return m, hostList.Select(clickedIndex)
+						hostList.Select(clickedIndex)
+						return m, nil
 					}
 				}
 			}
