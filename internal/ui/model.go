@@ -58,6 +58,8 @@ type mainModel struct {
 	logger             iLogger
 	viewport           viewport.Model
 	ready              bool
+	lastClickTime time.Time
+	lastClickedID int
 }
 
 func (m *mainModel) Init() tea.Cmd {
