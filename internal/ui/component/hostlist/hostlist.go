@@ -154,11 +154,8 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if clickedIndex >= 0 && clickedIndex < len(m.VisibleItems()) {
 			m.Select(clickedIndex)
 			m.logger.Debug("[UI] Selected host index: %d", clickedIndex)
-
-			// 클릭된 항목이 hostListItem인 경우 SSH 연결 시도
 			if hostItem, ok := m.VisibleItems()[clickedIndex].(ListItemHost); ok {
 				m.logger.Debug("[UI] Clicked host ID: %d, Title: %s", hostItem.ID, hostItem.Title())
-				// appState 업데이트까지 처리됨
 				return m, tea.Sequence(
 					m.onFocusChanged(),
 					m.constructProcessCmd(constant.ProcessTypeSSHConnect),
