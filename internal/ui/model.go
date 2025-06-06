@@ -82,12 +82,17 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		listOffset := 2
                 clickedIndex := msg.Y - listOffset
 
-                if clickedIndex >= 0 && clickedIndex < len(m.appState.Hosts) {
-			selectedHost := m.appState.Hosts[clickedIndex]
-			m.logger.Debug("[UI] Clicked host index: %d, ID: %d", clickedIndex, selectedHost.ID)
-			m.appState.Selected = selectedHost.ID
+                if m.appState.CurrentView == state.ViewHostList {
+		if hostList, ok := m.modelHostList.(*hostlist.listModel); ok {
+			visibleItems := hostList.VisibleItems()
+			if clickedIndex >= 0 && clickedIndex < len(visibleItems) {
+				if hostItem, ok := visibleItems[clickedIndex].(hostlist.ListItemHost); ok {
+					m.logger.Debug("[UI] Clicked host index: %d, ID: %d", clickedIndex, hostItem.ID)
+					return m, hostList.Select(clickedIndex)
+				}
+			}
 		}
-		
+	}
 	case tea.WindowSizeMsg:
 		m.logger.Debug("[UI] Set terminal window size: %d %d", msg.Width, msg.Height)
 		m.appState.Width = msg.Width
