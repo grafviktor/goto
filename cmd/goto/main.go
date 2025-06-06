@@ -42,14 +42,14 @@ func main() {
 	appState := createApplicationOrExit()
 
 	// Init storage
-	storage, fatalErr := storage.Get(appState.Context, appState.ApplicationConfig, appState.Logger)
+	strg, fatalErr := storage.Get(appState.Context, appState.ApplicationConfig, appState.Logger)
 	if fatalErr != nil {
 		appState.Logger.Error("[MAIN] Cannot access application storage: %v\n", fatalErr)
 		os.Exit(1)
 	}
 
 	// Run user interface
-	ui.Start(appState.Context, storage, &appState)
+	ui.Start(appState.Context, strg, &appState)
 
 	// Quit signal should be intercepted on the UI level, however it will require an
 	// additional switch-case block with an appropriate checks. Leaving this message here.
@@ -90,7 +90,6 @@ func createApplicationOrExit() state.Application {
 		version.Print()
 		fmt.Println()
 		applicationState.PrintConfig()
-
 		lg.Debug("[MAIN] Exit application")
 		os.Exit(0)
 	}
@@ -182,9 +181,6 @@ func createConfigurationOrExit() (application.Configuration, bool) {
 		log.Printf("[MAIN] Can't create application home folder: %v\n", fatalErr)
 		success = false
 	}
-
-	// Merge environment params with command line arguments. Command line arguments win!
-	// applicationConfiguration := application.Merge(fallbackParams, commandLineParams)
 
 	return cmdConfig, success
 }

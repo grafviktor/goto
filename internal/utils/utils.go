@@ -4,6 +4,7 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -17,6 +18,11 @@ import (
 // s is string to check.
 func StringEmpty(s *string) bool {
 	return s == nil || len(strings.TrimSpace(*s)) == 0
+}
+
+// FprintfIgnoreError - writes formatted string to the writer, ignoring any errors.
+func FprintfIgnoreError(w io.Writer, format string, args ...any) {
+	_, _ = fmt.Fprintf(w, format, args...)
 }
 
 // Regex pattern to split at the boundary between letters and numbers.

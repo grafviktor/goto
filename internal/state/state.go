@@ -3,7 +3,7 @@ package state
 
 import (
 	"context"
-	"fmt"
+	"io"
 	"os"
 	"path"
 	"sync"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/application"
 	"github.com/grafviktor/goto/internal/constant"
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 type view int
@@ -135,12 +136,16 @@ func (as *Application) Persist() error {
 	return nil
 }
 
+func (as *Application) printConfig(w io.Writer) {
+	utils.FprintfIgnoreError(w, "App home:           %s\n", as.ApplicationConfig.AppHome)
+	utils.FprintfIgnoreError(w, "Log level:          %s\n", as.ApplicationConfig.LogLevel)
+	if as.SSHConfigEnabled {
+		utils.FprintfIgnoreError(w, "SSH config enabled: %t\n", as.SSHConfigEnabled)
+		utils.FprintfIgnoreError(w, "SSH config path:    %s\n", as.ApplicationConfig.SSHConfigFilePath)
+	}
+}
+
 // PrintConfig outputs user-definable parameters in the console.
 func (as *Application) PrintConfig() {
-	fmt.Printf("App home:           %s\n", as.ApplicationConfig.AppHome)
-	fmt.Printf("Log level:          %s\n", as.ApplicationConfig.LogLevel)
-	if as.SSHConfigEnabled {
-		fmt.Printf("SSH config enabled: %t\n", as.SSHConfigEnabled)
-		fmt.Printf("SSH config path:    %s\n", as.ApplicationConfig.SSHConfigFilePath)
-	}
+	as.printConfig(os.Stdout)
 }

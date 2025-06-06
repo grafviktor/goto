@@ -2,6 +2,7 @@
 package state
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -134,4 +135,24 @@ func Test_PersistApplicationStateError(t *testing.T) {
 	// Persist the modified state to disk
 	err := appState.Persist()
 	assert.Error(t, err)
+}
+
+func Test_PrintConfigTo(t *testing.T) {
+	appConfig := application.Configuration{
+		AppHome:           "/tmp/goto",
+		LogLevel:          "debug",
+		SSHConfigFilePath: "/tmp/ssh_config",
+	}
+	app := &Application{
+		ApplicationConfig: appConfig,
+		SSHConfigEnabled:  true,
+	}
+
+	var buf bytes.Buffer
+	app.printConfig(&buf)
+	output := buf.String()
+	assert.Contains(t, output, "App home:           /tmp/goto")
+	assert.Contains(t, output, "Log level:          debug")
+	assert.Contains(t, output, "SSH config enabled: true")
+	assert.Contains(t, output, "SSH config path:    /tmp/ssh_config")
 }
