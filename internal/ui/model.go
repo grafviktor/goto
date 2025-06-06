@@ -78,7 +78,16 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseMsg:
 		if msg.Type == tea.MouseLeft {
 		m.logger.Debug("[UI] Mouse click at X: %d, Y: %d", msg.X, msg.Y)
-	}
+		}
+		listOffset := 2
+                clickedIndex := msg.Y - listOffset
+
+                if clickedIndex >= 0 && clickedIndex < len(m.appState.Hosts) {
+			selectedHost := m.appState.Hosts[clickedIndex]
+			m.logger.Debug("[UI] Clicked host index: %d, ID: %d", clickedIndex, selectedHost.ID)
+			m.appState.Selected = selectedHost.ID
+		}
+		
 	case tea.WindowSizeMsg:
 		m.logger.Debug("[UI] Set terminal window size: %d %d", msg.Width, msg.Height)
 		m.appState.Width = msg.Width
