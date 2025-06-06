@@ -144,6 +144,12 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m, m.handleKeyboardEvent(msg)
+        case tea.MouseMsg:
+		if msg.Type == tea.MouseLeft {
+			m.logger.Debug("[UI] Mouse click at X: %d, Y: %d", msg.X, msg.Y)
+		}
+		return m, nil
+	
 	case tea.WindowSizeMsg:
 		// Triggers immediately after app start because we render this component by default
 		h, v := styleDoc.GetFrameSize()
