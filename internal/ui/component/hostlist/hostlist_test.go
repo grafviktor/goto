@@ -1083,7 +1083,7 @@ func TestUpdate_HostFocusPreservedAfterClearFilterMessage(t *testing.T) {
 // ============== utility methods ===============
 // ==============================================
 
-func NewMockListModel(storageShouldFail bool) *listModel {
+func NewMockListModel(storageShouldFail bool) *ListModel {
 	storage := test.NewMockStorage(storageShouldFail)
 	mockState := state.ApplicationState{Selected: 1}
 
