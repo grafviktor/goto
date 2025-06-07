@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-        "time"
-	
+	"time"
+
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -59,9 +59,9 @@ type mainModel struct {
 	logger             iLogger
 	viewport           viewport.Model
 	ready              bool
-	lastClickTime time.Time
-	lastClickedID int
-	prevSelectedID int
+	lastClickTime      time.Time
+	lastClickedID      int
+	prevSelectedID     int
 }
 
 func (m *mainModel) Init() tea.Cmd {
@@ -80,41 +80,38 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Keyboard event: '%v'", msg)
 		return m.handleKeyEvent(msg)
 	case tea.MouseMsg:
-	if msg.Type == tea.MouseLeft {
-	m.logger.Debug("[UI] Mouse click at X: %d, Y: %d", msg.X, msg.Y)
+		if msg.Type == tea.MouseLeft {
+			m.logger.Debug("[UI] Mouse click at X: %d, Y: %d", msg.X, msg.Y)
 
-	listOffset := 2
-	itemHeight := 3
-	clickedIndex := (msg.Y - listOffset) / itemHeight
+			listOffset := 2
+			itemHeight := 3
+			clickedIndex := (msg.Y - listOffset) / itemHeight
 
-	if m.appState.CurrentView == state.ViewHostList {
-		if hostList, ok := m.modelHostList.(*hostlist.ListModel); ok {
-			visibleItems := hostList.VisibleItems()
-			if clickedIndex >= 0 && clickedIndex < len(visibleItems) {
-				if hostItem, ok := visibleItems[clickedIndex].(hostlist.ListItemHost); ok {
-					now := time.Now()
-					m.logger.Debug("[UI] Clicked host index: %d, ID: %d", clickedIndex, hostItem.ID)
+			if m.appState.CurrentView == state.ViewHostList {
+				if hostList, ok := m.modelHostList.(*hostlist.ListModel); ok {
+					visibleItems := hostList.VisibleItems()
+					if clickedIndex >= 0 && clickedIndex < len(visibleItems) {
+						if hostItem, ok := visibleItems[clickedIndex].(hostlist.ListItemHost); ok {
+							now := time.Now()
+							m.logger.Debug("[UI] Clicked host index: %d, ID: %d", clickedIndex, hostItem.ID)
 
-					isDoubleClick := m.appState.Selected == hostItem.ID &&
-						now.Sub(m.lastClickTime) < 500*time.Millisecond
+							isDoubleClick := m.appState.Selected == hostItem.ID &&
+								now.Sub(m.lastClickTime) < 500*time.Millisecond
 
-					if isDoubleClick {
-						m.logger.Debug("[UI] Double click detected. Connecting to SSH")
-						return m, message.TeaCmd(message.RunProcessSSHConnect{Host: hostItem.Host})
+							if isDoubleClick {
+								m.logger.Debug("[UI] Double click detected. Connecting to SSH")
+								return m, message.TeaCmd(message.RunProcessSSHConnect{Host: hostItem.Host})
+							}
+							m.prevSelectedID = m.appState.Selected
+							m.appState.Selected = hostItem.ID
+							hostList.Select(clickedIndex)
+							m.lastClickTime = now
+							return m, nil
+						}
 					}
-                                        m.prevSelectedID = m.appState.Selected
-					m.appState.Selected = hostItem.ID
-					hostList.Select(clickedIndex)
-					m.lastClickTime = now
-					return m, nil
 				}
 			}
 		}
-	}
-}
-
-
-
 
 	case tea.WindowSizeMsg:
 		m.logger.Debug("[UI] Set terminal window size: %d %d", msg.Width, msg.Height)
