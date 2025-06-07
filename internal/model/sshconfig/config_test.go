@@ -52,11 +52,11 @@ func TestIsAlternativeFilePathDefined(t *testing.T) {
 
 	// No custom path is set
 	state.Get().ApplicationConfig.SSHConfigFilePath = ""
-	underTest := IsAlternativeFilePathDefined()
-	require.False(t, underTest, "IsAlternativeFilePathDefined should return false when no custom path is set")
+	actual := IsAlternativeFilePathDefined()
+	require.False(t, actual, "IsAlternativeFilePathDefined should return false when no custom path is set")
 
 	// Custom path is set
 	state.Get().ApplicationConfig.SSHConfigFilePath = "/custom/path/to/ssh_config"
-	underTest = IsAlternativeFilePathDefined()
-	require.True(t, underTest, "IsAlternativeFilePathDefined should return true when custom path is set")
+	actual = IsAlternativeFilePathDefined()
+	require.True(t, actual, "IsAlternativeFilePathDefined should return true when custom path is set")
 }

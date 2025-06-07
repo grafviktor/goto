@@ -1,10 +1,13 @@
 package host
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/grafviktor/goto/internal/constant"
 )
 
 func TestNewHost(t *testing.T) {
@@ -61,6 +64,110 @@ func TestCloneHost(t *testing.T) {
 	clonedHost.Address = "ModifiedAddress"
 	if clonedHost.Address == originalHost.Address {
 		t.Error("Modifying the cloned host should not affect the original host")
+	}
+}
+
+func TestIsUserDefinedSSHCommand(t *testing.T) {
+	tests := []struct {
+		name     string
+		host     Host
+		expected string
+	}{
+		{
+			name: "NOT user defined ssh command",
+			host: Host{
+				Address:          "localhost",
+				RemotePort:       "2222",
+				LoginName:        "root",
+				IdentityFilePath: "/tmp",
+			},
+			expected: fmt.Sprintf("%s%s", osCmdPrefix, "ssh -i /tmp -p 2222 -l root localhost"),
+		},
+		{
+			name: "User defined ssh command",
+			host: Host{
+				Address: "username@localhost",
+			},
+			expected: fmt.Sprintf("%s%s", osCmdPrefix, "ssh username@localhost"),
+		},
+		{
+			name: "User defined ssh command - other parameters ignored",
+			host: Host{
+				Address:          "username@localhost",
+				RemotePort:       "2222",
+				LoginName:        "root",
+				IdentityFilePath: "/tmp",
+			},
+			expected: fmt.Sprintf("%s%s", osCmdPrefix, "ssh username@localhost"),
+		},
+		{
+			name: "Host loaded from SSH config",
+			host: Host{
+				Address:     "localhost",
+				Title:       "LOCALHOST_ALIAS",
+				StorageType: constant.HostStorageType.SSHConfig,
+			},
+			expected: fmt.Sprintf("%s%s", osCmdPrefix, "ssh LOCALHOST_ALIAS"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tt.host.CmdSSHConnect()
+			require.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func TestCmdSSHConfig(t *testing.T) {
+	tests := []struct {
+		name     string
+		host     Host
+		expected string
+	}{
+		{
+			name: "NOT user defined ssh command",
+			host: Host{
+				Address:          "localhost",
+				RemotePort:       "2222",
+				LoginName:        "root",
+				IdentityFilePath: "/tmp",
+			},
+			expected: fmt.Sprintf("%s%s", osCmdPrefix, "ssh -i /tmp -p 2222 -l root -G localhost"),
+		},
+		{
+			name: "User defined ssh command",
+			host: Host{
+				Address: "username@localhost",
+			},
+			expected: fmt.Sprintf("%s%s", osCmdPrefix, "ssh -G username@localhost"),
+		},
+		{
+			name: "User defined ssh command - other parameters ignored",
+			host: Host{
+				Address:          "username@localhost",
+				RemotePort:       "2222",
+				LoginName:        "root",
+				IdentityFilePath: "/tmp",
+			},
+			expected: fmt.Sprintf("%s%s", osCmdPrefix, "ssh -G username@localhost"),
+		},
+		{
+			name: "Host loaded from SSH config",
+			host: Host{
+				Address:     "localhost",
+				Title:       "LOCALHOST_ALIAS",
+				StorageType: constant.HostStorageType.SSHConfig,
+			},
+			expected: fmt.Sprintf("%s%s", osCmdPrefix, "ssh -G LOCALHOST_ALIAS"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tt.host.CmdSSHConfig()
+			require.Equal(t, tt.expected, actual)
+		})
 	}
 }
 

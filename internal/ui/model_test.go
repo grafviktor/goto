@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/grafviktor/goto/internal/constant"
+	hostModel "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
 	testutils "github.com/grafviktor/goto/internal/testutils"
@@ -245,6 +246,25 @@ func TestHandleProcessError(t *testing.T) {
 			require.Equal(t, tt.expected.viewState, (int)(model.appState.CurrentView))
 		})
 	}
+}
+
+func TestDispatchProcessSSHCopyID(t *testing.T) {
+	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
+
+	// Prepare a host with SSH config
+	hostWithConfig := hostModel.Host{}
+	hostWithConfig.SSHHostConfig = &sshconfig.Config{
+		IdentityFile: "/tmp/id_rsa",
+		Hostname:     "localhost",
+	}
+
+	msg := message.RunProcessSSHCopyID{
+		Host: hostWithConfig,
+	}
+
+	cmd := model.dispatchProcessSSHCopyID(msg)
+	// Check that cmd returns a tea.execMsg (unexported type, so check type name)
+	require.Equal(t, "execMsg", reflect.TypeOf(cmd()).Name())
 }
 
 // ---------------------------------
