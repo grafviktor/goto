@@ -1,9 +1,14 @@
 package sshconfig
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/grafviktor/goto/internal/application"
+	"github.com/grafviktor/goto/internal/state"
+	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 )
 
 func TestGetCurrentOSUser(t *testing.T) {
@@ -38,4 +43,20 @@ func TestParseConfig(t *testing.T) {
 
 	actual = Parse(unixMockSSHConfig)
 	require.Equal(t, expected, actual)
+}
+
+func TestIsAlternativeFilePathDefined(t *testing.T) {
+	// Create a mock logger for testing
+	mockLogger := mocklogger.Logger{}
+	state.Create(context.TODO(), application.Configuration{}, &mockLogger)
+
+	// No custom path is set
+	state.Get().ApplicationConfig.SSHConfigFilePath = ""
+	underTest := IsAlternativeFilePathDefined()
+	require.False(t, underTest, "IsAlternativeFilePathDefined should return false when no custom path is set")
+
+	// Custom path is set
+	state.Get().ApplicationConfig.SSHConfigFilePath = "/custom/path/to/ssh_config"
+	underTest = IsAlternativeFilePathDefined()
+	require.True(t, underTest, "IsAlternativeFilePathDefined should return true when custom path is set")
 }

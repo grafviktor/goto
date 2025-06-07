@@ -9,6 +9,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/state"
 	testutils "github.com/grafviktor/goto/internal/testutils"
+	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 	"github.com/grafviktor/goto/internal/ui/message"
 )
 
@@ -114,5 +115,5 @@ func TestLoadItems(t *testing.T) {
 func NewMockGroupModel(storageShouldFail bool) *model {
 	mockState := state.Application{Selected: 1}
 	storage := testutils.NewMockStorage(storageShouldFail)
-	return New(context.TODO(), storage, &mockState, &testutils.MockLogger{})
+	return New(context.TODO(), storage, &mockState, &mocklogger.Logger{})
 }

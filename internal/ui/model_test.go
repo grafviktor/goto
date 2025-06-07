@@ -14,12 +14,13 @@ import (
 	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
 	testutils "github.com/grafviktor/goto/internal/testutils"
+	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 	"github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
 )
 
 func TestNew(t *testing.T) {
-	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &testutils.MockLogger{})
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
 	require.NotNil(t, model)
 	cmd := model.Init()
 	var msgs []tea.Msg
@@ -31,7 +32,7 @@ func TestNew(t *testing.T) {
 
 func TestUpdate_KeyMsg(t *testing.T) {
 	// Random key test - make sure that the app reacts on Ctrl+C
-	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &testutils.MockLogger{})
+	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
 	_, cmd := model.Update(tea.KeyMsg{
 		Type: tea.KeyCtrlC,
 	})
@@ -42,7 +43,7 @@ func TestUpdate_KeyMsg(t *testing.T) {
 
 func TestDispatchProcess_Foreground(t *testing.T) {
 	// Create a model
-	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &testutils.MockLogger{})
+	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
 
 	validProcess := utils.BuildProcess("echo test") // "echo test" is a cross-platform command
 	validProcess.Stdout = os.Stdout
@@ -76,7 +77,7 @@ func TestDispatchProcess_Foreground(t *testing.T) {
 // Low priority though as it works in gitlab tests for Windows platform. Requires investigation.
 func TestDispatchProcess_Background_OK(t *testing.T) {
 	// Create a model
-	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &testutils.MockLogger{})
+	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
 
 	// Test case: Successful process execution
 	validProcess := utils.BuildProcess("echo test")
@@ -94,7 +95,7 @@ func TestDispatchProcess_Background_OK(t *testing.T) {
 
 func TestDispatchProcess_Background_Fail(t *testing.T) {
 	// Create a model
-	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &testutils.MockLogger{})
+	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
 
 	// Test case: Unsuccessful process execution
 	validProcess := utils.BuildProcess("nonexistent command")
@@ -111,7 +112,7 @@ func TestDispatchProcess_Background_Fail(t *testing.T) {
 }
 
 func TestHandleProcessSuccess_SSH_load_config(t *testing.T) {
-	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &testutils.MockLogger{})
+	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
 	given := message.RunProcessSuccess{
 		ProcessType: constant.ProcessTypeSSHLoadConfig,
 		StdOut:      "hostname localhost\r\nport 2222\r\nidentityfile /tmp\r\nuser root",
@@ -194,7 +195,7 @@ func TestHandleProcessSuccess_SSH_copy_ID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &testutils.MockLogger{})
+			model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
 			model.handleProcessSuccess(tt.msg)
 			require.Equal(t, tt.expected.modelMessage, model.viewMessageContent)
 			require.Equal(t, tt.expected.viewState, (int)(model.appState.CurrentView))
@@ -238,7 +239,7 @@ func TestHandleProcessError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &testutils.MockLogger{})
+			model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
 			model.handleProcessError(tt.msg)
 			require.Equal(t, tt.expected.modelMessage, model.viewMessageContent)
 			require.Equal(t, tt.expected.viewState, (int)(model.appState.CurrentView))
