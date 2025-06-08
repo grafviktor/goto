@@ -95,7 +95,9 @@ Supported platforms: macOS, Linux, Windows.
 
 ### 하단 gif: 마우스로 서버 선택, 접속 기능을 추가
 
+
 ![osp 실행 화면](ospvideo.gif)
+
 
 ### Command line options ###
 
@@ -103,29 +105,36 @@ Supported platforms: macOS, Linux, Windows.
 * `-l` - log verbosity level. Only `info`(default) or `debug` values are currently supported;
 * `-v` - display version and configuration details.
 
-## File storage structure ##
-
-Currently you can only store your hosts in a yaml file, which is called `hosts.yaml`. The file is located in your user config folder which exact path depends on a running platform:
-
-* on Linux, it's in `$XDG_CONFIG_HOME/goto` or `$HOME/.config/goto`;
-* on Mac, it's in `$HOME/Library/Application Support/goto`;
-* on Windows, it's in `%AppData%\goto`.
-
-Usually you don't need to edit this file manually, but sometimes it's much more convenient to edit it into your favorite text editor, than using `goto` utility. The file structure is very simple and self-explanatory:
-
-```yaml
-- host:
-    title: kernel.org
-    description: Server 1
-    address: 127.0.0.1
-- host:
-    title: microsoft.com
-    description: Server 2
-    address: 127.0.0.1
-    network_port: 22
-    username: satya
-    identity_file_path: /home/user/.ssh/id_rsa_microsoft
+## Directory Structure ##
+```bash
+📦2025-OSP/
+├── CHANGELOG.md             
+├── codecov.yml              
+├── demo/                    
+├── build/                   * 패키징 관련 스크립트/파일
+│   └── deb/
+│       ├── Dockerfile       * `.deb` 빌드를 위한 Docker 설정
+│       └── goto.control      
+├── cmd/                     
+│   └── goto/
+│       └── main.go          * 실행 파일
+├── internal/                * 내부 코드
+├── e2e/                     
+├── Makefile                 
+├── go.mod, go.sum           * Go 모듈 의존성 관리 파일
+├── install/                 
+├── LICENSE                  * MIT 라이선스 텍스트
+├── README.md                * 프로젝트 설명, 빌드·실행 가이드
+└── CONTRIBUTING.md          
 ```
+### 주요 디렉토리 설명
+* `demo/` : 앱 실행 GIF, 스크린샷, 데모 동영상 등 사용자 안내용 파일
+* `build/deb/`  
+├── `Dockerfile`: 패키지 빌드 컨테이너 설정
+├── `goto.control`: 패키지 메타데이터 정의
+* ` cmd/goto/`: Go 애플리케이션의 루트 디렉토리
+├── `main.go`: 프로그램 실행 파일
+
 
 ## [Contributing guidelines](CONTRIBUTING.md) ##
 
