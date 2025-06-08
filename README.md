@@ -14,13 +14,13 @@ Supported platforms: macOS, Linux, Windows.
 
 ## Requirements ##
 
-기술 스택 및 라이브러리
+### 기술 스택 및 라이브러리
 - Go 언어
 - Bubble Tea: TUI 기반 UI 라이브러리
 - os 패키지: ssh_config 파일 파싱
 - Docker: 개발 환경 격리 및 배포
 
-마우스 클릭 기능 세부 구현
+### 마우스 클릭 기능 세부 구현
 - 'tea.MouseMsg`로 마우스 이벤트 처리
 - 클릭 좌표 기반 항목 선택 (itemHeight, listOffset 사용)
 - 클릭된 좌표를 화면의 항목 크기에 맞게 변환하여, 해당 항목을 선택하도록 구현
@@ -29,13 +29,13 @@ Supported platforms: macOS, Linux, Windows.
 
 ## How to Install & Run ##
 
-1. Repo 클론 및 디렉토리 이동
+### 1. Repo 클론 및 디렉토리 이동
 ```bash
    git clone https://github.com/ts9744/2025-OSP.git
    cd 2025-OSP
 ```
    
-2. Docker 이미지 빌드
+### 2. Docker 이미지 빌드
 ```bash
    docker build \
   --build-arg VERSION=1.0.0 \
@@ -43,80 +43,65 @@ Supported platforms: macOS, Linux, Windows.
   -t final_2021040024:v1 \
   .
 ```  
-3. Docker 컨테이너 실행 및 진입
+### 3. Docker 컨테이너 실행 및 진입
 ```bash
    docker run -it final_2021040024:v1 /bin/bash
 ```
-4. 도구 버전 확인 (컨테이너 내부)
+### 4. 도구 버전 확인 (컨테이너 내부)
 ```bash
    git --version
    go version
    make --version
    gg -v
 ```
-5. GO 수동 설치
+### 5. GO 수동 설치
 ```bash
    wget https://go.dev/dl/go1.22.3.linux-amd64.tar.gz
 ```
-Case1.압축 해제 (Sudo Used)
+### Case1.압축 해제 (Sudo Used)
 ```bash
    sudo tar -C /usr/local -xzf go1.22.3.linux-amd64.tar.gz
 ```
-Case2. 설치용폴더 생성, 압축해제 (Sudo Unused)
+### Case2. 설치용폴더 생성, 압축해제 (Sudo Unused)
 ```bash
    mkdir -p $HOME/local
    tar -C $HOME/local -xzf go1.22.3.linux-amd64.tar.gz
 ```
-6. 환경 변수 설정
+### 6. 환경 변수 설정
 ```bash
    echo 'export GOROOT=$HOME/local/go' >> ~/.bashrc
    echo 'export PATH=$GOROOT/bin:$PATH' >> ~/.bashrc
    source ~/.bashrc
 ```
-7. 설치 확인
+### 7. 설치 확인
 ```bash
    go version
 ```
-8. 프로그램 실행:
+### 8. 프로그램 실행:
 ```bash
    go run main.go
 ```
-###9. 프로그램 종료 방법:###
+### 9. 프로그램 종료 방법:
    프로그램 내에서 esc를 누른 뒤, y 입력 후 Enter
+
+
 
 ## Functional demo ##
 방향키로 서버 선택 후 Enter로 접속하는 프로그램
 
 ![Shows how to open ssh session using goto](demo/edit_and_connect.gif)
 
-상단 gif: 기존의 프로그램(방향키로 서버 선택, 접속)  
+### 상단 gif: 기존의 프로그램(방향키로 서버 선택, 접속)  
 
-하단 gif: 마우스로 서버 선택, 접속 기능을 추가
+### 하단 gif: 마우스로 서버 선택, 접속 기능을 추가
 
 ![osp 실행 화면](ospvideo.gif)
 
-### Organize your hostnames into logical groups ###
-
-![Shows how to switch between hosts groups](demo/switch_between_groups.gif)
-
-### Search efficiently across all your records ###
-
-![Depicts how to search hosts through the database](demo/search_through_database.gif)
-
-Find more demos and uses cases [here](demo/README.md).
-
-## 3. Configuration ##
-
-### 3.1. Command line options ###
+### Command line options ###
 
 * `-f` - application home folder;
 * `-l` - log verbosity level. Only `info`(default) or `debug` values are currently supported;
 * `-v` - display version and configuration details.
-
-### 3.2. Environment variables ###
-
-* `GG_HOME` - application home folder;
-* `GG_LOG_LEVEL` - log verbosity level. Only `info`(default) or `debug` values are currently supported.
 
 ## 4. File storage structure ##
 
@@ -147,19 +132,3 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
 ## 6. [Changelog](CHANGELOG.md) ##
 
 ## 7. [License](LICENSE) ##
-
-## 8. Thanks ##
-
-* To people who find time to contribute whether it is a bug report, a feature or a pull request.
-* To [Charmbracelet project](https://charm.sh/) for the glamorous [Bubbletea](https://github.com/charmbracelet/bubbletea) library.
-* To [JetBrains Team](https://www.jetbrains.com/) for their [support for Open-Source community](https://www.jetbrains.com/community/opensource/) and for the amazing products they make. That is a great boost indeed. I'm proudly placing their logo here as a humble "Thank You" gesture.
-
-<div align="center">
-  <a href="https://www.jetbrains.com/">
-    <img
-      height="40px"
-      src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg"
-      alt="JetBrains logo."
-    >
-  </a>
-</div>
