@@ -3,107 +3,67 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://raw.githubusercontent.com/grafviktor/goto/master/LICENSE)
 [![Codecov](https://codecov.io/gh/grafviktor/goto/branch/develop/graph/badge.svg?token=tTyTsuCvNb)](https://codecov.io/gh/grafviktor/goto)
 
-This tiny app helps to maintain a list of ssh servers. Unlike PuTTY it doesn't incorporate any connection logic, but relying on `ssh` utility which should be installed on your system.
+This tiny app helps to maintain a list of SSH servers. Unlike PuTTY, it doesn't incorporate any connection logic, relying on the `ssh` utility which should be installed on your system.
 
 Supported platforms: macOS, Linux, Windows.
 
-## 1. Installation ##
+## Goal ##
 
-### 1.1 Manual ###
-
-* Download the latest version from the [Releases](https://github.com/grafviktor/goto/releases) section;
-* Choose a binary file which matches your platform;
-* Place the binary into your user's binary path;
-* Optionally: rename `gg-${YOUR_PLATFORM_TYPE}` to `gg`.
-* If you're on Linux or macOS, ensure that the binary has execution permissions:
-  ```bash
-  chmod +x gg
-  ```
-
-### 1.2 Using package manager ###
-
-#### Arch Linux ####
-
-Package [goto-ssh-bin](https://aur.archlinux.org/packages/goto-ssh-bin) is supported by Arch Linux community. Please find the details in [PKGBUILD](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=goto-ssh-bin) file.
-
-```bash
-# Install goto
-yay -S goto-ssh-bin
-```
-
-## 2. Functional demo ##
-
-### 2.1. Edit your database and connect to remote machines ###
-
-![Shows how to open ssh session using goto](demo/edit_and_connect.gif)
-
-### 2.2. Organize your hostnames into logical groups ###
-
-![Shows how to switch between hosts groups](demo/switch_between_groups.gif)
-
-### 2.3. Search efficiently across all your records ###
-
-![Depicts how to search hosts through the database](demo/search_through_database.gif)
-
-Find more demos and uses cases [here](demo/README.md).
-
-## 3. Configuration ##
-
-### 3.1. Command line options ###
-
-* `-f` - application home folder;
-* `-l` - log verbosity level. Only `info`(default) or `debug` values are currently supported;
-* `-v` - display version and configuration details.
-
-### 3.2. Environment variables ###
-
-* `GG_HOME` - application home folder;
-* `GG_LOG_LEVEL` - log verbosity level. Only `info`(default) or `debug` values are currently supported.
-
-## 4. File storage structure ##
-
-Currently you can only store your hosts in a yaml file, which is called `hosts.yaml`. The file is located in your user config folder which exact path depends on a running platform:
-
-* on Linux, it's in `$XDG_CONFIG_HOME/goto` or `$HOME/.config/goto`;
-* on Mac, it's in `$HOME/Library/Application Support/goto`;
-* on Windows, it's in `%AppData%\goto`.
-
-Usually you don't need to edit this file manually, but sometimes it's much more convenient to edit it into your favorite text editor, than using `goto` utility. The file structure is very simple and self-explanatory:
-
-```yaml
-- host:
-    title: kernel.org
-    description: Server 1
-    address: 127.0.0.1
-- host:
-    title: microsoft.com
-    description: Server 2
-    address: 127.0.0.1
-    network_port: 22
-    username: satya
-    identity_file_path: /home/user/.ssh/id_rsa_microsoft
-```
-
-## 5. [Contributing guidelines](CONTRIBUTING.md) ##
-
-## 6. [Changelog](CHANGELOG.md) ##
-
-## 7. [License](LICENSE) ##
-
-## 8. Thanks ##
-
-* To people who find time to contribute whether it is a bug report, a feature or a pull request.
-* To [Charmbracelet project](https://charm.sh/) for the glamorous [Bubbletea](https://github.com/charmbracelet/bubbletea) library.
-* To [JetBrains Team](https://www.jetbrains.com/) for their [support for Open-Source community](https://www.jetbrains.com/community/opensource/) and for the amazing products they make. That is a great boost indeed. I'm proudly placing their logo here as a humble "Thank You" gesture.
-
-<div align="center">
-  <a href="https://www.jetbrains.com/">
-    <img
-      height="40px"
-      src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg"
-      alt="JetBrains logo."
-    >
-  </a>
-</div>
+ 기존의 프로그램은 방향키를 사용하여 SSH 서버를 선택한 후 엔터키를 입력하여 접속하는 방식만 지원했습니다. 하지만 이 프로그램에 마우스 클릭을 통해 서버를 선택하고 접속할 수 있는 기능을 추가하여, 사용자의 편의성을 더욱 향상시켰습니다. 이로 인해 사용자들은 더 직관적이고 빠르게 SSH 서버에 접속할 수 있게 되었습니다. 
 
 
+## Requirements ##
+
+기술 스택 및 라이브러리
+- Bubble Tea: CLI 애플리케이션을 위한 Go 라이브러리로, 사용자 인터페이스를 구성하는 데 사용
+- OS 패키지: 로컬 파일 시스템에서 ssh_config 파일을 읽어오기 위한 패키지 사용
+
+마우스 클릭 기능 구현
+- tea.MouseMsg를 사용하여 마우스 클릭 이벤트를 처리
+- tea.MouseLeft 타입의 클릭 이벤트를 감지하고, 사용자가 클릭한 좌표를 기반으로 해당 항목을 선택하도록 구현
+클릭한 항목을 선택하기 위한 계산:
+- 클릭된 좌표를 화면의 항목 크기에 맞게 변환하여, 해당 항목을 선택하도록 구현
+- itemHeight와 listOffset을 사용하여 항목 크기와 리스트 오프셋을 고려해 클릭된 항목을 계산
+더블 클릭 감지:
+- 더블 클릭 감지: 두 번의 클릭 사이 시간 차이를 확인하여, 더블 클릭이 발생했을 때 해당 호스트에 대한 SSH 연결을 시도
+- time.Now()와 lastClickTime을 비교하여 더블 클릭 여부를 확인하고, 더블 클릭 시 SSH 연결을 시도하는 로직을 추가
+- isDoubleClick 변수를 사용하여 두 번의 클릭이 500ms 이내로 발생했을 때만 더블 클릭으로 처리
+(더블클릭 기능 코드는 구현했으나 작동하지 않아 현재는 한 번 클릭으로 접속 가능한 상태)
+
+
+
+### Libraries and Tools ###
+
+To run this project in Docker, you'll need the following **libraries and tools** installed in the container:
+
+- **Docker** >= 20.10.0
+- **Go** >= 1.22.x (for building the project)
+- **Yaml** >= 2.2.1 (for configuration files)
+- **Bubbletea** (for UI components) >= 0.19.0
+
+**Docker Image Setup**: The Docker image includes all dependencies needed for this project to run smoothly. You can find the versions of libraries used in the Dockerfile.
+
+For example, in the Docker container:
+- Go: 1.22.x
+- Yaml: 2.2.1
+- Bubbletea: 0.19.0
+
+### Docker Image Versions ###
+
+This project uses **Docker** to isolate the application environment. The Dockerfile and container include:
+
+- Go 1.22.x
+- Yaml 2.2.1
+- Bubbletea 0.19.0
+
+**Note**: To ensure compatibility, these versions must be consistent between your local machine and the Docker container.
+
+## How to Install & Run ##
+
+### 1. **Docker Image Setup** ###
+
+Assuming you have Docker installed, follow the steps below:
+
+1. **Download the Docker image** for the project:
+   ```bash
+   docker pull ts9744/2025-osp
