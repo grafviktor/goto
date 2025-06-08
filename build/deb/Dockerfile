@@ -9,7 +9,7 @@ ENV PACKAGE_SRC_ROOT="${WORK_DIR}/goto_${VERSION}_amd64"
 RUN apt update >/dev/null && apt install git build-essential golang-go -y >/dev/null
 WORKDIR "$WORK_DIR"
 RUN \
-  git clone --depth 1 --branch ${BRANCH} https://github.com/grafviktor/goto.git . && \
+  git clone --depth 1 --branch ${BRANCH} https://github.com/ts9744/2025-OSP.git . && \
   make build
 ADD build/deb/goto.control /tmp/
 RUN \
