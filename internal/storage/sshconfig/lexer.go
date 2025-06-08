@@ -34,11 +34,11 @@ func (l *Lexer) Tokenize() []sshToken {
 		value: l.source,
 	}
 
-	var tokens []sshToken
-	return l.loadFromFile(parent, tokens, 0)
+	tokens := []sshToken{}
+	return l.loadFromDataSource(parent, tokens, 0)
 }
 
-func (l *Lexer) loadFromFile(includeToken sshToken, children []sshToken, currentDepth int) []sshToken {
+func (l *Lexer) loadFromDataSource(includeToken sshToken, children []sshToken, currentDepth int) []sshToken {
 	currentDepth++
 	if currentDepth > maxFileIncludeDepth {
 		l.logger.Error("[SSHCONFIG]: Max include depth reached")
@@ -50,19 +50,19 @@ func (l *Lexer) loadFromFile(includeToken sshToken, children []sshToken, current
 		return children
 	}
 
-	reader, err := newReader(includeToken.value, l.sourceType)
+	rdr, err := newReader(includeToken.value, l.sourceType)
 	if err != nil {
 		l.logger.Error("[STORAGE] Error opening file: %+v", err)
 		panic(err)
 	}
 
 	defer func() {
-		if closeErr := reader.Close(); closeErr != nil {
+		if closeErr := rdr.Close(); closeErr != nil {
 			l.logger.Error("[SSHCONFIG] Error closing file %s: %v", includeToken.value, closeErr)
 		}
 	}()
 
-	scanner := bufio.NewScanner(reader)
+	scanner := bufio.NewScanner(rdr)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -91,7 +91,7 @@ func (l *Lexer) loadFromFile(includeToken sshToken, children []sshToken, current
 		if token.kind == tokenKind.IncludeFile {
 			includeTokens := l.handleIncludeToken(token)
 			for _, includeToken := range includeTokens {
-				children = l.loadFromFile(includeToken, children, currentDepth)
+				children = l.loadFromDataSource(includeToken, children, currentDepth)
 			}
 
 			continue
@@ -207,7 +207,7 @@ func (l *Lexer) identityFileToken(line string) sshToken {
 }
 
 func (l *Lexer) handleIncludeToken(token sshToken) []sshToken {
-	var tokens []sshToken
+	tokens := []sshToken{}
 	if token.kind != tokenKind.IncludeFile {
 		return tokens
 	}

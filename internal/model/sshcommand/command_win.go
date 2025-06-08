@@ -7,8 +7,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/grafviktor/goto/internal/utils"
 	"github.com/samber/lo"
+
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 // BaseCMD return OS specific 'ssh' command.

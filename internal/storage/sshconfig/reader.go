@@ -6,41 +6,41 @@ import (
 	"strings"
 )
 
-func newReader(value string, kind string) (*closeableReader, error) {
+func newReader(value, kind string) (*reader, error) {
 	if kind == "file" {
 		file, err := os.Open(value)
 		if err != nil {
 			return nil, err
 		}
 
-		return &closeableReader{
+		return &reader{
 			kind:   kind,
 			reader: file,
 			closer: nil,
 		}, nil
 	}
 
-	return &closeableReader{
+	return &reader{
 		kind:   kind,
 		reader: strings.NewReader(value),
 		closer: nil,
 	}, nil
 }
 
-type closeableReader struct {
+type reader struct {
 	kind   string
 	reader io.Reader
 	closer io.Closer
 }
 
-func (r closeableReader) Read(p []byte) (n int, err error) {
+func (r reader) Read(p []byte) (n int, err error) {
 	if r.reader == nil {
 		return 0, io.EOF
 	}
 	return r.reader.Read(p)
 }
 
-func (r closeableReader) Close() error {
+func (r reader) Close() error {
 	if r.closer != nil {
 		return r.closer.Close()
 	}
