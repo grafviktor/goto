@@ -9,7 +9,7 @@ Supported platforms: macOS, Linux, Windows.
 
 ## Goal ##
 
- 기존의 프로그램은 방향키를 사용하여 SSH 서버를 선택한 후 엔터키를 입력하여 접속하는 방식만 지원했습니다. 본 프로젝트에서는 마우스 클릭을 통해 서버를 선택하고 접속할 수 있는 기능을 추가하여, 사용자의 편의성을 더욱 향상시켰습니다. 이로 인해 사용자들은 더 직관적이고 빠르게 SSH 서버에 접속할 수 있게 되었습니다. 하지만, 터미널 환경(PuTTY 등)에 따라 마우스 이벤트가 지원되지 않을 수 있습니다.
+  기존의 프로그램은 방향키를 사용하여 SSH 서버를 선택한 후 엔터키를 입력하여 접속하는 방식만 지원했습니다. <br><br>본 프로젝트에서는 마우스 클릭을 통해 서버를 선택하고 접속할 수 있는 기능을 추가하여, 사용자의 편의성을 더욱 향상시켰습니다. <br><br>이로 인해 사용자들은 더 직관적이고 빠르게 SSH 서버에 접속할 수 있게 되었습니다. <br><br>하지만, 터미널 환경(PuTTY 등)에 따라 마우스 이벤트가 지원되지 않을 수 있습니다.
 
 
 ## Requirements ##
@@ -27,48 +27,139 @@ Supported platforms: macOS, Linux, Windows.
 - 더블 클릭 감지: 두 번의 클릭 사이 시간 차이를 확인하여, 더블 클릭이 발생했을 때 해당 호스트에 대   한 SSH 연결을 시도
 (더블클릭 기능 코드는 구현했으나 작동하지 않아 현재는 한 번 클릭으로 접속 가능한 상태)
 
-### 실행 방법 ###
+## How to Install & Run ##
 
 1. Repo 클론 및 디렉토리 이동
+```bash
    git clone https://github.com/ts9744/2025-OSP.git
    cd 2025-OSP
+```
    
 2. Docker 이미지 빌드
+```bash
    docker build \
   --build-arg VERSION=1.0.0 \
   --build-arg BRANCH=feature/Click_Function \
   -t final_2021040024:v1 \
   .
-
+```  
 3. Docker 컨테이너 실행 및 진입
+```bash
    docker run -it final_2021040024:v1 /bin/bash
-
+```
 4. 도구 버전 확인 (컨테이너 내부)
+```bash
    git --version
    go version
    make --version
    gg -v
-   
+```
 5. GO 수동 설치
+```bash
    wget https://go.dev/dl/go1.22.3.linux-amd64.tar.gz
-   
-   A. 압축 해제 (Sudo Used)
+```
+Case1.압축 해제 (Sudo Used)
+```bash
    sudo tar -C /usr/local -xzf go1.22.3.linux-amd64.tar.gz
-
-   B. 설치용폴더 생성, 압축해제 (Sudo Unused)
+```
+Case2. 설치용폴더 생성, 압축해제 (Sudo Unused)
+```bash
    mkdir -p $HOME/local
    tar -C $HOME/local -xzf go1.22.3.linux-amd64.tar.gz
-
-   이후 환경 변수 설정
+```
+6. 환경 변수 설정
+```bash
    echo 'export GOROOT=$HOME/local/go' >> ~/.bashrc
    echo 'export PATH=$GOROOT/bin:$PATH' >> ~/.bashrc
    source ~/.bashrc
-   
-   설치 확인
+```
+7. 설치 확인
+```bash
    go version
-
-6. 프로그램 실행:
+```
+8. 프로그램 실행:
+```bash
    go run main.go
-
-7. 프로그램 종료 방법:
+```
+###9. 프로그램 종료 방법:###
    프로그램 내에서 esc를 누른 뒤, y 입력 후 Enter
+
+## Functional demo ##
+방향키로 서버 선택 후 Enter로 접속하는 프로그램
+
+![Shows how to open ssh session using goto](demo/edit_and_connect.gif)
+
+상단 gif: 기존의 프로그램(방향키로 서버 선택, 접속)  
+
+하단 gif: 마우스로 서버 선택, 접속 기능을 추가
+
+![osp 실행 화면](ospvideo.gif)
+
+### Organize your hostnames into logical groups ###
+
+![Shows how to switch between hosts groups](demo/switch_between_groups.gif)
+
+### Search efficiently across all your records ###
+
+![Depicts how to search hosts through the database](demo/search_through_database.gif)
+
+Find more demos and uses cases [here](demo/README.md).
+
+## 3. Configuration ##
+
+### 3.1. Command line options ###
+
+* `-f` - application home folder;
+* `-l` - log verbosity level. Only `info`(default) or `debug` values are currently supported;
+* `-v` - display version and configuration details.
+
+### 3.2. Environment variables ###
+
+* `GG_HOME` - application home folder;
+* `GG_LOG_LEVEL` - log verbosity level. Only `info`(default) or `debug` values are currently supported.
+
+## 4. File storage structure ##
+
+Currently you can only store your hosts in a yaml file, which is called `hosts.yaml`. The file is located in your user config folder which exact path depends on a running platform:
+
+* on Linux, it's in `$XDG_CONFIG_HOME/goto` or `$HOME/.config/goto`;
+* on Mac, it's in `$HOME/Library/Application Support/goto`;
+* on Windows, it's in `%AppData%\goto`.
+
+Usually you don't need to edit this file manually, but sometimes it's much more convenient to edit it into your favorite text editor, than using `goto` utility. The file structure is very simple and self-explanatory:
+
+```yaml
+- host:
+    title: kernel.org
+    description: Server 1
+    address: 127.0.0.1
+- host:
+    title: microsoft.com
+    description: Server 2
+    address: 127.0.0.1
+    network_port: 22
+    username: satya
+    identity_file_path: /home/user/.ssh/id_rsa_microsoft
+```
+
+## 5. [Contributing guidelines](CONTRIBUTING.md) ##
+
+## 6. [Changelog](CHANGELOG.md) ##
+
+## 7. [License](LICENSE) ##
+
+## 8. Thanks ##
+
+* To people who find time to contribute whether it is a bug report, a feature or a pull request.
+* To [Charmbracelet project](https://charm.sh/) for the glamorous [Bubbletea](https://github.com/charmbracelet/bubbletea) library.
+* To [JetBrains Team](https://www.jetbrains.com/) for their [support for Open-Source community](https://www.jetbrains.com/community/opensource/) and for the amazing products they make. That is a great boost indeed. I'm proudly placing their logo here as a humble "Thank You" gesture.
+
+<div align="center">
+  <a href="https://www.jetbrains.com/">
+    <img
+      height="40px"
+      src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg"
+      alt="JetBrains logo."
+    >
+  </a>
+</div>
