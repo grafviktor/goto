@@ -103,7 +103,7 @@ Supported platforms: macOS, Linux, Windows.
 * `-l` - log verbosity level. Only `info`(default) or `debug` values are currently supported;
 * `-v` - display version and configuration details.
 
-## 4. File storage structure ##
+## File storage structure ##
 
 Currently you can only store your hosts in a yaml file, which is called `hosts.yaml`. The file is located in your user config folder which exact path depends on a running platform:
 
@@ -127,8 +127,6 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
     identity_file_path: /home/user/.ssh/id_rsa_microsoft
 ```
 
-## 5. [Contributing guidelines](CONTRIBUTING.md) ##
+## [Contributing guidelines](CONTRIBUTING.md) ##
 
-## 6. [Changelog](CHANGELOG.md) ##
-
-## 7. [License](LICENSE) ##
+## [License](LICENSE) ##
