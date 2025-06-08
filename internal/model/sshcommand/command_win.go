@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/grafviktor/goto/internal/utils"
+	"github.com/samber/lo"
 )
 
 // BaseCMD return OS specific 'ssh' command.
@@ -25,9 +28,9 @@ func CopyIDCommand(options ...Option) string {
 		case OptionAddress:
 			hostname = opt.Value
 		case OptionLoginName:
-			username = opt.Value
+			username = fmt.Sprintf("%s@", opt.Value)
 		case OptionRemotePort:
-			remotePort = opt.Value
+			remotePort = lo.Ternary(utils.StringEmpty(&opt.Value), "", fmt.Sprintf(" -p %s", opt.Value))
 		case OptionPrivateKey:
 			if strings.HasPrefix(opt.Value, "~") {
 				// Replace "~" with "$HOME" environment variable
@@ -39,7 +42,7 @@ func CopyIDCommand(options ...Option) string {
 	}
 
 	installKeyCommand := `"cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && echo Key added. Now try logging into the machine."`
-	return fmt.Sprintf(`cmd /c type "%s.pub" | ssh %s@%s -p %s %s`,
+	return fmt.Sprintf(`cmd /c type "%s.pub" | ssh %s%s%s %s`,
 		privateKey,
 		username,
 		hostname,

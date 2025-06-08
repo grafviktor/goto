@@ -102,10 +102,19 @@ func (h *Host) CmdSSHConfig() string {
 }
 
 // CmdSSHCopyID - returns SSH command for copying SSH key to a remote host (see ssh-copy-id).
+// Be aware, that though ssh-copy-id respects ssh_config, it's impossible to specify alternative
+// ssh config file when copy identity key.
 func (h *Host) CmdSSHCopyID() string {
-	// Though ssh-copy-id respects ssh_config, it's impossible to specify alternative ssh config file.
-	if h.StorageType == constant.HostStorageType.SSHConfig {
-		return sshcommand.CopyIDCommand(sshcommand.OptionAddress{Value: h.Title})
+	hostLoadedFromSSHConfig := h.StorageType == constant.HostStorageType.SSHConfig
+	if hostLoadedFromSSHConfig {
+		// When copy ssh identity key to a host loaded from .ssh/config, we only use 2 options:
+		// 1. Host alias (which is title)
+		// 2. Identity file path, which is only necessary for Windows version of CopyIDCommand,
+		//    however passing it to Unix as well, to keep the code more consistent.
+		return sshcommand.CopyIDCommand(
+			sshcommand.OptionAddress{Value: h.Title},
+			sshcommand.OptionPrivateKey{Value: h.SSHHostConfig.IdentityFile},
+		)
 	}
 
 	return sshcommand.CopyIDCommand(

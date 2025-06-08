@@ -113,7 +113,7 @@ func Test_CheckAppInstalled(t *testing.T) {
 	}{
 		{
 			name:          "Installed App",
-			appName:       "echo", // Assuming 'echo' is always installed
+			appName:       "find", // Assuming 'find' is always installed
 			expectedError: false,
 		},
 		{

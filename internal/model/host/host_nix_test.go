@@ -39,8 +39,14 @@ func TestCmdSSHCopyID(t *testing.T) {
 				Title:       "LOCALHOST_ALIAS",
 				Address:     "localhost",
 				StorageType: constant.HostStorageType.SSHConfig,
+				SSHHostConfig: &sshconfig.Config{
+					Hostname:     "localhost",
+					IdentityFile: "/tmp",
+					Port:         "2222",
+					User:         "root",
+				},
 			},
-			expected: "ssh-copy-id LOCALHOST_ALIAS",
+			expected: "ssh-copy-id -i /tmp LOCALHOST_ALIAS",
 		},
 	}
 

@@ -41,6 +41,12 @@ func TestCmdSSHCopyID(t *testing.T) {
 				Title:       "LOCALHOST_ALIAS",
 				Address:     "localhost",
 				StorageType: constant.HostStorageType.SSHConfig,
+				SSHHostConfig: &sshconfig.Config{
+					Hostname:     "localhost",
+					IdentityFile: "~/.ssh/test",
+					Port:         "2222",
+					User:         "root",
+				},
 			},
 			expected: `cmd /c type "C:\Users\username\.ssh\test.pub" | ssh LOCALHOST_ALIAS "cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && echo Key added. Now try logging into the machine."`,
 		},

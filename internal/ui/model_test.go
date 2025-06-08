@@ -4,9 +4,11 @@ import (
 	"context"
 	"os"
 	"reflect"
+	"runtime"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -79,9 +81,9 @@ func TestDispatchProcess_Foreground(t *testing.T) {
 func TestDispatchProcess_Background_OK(t *testing.T) {
 	// Create a model
 	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
-
+	cmd := lo.Ternary(runtime.GOOS == "windows", "cmd /C echo test", "echo test")
 	// Test case: Successful process execution
-	validProcess := utils.BuildProcess("echo test")
+	validProcess := utils.BuildProcess(cmd)
 	validProcess.Stdout = &utils.ProcessBufferWriter{}
 	validProcess.Stderr = &utils.ProcessBufferWriter{}
 
