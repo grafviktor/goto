@@ -130,10 +130,10 @@ Supported platforms: macOS, Linux, Windows.
 ### 주요 디렉토리 설명
 * `demo/` : 앱 실행 GIF, 스크린샷, 데모 동영상 등 사용자 안내용 파일
 * `build/deb/`  
-├── `Dockerfile`: 패키지 빌드 컨테이너 설정
-├── `goto.control`: 패키지 메타데이터 정의
-* ` cmd/goto/`: Go 애플리케이션의 루트 디렉토리
-├── `main.go`: 프로그램 실행 파일
+├── `Dockerfile`: 패키지 빌드 컨테이너 설정  
+└── `goto.control`: 패키지 메타데이터 정의  
+* ` cmd/goto/`: Go 애플리케이션의 루트 디렉토리  
+└── `main.go`: 프로그램 실행 파일
 
 
 ## [Contributing guidelines](CONTRIBUTING.md) ##
