@@ -91,9 +91,9 @@ Supported platforms: macOS, Linux, Windows.
 
 ![Shows how to open ssh session using goto](demo/edit_and_connect.gif)
 
-### 상단 gif: 기존의 프로그램(방향키로 서버 선택, 접속)  
+상단의 GIF: 기존의 프로그램(방향키로 서버 선택, 접속)  
 
-### 하단 gif: 마우스로 서버 선택, 접속 기능을 추가
+하단의 GIF: 마우스로 서버 선택, 접속 기능을 추가
 
 
 ![osp 실행 화면](ospvideo.gif)
