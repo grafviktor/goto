@@ -79,8 +79,8 @@ func isTextFileMime(filename string) bool {
 	}
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil {
-			logger := logger.Get()
-			logger.Error("[SSHCONFIG] Error closing file %s: %v", filename, closeErr)
+			log := logger.Get()
+			log.Error("[UTILS] Error closing file %s: %v", filename, closeErr)
 		}
 	}()
 

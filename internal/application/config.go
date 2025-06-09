@@ -39,28 +39,3 @@ type Configuration struct {
 	EnableFeature         FeatureFlag
 	DisableFeature        FeatureFlag
 }
-
-// Merge builds application configuration from user parameters and common objects.
-func Merge(envParams, cmdParams Configuration) Configuration {
-	if len(cmdParams.AppHome) > 0 {
-		envParams.AppHome = cmdParams.AppHome
-	}
-
-	if len(cmdParams.LogLevel) > 0 {
-		envParams.LogLevel = cmdParams.LogLevel
-	}
-
-	if len(cmdParams.EnableFeature) > 0 {
-		envParams.EnableFeature = cmdParams.EnableFeature
-	}
-
-	if len(cmdParams.DisableFeature) > 0 {
-		envParams.DisableFeature = cmdParams.DisableFeature
-	}
-
-	if len(cmdParams.SSHConfigFilePath) > 0 {
-		envParams.SSHConfigFilePath = cmdParams.SSHConfigFilePath
-	}
-
-	return envParams
-}
