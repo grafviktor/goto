@@ -1,10 +1,15 @@
 package sshcommand
 
 import (
+	"context"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/grafviktor/goto/internal/application"
+	"github.com/grafviktor/goto/internal/state"
+	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 )
 
 func Test_ConstructKeyValueOption(t *testing.T) {
@@ -146,4 +151,10 @@ func Test_LoadConfigCommand(t *testing.T) {
 			require.Contains(t, actual, tt.expectedResult)
 		})
 	}
+
+	// Repeat the first test with a custom SSH config file path
+	mockLogger := mocklogger.Logger{}
+	state.Create(context.TODO(), application.Configuration{SSHConfigFilePath: "~/.ssh/custom_config"}, &mockLogger)
+	actual := LoadConfigCommand(tests[0].option)
+	require.Contains(t, `ssh -G example.com -F "~/.ssh/custom_config"`, actual)
 }

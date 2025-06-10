@@ -11,13 +11,13 @@ func Test_isTextFileMime(t *testing.T) {
 
 	// Create a text file
 	textFile := filepath.Join(tmpDir, "file.txt")
-	if err := os.WriteFile(textFile, []byte("hello world\nthis is a test"), 0644); err != nil {
+	if err := os.WriteFile(textFile, []byte("hello world\nthis is a test"), 0o644); err != nil {
 		t.Fatalf("failed to create text file: %v", err)
 	}
 
 	// Create a binary file
 	binFile := filepath.Join(tmpDir, "file.bin")
-	if err := os.WriteFile(binFile, []byte{0x00, 0x01, 0x02, 0x03, 0x04}, 0644); err != nil {
+	if err := os.WriteFile(binFile, []byte{0x00, 0x01, 0x02, 0x03, 0x04}, 0o644); err != nil {
 		t.Fatalf("failed to create binary file: %v", err)
 	}
 

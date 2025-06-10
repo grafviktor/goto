@@ -3,7 +3,6 @@ package storage
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/samber/lo"
 	"golang.org/x/exp/slices"
@@ -50,31 +49,25 @@ type combinedStorage struct {
 
 // Get returns new data service.
 func Get(ctx context.Context, appConfig application.Configuration, logger iLogger) (HostStorage, error) {
-	storages := getStorages(ctx, appConfig, logger)
-
 	cs := combinedStorage{
-		storages:       make(map[constant.HostStorageEnum]HostStorage),
+		storages:       getStorages(ctx, appConfig, logger),
 		hostStorageMap: make(map[int]hostStorageMapping),
 		hosts:          make(map[int]model.Host),
 		nextID:         0,
-	}
-	cs.logger = logger
-	for _, storage := range storages {
-		if storage.Type() == constant.HostStorageType.Combined {
-			errMsg := fmt.Sprintf("cannot use %s in combineStorages method", storage.Type())
-			panic(errMsg)
-		}
-		cs.storages[storage.Type()] = storage
+		logger:         logger,
 	}
 
 	return &cs, nil
 }
 
-func getStorages(ctx context.Context, appConfig application.Configuration, logger iLogger) []HostStorage {
-	var storages []HostStorage
+func getStorages(
+	ctx context.Context,
+	appConfig application.Configuration,
+	logger iLogger,
+) map[constant.HostStorageEnum]HostStorage {
+	storageMap := make(map[constant.HostStorageEnum]HostStorage)
 	yamlStorage := newYAMLStorage(ctx, appConfig.AppHome, logger)
-
-	storages = append(storages, yamlStorage)
+	storageMap[yamlStorage.Type()] = yamlStorage
 
 	sshConfigEnabled := state.Get().SSHConfigEnabled
 	logger.Debug("[STORAGE] SSH config storage enable: '%t'", sshConfigEnabled)
@@ -84,11 +77,11 @@ func getStorages(ctx context.Context, appConfig application.Configuration, logge
 		if err != nil {
 			logger.Error("[STORAGE] Cannot load ssh hosts from file: '%s'. Error: %v", appConfig.SSHConfigFilePath, err)
 		} else {
-			storages = append(storages, sshConfigStorage)
+			storageMap[sshConfigStorage.Type()] = sshConfigStorage
 		}
 	}
 
-	return storages
+	return storageMap
 }
 
 // Delete implements HostStorage.
