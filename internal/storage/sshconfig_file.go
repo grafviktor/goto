@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/samber/lo"
+	"golang.org/x/exp/slices"
 
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
@@ -55,7 +56,15 @@ func (s *SSHConfigFile) GetAll() ([]model.Host, error) {
 		s.innerStorage[i+1] = hosts[i]
 	}
 
-	return lo.Values(s.innerStorage), nil
+	values := lo.Values(s.innerStorage)
+	// Map does not guarantee order, so we need to sort the collection.
+	slices.SortFunc(values, func(a, b model.Host) int {
+		if a.ID < b.ID {
+			return -1
+		}
+		return 1
+	})
+	return values, nil
 }
 
 // Get - returns host by ID.
