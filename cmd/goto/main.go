@@ -60,7 +60,7 @@ func main() {
 		appState.Logger.Error("[MAIN] Can't save application state before closing %v", fatalErr)
 	}
 
-	appState.Logger.Info("[MAIN] Close application")
+	appState.Logger.Info("[MAIN] --------= Close application =-------")
 	appState.Logger.Close()
 }
 

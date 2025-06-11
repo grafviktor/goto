@@ -148,7 +148,7 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd := m.onHostCreated(msg)
 		return m, cmd
 	case message.GroupSelected:
-		m.logger.Debug("[UI] Update app state. Active group: '%s'", msg.Name)
+		m.logger.Debug("[UI] Update app state. Active group: %q", msg.Name)
 		m.appState.Group = msg.Name
 		// Reset filter when group is selected
 		m.ResetFilter()
@@ -485,7 +485,7 @@ func (m *listModel) onFocusChanged() tea.Cmd {
 	m.updateKeyMap()
 
 	if hostItem, ok := m.SelectedItem().(ListItemHost); ok {
-		m.logger.Debug("[UI] Focus changed to host id: %v, title: %s", hostItem.ID, hostItem.Title())
+		m.logger.Debug("[UI] Focus changed to host id: %v, title: %q", hostItem.ID, hostItem.Title())
 
 		return tea.Sequence(
 			message.TeaCmd(message.HostSelected{HostID: hostItem.ID}),
@@ -592,7 +592,7 @@ func (m *listModel) updateTitle() {
 
 	if m.Title != newTitle {
 		m.Title = newTitle
-		m.logger.Debug("[UI] New list title: %s", newTitle)
+		m.logger.Debug("[UI] New list title: %q", strings.TrimSpace(utils.StripStyles(newTitle)))
 	}
 }
 

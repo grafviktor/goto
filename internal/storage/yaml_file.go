@@ -27,7 +27,7 @@ const (
 
 // newYAMLStorage creates new YAML storage.
 func newYAMLStorage(_ context.Context, appFolder string, logger iLogger) *yamlFile {
-	logger.Debug("[STORAGE] Init YAML storage. Config folder %s", appFolder)
+	logger.Debug("[STORAGE] Init YAML storage. Config folder %q", appFolder)
 	fsDataPath := path.Join(appFolder, hostsFile)
 
 	return &yamlFile{
@@ -104,7 +104,7 @@ func (s *yamlFile) Delete(hostID int) error {
 func (s *yamlFile) GetAll() ([]model.Host, error) {
 	// re-create innerStorage before reading file data
 	s.innerStorage = make(map[int]yamlHostWrapper)
-	s.logger.Debug("[STORAGE] Read hosts from file: %s\n", s.fsDataPath)
+	s.logger.Debug("[STORAGE] Read hosts from file: %q\n", s.fsDataPath)
 	fileData, err := os.ReadFile(s.fsDataPath)
 	if err != nil {
 		var pathErr *os.PathError

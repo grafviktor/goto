@@ -102,10 +102,10 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Connect to focused SSH host")
 		return m, m.dispatchProcessSSHConnect(msg)
 	case message.RunProcessSSHLoadConfig:
-		m.logger.Debug("[UI] Load SSH config for focused host id: %d, title: %s", msg.Host.ID, msg.Host.Title)
+		m.logger.Debug("[UI] Load SSH config for focused host id: %d, title: %q", msg.Host.ID, msg.Host.Title)
 		return m, m.dispatchProcessSSHLoadConfig(msg)
 	case message.RunProcessSSHCopyID:
-		m.logger.Debug("[UI] Copy SSH config to host id: %d, title: %s", msg.Host.ID, msg.Host.Title)
+		m.logger.Debug("[UI] Copy SSH config to host id: %d, title: %q", msg.Host.ID, msg.Host.Title)
 		return m, m.dispatchProcessSSHCopyID(msg)
 	case message.RunProcessSuccess:
 		m.logger.Debug("[UI] Handle process success message. Process: %v", msg.ProcessType)

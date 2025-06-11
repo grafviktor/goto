@@ -72,10 +72,10 @@ func getStorages(
 	sshConfigEnabled := state.Get().SSHConfigEnabled
 	logger.Debug("[STORAGE] SSH config storage enable: '%t'", sshConfigEnabled)
 	if sshConfigEnabled {
-		logger.Info("[STORAGE] Load ssh hosts from ssh config file: '%s'", appConfig.SSHConfigFilePath)
+		logger.Info("[STORAGE] Load ssh hosts from ssh config file: %q", appConfig.SSHConfigFilePath)
 		sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.SSHConfigFilePath, logger)
 		if err != nil {
-			logger.Error("[STORAGE] Cannot load ssh hosts from file: '%s'. Error: %v", appConfig.SSHConfigFilePath, err)
+			logger.Error("[STORAGE] Cannot load ssh hosts from file: %q. Error: %v", appConfig.SSHConfigFilePath, err)
 		} else {
 			storageMap[sshConfigStorage.Type()] = sshConfigStorage
 		}
