@@ -19,7 +19,7 @@ type LogLevel int
 const (
 	// LevelDebug - when log level is 'debug', then all messages will be printed into the log file.
 	LevelDebug LogLevel = iota
-	// LevelInfo - when log level is 'info', then only 'info' messages will be printed into the log file.
+	// LevelInfo - when log level is 'info', then only 'info' and more severe messages will be printed into the log file.
 	LevelInfo
 )
 

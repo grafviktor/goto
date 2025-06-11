@@ -20,11 +20,7 @@ func TestLoggerConstructor(t *testing.T) {
 	// Use a mock to avoid sync.Once restrictions in tests
 	once = &mockOnce{}
 	// Create a temporary directory for testing
-	tmpDir, err := os.MkdirTemp("", "testlog")
-	if err != nil {
-		t.Fatalf("Failed to create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Set up test cases
 	testCases := []struct {
@@ -76,11 +72,7 @@ func TestLoggerConstructor(t *testing.T) {
 
 func TestLoggerMethods(t *testing.T) {
 	// Create a temporary directory for testing
-	tmpDir, err := os.MkdirTemp("", "testlog")
-	if err != nil {
-		t.Fatalf("Failed to create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Create an appLogger instance for testing
 	logger, err := Create(tmpDir, "debug")
@@ -99,6 +91,7 @@ func TestLoggerMethods(t *testing.T) {
 	}{
 		{"Debug", LevelDebug, logger.Debug, "DEBG", true},
 		{"Info", LevelInfo, logger.Info, "INFO", true},
+		{"Warn", LevelInfo, logger.Warn, "WARN", true},
 		// LogLevel is 'info', but we're printing debug message, thus it should not be printed.
 		{"Debug output should be hushed", LevelInfo, logger.Debug, "", false},
 		{"Error", LevelInfo, logger.Error, "ERRO", true},
