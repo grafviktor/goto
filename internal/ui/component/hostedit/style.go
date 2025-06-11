@@ -16,9 +16,9 @@ var (
 		Padding(0, 1).
 		// Instead of placing "1" to have a padding at the bottom,
 		// I use '\n' in the code base. That is to a rendering artifacts
-		Margin(1, 4, 0)
+		Margin(1, 2, 0)
 
-	menuStyle = lipgloss.NewStyle().Margin(3, 4, 0)
+	menuStyle = lipgloss.NewStyle().Margin(2, 2, 1)
 )
 
 //nolint:dupword

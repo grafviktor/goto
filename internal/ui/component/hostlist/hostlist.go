@@ -5,9 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
+	"regexp"
 	"strings"
-	"time"
 
 	"golang.org/x/exp/slices"
 
@@ -41,21 +40,16 @@ type iLogger interface {
 	Error(format string, args ...any)
 }
 
-type (
-	msgToggleLayout     struct{ layout constant.ScreenLayout }
-	msgHideNotification struct{}
-)
+type msgToggleLayout struct{ layout constant.ScreenLayout }
 
 type listModel struct {
 	list.Model
-	repo                       storage.HostStorage
-	keyMap                     *keyMap
-	appState                   *state.ApplicationState
-	logger                     iLogger
-	mode                       string
-	notificationMessageTimer   *time.Timer
-	notificationMessageTimeout time.Duration
-	Styles                     styles
+	repo     storage.HostStorage
+	keyMap   *keyMap
+	appState *state.Application
+	logger   iLogger
+	mode     string
+	Styles   styles
 }
 
 // New - creates new host list model.
@@ -64,7 +58,7 @@ type listModel struct {
 // appState - is the application state, usually we want to restore previous state when application restarts,
 // for instance focus previously selected host.
 // log - application logger.
-func New(_ context.Context, storage storage.HostStorage, appState *state.ApplicationState, log iLogger) *listModel {
+func New(_ context.Context, storage storage.HostStorage, appState *state.Application, log iLogger) *listModel {
 	delegate := NewHostDelegate(&appState.ScreenLayout, &appState.Group, log)
 	delegateKeys := newDelegateKeyMap()
 	customStyles := customStyles()
@@ -98,7 +92,6 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	m.AdditionalFullHelpKeys = delegateKeys.FullHelp
 
 	m.Title = m.Styles.Title.Render(defaultListTitle)
-	m.notificationMessageTimeout = time.Second
 
 	return &m
 }
@@ -129,12 +122,7 @@ func (m *listModel) loadHosts() tea.Cmd {
 		items = append(items, ListItemHost{Host: h})
 	}
 
-	sort.Slice(items, func(i, j int) bool {
-		uniqueName1 := items[i].(ListItemHost).uniqueName()
-		uniqueName2 := items[j].(ListItemHost).uniqueName()
-		return uniqueName1 < uniqueName2
-	})
-
+	slices.SortFunc(items, hostComparator)
 	setItemsCmd := m.SetItems(items)
 	selectHostByIDCmd := m.selectHostByID(m.appState.Selected)
 	return tea.Sequence(setItemsCmd, selectHostByIDCmd)
@@ -160,7 +148,7 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd := m.onHostCreated(msg)
 		return m, cmd
 	case message.GroupSelected:
-		m.logger.Debug("[UI] Update app state. Active group: '%s'", msg.Name)
+		m.logger.Debug("[UI] Update app state. Active group: %q", msg.Name)
 		m.appState.Group = msg.Name
 		// Reset filter when group is selected
 		m.ResetFilter()
@@ -168,9 +156,15 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// to handle this, as it leads to series of hacks here and there. But it's the
 		// simplest way to implement it.
 		return m, m.loadHosts()
-	case msgHideNotification:
-		m.updateTitle()
+	case message.HideUINotification:
+		if msg.ComponentName == "hostlist" {
+			m.logger.Debug("[UI] Hide notification message")
+			m.updateTitle()
+		}
+
 		return m, nil
+	case message.ErrorOccurred:
+		return m, m.displayNotificationMsg(msg.Err.Error())
 	default:
 		m.SetShowStatusBar(m.FilterState() != list.Unfiltered)
 		return m, m.updateChildModel(msg)
@@ -228,11 +222,11 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 			// we should open select group form.
 			m.logger.Debug("[UI] Receive Escape key when group selected. Open view select group.")
 			return message.TeaCmd(message.OpenViewSelectGroup{})
-		} else {
-			m.logger.Debug("[UI] Receive Escape key. Ask user for confirmation to close the app.")
-			m.enterCloseAppMode()
-			return nil
 		}
+
+		m.logger.Debug("[UI] Receive Escape key. Ask user for confirmation to close the app.")
+		m.enterCloseAppMode()
+		return nil
 	default:
 		cmd := m.updateChildModel(msg)
 		return tea.Sequence(cmd, m.onFocusChanged())
@@ -409,13 +403,15 @@ func (m *listModel) copyItem() tea.Cmd {
 func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
 	updatedHost := ListItemHost{Host: msg.Host}
 	// Get all item titles, replacing the updated host's title
-	allTitles := lo.Map(m.Items(), func(item list.Item, _ int) string {
+	allItems := lo.Map(m.Items(), func(item list.Item, _ int) list.Item {
 		host := item.(ListItemHost)
-		return lo.Ternary(host.ID == updatedHost.ID, updatedHost.uniqueName(), host.uniqueName())
+		return lo.Ternary(host.ID == updatedHost.ID, updatedHost, host)
 	})
 
-	slices.Sort(allTitles)
-	newIndex := lo.IndexOf(allTitles, updatedHost.uniqueName())
+	slices.SortFunc(allItems, hostComparator)
+	_, newIndex, _ := lo.FindIndexOf(allItems, func(item list.Item) bool {
+		return updatedHost.ID == item.(ListItemHost).ID
+	})
 
 	_, currentIndex, _ := lo.FindIndexOf(m.Items(), func(item list.Item) bool {
 		return updatedHost.ID == item.(ListItemHost).ID
@@ -436,38 +432,43 @@ func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
 	)
 }
 
-func (m *listModel) setItemAndReorder(newIndex, currentIndex int, host ListItemHost) tea.Cmd {
+func (m *listModel) setItemAndReorder(newIndex, currentIndex int, updatedHost ListItemHost) tea.Cmd {
 	m.Model.RemoveItem(currentIndex)
-	cmd := m.Model.InsertItem(newIndex, host)
+	cmd := m.Model.InsertItem(newIndex, updatedHost)
 
 	// The collection is not yet updated and m.VisibleItems() may NOT contain the updated host yet,
-	// filtering is enabled. However, we must predict the new index.
-	visibleTitles := lo.Reduce(m.VisibleItems(), func(agg []string, item list.Item, index int) []string {
-		i := item.(ListItemHost)
-		return lo.Ternary(i.ID == host.ID, agg, append(agg, i.uniqueName()))
-	}, []string{host.uniqueName()})
+	// filtering is enabled. However, we must predict the new host index.
+	visibleItems := lo.Map(m.VisibleItems(), func(item list.Item, _ int) list.Item {
+		host := item.(ListItemHost)
+		return lo.Ternary(host.ID == updatedHost.ID, updatedHost, host)
+	})
 
-	slices.Sort(visibleTitles)
-	newVisibleItemsIndex := slices.Index(visibleTitles, host.uniqueName())
+	slices.SortFunc(visibleItems, hostComparator)
+	_, newVisibleItemsIndex, _ := lo.FindIndexOf(visibleItems, func(item list.Item) bool {
+		return updatedHost.ID == item.(ListItemHost).ID
+	})
 
 	m.Select(newVisibleItemsIndex)
-
 	return cmd
 }
 
 func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
-	createdHostItem := ListItemHost{Host: msg.Host}
-	titles := lo.Reduce(m.Items(), func(agg []string, item list.Item, index int) []string {
-		return append(agg, item.(ListItemHost).uniqueName())
-	}, []string{createdHostItem.uniqueName()})
-
-	slices.Sort(titles)
-	index := lo.IndexOf(titles, createdHostItem.uniqueName())
-	cmd := m.Model.InsertItem(index, createdHostItem)
-
 	// ResetFilter is required here because, user can create a new Item which will be filtered out,
 	// therefore the user will not see any changes in the UI which is confusing.
+	// ResetFilter must be done before calculating index of the new item.
+	// Consider checking if the item will be filtered out or not before deciding whether to reset the filter.
 	m.ResetFilter()
+	createdHostItem := ListItemHost{Host: msg.Host}
+
+	// Create a safe copy of visible items to avoid modifying the original collection
+	items := append([]list.Item{createdHostItem}, m.VisibleItems()...)
+	slices.SortFunc(items, hostComparator)
+	_, index, _ := lo.FindIndexOf(items, func(item list.Item) bool {
+		return createdHostItem.ID == item.(ListItemHost).ID
+	})
+
+	cmd := m.Model.InsertItem(index, createdHostItem)
+
 	// m.Select requires a visible item index, but because we reset filter VisibleItems array equals to Items
 	m.Select(index)
 
@@ -484,7 +485,7 @@ func (m *listModel) onFocusChanged() tea.Cmd {
 	m.updateKeyMap()
 
 	if hostItem, ok := m.SelectedItem().(ListItemHost); ok {
-		m.logger.Debug("[UI] Focus changed to host id: %v, title: %s", hostItem.ID, hostItem.Title())
+		m.logger.Debug("[UI] Focus changed to host id: %v, title: %q", hostItem.ID, hostItem.Title())
 
 		return tea.Sequence(
 			message.TeaCmd(message.HostSelected{HostID: hostItem.ID}),
@@ -499,7 +500,7 @@ func (m *listModel) onFocusChanged() tea.Cmd {
 func (m *listModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoaded) {
 	for index, item := range m.Items() {
 		if hostListItem, ok := item.(ListItemHost); ok && hostListItem.ID == msg.HostID {
-			hostListItem.SSHClientConfig = &msg.Config
+			hostListItem.SSHHostConfig = &msg.Config
 			m.SetItem(index, hostListItem)
 			break
 		}
@@ -549,7 +550,7 @@ func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedErrMsg)})
 	}
 
-	if host.SSHClientConfig == nil {
+	if host.SSHHostConfig == nil {
 		errorText := fmt.Sprintf("[UI] SSH config is not set for host ID='%d', Title='%s'", host.ID, host.Title)
 		m.logger.Error(errorText)
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(errorText)})
@@ -563,6 +564,8 @@ func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 
 	return nil
 }
+
+var sshConfigPathRe = regexp.MustCompile(`-F "([^"]+)"`)
 
 func (m *listModel) updateTitle() {
 	var newTitle string
@@ -579,6 +582,8 @@ func (m *listModel) updateTitle() {
 	case isHost:
 		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
 		connectCmd := strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
+		// Remove ssh config file path (if present)
+		connectCmd = sshConfigPathRe.ReplaceAllString(connectCmd, "")
 		newTitle = m.prefixWithGroupName(connectCmd)
 	default:
 		// If it's NOT a host list item, then probably the list is just empty
@@ -587,7 +592,7 @@ func (m *listModel) updateTitle() {
 
 	if m.Title != newTitle {
 		m.Title = newTitle
-		m.logger.Debug("[UI] New list title: %s", newTitle)
+		m.logger.Debug("[UI] New list title: %q", strings.TrimSpace(utils.StripStyles(newTitle)))
 	}
 }
 
@@ -602,12 +607,8 @@ func (m *listModel) prefixWithGroupName(title string) string {
 }
 
 func (m *listModel) updateKeyMap() {
-	shouldShowEditButtons := m.SelectedItem() != nil
-
-	if shouldShowEditButtons != m.keyMap.ShouldShowEditButtons() {
-		m.logger.Debug("[UI] Show edit keyboard shortcuts: %v", shouldShowEditButtons)
-		m.keyMap.SetShouldShowEditButtons(shouldShowEditButtons)
-	}
+	keyMapState := m.keyMap.UpdateKeyVisibility(m.SelectedItem())
+	m.logger.Debug("[UI] Edit keyboard shortcuts: %v", keyMapState)
 }
 
 func (m *listModel) selectHostByID(id int) tea.Cmd {
@@ -631,6 +632,10 @@ func (m *listModel) selectHostByID(id int) tea.Cmd {
 
 	// This is a side effect. Ideally, it should not be here.
 	return m.onFocusChanged()
+}
+
+func hostComparator(a, b list.Item) int {
+	return a.(ListItemHost).CompareTo(b.(ListItemHost))
 }
 
 /*
@@ -712,21 +717,15 @@ func (m *listModel) confirmAction() tea.Cmd {
 	return cmd
 }
 
+func (m *listModel) SetTitle(title string) {
+	m.Title = m.Styles.Title.Render(title)
+}
+
 func (m *listModel) displayNotificationMsg(msg string) tea.Cmd {
 	if utils.StringEmpty(&msg) {
 		return nil
 	}
 
 	m.logger.Debug("[UI] Notification message: %s", msg)
-	m.Title = m.Styles.Title.Render(msg)
-	if m.notificationMessageTimer != nil {
-		m.notificationMessageTimer.Stop()
-	}
-
-	m.notificationMessageTimer = time.NewTimer(m.notificationMessageTimeout)
-
-	return func() tea.Msg {
-		<-m.notificationMessageTimer.C
-		return msgHideNotification{}
-	}
+	return message.DisplayNotification("hostlist", msg, m)
 }

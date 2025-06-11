@@ -4,26 +4,30 @@ import (
 	"context"
 	"os"
 	"reflect"
+	"runtime"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/grafviktor/goto/internal/constant"
-	"github.com/grafviktor/goto/internal/model/ssh"
+	hostModel "github.com/grafviktor/goto/internal/model/host"
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
-	"github.com/grafviktor/goto/internal/test"
+	testutils "github.com/grafviktor/goto/internal/testutils"
+	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 	"github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
 )
 
 func TestNew(t *testing.T) {
-	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
 	require.NotNil(t, model)
 	cmd := model.Init()
 	var msgs []tea.Msg
-	test.CmdToMessage(cmd, &msgs)
+	testutils.CmdToMessage(cmd, &msgs)
 
 	require.IsType(t, message.HostSelected{}, msgs[0])
 	require.IsType(t, message.RunProcessSSHLoadConfig{}, msgs[1])
@@ -31,7 +35,7 @@ func TestNew(t *testing.T) {
 
 func TestUpdate_KeyMsg(t *testing.T) {
 	// Random key test - make sure that the app reacts on Ctrl+C
-	model := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
+	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
 	_, cmd := model.Update(tea.KeyMsg{
 		Type: tea.KeyCtrlC,
 	})
@@ -42,7 +46,7 @@ func TestUpdate_KeyMsg(t *testing.T) {
 
 func TestDispatchProcess_Foreground(t *testing.T) {
 	// Create a model
-	model := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
+	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
 
 	validProcess := utils.BuildProcess("echo test") // "echo test" is a cross-platform command
 	validProcess.Stdout = os.Stdout
@@ -76,10 +80,10 @@ func TestDispatchProcess_Foreground(t *testing.T) {
 // Low priority though as it works in gitlab tests for Windows platform. Requires investigation.
 func TestDispatchProcess_Background_OK(t *testing.T) {
 	// Create a model
-	model := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
-
+	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
+	cmd := lo.Ternary(runtime.GOOS == "windows", "cmd /C echo test", "echo test")
 	// Test case: Successful process execution
-	validProcess := utils.BuildProcess("echo test")
+	validProcess := utils.BuildProcess(cmd)
 	validProcess.Stdout = &utils.ProcessBufferWriter{}
 	validProcess.Stderr = &utils.ProcessBufferWriter{}
 
@@ -94,7 +98,7 @@ func TestDispatchProcess_Background_OK(t *testing.T) {
 
 func TestDispatchProcess_Background_Fail(t *testing.T) {
 	// Create a model
-	model := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
+	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
 
 	// Test case: Unsuccessful process execution
 	validProcess := utils.BuildProcess("nonexistent command")
@@ -111,7 +115,7 @@ func TestDispatchProcess_Background_Fail(t *testing.T) {
 }
 
 func TestHandleProcessSuccess_SSH_load_config(t *testing.T) {
-	model := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
+	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
 	given := message.RunProcessSuccess{
 		ProcessType: constant.ProcessTypeSSHLoadConfig,
 		StdOut:      "hostname localhost\r\nport 2222\r\nidentityfile /tmp\r\nuser root",
@@ -119,7 +123,7 @@ func TestHandleProcessSuccess_SSH_load_config(t *testing.T) {
 
 	expected := message.HostSSHConfigLoaded{
 		HostID: 0,
-		Config: ssh.Config{
+		Config: sshconfig.Config{
 			Hostname:     "localhost",
 			IdentityFile: "/tmp",
 			Port:         "2222",
@@ -194,7 +198,7 @@ func TestHandleProcessSuccess_SSH_copy_ID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			model := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
+			model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
 			model.handleProcessSuccess(tt.msg)
 			require.Equal(t, tt.expected.modelMessage, model.viewMessageContent)
 			require.Equal(t, tt.expected.viewState, (int)(model.appState.CurrentView))
@@ -238,7 +242,7 @@ func TestHandleProcessError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			model := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
+			model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
 			model.handleProcessError(tt.msg)
 			require.Equal(t, tt.expected.modelMessage, model.viewMessageContent)
 			require.Equal(t, tt.expected.viewState, (int)(model.appState.CurrentView))
@@ -246,8 +250,27 @@ func TestHandleProcessError(t *testing.T) {
 	}
 }
 
+func TestDispatchProcessSSHCopyID(t *testing.T) {
+	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
+
+	// Prepare a host with SSH config
+	hostWithConfig := hostModel.Host{}
+	hostWithConfig.SSHHostConfig = &sshconfig.Config{
+		IdentityFile: "/tmp/id_rsa",
+		Hostname:     "localhost",
+	}
+
+	msg := message.RunProcessSSHCopyID{
+		Host: hostWithConfig,
+	}
+
+	cmd := model.dispatchProcessSSHCopyID(msg)
+	// Check that cmd returns a tea.execMsg (unexported type, so check type name)
+	require.Equal(t, "execMsg", reflect.TypeOf(cmd()).Name())
+}
+
 // ---------------------------------
 
-func MockAppState() *state.ApplicationState {
-	return &state.ApplicationState{}
+func MockAppState() *state.Application {
+	return &state.Application{}
 }

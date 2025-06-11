@@ -16,7 +16,7 @@ import (
 	"github.com/samber/lo"
 
 	hostModel "github.com/grafviktor/goto/internal/model/host"
-	"github.com/grafviktor/goto/internal/model/ssh"
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/input"
@@ -61,6 +61,7 @@ var (
 )
 
 type iLogger interface {
+	Error(format string, args ...any)
 	Debug(format string, args ...any)
 	Info(format string, args ...any)
 }
@@ -87,18 +88,33 @@ func networkPortValidator(s string) error {
 	return nil
 }
 
-func getKeyMap(focusedInput int) keyMap {
-	if focusedInput == inputTitle || focusedInput == inputAddress {
-		keys.CopyInputValue.SetEnabled(true)
-	} else {
+func getKeyMap(host hostModel.Host, focusedInput int) keyMap {
+	switch {
+	case host.IsReadOnly():
 		keys.CopyInputValue.SetEnabled(false)
+		keys.Save.SetEnabled(false)
+		keys.Up.SetEnabled(false)
+		keys.Down.SetEnabled(false)
+		keys.Discard.SetHelp("esc", "close")
+	case focusedInput == inputTitle || focusedInput == inputAddress:
+		keys.CopyInputValue.SetEnabled(true)
+		keys.Save.SetEnabled(true)
+		keys.Up.SetEnabled(true)
+		keys.Down.SetEnabled(true)
+		keys.Discard.SetHelp("esc", "discard")
+	default:
+		keys.CopyInputValue.SetEnabled(false)
+		keys.Save.SetEnabled(true)
+		keys.Up.SetEnabled(true)
+		keys.Down.SetEnabled(true)
+		keys.Discard.SetHelp("esc", "discard")
 	}
 
 	return keys
 }
 
 type editModel struct {
-	appState     *state.ApplicationState
+	appState     *state.Application
 	focusedInput int
 	help         help.Model
 	host         hostModelWrapper
@@ -114,7 +130,7 @@ type editModel struct {
 }
 
 // New - returns new edit host form.
-func New(ctx context.Context, storage storage.HostStorage, state *state.ApplicationState, log iLogger) *editModel {
+func New(ctx context.Context, storage storage.HostStorage, state *state.Application, log iLogger) *editModel {
 	initialFocusedInput := inputTitle
 
 	// If we can't cast host id to int, that means we're adding a new host. Ignore the error
@@ -124,14 +140,14 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		// Logger should notify that this is a new host
 		host = hostModel.Host{Group: state.Group}
 	}
-	host.SSHClientConfig = ssh.StubConfig()
+	host.SSHHostConfig = sshconfig.StubConfig()
 
 	m := editModel{
 		inputs:       make([]input.Input, 7),
 		hostStorage:  storage,
 		host:         wrap(&host),
 		help:         help.New(),
-		keyMap:       getKeyMap(initialFocusedInput),
+		keyMap:       getKeyMap(host, initialFocusedInput),
 		appState:     state,
 		logger:       log,
 		focusedInput: initialFocusedInput,
@@ -207,9 +223,16 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case debouncedMessage:
 		cmd = m.handleDebouncedMessage(msg)
 	case message.HostSSHConfigLoaded:
-		m.host.SSHClientConfig = &msg.Config
+		m.host.SSHHostConfig = &msg.Config
 		m.updateInputFields()
 		m.viewport.SetContent(m.inputsView())
+	case message.HideUINotification:
+		if msg.ComponentName == "hostedit" {
+			m.logger.Debug("[UI] Hide notification message")
+			m.title = defaultTitle
+		}
+
+		return m, nil
 	}
 
 	return m, cmd
@@ -232,6 +255,12 @@ func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	m.title = defaultTitle
 
 	switch {
+	case key.Matches(msg, m.keyMap.Discard):
+		m.logger.Info("[UI] Discard changes for host id: %v", m.host.ID)
+		return message.TeaCmd(message.CloseViewHostEdit{})
+	case m.host.IsReadOnly():
+		m.logger.Debug("[UI] Received a key event. Cannot modify a readonly host.")
+		return m.displayNotificationMsg("host loaded from SSH config is readonly")
 	case key.Matches(msg, m.keyMap.Save):
 		m.logger.Info("[UI] Save changes for host id: %v", m.host.ID)
 		return m.save(msg)
@@ -240,9 +269,6 @@ func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		return nil
 	case key.Matches(msg, m.keyMap.Down) || key.Matches(msg, m.keyMap.Up):
 		return m.inputFocusChange(msg)
-	case key.Matches(msg, m.keyMap.Discard):
-		m.logger.Info("[UI] Discard changes for host id: %v", m.host.ID)
-		return message.TeaCmd(message.CloseViewHostEdit{})
 	default:
 		// Handle all other key events
 		cmd := m.focusedInputProcessKeyEvent(msg)
@@ -302,15 +328,16 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 		}
 	}
 
-	host, _ := m.hostStorage.Save(m.host.unwrap())
-	// Need to check storage error and update application status:
-	// if err != nil { return message.TeaCmd(message.Error{StdErr: err}) }
-	// or
-	// m.title = err
-
-	cmd := lo.Ternary(m.isNewHost,
-		message.TeaCmd(message.HostCreated{Host: host}),
-		message.TeaCmd(message.HostUpdated{Host: host}))
+	var cmd tea.Cmd
+	host, err := m.hostStorage.Save(m.host.unwrap())
+	if err != nil {
+		m.logger.Error("[UI] Cannot save host with id %v. Reason: %s", m.host.ID, err.Error())
+		cmd = message.TeaCmd(message.ErrorOccurred{Err: err})
+	} else {
+		cmd = lo.Ternary(m.isNewHost,
+			message.TeaCmd(message.HostCreated{Host: host}),
+			message.TeaCmd(message.HostUpdated{Host: host}))
+	}
 
 	return tea.Sequence(
 		message.TeaCmd(message.CloseViewHostEdit{}),
@@ -456,7 +483,7 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 		if i == m.focusedInput {
 			// KeyMap depends on focused input - when address is focused, we allow
 			// a user to copy address value to title.
-			m.keyMap = getKeyMap(i)
+			m.keyMap = getKeyMap(m.host.unwrap(), i)
 			m.logger.Debug("[UI] Focus input: '%s'", m.inputs[i].Label())
 
 			// Set focused state
@@ -482,6 +509,23 @@ func (m *editModel) handleCopyInputValueShortcut() {
 }
 
 func (m *editModel) updateInputFields() {
+	if m.host.IsReadOnly() {
+		m.handleReadonlyHost()
+	} else {
+		m.handleEditableHost()
+	}
+}
+
+func (m *editModel) handleReadonlyHost() {
+	m.logger.Debug("[UI] Update input components. All parameters are disabled.")
+	lo.ForEach(m.inputs, func(i input.Input, n int) {
+		m.inputs[n].Placeholder = fmt.Sprintf("%s: %s", "readonly", m.host.getHostAttributeValueByIndex(n))
+		m.inputs[n].SetValue("")
+		m.inputs[n].SetEnabled(false)
+	})
+}
+
+func (m *editModel) handleEditableHost() {
 	customConnectString := m.host.IsUserDefinedSSHCommand()
 	m.logger.Debug("[UI] Update input components. Additional SSH parameters disabled: %v", customConnectString)
 
@@ -490,9 +534,9 @@ func (m *editModel) updateInputFields() {
 	m.inputs[inputAddress].Placeholder = "*required*"
 	m.inputs[inputGroup].Placeholder = "n/a" //nolint:goconst
 	m.inputs[inputDescription].Placeholder = "n/a"
-	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.User)
-	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.Port)
-	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.IdentityFile)
+	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHHostConfig.User)
+	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHHostConfig.Port)
+	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHHostConfig.IdentityFile)
 
 	hostInputLabel := lo.Ternary(customConnectString, "Command", "Host")
 	m.inputs[inputAddress].SetLabel(hostInputLabel)
@@ -538,4 +582,17 @@ func (m *editModel) headerView() string {
 
 func (m *editModel) helpView() string {
 	return menuStyle.Render(m.help.View(m.keyMap))
+}
+
+func (m *editModel) SetTitle(title string) {
+	m.title = title
+}
+
+func (m *editModel) displayNotificationMsg(msg string) tea.Cmd {
+	if utils.StringEmpty(&msg) {
+		return nil
+	}
+
+	m.logger.Debug("[UI] Notification message: %s", msg)
+	return message.DisplayNotification("hostedit", msg, m)
 }

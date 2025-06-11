@@ -12,9 +12,10 @@ import (
 
 	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/host"
-	"github.com/grafviktor/goto/internal/model/ssh"
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
-	"github.com/grafviktor/goto/internal/test"
+	testutils "github.com/grafviktor/goto/internal/testutils"
+	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 	"github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
 )
@@ -22,13 +23,13 @@ import (
 func TestListModel_Init(t *testing.T) {
 	// Test Init function which loads data from storage
 	storageShouldFail := false
-	storage := test.NewMockStorage(storageShouldFail)
-	fakeAppState := state.ApplicationState{Selected: 1}
-	lm := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
+	storage := testutils.NewMockStorage(storageShouldFail)
+	fakeAppState := state.Application{Selected: 1}
+	lm := New(context.TODO(), storage, &fakeAppState, &mocklogger.Logger{})
 	teaCmd := lm.Init()
 
 	var dst []tea.Msg
-	test.CmdToMessage(teaCmd, &dst)
+	testutils.CmdToMessage(teaCmd, &dst)
 	require.Equal(t, dst, []tea.Msg{
 		message.HostSelected{HostID: 1},
 		message.RunProcessSSHLoadConfig{
@@ -41,7 +42,7 @@ func TestListModel_Init(t *testing.T) {
 				RemotePort:       "2222",
 				LoginName:        "root",
 				IdentityFilePath: "id_rsa",
-				SSHClientConfig:  &ssh.Config{},
+				SSHHostConfig:    &sshconfig.Config{},
 			},
 		},
 	})
@@ -53,12 +54,12 @@ func TestListModel_Init(t *testing.T) {
 	require.Equal(t, 1, lm.SelectedItem().(ListItemHost).ID)
 
 	// Test loadHosts function when a group is selected
-	storage = test.NewMockStorage(false)
+	storage = testutils.NewMockStorage(false)
 	lm = New(
 		context.TODO(),
 		storage,
-		&state.ApplicationState{Group: "Group 2"},
-		&test.MockLogger{},
+		&state.Application{Group: "Group 2"},
+		&mocklogger.Logger{},
 	)
 	lm.Init()
 	require.Len(t, lm.Items(), 1)
@@ -66,12 +67,12 @@ func TestListModel_Init(t *testing.T) {
 
 	// Now test initialLoad function simulating a broken storage
 	storageShouldFail = true
-	storage = test.NewMockStorage(storageShouldFail)
+	storage = testutils.NewMockStorage(storageShouldFail)
 	lm = New(
 		context.TODO(),
 		storage,
-		&state.ApplicationState{}, // we don't need app state, as error should be reported before we can even use it
-		&test.MockLogger{},
+		&state.Application{}, // we don't need app state, as error should be reported before we can even use it
+		&mocklogger.Logger{},
 	)
 	teaCmd = lm.Init()
 
@@ -154,7 +155,7 @@ func TestRemoveItem(t *testing.T) {
 			mode:          modeRemoveItem,
 			preselectItem: 0, // It's already '0' by default. Just to be more explicit
 			want: []tea.Msg{
-				msgHideNotification{},
+				message.HideUINotification{ComponentName: "hostlist"},
 				// Because we remote item "Mock Host 1" (which has index 0), we should ensure that next available item will be focused
 				message.HostSelected{HostID: 2},
 				message.RunProcessSSHLoadConfig{
@@ -167,7 +168,7 @@ func TestRemoveItem(t *testing.T) {
 						RemotePort:       "2222",
 						LoginName:        "root",
 						IdentityFilePath: "id_rsa",
-						SSHClientConfig:  &ssh.Config{},
+						SSHHostConfig:    &sshconfig.Config{},
 					},
 				},
 			},
@@ -181,7 +182,7 @@ func TestRemoveItem(t *testing.T) {
 			mode:          modeRemoveItem,
 			preselectItem: 2, // We have 3 items in the mock storage. Selecting the last one
 			want: []tea.Msg{
-				msgHideNotification{},
+				message.HideUINotification{ComponentName: "hostlist"},
 				// Because we remote item "Mock Host 1" (which has index 0), we should ensure that next available item will be focused
 				message.HostSelected{HostID: 2},
 				message.RunProcessSSHLoadConfig{
@@ -194,7 +195,7 @@ func TestRemoveItem(t *testing.T) {
 						RemotePort:       "2222",
 						LoginName:        "root",
 						IdentityFilePath: "id_rsa",
-						SSHClientConfig:  &ssh.Config{},
+						SSHHostConfig:    &sshconfig.Config{},
 					},
 				},
 			},
@@ -222,7 +223,7 @@ func TestRemoveItem(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.model.logger = &test.MockLogger{}
+			tt.model.logger = &mocklogger.Logger{}
 			// Preselect item
 			tt.model.Select(tt.preselectItem)
 			// Set mode removeMode
@@ -231,7 +232,7 @@ func TestRemoveItem(t *testing.T) {
 			cmd := tt.model.removeItem()
 			// Cmd() can return a sequence or tea.Msg
 			var actual []tea.Msg
-			test.CmdToMessage(cmd, &actual)
+			testutils.CmdToMessage(cmd, &actual)
 			require.ElementsMatch(t, tt.want, actual, "Wrong message type")
 			// Get all items from the database without error
 			items, _ := tt.model.repo.GetAll()
@@ -245,7 +246,7 @@ func TestConfirmAction(t *testing.T) {
 	// Test the fallback option when there is no active mode
 	// Create a new model. There is no special mode (like for instance, "remove item" mode)
 	model := NewMockListModel(false)
-	model.logger = &test.MockLogger{}
+	model.logger = &mocklogger.Logger{}
 	// Imagine that user triggers confirm action
 	cmd := model.confirmAction()
 	// When cancel action, we reset mode and return back to normal state
@@ -313,7 +314,7 @@ func TestEnterSSHCopyIDMode(t *testing.T) {
 func TestEnterRemoveItemMode(t *testing.T) {
 	// Create a new model
 	model := *NewMockListModel(false)
-	model.logger = &test.MockLogger{}
+	model.logger = &mocklogger.Logger{}
 	// Select non-existent index
 	model.Select(10)
 	// Call enterRemoveItemMode function
@@ -325,7 +326,7 @@ func TestEnterRemoveItemMode(t *testing.T) {
 
 	// Create another model
 	model = *NewMockListModel(false)
-	model.logger = &test.MockLogger{}
+	model.logger = &mocklogger.Logger{}
 	// Select a first item, which is valid
 	model.Select(0)
 	// Call enterRemoveItemMode function
@@ -340,7 +341,7 @@ func TestEnterRemoveItemMode(t *testing.T) {
 func TestExitRemoveItemMode(t *testing.T) {
 	// Create a new model
 	model := *NewMockListModel(false)
-	model.logger = &test.MockLogger{}
+	model.logger = &mocklogger.Logger{}
 	// Select a first item, which is valid
 	model.Select(0)
 	// Call enterRemoveItemMode function
@@ -367,13 +368,13 @@ func TestExitRemoveItemMode(t *testing.T) {
 				RemotePort:       "2222",
 				LoginName:        "root",
 				IdentityFilePath: "id_rsa",
-				SSHClientConfig:  &ssh.Config{},
+				SSHHostConfig:    &sshconfig.Config{},
 			},
 		},
 	}
 
 	var actual []tea.Msg
-	test.CmdToMessage(cmd, &actual)
+	testutils.CmdToMessage(cmd, &actual)
 	require.Equal(t, expected, actual, "Wrong message type")
 
 	// Ensure that model exited remove move
@@ -383,7 +384,7 @@ func TestExitRemoveItemMode(t *testing.T) {
 func TestListTitleUpdate(t *testing.T) {
 	// 1 Call updateTitle when host is not selected
 	model := *NewMockListModel(false)
-	model.logger = &test.MockLogger{}
+	model.logger = &mocklogger.Logger{}
 	// Select non-existent item
 	model.Select(10)
 	// Call updateTitle function, but it will fail, however without throwing any errors
@@ -393,7 +394,7 @@ func TestListTitleUpdate(t *testing.T) {
 
 	// 2 Call updateTitle when removeMode is active
 	model = *NewMockListModel(false)
-	model.logger = &test.MockLogger{}
+	model.logger = &mocklogger.Logger{}
 	// Select a host by valid index
 	model.Select(0)
 	// Enter remove mode
@@ -405,7 +406,7 @@ func TestListTitleUpdate(t *testing.T) {
 
 	// 3 Call updateTitle selected a host
 	model = *NewMockListModel(false)
-	model.logger = &test.MockLogger{}
+	model.logger = &mocklogger.Logger{}
 	// Select a host by valid index
 	model.Select(0)
 	// Call updateTitle function
@@ -415,7 +416,7 @@ func TestListTitleUpdate(t *testing.T) {
 
 	// 4 Call updateTitle selected a host and group is selected.
 	model = *NewMockListModel(false)
-	model.logger = &test.MockLogger{}
+	model.logger = &mocklogger.Logger{}
 	//
 	model.appState.Group = "Group 1"
 	// Select a host by valid index
@@ -427,7 +428,7 @@ func TestListTitleUpdate(t *testing.T) {
 
 	// 5 Call updateTitle when exiting app.
 	model = *NewMockListModel(false)
-	model.logger = &test.MockLogger{}
+	model.logger = &mocklogger.Logger{}
 	// Enter exit app mode
 	model.enterCloseAppMode()
 	// Call updateTitle function
@@ -439,7 +440,7 @@ func TestListTitleUpdate(t *testing.T) {
 func TestListModel_title_when_app_just_starts(t *testing.T) {
 	// This is just a sanity test, which checks title update function
 	model := *NewMockListModel(false)
-	model.logger = &test.MockLogger{}
+	model.logger = &mocklogger.Logger{}
 	// When app just starts, it should display "press 'n' to add a new host"
 	require.Equal(t, "press 'n' to add a new host", utils.StripStyles(model.Title))
 	// When press 'down' key, it should display a proper ssh connection string
@@ -450,7 +451,7 @@ func TestListModel_title_when_app_just_starts(t *testing.T) {
 func TestListModel_title_when_filter_is_enabled(t *testing.T) {
 	// Test bugfix for https://github.com/grafviktor/goto/issues/37
 	model := *NewMockListModel(false)
-	model.logger = &test.MockLogger{}
+	model.logger = &mocklogger.Logger{}
 	assert.Equal(t, model.FilterState(), list.Unfiltered)
 	// Enable filter
 	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
@@ -467,14 +468,14 @@ func TestListModel_editItem(t *testing.T) {
 
 	// First case - when host is not selected in the list of hosts.
 	// We should receive an error because there is nothing to edit
-	storage := test.NewMockStorage(false)
+	storage := testutils.NewMockStorage(false)
 	lm := New(
 		context.TODO(),
 		storage,
-		&state.ApplicationState{}, // we don't need app state, as error should be reported before we can even use it
-		&test.MockLogger{},
+		&state.Application{}, // we don't need app state, as error should be reported before we can even use it
+		&mocklogger.Logger{},
 	)
-	lm.logger = &test.MockLogger{}
+	lm.logger = &mocklogger.Logger{}
 	teaCmd := lm.editItem()
 
 	require.IsType(t, message.ErrorOccurred{}, teaCmd())
@@ -486,12 +487,12 @@ func TestListModel_editItem(t *testing.T) {
 	// we need it to automatically preselect first item from the list of hosts and NewMockListModel
 	// will do that for us
 	lm = NewMockListModel(false)
-	lm.logger = &test.MockLogger{}
+	lm.logger = &mocklogger.Logger{}
 
 	teaCmd = lm.editItem()
 
 	var dst []tea.Msg
-	test.CmdToMessage(teaCmd, &dst)
+	testutils.CmdToMessage(teaCmd, &dst)
 
 	require.Contains(t, dst, message.OpenViewHostEdit{HostID: 1})
 	require.Contains(t, dst, message.RunProcessSSHLoadConfig{Host: lm.SelectedItem().(ListItemHost).Host})
@@ -500,14 +501,14 @@ func TestListModel_editItem(t *testing.T) {
 func TestListModel_copyItem(t *testing.T) {
 	// First case - test that we receive an error when item is not selected
 	storageShouldFail := true
-	storage := test.NewMockStorage(storageShouldFail)
-	lm := New(context.TODO(), storage, &state.ApplicationState{}, &test.MockLogger{})
+	storage := testutils.NewMockStorage(storageShouldFail)
+	lm := New(context.TODO(), storage, &state.Application{}, &mocklogger.Logger{})
 	teaCmd := lm.copyItem()
 	require.Equal(t, itemNotSelectedErrMsg, teaCmd().(message.ErrorOccurred).Err.Error())
 
 	// Second case: storage is OK, and we have to ensure that copied host title as we expect it to be:
 	lm = NewMockListModel(false)
-	lm.logger = &test.MockLogger{}
+	lm.logger = &mocklogger.Logger{}
 
 	lm.copyItem()
 	host, err := lm.repo.Get(3)
@@ -518,7 +519,7 @@ func TestListModel_copyItem(t *testing.T) {
 func TestListModel_updateKeyMap(t *testing.T) {
 	// Case 1: Test that if a host list contains items and item is selected, then all keyboard shortcuts are shown on the screen
 	lm := *NewMockListModel(false)
-	lm.logger = &test.MockLogger{}
+	lm.logger = &mocklogger.Logger{}
 	lm.Init()
 
 	// Actually "displayedKeys" will also contain cursor up and cursor down and help keybindings,
@@ -557,7 +558,7 @@ func TestListModel_updateKeyMap(t *testing.T) {
 func TestUpdate_TeaSizeMsg(t *testing.T) {
 	// Test that if model is ready, WindowSizeMsg message will update inner model size
 	model := *NewMockListModel(false)
-	model.logger = &test.MockLogger{}
+	model.logger = &mocklogger.Logger{}
 	model.Update(tea.WindowSizeMsg{Width: 100, Height: 100})
 
 	require.Greater(t, model.Height(), 0)
@@ -568,7 +569,7 @@ func TestUpdate_HostSSHConfigLoaded(t *testing.T) {
 	// Test that host receives SSH expectedConfig once HostConfigLoaded message is dispatched
 	lm := *NewMockListModel(false)
 	lm.Init()
-	expectedConfig := ssh.Config{
+	expectedConfig := sshconfig.Config{
 		Hostname:     "mock_hostname",
 		IdentityFile: "/tmp",
 		Port:         "9999",
@@ -579,7 +580,7 @@ func TestUpdate_HostSSHConfigLoaded(t *testing.T) {
 		Config: expectedConfig,
 	})
 
-	actualConfig := lm.Items()[0].(ListItemHost).SSHClientConfig
+	actualConfig := lm.Items()[0].(ListItemHost).SSHHostConfig
 	require.Equal(t, &expectedConfig, actualConfig)
 }
 
@@ -599,7 +600,7 @@ func TestUpdate_HostUpdated(t *testing.T) {
 		RemotePort:       "9999",
 		LoginName:        "mock_username",
 		IdentityFilePath: "/tmp",
-		SSHClientConfig:  nil,
+		SSHHostConfig:    nil,
 	}
 
 	lm.Update(message.HostUpdated{Host: updatedHost})
@@ -614,7 +615,7 @@ func TestUpdate_HostUpdated(t *testing.T) {
 		RemotePort:       "9999",
 		LoginName:        "mock_username",
 		IdentityFilePath: "/tmp",
-		SSHClientConfig:  nil,
+		SSHHostConfig:    nil,
 	}
 
 	lm.Update(message.HostUpdated{Host: updatedHost})
@@ -638,7 +639,7 @@ func TestUpdate_HostCreated(t *testing.T) {
 		RemotePort:       "9999",
 		LoginName:        "mock_username",
 		IdentityFilePath: "/tmp",
-		SSHClientConfig:  nil,
+		SSHHostConfig:    nil,
 	}
 
 	lm.Update(message.HostCreated{Host: createdHost1})
@@ -647,14 +648,14 @@ func TestUpdate_HostCreated(t *testing.T) {
 
 	// Also check that host is inserted into a correct position of the hostlist model
 	createdHost2 := host.Host{
-		ID:               1,
+		ID:               666,
 		Title:            "ZZZ new host", // Should be positioned at last index
 		Description:      "Mock Host Updated",
 		Address:          "mock_hostname",
 		RemotePort:       "9999",
 		LoginName:        "mock_username",
 		IdentityFilePath: "/tmp",
-		SSHClientConfig:  nil,
+		SSHHostConfig:    nil,
 	}
 
 	lm.Update(message.HostCreated{Host: createdHost2})
@@ -667,9 +668,9 @@ func TestUpdate_GroupListSelectItem(t *testing.T) {
 	// Test when select group, the model must reload hosts and reset filter
 	model := New(
 		context.TODO(),
-		test.NewMockStorage(false),
-		&state.ApplicationState{},
-		&test.MockLogger{},
+		testutils.NewMockStorage(false),
+		&state.Application{},
+		&mocklogger.Logger{},
 	)
 	model.loadHosts()
 	// Load All items from the collection
@@ -691,14 +692,14 @@ func TestUpdate_msgHideNotification(t *testing.T) {
 	// Test that title resets back to normal when hiding notification
 	model := New(
 		context.TODO(),
-		test.NewMockStorage(false),
-		&state.ApplicationState{},
-		&test.MockLogger{},
+		testutils.NewMockStorage(false),
+		&state.Application{},
+		&mocklogger.Logger{},
 	)
 	model.loadHosts()
 	model.Title = "Mock notification message"
 
-	model.Update(msgHideNotification{})
+	model.Update(message.HideUINotification{ComponentName: "hostlist"})
 
 	// Ensure that notification returned back to normal when hid the notification message.
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", utils.StripStyles(model.Title))
@@ -733,7 +734,7 @@ func Test_handleKeyboardEvent_cancelWhileFiltering(t *testing.T) {
 
 	// Extract batch messages returned by the model
 	msgs := []tea.Msg{}
-	test.CmdToMessage(cmds, &msgs)
+	testutils.CmdToMessage(cmds, &msgs)
 
 	// Send those messages back to the model
 	for _, m := range msgs {
@@ -746,7 +747,7 @@ func Test_handleKeyboardEvent_cancelWhileFiltering(t *testing.T) {
 	// focus is set on the first item from the search results
 	_, cmds = model.Update(tea.KeyMsg{Type: tea.KeyEscape})
 	// Extract batch messages returned by the model
-	test.CmdToMessage(cmds, &msgs)
+	testutils.CmdToMessage(cmds, &msgs)
 
 	// Send those messages back to the model
 	for _, m := range msgs {
@@ -790,7 +791,7 @@ func Test_handleKeyboardEvent_clearFilter(t *testing.T) {
 
 	// Extract batch messages returned by the model
 	msgs := []tea.Msg{}
-	test.CmdToMessage(cmds, &msgs)
+	testutils.CmdToMessage(cmds, &msgs)
 
 	// Send those messages back to the model
 	for _, m := range msgs {
@@ -803,7 +804,7 @@ func Test_handleKeyboardEvent_clearFilter(t *testing.T) {
 	// focus is set to host "Mock Host 2"
 	_, cmds = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	// Extract batch messages returned by the model
-	test.CmdToMessage(cmds, &msgs)
+	testutils.CmdToMessage(cmds, &msgs)
 	for _, m := range msgs {
 		model.Update(m)
 	}
@@ -817,7 +818,7 @@ func Test_handleKeyboardEvent_clearFilter(t *testing.T) {
 	// focus is set on the same item which was focused while we were in filter mode
 	_, cmds = model.Update(tea.KeyMsg{Type: tea.KeyEscape})
 	// Extract batch messages returned by the model
-	test.CmdToMessage(cmds, &msgs)
+	testutils.CmdToMessage(cmds, &msgs)
 	for _, m := range msgs {
 		model.Update(m)
 	}
@@ -868,7 +869,7 @@ func Test_handleKeyboardEvent_copyID(t *testing.T) {
 	})
 
 	msgs := []tea.Msg{}
-	test.CmdToMessage(cmds, &msgs)
+	testutils.CmdToMessage(cmds, &msgs)
 	for _, m := range msgs {
 		model.Update(m)
 	}
@@ -893,7 +894,7 @@ func Test_handleKeyboardEvent_remove(t *testing.T) {
 	})
 
 	msgs := []tea.Msg{}
-	test.CmdToMessage(cmds, &msgs)
+	testutils.CmdToMessage(cmds, &msgs)
 	for _, m := range msgs {
 		model.Update(m)
 	}
@@ -928,12 +929,12 @@ func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
 	// "Mock Host 1"
 	// "Mock Host 2"
 	// "Mock Host 3"
-	storage := test.NewMockStorage(false)
-	fakeAppState := state.ApplicationState{Selected: 1}
+	storage := testutils.NewMockStorage(false)
+	fakeAppState := state.Application{Selected: 1}
 
 	// Create model
-	model := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
-	model.logger = &test.MockLogger{}
+	model := New(context.TODO(), storage, &fakeAppState, &mocklogger.Logger{})
+	model.logger = &mocklogger.Logger{}
 	model.Init()
 
 	// Make sure there are 3 items in the collection
@@ -958,7 +959,7 @@ func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
 
 	// Extract batch messages from cmd
 	msgs := []tea.Msg{}
-	test.CmdToMessage(cmds, &msgs)
+	testutils.CmdToMessage(cmds, &msgs)
 
 	// Feed all messages one by one to the model
 	for _, msg := range msgs {
@@ -974,12 +975,12 @@ func TestUpdate_ToggleBetweenScreenLayouts(t *testing.T) {
 	// "Mock Host 1"
 	// "Mock Host 2"
 	// "Mock Host 3"
-	storage := test.NewMockStorage(false)
-	fakeAppState := state.ApplicationState{Selected: 1}
+	storage := testutils.NewMockStorage(false)
+	fakeAppState := state.Application{Selected: 1}
 
 	// Create model
-	model := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
-	model.logger = &test.MockLogger{}
+	model := New(context.TODO(), storage, &fakeAppState, &mocklogger.Logger{})
+	model.logger = &mocklogger.Logger{}
 	model.Init()
 
 	// Make sure there are 3 items in the collection
@@ -1038,12 +1039,12 @@ func TestUpdate_HostFocusPreservedAfterClearFilterMessage(t *testing.T) {
 	// "Mock Host 1"
 	// "Mock Host 2"
 	// "Mock Host 3"
-	storage := test.NewMockStorage(false)
-	fakeAppState := state.ApplicationState{Selected: 1}
+	storage := testutils.NewMockStorage(false)
+	fakeAppState := state.Application{Selected: 1}
 
 	// Create model
-	model := New(context.TODO(), storage, &fakeAppState, &test.MockLogger{})
-	model.logger = &test.MockLogger{}
+	model := New(context.TODO(), storage, &fakeAppState, &mocklogger.Logger{})
+	model.logger = &mocklogger.Logger{}
 	model.Init()
 
 	// Make sure there are 3 items in the collection
@@ -1069,7 +1070,7 @@ func TestUpdate_HostFocusPreservedAfterClearFilterMessage(t *testing.T) {
 
 	// Extract batch messages returned by the model
 	msgs := []tea.Msg{}
-	test.CmdToMessage(cmds, &msgs)
+	testutils.CmdToMessage(cmds, &msgs)
 
 	// Send those messages back to the model
 	for _, m := range msgs {
@@ -1084,11 +1085,11 @@ func TestUpdate_HostFocusPreservedAfterClearFilterMessage(t *testing.T) {
 // ==============================================
 
 func NewMockListModel(storageShouldFail bool) *listModel {
-	storage := test.NewMockStorage(storageShouldFail)
-	mockState := state.ApplicationState{Selected: 1}
+	storage := testutils.NewMockStorage(storageShouldFail)
+	mockState := state.Application{Selected: 1}
 
 	// Create listModel using constructor function (using 'New' is important to preserve hotkeys)
-	lm := New(context.TODO(), storage, &mockState, &test.MockLogger{})
+	lm := New(context.TODO(), storage, &mockState, &mocklogger.Logger{})
 
 	items := make([]list.Item, 0)
 	// Wrap hosts into List items

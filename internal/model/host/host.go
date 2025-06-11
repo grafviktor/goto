@@ -4,7 +4,9 @@ package host
 import (
 	"strings"
 
-	"github.com/grafviktor/goto/internal/model/ssh"
+	"github.com/grafviktor/goto/internal/constant"
+	"github.com/grafviktor/goto/internal/model/sshcommand"
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 )
 
 // NewHost - constructs new Host model.
@@ -22,15 +24,16 @@ func NewHost(id int, title, description, address, loginName, identityFilePath, r
 
 // Host model definition.
 type Host struct {
-	ID               int         `yaml:"-"`
-	Title            string      `yaml:"title"`
-	Description      string      `yaml:"description,omitempty"`
-	Group            string      `yaml:"group,omitempty"`
-	Address          string      `yaml:"address"`
-	RemotePort       string      `yaml:"network_port,omitempty"`
-	LoginName        string      `yaml:"username,omitempty"`
-	IdentityFilePath string      `yaml:"identity_file_path,omitempty"`
-	SSHClientConfig  *ssh.Config `yaml:"-"`
+	Address          string                   `yaml:"address"`
+	Description      string                   `yaml:"description,omitempty"`
+	Group            string                   `yaml:"group,omitempty"`
+	ID               int                      `yaml:"-"`
+	IdentityFilePath string                   `yaml:"identity_file_path,omitempty"`
+	LoginName        string                   `yaml:"username,omitempty"`
+	RemotePort       string                   `yaml:"network_port,omitempty"`
+	SSHHostConfig    *sshconfig.Config        `yaml:"-"`
+	StorageType      constant.HostStorageEnum `yaml:"-"`
+	Title            string                   `yaml:"title"`
 }
 
 // Clone host model.
@@ -43,6 +46,7 @@ func (h *Host) Clone() Host {
 		LoginName:        h.LoginName,
 		IdentityFilePath: h.IdentityFilePath,
 		RemotePort:       h.RemotePort,
+		StorageType:      h.StorageType,
 	}
 
 	return newHost
@@ -62,42 +66,66 @@ func (h *Host) IsUserDefinedSSHCommand() bool {
 // CmdSSHConnect - returns SSH command for connecting to a remote host.
 func (h *Host) CmdSSHConnect() string {
 	if h.IsUserDefinedSSHCommand() {
-		return ssh.ConnectCommand(ssh.OptionAddress{Value: h.Address})
+		return sshcommand.ConnectCommand(sshcommand.OptionAddress{Value: h.Address})
 	}
 
-	return ssh.ConnectCommand([]ssh.Option{
-		ssh.OptionPrivateKey{Value: h.IdentityFilePath},
-		ssh.OptionRemotePort{Value: h.RemotePort},
-		ssh.OptionLoginName{Value: h.LoginName},
-		ssh.OptionAddress{Value: h.Address},
+	if h.StorageType == constant.HostStorageType.SSHConfig {
+		// When it's SSHConfig storage type, we need to use the title as a host name.
+		// This is because the by addressing the host by alias, we get all its settings from ssh_config.
+		return sshcommand.ConnectCommand(sshcommand.OptionAddress{Value: h.Title})
+	}
+
+	return sshcommand.ConnectCommand([]sshcommand.Option{
+		sshcommand.OptionPrivateKey{Value: h.IdentityFilePath},
+		sshcommand.OptionRemotePort{Value: h.RemotePort},
+		sshcommand.OptionLoginName{Value: h.LoginName},
+		sshcommand.OptionAddress{Value: h.Address},
 	}...)
 }
 
 // CmdSSHConfig - returns SSH command for loading host default configuration.
 func (h *Host) CmdSSHConfig() string {
-	if h.IsUserDefinedSSHCommand() {
-		return ssh.LoadConfigCommand(ssh.OptionReadConfig{Value: h.Address})
+	if h.StorageType == constant.HostStorageType.SSHConfig {
+		return sshcommand.LoadConfigCommand(sshcommand.OptionReadHostConfig{Value: h.Title})
 	}
 
-	return ssh.LoadConfigCommand([]ssh.Option{
-		ssh.OptionPrivateKey{Value: h.IdentityFilePath},
-		ssh.OptionRemotePort{Value: h.RemotePort},
-		ssh.OptionLoginName{Value: h.LoginName},
-		ssh.OptionReadConfig{Value: h.Address},
+	if h.IsUserDefinedSSHCommand() {
+		return sshcommand.LoadConfigCommand(sshcommand.OptionReadHostConfig{Value: h.Address})
+	}
+
+	return sshcommand.LoadConfigCommand([]sshcommand.Option{
+		sshcommand.OptionPrivateKey{Value: h.IdentityFilePath},
+		sshcommand.OptionRemotePort{Value: h.RemotePort},
+		sshcommand.OptionLoginName{Value: h.LoginName},
+		sshcommand.OptionReadHostConfig{Value: h.Address},
 	}...)
 }
 
 // CmdSSHCopyID - returns SSH command for copying SSH key to a remote host (see ssh-copy-id).
+// Be aware, that though ssh-copy-id respects ssh_config, it's impossible to specify alternative
+// ssh config file when copy identity key.
 func (h *Host) CmdSSHCopyID() string {
-	hostname := h.SSHClientConfig.Hostname
-	identityFile := h.SSHClientConfig.IdentityFile
-	port := h.SSHClientConfig.Port
-	user := h.SSHClientConfig.User
+	hostLoadedFromSSHConfig := h.StorageType == constant.HostStorageType.SSHConfig
+	if hostLoadedFromSSHConfig {
+		// When copy ssh identity key to a host loaded from .ssh/config, we only use 2 options:
+		// 1. Host alias (which is title)
+		// 2. Identity file path, which is only necessary for Windows version of CopyIDCommand,
+		//    however passing it to Unix as well, to keep the code more consistent.
+		return sshcommand.CopyIDCommand(
+			sshcommand.OptionAddress{Value: h.Title},
+			sshcommand.OptionPrivateKey{Value: h.SSHHostConfig.IdentityFile},
+		)
+	}
 
-	return ssh.CopyIDCommand(
-		ssh.OptionLoginName{Value: user},
-		ssh.OptionRemotePort{Value: port},
-		ssh.OptionPrivateKey{Value: identityFile},
-		ssh.OptionAddress{Value: hostname},
+	return sshcommand.CopyIDCommand(
+		sshcommand.OptionLoginName{Value: h.SSHHostConfig.User},
+		sshcommand.OptionRemotePort{Value: h.SSHHostConfig.Port},
+		sshcommand.OptionPrivateKey{Value: h.SSHHostConfig.IdentityFile},
+		sshcommand.OptionAddress{Value: h.SSHHostConfig.Hostname},
 	)
+}
+
+// IsReadOnly - returns true if host storage does not support modification.
+func (h *Host) IsReadOnly() bool {
+	return h.StorageType == constant.HostStorageType.SSHConfig
 }

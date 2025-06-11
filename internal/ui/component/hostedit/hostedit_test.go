@@ -5,15 +5,18 @@ import (
 	"context"
 	"fmt"
 	"testing"
-
-	"github.com/grafviktor/goto/internal/model/ssh"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/grafviktor/goto/internal/constant"
+	model "github.com/grafviktor/goto/internal/model/host"
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
-	"github.com/grafviktor/goto/internal/test"
+	testutils "github.com/grafviktor/goto/internal/testutils"
+	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 	"github.com/grafviktor/goto/internal/ui/message"
 )
 
@@ -65,19 +68,32 @@ func TestNetworkPortValidator(t *testing.T) {
 }
 
 func TestGetKeyMap(t *testing.T) {
+	host := model.Host{}
 	// When title or address is selected, we can copy its values between each other using a shortcut
-	keyMap := getKeyMap(inputTitle)
+	keyMap := getKeyMap(host, inputTitle)
 	require.True(t, keyMap.CopyInputValue.Enabled())
-	keyMap = getKeyMap(inputTitle)
+	keyMap = getKeyMap(host, inputTitle)
 	require.True(t, keyMap.CopyInputValue.Enabled())
 
 	// However, when any other input selected, this keyboard shortcut should NOT be available.
-	keyMap = getKeyMap(inputDescription)
+	keyMap = getKeyMap(host, inputDescription)
 	require.False(t, keyMap.CopyInputValue.Enabled())
+
+	// If host was loaded from read-only storage, then all hotkeys apart from 'Discard'
+	// should be disabled independently from which input is selected.
+	host.StorageType = constant.HostStorageType.SSHConfig
+	for i := range 7 {
+		keyMap = getKeyMap(host, i)
+		require.False(t, keyMap.Up.Enabled(), "Input %s shoud be disabled", keyMap.Up)
+		require.False(t, keyMap.Down.Enabled(), "Input %s shoud be disabled", keyMap.Down)
+		require.False(t, keyMap.Save.Enabled(), "Input %s shoud be disabled", keyMap.Save)
+		require.False(t, keyMap.CopyInputValue.Enabled(), "Input %s shoud be disabled", keyMap.CopyInputValue)
+		require.True(t, keyMap.Discard.Enabled(), "Input %s shoud be disabled", keyMap.Discard)
+	}
 }
 
 func TestSave(t *testing.T) {
-	hostEditModel := New(context.TODO(), test.NewMockStorage(true), MockAppState(), &test.MockLogger{})
+	hostEditModel := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
 	require.Equal(t, inputTitle, hostEditModel.focusedInput)
 
 	hostEditModel.inputs[inputDescription].SetValue("test")
@@ -99,15 +115,15 @@ func TestSave(t *testing.T) {
 	require.NotNil(t, messageSequence)
 
 	var dst []tea.Msg
-	test.CmdToMessage(messageSequence, &dst)
+	testutils.CmdToMessage(messageSequence, &dst)
 	require.Contains(t, dst, message.CloseViewHostEdit{})
 	require.Contains(t, dst, message.HostSelected{HostID: 0})
 }
 
 func TestCopyInputValueFromTo(t *testing.T) {
 	// Test copy values from title to hostname when create a new record in hosts database
-	storageHostNoFound := test.NewMockStorage(true)
-	hostEditModel := New(context.TODO(), storageHostNoFound, MockAppState(), &test.MockLogger{})
+	storageHostNoFound := testutils.NewMockStorage(true)
+	hostEditModel := New(context.TODO(), storageHostNoFound, MockAppState(), &mocklogger.Logger{})
 	// Check that selected input is title
 	assert.Equal(t, hostEditModel.focusedInput, inputTitle)
 
@@ -159,7 +175,7 @@ func TestHandleCopyInputValueShortcut(t *testing.T) {
 	// in the storage. Otherwise, everything what we type in title will automatically be
 	// propagated to address field.
 	storageShouldFail := false
-	model := New(context.TODO(), test.NewMockStorage(storageShouldFail), MockAppState(), &test.MockLogger{})
+	model := New(context.TODO(), testutils.NewMockStorage(storageShouldFail), MockAppState(), &mocklogger.Logger{})
 	// Override mock values which we received from mock database and set model values to 'test'
 	model.host.Title = "test"
 	model.host.Address = "test"
@@ -205,20 +221,56 @@ func TestHandleCopyInputValueShortcut(t *testing.T) {
 	assert.Equal(t, "test123456", model.inputs[inputAddress].Value())
 }
 
-func TestUpdate_TeaSizeMsg(t *testing.T) {
-	// Test that if model is ready, WindowSizeMsg message will update viewport
-	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
-	model.ready = true
-	model.Update(tea.WindowSizeMsg{Width: 100, Height: 100})
+func TestUpdate_HostSSHConfigLoaded(t *testing.T) {
+	// Test that when the model receives HostSSHConfigLoaded message,
+	// the input placeholders are updated with the values from the SSH config.
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	require.NotEqual(t, "default: Mock Identity File", model.inputs[inputIdentityFile].Placeholder)
+	require.NotEqual(t, "default: Mock User", model.inputs[inputLogin].Placeholder)
+	require.NotEqual(t, "default: Mock Port", model.inputs[inputNetworkPort].Placeholder)
 
-	require.Greater(t, model.viewport.Height, 0)
-	require.Greater(t, model.viewport.Width, 0)
+	model.Update(message.HostSSHConfigLoaded{
+		HostID: 0,
+		Config: sshconfig.Config{
+			IdentityFile: "Mock Identity File",
+			User:         "Mock User",
+			Port:         "Mock Port",
+		},
+	})
+
+	require.Equal(t, "default: Mock Identity File", model.inputs[inputIdentityFile].Placeholder)
+	require.Equal(t, "default: Mock User", model.inputs[inputLogin].Placeholder)
+	require.Equal(t, "default: Mock Port", model.inputs[inputNetworkPort].Placeholder)
+}
+
+func TestUpdate_HideUINotification(t *testing.T) {
+	// Test display notification message show and hide functionality
+	uiComponentName := "hostedit"
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	cmd := message.DisplayNotification(uiComponentName, "Test notification message", model)
+	require.Equal(t, "Test notification message", model.title)
+
+	done := make(chan tea.Msg, 1)
+	go func() {
+		done <- cmd()
+	}()
+
+	// Wait for notification message timeout
+	select {
+	case msg := <-done:
+		// Timeout is over, let's return the default title to the model
+		model.Update(msg)
+		require.Equal(t, defaultTitle, model.title)
+	case <-time.After(5 * time.Second):
+		// If nothing happens within 5 seconds, then the test failed
+		t.Fatal("timeout waiting for message on channel")
+	}
 }
 
 func TestView(t *testing.T) {
 	// Test that by calling View() function first time, we set ready flag to true
 	// and view() returns non-empty string which will be used to build terminal user interface
-	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
 	assert.False(t, model.ready)
 	var ui string = model.View()
 
@@ -228,19 +280,19 @@ func TestView(t *testing.T) {
 
 func TestHelpView(t *testing.T) {
 	// Test that help view is not empty
-	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
 	require.NotEmpty(t, model.helpView())
 }
 
 func TestHeaderView(t *testing.T) {
 	// Test that header view is not empty
-	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
 	require.NotEmpty(t, model.headerView())
 }
 
 func TestHandleDebounceMessage(t *testing.T) {
 	// Test that only last message is executed when wrap message in the debounce container
-	model := New(context.TODO(), test.NewMockStorage(false), MockAppState(), &test.MockLogger{})
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
 	_, returned1 := model.Update(debouncedMessage{
 		wrappedMsg:  struct{}{},
 		debounceTag: 0,
@@ -268,8 +320,8 @@ func TestHandleDebounceMessage(t *testing.T) {
 func TestUpdateInputPlaceHolders(t *testing.T) {
 	// Make sure that placeholders have correct values once ssh config is changed.
 	appState := MockAppState()
-	model := New(context.TODO(), test.NewMockStorage(false), appState, &test.MockLogger{})
-	model.host.SSHClientConfig = &ssh.Config{
+	model := New(context.TODO(), testutils.NewMockStorage(false), appState, &mocklogger.Logger{})
+	model.host.SSHHostConfig = &sshconfig.Config{
 		IdentityFile: "Mock Identity File",
 		User:         "Mock User",
 		Port:         "Mock Port",
@@ -320,6 +372,78 @@ func TestUpdateInputPlaceHolders(t *testing.T) {
 	), model.inputs[inputIdentityFile].Placeholder)
 }
 
-func MockAppState() *state.ApplicationState {
-	return &state.ApplicationState{}
+func TestUpdate_KeyDiscard(t *testing.T) {
+	// When press escape, should receive close form cmd
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	_, cmd := model.Update(tea.KeyMsg{
+		Type: tea.KeyEscape,
+	})
+
+	require.Equal(t, cmd(), message.CloseViewHostEdit{})
+}
+
+func TestUpdate_KeySave(t *testing.T) {
+	// When press escape, should receive close form cmd
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	_, cmd := model.Update(tea.KeyMsg{
+		Type: tea.KeyCtrlS,
+	})
+
+	var msgs []tea.Msg
+	testutils.CmdToMessage(cmd, &msgs)
+
+	for _, msg := range msgs {
+		if _, ok := msg.(message.HostSelected); ok {
+			continue
+		}
+		if _, ok := msg.(message.CloseViewHostEdit); ok {
+			continue
+		}
+		if _, ok := msg.(message.HostUpdated); ok {
+			continue
+		}
+
+		require.Fail(t, "One or more messages is missing or unexpected message is found")
+	}
+}
+
+func TestUpdate_KeyEventWhenHostIsReadOnly(t *testing.T) {
+	// When host is read-only, then all key events should be ignored except 'Discard'
+	// A warning notification message should be displayed
+	storage := testutils.NewMockStorage(false)
+	// simulate that we have a host which is read-only
+	storage.Hosts[0].StorageType = constant.HostStorageType.SSHConfig
+	model := New(context.TODO(), storage, MockAppState(), &mocklogger.Logger{})
+
+	_, cmd := model.Update(tea.KeyMsg{
+		// Save host shortcut
+		Type: tea.KeyCtrlS,
+	})
+
+	// When host is read-only, the title should display a warning message
+	require.Equal(t, "host loaded from SSH config is readonly", model.title)
+
+	done := make(chan tea.Msg, 1)
+	go func() {
+		done <- cmd()
+	}()
+
+	// Wait for notification message timeout
+	select {
+	case msg := <-done:
+		require.Equal(t, message.HideUINotification{ComponentName: "hostedit"}, msg)
+	case <-time.After(5 * time.Second):
+		// If nothing happens within 5 seconds, then the test failed
+		t.Fatal("timeout waiting for message on channel")
+	}
+}
+
+func TestDisplayNotificationMsg(t *testing.T) {
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	cmd := model.displayNotificationMsg("")
+	require.Nil(t, cmd)
+}
+
+func MockAppState() *state.Application {
+	return &state.Application{}
 }

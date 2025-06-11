@@ -1,8 +1,9 @@
 package hostlist
 
 import (
-	"fmt"
+	"github.com/samber/lo"
 
+	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/host"
 )
 
@@ -20,13 +21,16 @@ func (l ListItemHost) Description() string { return l.Host.Description }
 // FilterValue - returns the field combination which are used when user performs a search in the list.
 func (l ListItemHost) FilterValue() string { return l.Host.Title + l.Host.Description }
 
-// uniqueName - generates a unique name for a host.
-// Unique name is used to identify a host position in the list.
-// It's a naive implementation, but good enough for the current use case.
-//   - host:
-//     title: SomeHost
-//     id: 5
-//     # => SomeHost00005
-func (l ListItemHost) uniqueName() string {
-	return fmt.Sprintf("%s%05d", l.Host.Title, l.Host.ID)
+// CompareTo - compares this listItemHost with another one.
+func (l ListItemHost) CompareTo(host ListItemHost) int {
+	if l.Host.Title == host.Title() {
+		return l.Host.ID - host.ID
+	}
+
+	return lo.Ternary(l.Host.Title < host.Title(), -1, 1)
+}
+
+// ReadOnly - returns boolean. Overall, it is used to determine if user can edit host details.
+func (l ListItemHost) ReadOnly() bool {
+	return l.Host.StorageType == constant.HostStorageType.SSHConfig
 }

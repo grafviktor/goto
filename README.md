@@ -27,6 +27,10 @@ Supported platforms: macOS, Linux, Windows.
 
 ### 1.2 Using package manager ###
 
+#### Debian or RedHat ####
+
+RPM and DEB packages are available in the releases section. RPM and DEB packages are not provided for pre-release and Beta builds.
+
 #### Arch Linux ####
 
 Package [goto-ssh-bin](https://aur.archlinux.org/packages/goto-ssh-bin) is supported by Arch Linux community. Please find the details in [PKGBUILD](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=goto-ssh-bin) file.
@@ -54,26 +58,55 @@ Find more demos and uses cases [here](demo/README.md).
 
 ## 3. Configuration ##
 
+Please also refer [F.A.Q.](FAQ.md) page which provides additional configuration details and usage examples.
+
 ### 3.1. Command line options ###
 
-* `-f` - application home folder;
+* `-d` - disable feature, only supported value is ssh_config;
+  ```bash
+  gg -d "ssh_config"
+  ```
+* `-e` - enable feature, only supported value is ssh_config;
+  ```bash
+  gg -e "ssh_config"
+  ```
+* `-f` - specify the application home folder;
+  ```bash
+  gg -f /tmp/goto
+  ```
 * `-l` - log verbosity level. Only `info`(default) or `debug` values are currently supported;
+  ```bash
+  gg -l debug
+  ```
+* `-s` - define an alternative per-user SSH configuration file path;
+  ```bash
+  gg -s /mnt/nfs_share/ssh/config
+  ```
+* `-h` - display help;
 * `-v` - display version and configuration details.
 
 ### 3.2. Environment variables ###
 
-* `GG_HOME` - application home folder;
-* `GG_LOG_LEVEL` - log verbosity level. Only `info`(default) or `debug` values are currently supported.
+* `GG_HOME` - specify the application home folder;
+* `GG_LOG_LEVEL` - set log verbosity level. Only `info`(default) or `debug` values are currently supported.
+* `GG_SSH_CONFIG_FILE_PATH` - define an alternative per-user SSH configuration file path.
 
 ## 4. File storage structure ##
 
-Currently you can only store your hosts in a yaml file, which is called `hosts.yaml`. The file is located in your user config folder which exact path depends on a running platform:
+2 file storages are supported:
+
+* ssh_config - readonly storage type. Goto loads all hosts from your ~/.ssh/config file. See `man ssh_config`, if you want to find out more about OpenSSH client configuration file.
+* yaml file - writable storage type, but supports less options than ssh_config. Please section 4.1 if you want to find out more about yaml file structure and its location.
+
+### 4.1 Yaml storage location and structure ###
+
+You can only store your hosts in a yaml file, which is called `hosts.yaml`. The file is located in your user config folder which exact path depends on a running platform:
 
 * on Linux, it's in `$XDG_CONFIG_HOME/goto` or `$HOME/.config/goto`;
 * on Mac, it's in `$HOME/Library/Application Support/goto`;
 * on Windows, it's in `%AppData%\goto`.
 
-Usually you don't need to edit this file manually, but sometimes it's much more convenient to edit it into your favorite text editor, than using `goto` utility. The file structure is very simple and self-explanatory:
+Usually you don't need to edit this file manually, but sometimes it's much more convenient to edit it with help of your favorite text editor, than using `goto` utility. The file structure is very simple and self-explanatory:
 
 ```yaml
 - host:
@@ -89,13 +122,15 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
     identity_file_path: /home/user/.ssh/id_rsa_microsoft
 ```
 
-## 5. [Contributing guidelines](CONTRIBUTING.md) ##
+## 5. [F.A.Q.](FAQ.md) ##
 
-## 6. [Changelog](CHANGELOG.md) ##
+## 6. [Contributing guidelines](CONTRIBUTING.md) ##
 
-## 7. [License](LICENSE) ##
+## 7. [Changelog](CHANGELOG.md) ##
 
-## 8. Thanks ##
+## 8. [License](LICENSE) ##
+
+## 9. Thanks ##
 
 * To people who find time to contribute whether it is a bug report, a feature or a pull request.
 * To [Charmbracelet project](https://charm.sh/) for the glamorous [Bubbletea](https://github.com/charmbracelet/bubbletea) library.

@@ -83,6 +83,28 @@ func Test_GetAppDir(t *testing.T) {
 	require.Error(t, err, "App home folder should not be empty 2")
 }
 
+func Test(t *testing.T) {
+	// Test case: SSH config file path
+	userConfigDir, _ := os.UserHomeDir()
+	expected := path.Join(userConfigDir, ".ssh", "config")
+	got, _ := SSHConfigFilePath("")
+	require.Equal(t, expected, got, "Should return default ssh config file path")
+
+	// Test case: Path is a directory
+	customFolderPath := os.TempDir()
+	_, err := SSHConfigFilePath(customFolderPath)
+	require.Error(t, err, "SSH config file path is a directory")
+
+	// Test case: custom file path
+	tempFile, err := os.CreateTemp(os.TempDir(), "ssh_config*")
+	require.NoError(t, err, "Should create a temporary file for testing")
+	defer os.Remove(tempFile.Name()) // clean up
+	customPath := tempFile.Name()
+	got, err = SSHConfigFilePath(customPath)
+	require.NoError(t, err, "Should not return any errors because the path is valid")
+	require.Equal(t, customPath, got, "Should return custom ssh config file path")
+}
+
 func Test_CheckAppInstalled(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -91,7 +113,7 @@ func Test_CheckAppInstalled(t *testing.T) {
 	}{
 		{
 			name:          "Installed App",
-			appName:       "echo", // Assuming 'echo' is always installed
+			appName:       "find", // Assuming 'find' is always installed
 			expectedError: false,
 		},
 		{

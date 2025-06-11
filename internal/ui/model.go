@@ -11,7 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/grafviktor/goto/internal/constant"
-	"github.com/grafviktor/goto/internal/model/ssh"
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/grouplist"
@@ -24,6 +24,7 @@ import (
 type iLogger interface {
 	Debug(format string, args ...any)
 	Info(format string, args ...any)
+	Warn(format string, args ...any)
 	Error(format string, args ...any)
 }
 
@@ -32,7 +33,7 @@ type iLogger interface {
 func New(
 	ctx context.Context,
 	storage storage.HostStorage,
-	appState *state.ApplicationState,
+	appState *state.Application,
 	log iLogger,
 ) mainModel {
 	m := mainModel{
@@ -53,7 +54,7 @@ type mainModel struct {
 	modelHostList      tea.Model
 	modelGroupList     tea.Model
 	modelHostEdit      tea.Model
-	appState           *state.ApplicationState
+	appState           *state.Application
 	viewMessageContent string
 	logger             iLogger
 	viewport           viewport.Model
@@ -101,10 +102,10 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Connect to focused SSH host")
 		return m, m.dispatchProcessSSHConnect(msg)
 	case message.RunProcessSSHLoadConfig:
-		m.logger.Debug("[UI] Load SSH config for focused host id: %d, title: %s", msg.Host.ID, msg.Host.Title)
+		m.logger.Debug("[UI] Load SSH config for focused host id: %d, title: %q", msg.Host.ID, msg.Host.Title)
 		return m, m.dispatchProcessSSHLoadConfig(msg)
 	case message.RunProcessSSHCopyID:
-		m.logger.Debug("[UI] Copy SSH config to host id: %d, title: %s", msg.Host.ID, msg.Host.Title)
+		m.logger.Debug("[UI] Copy SSH config to host id: %d, title: %q", msg.Host.ID, msg.Host.Title)
 		return m, m.dispatchProcessSSHCopyID(msg)
 	case message.RunProcessSuccess:
 		m.logger.Debug("[UI] Handle process success message. Process: %v", msg.ProcessType)
@@ -272,8 +273,12 @@ func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadCo
 }
 
 func (m *mainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) tea.Cmd {
-	identityFile, hostname := msg.Host.SSHClientConfig.IdentityFile, msg.Host.SSHClientConfig.Hostname
+	identityFile, hostname := msg.Host.SSHHostConfig.IdentityFile, msg.Host.SSHHostConfig.Hostname
 	m.logger.Debug("[EXEC] Copy ssh-key '%s.pub' to host '%s'", identityFile, hostname)
+	if sshconfig.IsAlternativeFilePathDefined() {
+		m.logger.Warn("[EXEC] copy ssh key when alternative ssh config file is used: %q. ssh config file is ignored.",
+			m.appState.ApplicationConfig.SSHConfigFilePath)
+	}
 	process := utils.BuildProcessInterceptStdAll(msg.Host.CmdSSHCopyID())
 	m.logger.Info("[EXEC] Run process: '%s'", process.String())
 
@@ -283,7 +288,7 @@ func (m *mainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) te
 
 func (m *mainModel) handleProcessSuccess(msg message.RunProcessSuccess) tea.Cmd {
 	if msg.ProcessType == constant.ProcessTypeSSHLoadConfig {
-		parsedSSHConfig := ssh.Parse(msg.StdOut)
+		parsedSSHConfig := sshconfig.Parse(msg.StdOut)
 		m.logger.Debug("[EXEC] Host SSH config loaded: %+v", *parsedSSHConfig)
 		return message.TeaCmd(message.HostSSHConfigLoaded{
 			HostID: m.appState.Selected,

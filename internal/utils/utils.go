@@ -4,6 +4,7 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -17,6 +18,11 @@ import (
 // s is string to check.
 func StringEmpty(s *string) bool {
 	return s == nil || len(strings.TrimSpace(*s)) == 0
+}
+
+// FprintfIgnoreError - writes formatted string to the writer, ignoring any errors.
+func FprintfIgnoreError(w io.Writer, format string, args ...any) {
+	_, _ = fmt.Fprintf(w, format, args...)
 }
 
 // Regex pattern to split at the boundary between letters and numbers.
@@ -128,6 +134,34 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 	}
 
 	return path.Join(userConfigDir, appName), nil
+}
+
+// SSHConfigFilePath - returns ssh_config path or error.
+func SSHConfigFilePath(userDefinedPath string) (string, error) {
+	if !StringEmpty(&userDefinedPath) {
+		absolutePath, err := filepath.Abs(userDefinedPath)
+		if err != nil {
+			return "", err
+		}
+
+		stat, err := os.Stat(absolutePath)
+		if err != nil {
+			return "", err
+		}
+
+		if stat.IsDir() {
+			return "", errors.New("SSH config file path is a directory")
+		}
+
+		return absolutePath, nil
+	}
+
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s/.ssh/config", userHomeDir), nil
 }
 
 // CheckAppInstalled - checks if application is installed and can be found in executable path
