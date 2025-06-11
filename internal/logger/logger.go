@@ -51,6 +51,7 @@ func Create(appPath, userSetLogLevel string) (*AppLogger, error) {
 		}
 
 		appLogger.innerLogger = log.New(logFile, "", log.Ldate|log.Ltime)
+		appLogger.logFile = logFile
 	})
 
 	return appLogger, err
@@ -100,6 +101,8 @@ func (l *AppLogger) Error(format string, args ...any) {
 
 // Close - closes the log file.
 func (l *AppLogger) Close() {
-	//nolint:errcheck // we don't care if log file wasn't closed properly
-	l.logFile.Close()
+	if l.logFile != nil {
+		//nolint:errcheck // we don't care if log file wasn't closed properly
+		l.logFile.Close()
+	}
 }
