@@ -60,7 +60,7 @@ type Application struct {
 	// SSHConfigEnabled is a part of ApplicationState, not user config, because it is a feature flag
 	// which is persisted across application restarts. In other words, once defined, it will be
 	// persisted in the state.yaml file and will be used in the next application run.
-	SSHConfigEnabled  bool                      `yaml:"ssh_config"`
+	SSHConfigEnabled  bool                      `yaml:"enable_ssh_config"`
 	ApplicationConfig application.Configuration `yaml:"-"`
 	Context           context.Context           `yaml:"-"`
 }
