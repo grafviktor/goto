@@ -156,5 +156,6 @@ func Test_LoadConfigCommand(t *testing.T) {
 	mockLogger := mocklogger.Logger{}
 	state.Create(context.TODO(), application.Configuration{SSHConfigFilePath: "~/.ssh/custom_config"}, &mockLogger)
 	actual := LoadConfigCommand(tests[0].option)
-	require.Contains(t, `ssh -G example.com -F "~/.ssh/custom_config"`, actual)
+	// Should use contains because on Windows version the command starts from 'cmd /c ...'
+	require.Contains(t, actual, `ssh -G example.com -F "~/.ssh/custom_config"`)
 }
