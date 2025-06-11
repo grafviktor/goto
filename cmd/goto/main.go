@@ -90,7 +90,7 @@ func createApplicationOrExit() state.Application {
 		version.Print()
 		fmt.Println()
 		applicationState.PrintConfig()
-		lg.Debug("[MAIN] Exit application")
+		lg.Debug("[MAIN] --------= Close application =-------")
 		os.Exit(0)
 	}
 
@@ -99,11 +99,12 @@ func createApplicationOrExit() state.Application {
 		lg.Debug("[MAIN] Enable feature: '%s'", applicationConfiguration.EnableFeature)
 		fmt.Printf("Enabled: '%s'\n", applicationConfiguration.EnableFeature)
 		applicationState.SSHConfigEnabled = applicationConfiguration.EnableFeature == featureSSHConfig
+		err = applicationState.Persist()
 		if err != nil {
 			lg.Debug("[MAIN] Cannot save application configuration: %v", err)
 		}
 
-		lg.Debug("[MAIN] Exit application")
+		lg.Debug("[MAIN] --------= Close application =-------")
 		os.Exit(0)
 	}
 
@@ -117,7 +118,7 @@ func createApplicationOrExit() state.Application {
 			lg.Debug("[MAIN] Cannot save application configuration: %v", err)
 		}
 
-		lg.Debug("[MAIN] Exit application")
+		lg.Debug("[MAIN] --------= Close application =-------")
 		os.Exit(0)
 	}
 
