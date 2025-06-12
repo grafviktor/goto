@@ -9,7 +9,7 @@ export GG_HOME=.
 export GG_LOG_LEVEL=debug
 
 function cleanup() {
-    rm -f hosts.yaml state.yaml app.log 2>/dev/null
+    rm -rf hosts.yaml state.yaml app.log .ssh 2>/dev/null
 }
 
 cleanup
@@ -18,6 +18,11 @@ for file in *.tape; do
     if [ -f "${basename}.yaml" ]; then
         cp "${basename}.yaml" hosts.yaml
     fi
+    if [ -f "${basename}.config" ]; then
+      mkdir .ssh
+      cp "${basename}.config" .ssh/config
+    fi
+
     vhs "$file" > /dev/null
     cleanup
 done
