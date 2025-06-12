@@ -72,7 +72,9 @@ type AppLogger struct {
 func (l *AppLogger) print(prefix, format string, args ...any) {
 	msg := fmt.Sprintf("[%s] %s", prefix, format)
 	msg = fmt.Sprintf(msg, args...)
-	l.innerLogger.Print(utils.StripStyles(msg))
+	if l.logFile != nil {
+		l.innerLogger.Print(utils.StripStyles(msg))
+	}
 }
 
 // Debug - prints debug message if log level is set to debug.

@@ -73,7 +73,6 @@ func createApplicationOrExit() state.Application {
 	lg, err := logger.Create(applicationConfiguration.AppHome, applicationConfiguration.LogLevel)
 	if err != nil {
 		log.Printf("[MAIN] Can't create log file: %v\n", err)
-		success = false
 	}
 
 	lg.Debug("[CONFIG] Set application home folder to %q\n", applicationConfiguration.AppHome)
@@ -123,19 +122,20 @@ func createApplicationOrExit() state.Application {
 		os.Exit(0)
 	}
 
-	// Check errors in the very end. That allows to check application version and enable/disable
-	// features, even if something is not right with the app.
-	if !success {
-		lg.Warn("--------= Close application with non-zero code =--------")
-		os.Exit(1)
-	}
-
 	// Log application version
 	lg.Info("[MAIN] Start application")
 	lg.Info("[MAIN] Version:    %s", version.Number())
 	lg.Info("[MAIN] Commit:     %s", version.CommitHash())
 	lg.Info("[MAIN] Branch:     %s", version.BuildBranch())
 	lg.Info("[MAIN] Build date: %s", version.BuildDate())
+
+	// Check errors at the very end. That allows to check application version and enable/disable
+	// features, even if something is not right with the app.
+	if !success {
+		lg.Warn("--------= Close application with non-zero code =--------")
+		log.Printf("[MAIN] Exit due to a fatal error")
+		os.Exit(1)
+	}
 
 	return *applicationState
 }
@@ -168,7 +168,7 @@ func createConfigurationOrExit() (application.Configuration, bool) {
 	// Set application home folder path
 	cmdConfig.AppHome, err = utils.AppDir(appName, cmdConfig.AppHome)
 	if err != nil {
-		log.Printf("[MAIN] Can't set application home folder: %v\n", err)
+		log.Printf("[MAIN] Application home folder: %v\n", err)
 		success = false
 	}
 
@@ -183,7 +183,7 @@ func createConfigurationOrExit() (application.Configuration, bool) {
 	// Set ssh config file path
 	cmdConfig.SSHConfigFilePath, err = utils.SSHConfigFilePath(cmdConfig.SSHConfigFilePath)
 	if err != nil {
-		log.Printf("[MAIN] Can't set SSH config path. Error: %v\n", err)
+		log.Printf("[MAIN] Can't open SSH config file: %v\n", err)
 		success = false
 	}
 
