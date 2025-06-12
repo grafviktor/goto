@@ -1,22 +1,32 @@
 #!/usr/bin/env bash
 
-# Without these 3 deps, vhs is silently dying:
-
+# Without ffmpeg, ttyd and jq in binary path, vhs exits with non-zero code, without displaying error message.
 ffmpeg -version >/dev/null 2>&1
 if [ $? -ne 0 ]; then
     echo "Error: 'ffmpeg' is not installed or not found in path."
+    echo "Run 'apt install ffmpeg' or 'brew install ffmpeg'."
+    exit 1
 fi
 
 ttyd -version >/dev/null 2>&1
 if [ $? -ne 0 ]; then
     echo "Error: 'ttyd' is not installed or not found in path."
-    echo "Install ttyd from https://github.com/tsl0922/ttyd, just take the binary and put it in your PATH."
+    echo "Install ttyd from https://github.com/tsl0922/ttyd, for mac: 'brew install ttyd', for linux: take the binary and put it in your PATH."
+    exit 1
 fi
 
 jq -V >/dev/null 2>&1
 if [ $? -ne 0 ]; then
     echo "Error: 'jq' is not installed or not found in path."
     echo "Run apt install jq or brew install jq to install it."
+    exit 1
+fi
+
+vhs -v >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echo "Error: 'vhs' is not installed or not found in path."
+    echo "Take the binary from 'https://github.com/charmbracelet/vhs/releases' page."
+    exit 1
 fi
 
 set -e

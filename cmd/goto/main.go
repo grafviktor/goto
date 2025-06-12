@@ -32,6 +32,7 @@ var (
 const (
 	appName          = "goto"
 	featureSSHConfig = "ssh_config"
+	logMsgCloseApp   = "--------= Close application =-------"
 )
 
 func main() {
@@ -60,7 +61,7 @@ func main() {
 		appState.Logger.Error("[MAIN] Can't save application state before closing %v", fatalErr)
 	}
 
-	appState.Logger.Info("[MAIN] --------= Close application =-------")
+	appState.Logger.Info("[MAIN] %s", logMsgCloseApp)
 	appState.Logger.Close()
 }
 
@@ -90,13 +91,13 @@ func createApplicationOrExit() state.Application {
 		version.Print()
 		fmt.Println()
 		applicationState.PrintConfig()
-		lg.Debug("[MAIN] --------= Close application =-------")
+		lg.Debug("[MAIN] %s", logMsgCloseApp)
 		os.Exit(0)
 	}
 
 	// If "-e" parameter provided, display enabled features and exit
 	if applicationConfiguration.EnableFeature != "" {
-		lg.Debug("[MAIN] Enable feature: '%s'", applicationConfiguration.EnableFeature)
+		lg.Info("[MAIN] Enable feature: '%s'", applicationConfiguration.EnableFeature)
 		fmt.Printf("Enabled: '%s'\n", applicationConfiguration.EnableFeature)
 		applicationState.SSHConfigEnabled = applicationConfiguration.EnableFeature == featureSSHConfig
 		err = applicationState.Persist()
@@ -104,13 +105,13 @@ func createApplicationOrExit() state.Application {
 			lg.Debug("[MAIN] Cannot save application configuration: %v", err)
 		}
 
-		lg.Debug("[MAIN] --------= Close application =-------")
+		lg.Debug("[MAIN] %s", logMsgCloseApp)
 		os.Exit(0)
 	}
 
 	// If "-d" parameter provided, display disabled features and exit
 	if applicationConfiguration.DisableFeature != "" {
-		lg.Debug("[MAIN] Disable feature: '%s'", applicationConfiguration.DisableFeature)
+		lg.Info("[MAIN] Disable feature: '%s'", applicationConfiguration.DisableFeature)
 		fmt.Printf("Disabled: '%s'\n", applicationConfiguration.DisableFeature)
 		applicationState.SSHConfigEnabled = !(applicationConfiguration.DisableFeature == featureSSHConfig)
 		err = applicationState.Persist()
@@ -118,13 +119,14 @@ func createApplicationOrExit() state.Application {
 			lg.Debug("[MAIN] Cannot save application configuration: %v", err)
 		}
 
-		lg.Debug("[MAIN] --------= Close application =-------")
+		lg.Debug("[MAIN] %s", logMsgCloseApp)
 		os.Exit(0)
 	}
 
 	// Check errors in the very end. That allows to check application version and enable/disable
 	// features, even if something is not right with the app.
 	if !success {
+		lg.Warn("--------= Close application with non-zero code =--------")
 		os.Exit(1)
 	}
 
