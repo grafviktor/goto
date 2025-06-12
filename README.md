@@ -7,11 +7,6 @@ This tiny app helps to maintain a list of ssh servers. Unlike PuTTY it doesn't i
 
 Supported platforms: macOS, Linux, Windows.
 
-## Pre-Release v1.4.0 with ssh_config support is available ##
-
-* Forthcoming release introduces `ssh_config` file support. Test build can be taken from the [releases page](https://github.com/grafviktor/goto/releases/tag/v1.4.0-beta).
-* Latest stable version is v1.3.0.
-
 ## 1. Installation ##
 
 ### 1.1 Manual ###
@@ -64,11 +59,11 @@ Please also refer [F.A.Q.](FAQ.md) page which provides additional configuration 
 
 * `-d` - disable feature, only supported value is ssh_config;
   ```bash
-  gg -d "ssh_config"
+  gg -d "ssh_config" # since version 1.4.0
   ```
 * `-e` - enable feature, only supported value is ssh_config;
   ```bash
-  gg -e "ssh_config"
+  gg -e "ssh_config" # since version 1.4.0
   ```
 * `-f` - specify the application home folder;
   ```bash
@@ -80,7 +75,7 @@ Please also refer [F.A.Q.](FAQ.md) page which provides additional configuration 
   ```
 * `-s` - define an alternative per-user SSH configuration file path;
   ```bash
-  gg -s /mnt/nfs_share/ssh/config
+  gg -s /mnt/nfs_share/ssh/config # since version 1.4.0
   ```
 * `-h` - display help;
 * `-v` - display version and configuration details.

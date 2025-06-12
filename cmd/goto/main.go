@@ -133,7 +133,7 @@ func createApplicationOrExit() state.Application {
 	// features, even if something is not right with the app.
 	if !success {
 		lg.Warn("--------= Close application with non-zero code =--------")
-		log.Printf("[MAIN] Exit due to a fatal error")
+		log.Printf("[MAIN] Exit due to a fatal error.")
 		os.Exit(1)
 	}
 
