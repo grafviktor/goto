@@ -100,7 +100,7 @@ func IsInitialized() bool {
 }
 
 func (as *Application) readFromFile() error {
-	as.Logger.Debug("[APPSTATE] Read application state from: '%s'", as.appStateFilePath)
+	as.Logger.Debug("[APPSTATE] Read application state from: %q", as.appStateFilePath)
 	fileData, err := os.ReadFile(as.appStateFilePath)
 	if err != nil {
 		as.Logger.Info("[APPSTATE] Can't read application state from file '%v'", err)
@@ -120,7 +120,7 @@ func (as *Application) readFromFile() error {
 
 // Persist saves app state to disk.
 func (as *Application) Persist() error {
-	as.Logger.Debug("[APPSTATE] Persist application state to file: %s", as.appStateFilePath)
+	as.Logger.Debug("[APPSTATE] Persist application state to file: %q", as.appStateFilePath)
 	result, err := yaml.Marshal(as)
 	if err != nil {
 		as.Logger.Error("[APPSTATE] Cannot marshall application state. %v", err)

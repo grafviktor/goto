@@ -81,7 +81,7 @@ func StripStyles(input string) string {
 // appConfigDir is application home folder path.
 func CreateAppDirIfNotExists(appConfigDir string) error {
 	if StringEmpty(&appConfigDir) {
-		return errors.New("bad argument")
+		return errors.New("bad folder name")
 	}
 
 	stat, err := os.Stat(appConfigDir)
@@ -112,11 +112,12 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 
 		stat, err := os.Stat(absolutePath)
 		if err != nil {
-			return "", err
+			return absolutePath, err
 		}
 
 		if !stat.IsDir() {
-			return "", errors.New("home path is not a directory")
+			msg := fmt.Sprintf("%q is not a directory", absolutePath)
+			return "", errors.New(msg)
 		}
 
 		return absolutePath, nil

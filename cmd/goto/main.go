@@ -76,18 +76,18 @@ func createApplicationOrExit() state.Application {
 		success = false
 	}
 
-	lg.Debug("[CONFIG] Set application home folder to '%s'\n", applicationConfiguration.AppHome)
-	lg.Debug("[CONFIG] Set application log level to '%s'\n", applicationConfiguration.LogLevel)
-	lg.Debug("[CONFIG] Enable feature '%s'\n", applicationConfiguration.EnableFeature)
-	lg.Debug("[CONFIG] Disable feature '%s'\n", applicationConfiguration.DisableFeature)
-	lg.Debug("[CONFIG] Set SSH config path to '%s'\n", applicationConfiguration.SSHConfigFilePath)
+	lg.Debug("[CONFIG] Set application home folder to %q\n", applicationConfiguration.AppHome)
+	lg.Debug("[CONFIG] Set application log level to %q\n", applicationConfiguration.LogLevel)
+	lg.Debug("[CONFIG] Enabled features: %q\n", applicationConfiguration.EnableFeature)
+	lg.Debug("[CONFIG] Disabled features: %q\n", applicationConfiguration.DisableFeature)
+	lg.Debug("[CONFIG] Set SSH config path to %q\n", applicationConfiguration.SSHConfigFilePath)
 
 	// Create applicationContext state
 	applicationState := state.Create(context.Background(), applicationConfiguration, lg)
 
 	// If "-v" parameter provided, display application version configuration and exit
 	if applicationConfiguration.DisplayVersionAndExit {
-		lg.Debug("[MAIN] Display application version")
+		lg.Debug("[MAIN] Display application version and exit")
 		version.Print()
 		fmt.Println()
 		applicationState.PrintConfig()
@@ -97,7 +97,7 @@ func createApplicationOrExit() state.Application {
 
 	// If "-e" parameter provided, display enabled features and exit
 	if applicationConfiguration.EnableFeature != "" {
-		lg.Info("[MAIN] Enable feature: '%s'", applicationConfiguration.EnableFeature)
+		lg.Info("[MAIN] Enable feature %q and exit", applicationConfiguration.EnableFeature)
 		fmt.Printf("Enabled: '%s'\n", applicationConfiguration.EnableFeature)
 		applicationState.SSHConfigEnabled = applicationConfiguration.EnableFeature == featureSSHConfig
 		err = applicationState.Persist()
@@ -111,7 +111,7 @@ func createApplicationOrExit() state.Application {
 
 	// If "-d" parameter provided, display disabled features and exit
 	if applicationConfiguration.DisableFeature != "" {
-		lg.Info("[MAIN] Disable feature: '%s'", applicationConfiguration.DisableFeature)
+		lg.Info("[MAIN] Disable feature %q and exit", applicationConfiguration.DisableFeature)
 		fmt.Printf("Disabled: '%s'\n", applicationConfiguration.DisableFeature)
 		applicationState.SSHConfigEnabled = !(applicationConfiguration.DisableFeature == featureSSHConfig)
 		err = applicationState.Persist()
@@ -141,12 +141,12 @@ func createApplicationOrExit() state.Application {
 }
 
 func createConfigurationOrExit() (application.Configuration, bool) {
-	var fatalErr error
+	var err error
 	success := true
 
 	envConfig := application.Configuration{}
 	// Parse environment parameters. These parameters have lower precedence than command line flags
-	if err := env.Parse(&envConfig); err != nil {
+	if err = env.Parse(&envConfig); err != nil {
 		fmt.Printf("%+v\n", err)
 	}
 
@@ -166,22 +166,25 @@ func createConfigurationOrExit() (application.Configuration, bool) {
 	flag.Parse()
 
 	// Set application home folder path
-	cmdConfig.AppHome, fatalErr = utils.AppDir(appName, cmdConfig.AppHome)
-	if fatalErr != nil {
-		log.Printf("[MAIN] Can't set application home folder: %v\n", fatalErr)
-		success = false
-	}
-
-	// Set ssh config file path
-	cmdConfig.SSHConfigFilePath, fatalErr = utils.SSHConfigFilePath(cmdConfig.SSHConfigFilePath)
-	if fatalErr != nil {
-		log.Printf("[MAIN] Can't set SSH config path. Error: %v\n", fatalErr)
+	cmdConfig.AppHome, err = utils.AppDir(appName, cmdConfig.AppHome)
+	if err != nil {
+		log.Printf("[MAIN] Can't set application home folder: %v\n", err)
 		success = false
 	}
 
 	// Create application folder
-	if fatalErr = utils.CreateAppDirIfNotExists(cmdConfig.AppHome); fatalErr != nil {
-		log.Printf("[MAIN] Can't create application home folder: %v\n", fatalErr)
+	if err = utils.CreateAppDirIfNotExists(cmdConfig.AppHome); err != nil {
+		log.Printf("[MAIN] Can't create application home folder: %v\n", err)
+		success = false
+	} else {
+		// Even, if there was an error, we created the application home folder.
+		success = true
+	}
+
+	// Set ssh config file path
+	cmdConfig.SSHConfigFilePath, err = utils.SSHConfigFilePath(cmdConfig.SSHConfigFilePath)
+	if err != nil {
+		log.Printf("[MAIN] Can't set SSH config path. Error: %v\n", err)
 		success = false
 	}
 
