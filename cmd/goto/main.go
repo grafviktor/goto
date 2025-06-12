@@ -175,7 +175,6 @@ func createConfigurationOrExit() (application.Configuration, bool) {
 	// Create application folder
 	if err = utils.CreateAppDirIfNotExists(cmdConfig.AppHome); err != nil {
 		log.Printf("[MAIN] Can't create application home folder: %v\n", err)
-		success = false
 	} else {
 		// Even, if there was an error, we created the application home folder.
 		success = true
