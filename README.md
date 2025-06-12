@@ -90,7 +90,7 @@ Please also refer [F.A.Q.](FAQ.md) page which provides additional configuration 
 
 2 file storages are supported:
 
-* ssh_config - readonly storage type. Goto loads all hosts from your ~/.ssh/config file. See `man ssh_config`, if you want to find out more about OpenSSH client configuration file.
+* ssh_config - readonly storage type. Goto loads all hosts from your `~/.ssh/config` file. See `man ssh_config`, if you want to find out more about OpenSSH client configuration file.
 * yaml file - writable storage type, but supports less options than ssh_config. Please section 4.1 if you want to find out more about yaml file structure and its location.
 
 ### 4.1 Yaml storage location and structure ###
