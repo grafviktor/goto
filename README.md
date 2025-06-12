@@ -24,7 +24,7 @@ Supported platforms: macOS, Linux, Windows.
 
 #### Debian or RedHat ####
 
-RPM and DEB packages are available in the releases section. RPM and DEB packages are not provided for pre-release and Beta builds.
+RPM and DEB packages are available in the releases section (these packages are not provided for pre-release builds).
 
 #### Arch Linux ####
 
