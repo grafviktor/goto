@@ -62,8 +62,16 @@ Set Height 400
 Set Padding 20
 Env GG_SSH_CONFIG_FILE_PATH .ssh/config
 
+Hide
+Type "gg"
+Enter
 Show
 Sleep 1s
+Hide
+Type "q"
+Type "clear"
+Enter
+Show
 Type "cat .ssh/config"
 Sleep 1s
 Enter
@@ -78,6 +86,3 @@ Down
 Sleep 1s
 Down
 Sleep 1s
-Type "q"
-
-Sleep 3s
