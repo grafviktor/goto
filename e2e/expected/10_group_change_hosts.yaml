@@ -1,0 +1,15 @@
+- host:
+    address: 127.0.0.1
+    description: network host description
+    group: yaml_config
+    title: network host
+- host:
+    address: 127.0.0.1
+    description: network host description
+    group: yaml_config
+    title: network host (1)
+- host:
+    address: 127.0.0.1
+    description: network host description
+    group: yaml_config
+    title: network host (2)

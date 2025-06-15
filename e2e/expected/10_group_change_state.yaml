@@ -1,2 +1,3 @@
 selected: 6
+group: yaml_config
 enable_ssh_config: true
