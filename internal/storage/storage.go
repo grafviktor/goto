@@ -53,7 +53,6 @@ func Get(ctx context.Context, appConfig application.Configuration, logger iLogge
 		storages:       getStorages(ctx, appConfig, logger),
 		hostStorageMap: make(map[int]hostStorageMapping),
 		hosts:          make(map[int]model.Host),
-		nextID:         0,
 		logger:         logger,
 	}
 
@@ -109,6 +108,7 @@ func (c *combinedStorage) Get(hostID int) (model.Host, error) {
 
 // GetAll implements HostStorage. Warning: this method rebuilds the IDs.
 func (c *combinedStorage) GetAll() ([]model.Host, error) {
+	c.nextID = 0
 	storageTypes := lo.Keys(c.storages)
 	slices.Sort(storageTypes)
 	c.hosts = make(map[int]model.Host, 0)
