@@ -19,6 +19,7 @@ Host test
     User alice
     Port 2222
     IdentityFile ~/.ssh/id_rsa
+	HostkeyAlgorithms +ssh-dss,ssh-rsa
 `
 	lex := &Lexer{
 		sourceType: "string",
@@ -32,10 +33,6 @@ Host test
 	}
 	tokens := lex.loadFromDataSource(parent, nil, 0)
 
-	if len(tokens) != 7 {
-		t.Fatalf("expected 7 tokens, got %d", len(tokens))
-	}
-
 	wantKinds := []tokenEnum{
 		tokenKind.Host,
 		tokenKind.Group,
@@ -45,6 +42,11 @@ Host test
 		tokenKind.NetworkPort,
 		tokenKind.IdentityFile,
 	}
+
+	if len(tokens) != len(wantKinds) {
+		t.Fatalf("expected %d tokens, got %d", len(wantKinds), len(tokens))
+	}
+
 	for i, tk := range tokens {
 		if tk.kind != wantKinds[i] {
 			t.Errorf("token %d: expected kind %v, got %v", i, wantKinds[i], tk.kind)
@@ -138,22 +140,26 @@ func TestLexer_Tokenize_IncludeDepthLimit(t *testing.T) {
 	_ = lex.loadFromDataSource(parent, nil, maxFileIncludeDepth)
 }
 
-func Test_hasPrefixIgnoreCase(t *testing.T) {
+func Test_matchToken(t *testing.T) {
 	tests := []struct {
-		str    string
-		prefix string
-		want   bool
+		str        string
+		prefix     string
+		identation bool
+		want       bool
 	}{
-		{"Host test", "host", true},
-		{"HOST test", "host", true},
-		{"User alice", "USER", true},
-		{"Port 22", "port", true},
-		{"IdentityFile foo", "identityfile", true},
-		{"SomethingElse", "host", false},
+		{"Host test", "host", false, true},
+		{"\tHost test", "host", false, false},
+		{"HOST test", "host", false, true},
+		{"\tUser alice", "USER", true, true},
+		{" Port 22", "port", true, true},
+		{"\tIdentityFile foo", "identityfile", true, true},
+		{"\tSomethingElse", "host", true, false},
+		{"\t# GG:GROUP test", "# GG:GROUP", true, true},
+		{"\t# GG:GROUP: test", "# GG:GROUP", true, true},
 	}
 	for _, tt := range tests {
-		if got := hasPrefixIgnoreCase(tt.str, tt.prefix); got != tt.want {
-			t.Errorf("hasPrefixIgnoreCase(%q, %q) = %v, want %v", tt.str, tt.prefix, got, tt.want)
+		if got := matchToken(tt.str, tt.prefix, tt.identation); got != tt.want {
+			t.Errorf("hasPrefixIgnoreCase(%q, %q, %v) = %v, want %v", tt.str, tt.prefix, tt.identation, got, tt.want)
 		}
 	}
 }
