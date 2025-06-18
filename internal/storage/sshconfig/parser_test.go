@@ -67,15 +67,21 @@ func TestParser_Parse_InvalidHost(t *testing.T) {
 			// This token is invalid because it does not have a hostname
 			{kind: tokenKind.Host, value: "*"},
 			{kind: tokenKind.Hostname, value: "bad.com"},
+			// This token is invalid because it does not host and hostname
+			{kind: tokenKind.Host, value: ""},
+			{kind: tokenKind.Hostname, value: ""},
 			// This token is valid and will be added to the hosts
 			{kind: tokenKind.Host, value: "good"},
 			{kind: tokenKind.Hostname, value: "good.com"},
+			// This token is valid because Hostname is taken from Host
+			{kind: tokenKind.Host, value: "good.com"},
+			{kind: tokenKind.Hostname, value: ""},
 		},
 	}
 	parser := NewParser(lexer, &mocklogger.Logger{})
 	hosts, err := parser.Parse()
 	require.NoError(t, err)
-	require.Len(t, hosts, 1)
+	require.Len(t, hosts, 2)
 	require.Equal(t, "good", hosts[0].Title)
 	require.Equal(t, "good.com", hosts[0].Address)
 }
