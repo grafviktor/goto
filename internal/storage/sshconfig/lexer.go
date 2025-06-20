@@ -69,7 +69,13 @@ func (l *Lexer) loadFromDataSource(includeToken sshToken, children []sshToken, c
 	scanner := bufio.NewScanner(rdr)
 
 	for scanner.Scan() {
-		line := strings.TrimRight(scanner.Text(), " \t")
+		line := scanner.Text()
+		if shouldSkipLine(line) {
+			continue
+		}
+
+		line = stripInlineComments(line)
+
 		var token sshToken
 		switch {
 		case matchToken(line, "User", true):
@@ -113,6 +119,39 @@ func (l *Lexer) loadFromDataSource(includeToken sshToken, children []sshToken, c
 	}
 
 	return children
+}
+
+func shouldSkipLine(line string) bool {
+	trimmedLine := strings.TrimSpace(line)
+	if utils.StringEmpty(&trimmedLine) {
+		return true
+	}
+
+	if strings.HasPrefix(trimmedLine, "# GG:") {
+		// This is a metadata comments, which should be processed
+		return false
+	}
+
+	if strings.HasPrefix(trimmedLine, "#") {
+		return true
+	}
+
+	return false
+}
+
+func stripInlineComments(line string) string {
+	line = strings.TrimRight(line, " \t")
+
+	if strings.Contains(line, "# GG:") {
+		return line
+	}
+
+	parts := strings.Split(line, "#")
+	if len(parts) > 0 {
+		return parts[0]
+	}
+
+	return line
 }
 
 func matchToken(line, prefix string, shouldBeIndented bool) bool {

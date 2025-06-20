@@ -15,9 +15,9 @@ func TestLexer_Tokenize_General(t *testing.T) {
 Host test
     # GG:GROUP mock_group
     # GG:DESCRIPTION mock_description
-    HostName example.com
+    HostName example.com # comment
     User alice
-    Port 2222
+    Port 2222 # comment
     IdentityFile ~/.ssh/id_rsa
 	HostkeyAlgorithms +ssh-dss,ssh-rsa
 `
@@ -43,6 +43,16 @@ Host test
 		tokenKind.IdentityFile,
 	}
 
+	wantValues := []string{
+		"test",
+		"mock_group",
+		"mock_description",
+		"example.com",
+		"alice",
+		"2222",
+		"~/.ssh/id_rsa",
+	}
+
 	if len(tokens) != len(wantKinds) {
 		t.Fatalf("expected %d tokens, got %d", len(wantKinds), len(tokens))
 	}
@@ -50,6 +60,10 @@ Host test
 	for i, tk := range tokens {
 		if tk.kind != wantKinds[i] {
 			t.Errorf("token %d: expected kind %v, got %v", i, wantKinds[i], tk.kind)
+		}
+
+		if tk.value != wantValues[i] {
+			t.Errorf("token %d: expected value %q, got %q", i, wantValues[i], tk.value)
 		}
 	}
 }
