@@ -1,0 +1,45 @@
+# Global defaults
+Host *
+    ForwardAgent yes
+    ServerAliveInterval 60     # Keep connections alive
+    IdentityFile "~/.ssh/default_id"
+
+    # Override for specific host pattern
+    Host github.com *.internal.example.com !excluded.internal.example.com
+        User git
+        IdentityFile "~/.ssh/github_id"
+        PreferredAuthentications publickey
+
+# Host with uppercase keyword and tabs
+HOST myserver
+	HostName	192.168.1.100
+	Port		2222
+	User		admin
+	IdentityFile	~/.ssh/admin_key
+
+# Host with inline comment after value
+Host sandbox
+    HostName sandbox.local    # Local sandbox
+    User    dev    # dev user
+    IdentityFile "~/.ssh/dev key"  # Quoted filename with space
+
+# Host with multiple identities
+Host test
+    IdentityFile ~/.ssh/id1
+    IdentityFile ~/.ssh/id2
+
+# Empty value (illegal or intentional override)
+Host broken
+    User
+
+# Host with weird spacing
+Host       weird-host
+        HostName     10.0.0.5
+   Port      2200
+
+# Escaped quote in value (not really supported by ssh, but your lexer might see it)
+Host "quoted-host"
+    HostName "host\"name.local"
+
+# Include directive (should be handled externally)
+Include ~/.ssh/config.d/*.conf

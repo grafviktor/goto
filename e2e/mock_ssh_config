@@ -1,15 +1,15 @@
 Host SHADOW_PROD
   User prodsupport
-  HostName 127.0.01
+  HostName 127.0.0.1
   Port 22
   IdentityFile ~/.ssh/non-existent
 Host UAT
   User manager
-  HostName 127.0.01
+  HostName 127.0.0.1
   Port 22
   IdentityFile ~/.ssh/non-existent
 Host BETA
   User developer
-  HostName 127.0.01
+  HostName 127.0.0.1
   Port 22
   IdentityFile ~/.ssh/non-existent
