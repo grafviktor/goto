@@ -65,6 +65,7 @@ var twoWordsRegex = regexp.MustCompile(`^(\S+)\s+(.+)$`)
 
 func parseKeyValuesLine(line string) (string, string, error) {
 	matches := twoWordsRegex.FindStringSubmatch(line)
+	// Ideally it should be a loop, not regex.
 	if len(matches) > 1 {
 		return matches[1], matches[2], nil
 	}

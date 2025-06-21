@@ -6,6 +6,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/samber/lo"
+
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 const maxFileIncludeDepth = 16
@@ -65,24 +69,30 @@ func (l *Lexer) loadFromDataSource(includeToken sshToken, children []sshToken, c
 	scanner := bufio.NewScanner(rdr)
 
 	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
+		line := scanner.Text()
+		if shouldSkipLine(line) {
+			continue
+		}
+
+		line = stripInlineComments(line)
+
 		var token sshToken
 		switch {
-		case hasPrefixIgnoreCase(line, "User"):
+		case matchToken(line, "User", true):
 			token = l.usernameToken(line)
-		case hasPrefixIgnoreCase(line, "HostName"):
+		case matchToken(line, "HostName", true):
 			token = l.hostnameToken(line)
-		case hasPrefixIgnoreCase(line, "Host"): // Host should be checked after HostName
+		case matchToken(line, "Host", false):
 			token = l.hostToken(line)
-		case hasPrefixIgnoreCase(line, "Port"):
+		case matchToken(line, "Port", true):
 			token = l.networkPortToken(line)
-		case hasPrefixIgnoreCase(line, "Include"):
+		case matchToken(line, "Include", false):
 			token = l.keyValuesToken(tokenKind.IncludeFile, line)
-		case hasPrefixIgnoreCase(line, "IdentityFile"):
+		case matchToken(line, "IdentityFile", true):
 			token = l.identityFileToken(line)
-		case hasPrefixIgnoreCase(line, "# GG:GROUP"):
+		case matchToken(line, "# GG:GROUP", true):
 			token = l.metaDataToken(tokenKind.Group, line)
-		case hasPrefixIgnoreCase(line, "# GG:DESCRIPTION"):
+		case matchToken(line, "# GG:DESCRIPTION", true):
 			token = l.metaDataToken(tokenKind.Description, line)
 		default:
 			token = sshToken{kind: tokenKind.Unsupported}
@@ -111,8 +121,79 @@ func (l *Lexer) loadFromDataSource(includeToken sshToken, children []sshToken, c
 	return children
 }
 
-func hasPrefixIgnoreCase(str, prefix string) bool {
-	return strings.HasPrefix(strings.ToLower(str), strings.ToLower(prefix))
+func shouldSkipLine(line string) bool {
+	trimmedLine := strings.TrimSpace(line)
+	if utils.StringEmpty(&trimmedLine) {
+		return true
+	}
+
+	if strings.HasPrefix(trimmedLine, "# GG:") {
+		// This is a metadata comments, which should be processed
+		return false
+	}
+
+	if strings.HasPrefix(trimmedLine, "#") {
+		return true
+	}
+
+	return false
+}
+
+func stripInlineComments(line string) string {
+	line = strings.TrimRight(line, " \t")
+
+	if strings.Contains(line, "# GG:") {
+		return line
+	}
+
+	parts := strings.Split(line, "#")
+	if len(parts) > 0 {
+		return parts[0]
+	}
+
+	return line
+}
+
+func matchToken(line, prefix string, shouldBeIndented bool) bool {
+	trimmedLine := strings.TrimSpace(line)
+	if utils.StringEmpty(&trimmedLine) {
+		return false
+	}
+
+	if len(prefix) >= len(trimmedLine) {
+		return false
+	}
+
+	if isTokenIndented(line) != shouldBeIndented {
+		return false
+	}
+
+	if !isTokenFollowedDelimiter(trimmedLine, prefix) {
+		return false
+	}
+
+	return strings.HasPrefix(strings.ToLower(trimmedLine), strings.ToLower(prefix))
+}
+
+func isTokenIndented(str string) bool {
+	return len(str) > 0 && (str[0] == ' ' || str[0] == '\t')
+}
+
+func isTokenFollowedDelimiter(str, prefix string) bool {
+	prefixLen := len(prefix)
+	delimiters := []rune{' ', '\t'}
+
+	// Should support metadata token which ends with space or color.
+	// For instance "# GG:GROUP value" or "# GG:GROUP: value" are valid
+	if strings.HasPrefix(str, "# GG:") {
+		delimiters = append(delimiters, ':')
+	}
+
+	_, found := lo.Find(delimiters, func(d rune) bool {
+		return str[prefixLen] == byte(d)
+	})
+
+	return found
 }
 
 func (l *Lexer) hostToken(line string) sshToken {
@@ -194,7 +275,8 @@ func (l *Lexer) networkPortToken(rawLine string) sshToken {
 }
 
 func (l *Lexer) identityFileToken(line string) sshToken {
-	key, value, err := parseKeyValuesLine(line)
+	trimmedLine := strings.TrimSpace(line)
+	key, value, err := parseKeyValuesLine(trimmedLine)
 	if err != nil {
 		return sshToken{kind: tokenKind.Unsupported}
 	}
@@ -248,6 +330,7 @@ func (l *Lexer) handleIncludeToken(token sshToken) []sshToken {
 
 func (l *Lexer) metaDataToken(kind tokenEnum, line string) sshToken {
 	tokenFound := false
+	line = strings.TrimSpace(line)
 	line, tokenFound = strings.CutPrefix(line, "# GG:")
 	if !tokenFound {
 		return sshToken{kind: tokenKind.Unsupported}

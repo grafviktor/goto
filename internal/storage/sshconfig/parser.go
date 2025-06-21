@@ -78,11 +78,11 @@ func (p *Parser) hostValid() bool {
 		return false
 	}
 
-	if strings.TrimSpace(p.currentHost.Title) == "" || strings.Contains(p.currentHost.Title, "*") {
+	if strings.Contains(p.currentHost.Title, "*") {
 		return false
 	}
 
-	if strings.TrimSpace(p.currentHost.Address) == "" {
+	if utils.StringEmpty(&p.currentHost.Title) && utils.StringEmpty(&p.currentHost.Address) {
 		return false
 	}
 
@@ -95,6 +95,12 @@ func (p *Parser) setDefaults() {
 	for i, host := range p.foundHosts {
 		if utils.StringEmpty(&host.Group) {
 			p.foundHosts[i].Group = putSSHConfigHostsIntoGroupName
+		}
+
+		// In ssh_config, it is valid to define a host without an address.
+		// If the address is empty, then title must be used.
+		if utils.StringEmpty(&host.Address) {
+			p.foundHosts[i].Address = host.Title
 		}
 	}
 }

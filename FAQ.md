@@ -74,8 +74,8 @@ Yes, you can! By default all hosts loaded from `$HOME/.ssh/config` will be put t
 
 ```
 Host SOME_HOST_ALIAS
-  # GG:GROUP: Production
-  # GG:DESCRIPTION: Shadow Prod Machine
+  # GG:GROUP Production
+  # GG:DESCRIPTION Shadow Prod Machine
   User appuser
   HostName production2.intranet
   Port 2222
