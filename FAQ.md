@@ -42,6 +42,10 @@ The app does not send or request anything from the network.
 
 It's very easy. Make sure that `go` and `make` are installed in your system. Just clone the repo and and run `make build`. I also suggest you to read through the Makefile, it's well commented and self-explanatory.
 
+**Q: Which library do you use in order to render UI components?**
+
+Please see "[bubbletea](https://github.com/charmbracelet/bubbletea/)" and "[bubbles](https://github.com/charmbracelet/bubbles)".
+
 ## OpenSSH client configuration file support (only version 1.4.0 and above) ##
 
 **Q: Why was ssh_config support added?**
