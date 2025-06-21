@@ -1,6 +1,10 @@
-# Changelog 
+# Changelog
 
-**[v1.4.0](https://github.com/grafviktor/goto/compare/v1.2.0...v1.3.0) - 2025-06-12**
+**[v1.4.1](https://github.com/grafviktor/goto/compare/v1.4.0...v1.4.1) - 2025-06-21**
+
+* Fix issues which were uncovered in ssh_config parser [[details](https://github.com/grafviktor/goto/issues/102)].
+
+**[v1.4.0](https://github.com/grafviktor/goto/compare/v1.3.0...v1.4.0) - 2025-06-12**
 
 * Display hosts from `~/.ssh/config` file [[details](https://github.com/grafviktor/goto/issues/45)].
 * Various minor improvements and bugfixes.
