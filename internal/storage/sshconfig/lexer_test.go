@@ -13,8 +13,10 @@ import (
 func TestLexer_Tokenize_General(t *testing.T) {
 	const config = `
 Host test
+    # Just a comment
     # GG:GROUP mock_group
     # GG:DESCRIPTION mock_description
+		Unsupported
     HostName example.com # comment
     User alice
     Port 2222 # comment
