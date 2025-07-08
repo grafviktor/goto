@@ -26,6 +26,7 @@ func New() *Input {
 // Input - input UI component.
 type Input struct {
 	textinput.Model
+
 	label          string
 	FocusedPrompt  string
 	Tooltip        string

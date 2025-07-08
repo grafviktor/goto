@@ -44,7 +44,11 @@ func Test_CreateAppDirIfNotExists(t *testing.T) {
 	tmpFile, _ := os.CreateTemp("", "unit_test_tmp*")
 	defer os.RemoveAll(tmpFile.Name()) // clean up
 	err := CreateAppDirIfNotExists(tmpFile.Name())
-	require.Error(t, err, "CreateAppDirIfNotExists should return an error when home path exists and it's not a directory")
+	require.Error(
+		t,
+		err,
+		"CreateAppDirIfNotExists should return an error when home path exists and it's not a directory",
+	)
 
 	err = CreateAppDirIfNotExists(" ")
 	require.Error(t, err, "CreateAppDirIfNotExists should return an error when argument is empty")
