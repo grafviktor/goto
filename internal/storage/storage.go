@@ -3,9 +3,9 @@ package storage
 
 import (
 	"context"
+	"slices"
 
 	"github.com/samber/lo"
-	"golang.org/x/exp/slices"
 
 	"github.com/grafviktor/goto/internal/application"
 	"github.com/grafviktor/goto/internal/constant"

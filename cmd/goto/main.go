@@ -1,6 +1,6 @@
 // Package main contains application entry point
 //
-//nolint:lll // disable line length check
+//nolint:lll,gochecknoglobals // Disable line length check, Ignore burn in these variables.
 package main
 
 import (
@@ -160,9 +160,22 @@ func createConfigurationOrExit() (application.Configuration, bool) {
 	flag.BoolVar(&cmdConfig.DisplayVersionAndExit, "v", false, "Display application details")
 	flag.StringVar(&cmdConfig.AppHome, "f", envConfig.AppHome, "Application home folder")
 	flag.StringVar(&cmdConfig.LogLevel, "l", envConfig.LogLevel, "Log verbosity level: debug, info")
-	flag.StringVar(&cmdConfig.SSHConfigFilePath, "s", envConfig.SSHConfigFilePath, "Specifies an alternative per-user SSH configuration file path")
-	flag.Var(&cmdConfig.EnableFeature, "e", fmt.Sprintf("Enable feature. Supported values: %s", strings.Join(application.SupportedFeatures, "|")))
-	flag.Var(&cmdConfig.DisableFeature, "d", fmt.Sprintf("Disable feature. Supported values: %s", strings.Join(application.SupportedFeatures, "|")))
+	flag.StringVar(
+		&cmdConfig.SSHConfigFilePath,
+		"s",
+		envConfig.SSHConfigFilePath,
+		"Specifies an alternative per-user SSH configuration file path",
+	)
+	flag.Var(
+		&cmdConfig.EnableFeature,
+		"e",
+		fmt.Sprintf("Enable feature. Supported values: %s", strings.Join(application.SupportedFeatures, "|")),
+	)
+	flag.Var(
+		&cmdConfig.DisableFeature,
+		"d",
+		fmt.Sprintf("Disable feature. Supported values: %s", strings.Join(application.SupportedFeatures, "|")),
+	)
 	flag.Parse()
 
 	// Set application home folder path

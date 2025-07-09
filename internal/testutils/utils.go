@@ -24,7 +24,7 @@ func CmdToMessage(cmd tea.Cmd, messages *[]tea.Msg) {
 		for i := 0; i < valueOf.Len(); i++ {
 			if valueOf.Index(i).Kind() == reflect.Func {
 				// If it's a function, then it's probably inner tea.Cmd
-				innerCmd := valueOf.Index(i).Interface().(tea.Cmd)
+				innerCmd, _ := valueOf.Index(i).Interface().(tea.Cmd)
 				CmdToMessage(innerCmd, messages)
 			} else {
 				// Otherwise it's a slice of real messages

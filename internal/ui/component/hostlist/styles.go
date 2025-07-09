@@ -7,6 +7,7 @@ import (
 
 type styles struct {
 	list.Styles
+
 	Group lipgloss.Style
 	Title lipgloss.Style
 }

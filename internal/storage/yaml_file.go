@@ -5,8 +5,7 @@ import (
 	"errors"
 	"os"
 	"path"
-
-	"golang.org/x/exp/slices"
+	"slices"
 
 	"github.com/samber/lo"
 	"gopkg.in/yaml.v2"

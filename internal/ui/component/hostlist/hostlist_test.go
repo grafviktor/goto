@@ -83,41 +83,42 @@ func TestListModel_Init(t *testing.T) {
 
 func Test_listModel_Change_Selection(t *testing.T) {
 	tests := []struct {
+		tea.KeyMsg
+
 		name                   string
 		expectedSelectionIndex int
-		tea.KeyMsg
 	}{
 		// Simulate focus next event
 		{
+			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 			"Select next using 'j' key",
 			2,
-			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		},
 		{
+			tea.KeyMsg{Type: tea.KeyDown},
 			"Select next using '↓' key",
 			2,
-			tea.KeyMsg{Type: tea.KeyDown},
 		},
 		{
+			tea.KeyMsg{Type: tea.KeyTab},
 			"Select next using 'tab' key",
 			2,
-			tea.KeyMsg{Type: tea.KeyTab},
 		},
 		// Simulate focus previous event
 		{
+			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}},
 			"Select previous using 'k' key",
 			0,
-			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}},
 		},
 		{
+			tea.KeyMsg{Type: tea.KeyUp},
 			"Select previous using '↑' key",
 			0,
-			tea.KeyMsg{Type: tea.KeyUp},
 		},
 		{
+			tea.KeyMsg{Type: tea.KeyShiftTab},
 			"Select previous using 'shift+tab' key",
 			0,
-			tea.KeyMsg{Type: tea.KeyShiftTab},
 		},
 	}
 	for _, tt := range tests {

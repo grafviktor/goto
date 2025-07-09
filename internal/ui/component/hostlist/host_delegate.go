@@ -18,6 +18,7 @@ var groupHint = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#9
 
 type hostDelegate struct {
 	list.DefaultDelegate
+
 	layout        *constant.ScreenLayout
 	selectedGroup *string
 	logger        iLogger
@@ -36,6 +37,7 @@ func NewHostDelegate(layout *constant.ScreenLayout, group *string, log iLogger) 
 
 	delegate.UpdateFunc = func(msg tea.Msg, m *list.Model) tea.Cmd {
 		if _, ok := msg.(msgToggleLayout); ok {
+			//exhaustive:ignore
 			switch *delegate.layout {
 			case constant.ScreenLayoutCompact:
 				*delegate.layout = constant.ScreenLayoutDescription

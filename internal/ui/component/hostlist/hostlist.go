@@ -6,9 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
-
-	"golang.org/x/exp/slices"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -44,6 +43,7 @@ type msgToggleLayout struct{ layout constant.ScreenLayout }
 
 type listModel struct {
 	list.Model
+
 	repo     storage.HostStorage
 	keyMap   *keyMap
 	appState *state.Application
@@ -195,7 +195,7 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		return m.updateChildModel(msg)
 	case key.Matches(msg, m.Model.KeyMap.ClearFilter):
 		// When user clears the host filter, child model resets the focus. Explicitly set focus on previously selected item.
-		selectedID := m.SelectedItem().(ListItemHost).ID
+		selectedID := m.SelectedItem().(ListItemHost).ID //nolint:errcheck // SelectedItem always returns ListItemHost
 		return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
 	case m.mode != modeDefault:
 		// Handle key event when some mode is enabled. For instance "removeMode".
@@ -267,7 +267,7 @@ func (m *listModel) removeItem() tea.Cmd {
 	}
 
 	_, index, _ := lo.FindIndexOf(m.Items(), func(i list.Item) bool {
-		return i.(ListItemHost).ID == item.ID
+		return i.(ListItemHost).ID == item.ID //nolint:errcheck // i always contains ListItemHost
 	})
 
 	/*
@@ -365,7 +365,7 @@ func (m *listModel) copyItem() tea.Cmd {
 		clonedHostTitle := fmt.Sprintf("%s (%d)", originalHost.Title, i)
 		listItems := m.Items()
 		idx := slices.IndexFunc(listItems, func(li list.Item) bool {
-			return li.(ListItemHost).Title() == clonedHostTitle
+			return li.(ListItemHost).Title() == clonedHostTitle //nolint:errcheck // list item always contains ListItemHost
 		})
 
 		// If title is unique, then we assign the title to the cloned host
@@ -382,7 +382,7 @@ func (m *listModel) copyItem() tea.Cmd {
 	}
 
 	titles := lo.Reduce(m.Items(), func(agg []string, item list.Item, index int) []string {
-		return append(agg, item.(ListItemHost).Title())
+		return append(agg, item.(ListItemHost).Title()) //nolint:errcheck // item always contains ListItemHost
 	}, []string{clonedHost.Title})
 
 	slices.Sort(titles)
@@ -404,17 +404,17 @@ func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
 	updatedHost := ListItemHost{Host: msg.Host}
 	// Get all item titles, replacing the updated host's title
 	allItems := lo.Map(m.Items(), func(item list.Item, _ int) list.Item {
-		host := item.(ListItemHost)
+		host, _ := item.(ListItemHost)
 		return lo.Ternary(host.ID == updatedHost.ID, updatedHost, host)
 	})
 
 	slices.SortFunc(allItems, hostComparator)
 	_, newIndex, _ := lo.FindIndexOf(allItems, func(item list.Item) bool {
-		return updatedHost.ID == item.(ListItemHost).ID
+		return updatedHost.ID == item.(ListItemHost).ID //nolint:errcheck // item always contains ListItemHost
 	})
 
 	_, currentIndex, _ := lo.FindIndexOf(m.Items(), func(item list.Item) bool {
-		return updatedHost.ID == item.(ListItemHost).ID
+		return updatedHost.ID == item.(ListItemHost).ID //nolint:errcheck // item always contains ListItemHost
 	})
 
 	// Do not use m.Index(), as it returns Visible Index, whilst
@@ -439,13 +439,13 @@ func (m *listModel) setItemAndReorder(newIndex, currentIndex int, updatedHost Li
 	// The collection is not yet updated and m.VisibleItems() may NOT contain the updated host yet,
 	// filtering is enabled. However, we must predict the new host index.
 	visibleItems := lo.Map(m.VisibleItems(), func(item list.Item, _ int) list.Item {
-		host := item.(ListItemHost)
+		host, _ := item.(ListItemHost)
 		return lo.Ternary(host.ID == updatedHost.ID, updatedHost, host)
 	})
 
 	slices.SortFunc(visibleItems, hostComparator)
 	_, newVisibleItemsIndex, _ := lo.FindIndexOf(visibleItems, func(item list.Item) bool {
-		return updatedHost.ID == item.(ListItemHost).ID
+		return updatedHost.ID == item.(ListItemHost).ID //nolint:errcheck // item always contains ListItemHost
 	})
 
 	m.Select(newVisibleItemsIndex)
@@ -464,7 +464,7 @@ func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
 	items := append([]list.Item{createdHostItem}, m.VisibleItems()...)
 	slices.SortFunc(items, hostComparator)
 	_, index, _ := lo.FindIndexOf(items, func(item list.Item) bool {
-		return createdHostItem.ID == item.(ListItemHost).ID
+		return createdHostItem.ID == item.(ListItemHost).ID //nolint:errcheck // item always contains ListItemHost
 	})
 
 	cmd := m.Model.InsertItem(index, createdHostItem)
@@ -635,7 +635,7 @@ func (m *listModel) selectHostByID(id int) tea.Cmd {
 }
 
 func hostComparator(a, b list.Item) int {
-	return a.(ListItemHost).CompareTo(b.(ListItemHost))
+	return a.(ListItemHost).CompareTo(b.(ListItemHost)) //nolint:errcheck // a and b always contain ListItemHost
 }
 
 /*

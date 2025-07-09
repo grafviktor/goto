@@ -26,6 +26,7 @@ type iLogger interface {
 
 type model struct {
 	list.Model
+
 	repo     storage.HostStorage
 	appState *state.Application
 	logger   iLogger
@@ -88,6 +89,7 @@ func (m *model) View() string {
 func (m *model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	var cmd tea.Cmd
 
+	//exhaustive:ignore
 	switch msg.Type {
 	case tea.KeyEscape:
 		m.logger.Debug("[UI] Escape key. Deselect group and exit from group list view.")
@@ -98,7 +100,7 @@ func (m *model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 			message.TeaCmd(message.CloseViewSelectGroup{}),
 		)
 	case tea.KeyEnter:
-		selected := m.SelectedItem().(ListItemHostGroup).Title()
+		selected := m.SelectedItem().(ListItemHostGroup).Title() //nolint:errcheck // SelectedItem always returns ListItemHostGroup
 		selected = strings.TrimSpace(selected)
 
 		if selected == noGroupSelected {

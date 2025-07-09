@@ -68,6 +68,7 @@ func (m *mainModel) Init() tea.Cmd {
 	return m.modelHostList.Init()
 }
 
+//nolint:funlen
 func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd

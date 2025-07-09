@@ -440,7 +440,7 @@ func (m *editModel) updateViewPort(msg tea.Msg) {
 
 func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
-	keyMsg := msg.(tea.KeyMsg)
+	keyMsg, _ := msg.(tea.KeyMsg)
 
 	enabledInputs := lo.Filter(m.inputs, func(i input.Input, n int) bool {
 		return i.Enabled()
