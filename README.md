@@ -24,11 +24,13 @@ Supported platforms: macOS, Linux, Windows.
 
 #### Debian or RedHat ####
 
-RPM and DEB packages are available in the releases section (these packages are not provided for pre-release builds).
+RPM and DEB packages are available in the [releases](https://github.com/grafviktor/goto/releases/latest) section (these packages are not provided for pre-release builds).
 
-#### Arch Linux ####
+#### Arch Linux (AUR) ####
 
-Package [goto-ssh-bin](https://aur.archlinux.org/packages/goto-ssh-bin) is supported by Arch Linux community. Please find the details in [PKGBUILD](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=goto-ssh-bin) file.
+_Maintained externally by the open-source community._
+
+Install [goto-ssh-bin](https://aur.archlinux.org/packages/goto-ssh-bin) package. Also see the [build](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=goto-ssh-bin) file for additional details.
 
 ```bash
 # Install goto
@@ -36,6 +38,8 @@ yay -S goto-ssh-bin
 ```
 
 #### macOS (Homebrew) ####
+
+_Maintained externally by the open-source community._
 
 You can install `goto` via Homebrew using a community tap:
 
