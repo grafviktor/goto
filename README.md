@@ -35,6 +35,20 @@ Package [goto-ssh-bin](https://aur.archlinux.org/packages/goto-ssh-bin) is suppo
 yay -S goto-ssh-bin
 ```
 
+#### macOS (Homebrew) ####
+
+You can install `goto` via Homebrew using a community tap:
+
+```bash
+brew tap avasilic/goto
+brew install goto-ssh
+```
+
+This installs the gg binary (renamed automatically). Run it with:
+```bash
+gg
+```
+
 ## 2. Functional demo ##
 
 ### 2.1. Edit your database and connect to remote machines ###
