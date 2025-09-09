@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 
 	"github.com/grafviktor/goto/internal/application"
@@ -87,11 +88,7 @@ func Test_GetApplicationState(t *testing.T) {
 // Test persisting app state.
 func Test_PersistApplicationState(t *testing.T) {
 	// Set up a temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create a mock logger for testing
 	mockLogger := MockLogger{}
@@ -104,19 +101,19 @@ func Test_PersistApplicationState(t *testing.T) {
 	underTest.Selected = 42
 
 	// Persist the modified state to disk
-	err = underTest.Persist()
-	assert.NoError(t, err)
+	err := underTest.Persist()
+	require.NoError(t, err)
 
 	// Read the persisted state from disk
 	persistedState := &Application{}
 	fileData, err := os.ReadFile(path.Join(tempDir, stateFile))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = yaml.Unmarshal(fileData, persistedState)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Ensure that the persisted state matches the modified state
-	assert.Equal(t, underTest.Selected, persistedState.Selected)
+	require.Equal(t, underTest.Selected, persistedState.Selected)
 }
 
 // Test persisting app state.

@@ -330,9 +330,8 @@ func (l *Lexer) handleIncludeToken(token sshToken) []sshToken {
 }
 
 func (l *Lexer) metaDataToken(kind tokenEnum, line string) sshToken {
-	tokenFound := false
 	line = strings.TrimSpace(line)
-	line, tokenFound = strings.CutPrefix(line, "# GG:")
+	line, tokenFound := strings.CutPrefix(line, "# GG:")
 	if !tokenFound {
 		return sshToken{kind: tokenKind.Unsupported}
 	}

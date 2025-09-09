@@ -551,11 +551,11 @@ func (m *editModel) handleEditableHost() {
 		&m.inputs[inputIdentityFile],
 	}
 
-	lo.ForEach(sshParamsInputFields, func(i *input.Input, n int) {
+	lo.ForEach(sshParamsInputFields, func(i *input.Input, _ int) {
 		i.SetEnabled(!customConnectString)
 	})
 
-	lo.ForEach(m.inputs, func(i input.Input, n int) {
+	lo.ForEach(m.inputs, func(_ input.Input, n int) {
 		if m.inputs[n].Enabled() {
 			m.inputs[n].SetValue(m.host.getHostAttributeValueByIndex(n))
 		} else {

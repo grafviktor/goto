@@ -77,7 +77,7 @@ func TestYAMLFile_GetAll_EmptyFile(t *testing.T) {
 
 	hosts, err := st.GetAll()
 	require.NoError(t, err)
-	require.Len(t, hosts, 0)
+	require.Empty(t, hosts)
 }
 
 func TestYAMLFile_GetAll_InvalidYAML(t *testing.T) {

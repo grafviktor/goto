@@ -43,7 +43,7 @@ func TestPrintConsole(t *testing.T) {
 	expectedOutput += fmt.Sprintf("Branch:     %s\n", BuildBranch())
 	expectedOutput += fmt.Sprintf("Build date: %s\n", BuildDate())
 
-	require.Equal(t, output, expectedOutput)
+	require.Equal(t, expectedOutput, output)
 }
 
 // captureOutput captures the output of a function and returns it as a string.

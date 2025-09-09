@@ -91,7 +91,7 @@ func TestParser_Parse_EmptyLexer(t *testing.T) {
 	parser := NewParser(lexer, &mocklogger.Logger{})
 	hosts, err := parser.Parse()
 	require.NoError(t, err)
-	require.Len(t, hosts, 0)
+	require.Empty(t, hosts)
 }
 
 func TestParser_Parse_DefaultGroup(t *testing.T) {

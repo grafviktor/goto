@@ -209,6 +209,6 @@ func TestLexer_MetaDataToken(t *testing.T) {
 	lex := &Lexer{}
 	line := "# GG:GROUP mock_group"
 	token := lex.metaDataToken(tokenKind.Group, line)
-	require.Equal(t, token.key, "GROUP", "wrong token key")
-	require.Equal(t, token.value, "mock_group", "wrong token value")
+	require.Equal(t, "GROUP", token.key, "wrong token key")
+	require.Equal(t, "mock_group", token.value, "wrong token value")
 }

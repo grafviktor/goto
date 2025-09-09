@@ -53,8 +53,8 @@ func TestCloneHost(t *testing.T) {
 
 	// ID of the new host should always be "0", we should not copy the ID of the original host
 	require.Equal(t,
-		clonedHost.ID,
 		0,
+		clonedHost.ID,
 		"Clone function should create a new host, but host ID should be equal to '0'",
 	)
 

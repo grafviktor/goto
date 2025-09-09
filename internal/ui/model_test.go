@@ -201,7 +201,7 @@ func TestHandleProcessSuccess_SSH_copy_ID(t *testing.T) {
 			model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
 			model.handleProcessSuccess(tt.msg)
 			require.Equal(t, tt.expected.modelMessage, model.viewMessageContent)
-			require.Equal(t, tt.expected.viewState, (int)(model.appState.CurrentView))
+			require.Equal(t, (int)(model.appState.CurrentView), tt.expected.viewState)
 		})
 	}
 }
@@ -245,7 +245,7 @@ func TestHandleProcessError(t *testing.T) {
 			model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
 			model.handleProcessError(tt.msg)
 			require.Equal(t, tt.expected.modelMessage, model.viewMessageContent)
-			require.Equal(t, tt.expected.viewState, (int)(model.appState.CurrentView))
+			require.Equal(t, (int)(model.appState.CurrentView), tt.expected.viewState)
 		})
 	}
 }

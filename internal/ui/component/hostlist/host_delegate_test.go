@@ -102,7 +102,7 @@ func TestHostDelegate_Render(t *testing.T) {
 
 	for _, tc := range tests {
 		var buf bytes.Buffer
-		mockModel := NewMockListModel(false)
+		mockModel := newMockListModel(false)
 		mockModel.Update(
 			tea.WindowSizeMsg{Width: 100, Height: 100},
 		) // required, otherwise the model does not render anything

@@ -1,4 +1,4 @@
-package utils
+package utils //nolint:revive
 
 import (
 	"os"
@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -41,7 +40,7 @@ func Test_StringAbbreviation(t *testing.T) {
 }
 
 func Test_CreateAppDirIfNotExists(t *testing.T) {
-	tmpFile, _ := os.CreateTemp("", "unit_test_tmp*")
+	tmpFile, _ := os.CreateTemp(t.TempDir(), "unit_test_tmp*")
 	defer os.RemoveAll(tmpFile.Name()) // clean up
 	err := CreateAppDirIfNotExists(tmpFile.Name())
 	require.Error(
@@ -53,13 +52,11 @@ func Test_CreateAppDirIfNotExists(t *testing.T) {
 	err = CreateAppDirIfNotExists(" ")
 	require.Error(t, err, "CreateAppDirIfNotExists should return an error when argument is empty")
 
-	tmpDir, _ := os.MkdirTemp("", "unit_test_tmp*")
-	defer os.RemoveAll(tmpDir) // clean up
+	tmpDir := t.TempDir()
 	err = CreateAppDirIfNotExists(tmpDir)
 	require.NoError(t, err, "CreateAppDirIfNotExists should not return an error when app home exists")
 
-	tmpDir = path.Join(os.TempDir(), "test")
-	defer os.RemoveAll(tmpDir) // clean up
+	tmpDir = path.Join(t.TempDir(), "test")
 	err = CreateAppDirIfNotExists(tmpDir)
 	require.NoError(t, err, "CreateAppDirIfNotExists should create app home folder if not exists")
 }
@@ -69,14 +66,13 @@ func Test_GetAppDir(t *testing.T) {
 
 	expected := path.Join(userConfigDir, "test")
 	got, _ := AppDir("test", "")
-	require.Equal(t, got, expected, "Should create a subfolder with a certain name in user config directory")
+	require.Equal(t, expected, got, "Should create a subfolder with a certain name in user config directory")
 
 	expected, _ = filepath.Abs(".")
 	got, _ = AppDir("test", ".")
-	require.Equal(t, got, expected, "Should ignore application name and use a user-defined folder")
+	require.Equal(t, expected, got, "Should ignore application name and use a user-defined folder")
 
-	tmp, _ := os.CreateTemp("", "unit_test_tmp*")
-	defer os.RemoveAll(tmp.Name())
+	tmp, _ := os.CreateTemp(t.TempDir(), "unit_test_tmp*")
 	_, err := AppDir("", tmp.Name())
 	require.Error(t, err, "Should not accept file as a user dir")
 
@@ -95,12 +91,12 @@ func Test(t *testing.T) {
 	require.Equal(t, expected, got, "Should return default ssh config file path")
 
 	// Test case: Path is a directory
-	customFolderPath := os.TempDir()
+	customFolderPath := t.TempDir()
 	_, err := SSHConfigFilePath(customFolderPath)
 	require.Error(t, err, "SSH config file path is a directory")
 
 	// Test case: custom file path
-	tempFile, err := os.CreateTemp(os.TempDir(), "ssh_config*")
+	tempFile, err := os.CreateTemp(t.TempDir(), "ssh_config*")
 	require.NoError(t, err, "Should create a temporary file for testing")
 	defer os.Remove(tempFile.Name()) // clean up
 	customPath := tempFile.Name()
@@ -234,9 +230,9 @@ func Test_ProcessBufferWriter_Write(t *testing.T) {
 	data := []byte("test test test")
 	n, err := writer.Write(data)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Make sure that 'n' is equal to the data length which we sent to the writer
-	assert.Equal(t, len(data), n)
+	require.Equal(t, len(data), n)
 	// However we can read the text from writer.Output variable when we need
-	assert.Equal(t, data, writer.Output)
+	require.Equal(t, data, writer.Output)
 }

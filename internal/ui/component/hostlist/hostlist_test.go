@@ -30,7 +30,7 @@ func TestListModel_Init(t *testing.T) {
 
 	var dst []tea.Msg
 	testutils.CmdToMessage(teaCmd, &dst)
-	require.Equal(t, dst, []tea.Msg{
+	require.Equal(t, []tea.Msg{
 		message.HostSelected{HostID: 1},
 		message.RunProcessSSHLoadConfig{
 			Host: host.Host{
@@ -45,7 +45,7 @@ func TestListModel_Init(t *testing.T) {
 				SSHHostConfig:    &sshconfig.Config{},
 			},
 		},
-	})
+	}, dst)
 
 	// Check that hosts are filtered by Title
 	require.Equal(t, "Mock Host 1", lm.Items()[0].(ListItemHost).Title())
@@ -123,7 +123,7 @@ func Test_listModel_Change_Selection(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			model := *NewMockListModel(false)
+			model := *newMockListModel(false)
 			// Select item at index 1. We need this preselection in order
 			// to test 'focus previous' and 'focus next' messages
 			model.Select(1)
@@ -144,7 +144,7 @@ func Test_listModel_Change_Selection(t *testing.T) {
 func TestRemoveItem(t *testing.T) {
 	tests := []struct {
 		name          string
-		model         listModel
+		model         ListModel
 		mode          string
 		want          interface{}
 		preselectItem int
@@ -152,7 +152,7 @@ func TestRemoveItem(t *testing.T) {
 	}{
 		{
 			name:          "Remove item success",
-			model:         *NewMockListModel(false),
+			model:         *newMockListModel(false),
 			mode:          modeRemoveItem,
 			preselectItem: 0, // It's already '0' by default. Just to be more explicit
 			want: []tea.Msg{
@@ -179,7 +179,7 @@ func TestRemoveItem(t *testing.T) {
 			// Checking this because there is a focusing problem in bubbles/list component
 			// when remove last item, the component does not set focus on any item.
 			name:          "Remove LAST item success",
-			model:         *NewMockListModel(false),
+			model:         *newMockListModel(false),
 			mode:          modeRemoveItem,
 			preselectItem: 2, // We have 3 items in the mock storage. Selecting the last one
 			want: []tea.Msg{
@@ -204,7 +204,7 @@ func TestRemoveItem(t *testing.T) {
 		},
 		{
 			name:  "Remove item error because of the database error",
-			model: *NewMockListModel(true),
+			model: *newMockListModel(true),
 			mode:  modeRemoveItem,
 			want: []tea.Msg{
 				message.ErrorOccurred{Err: errors.New("mock error")},
@@ -213,7 +213,7 @@ func TestRemoveItem(t *testing.T) {
 		},
 		{
 			name:  "Remove item error wrong item selected",
-			model: *NewMockListModel(false),
+			model: *newMockListModel(false),
 			mode:  modeRemoveItem,
 			want: []tea.Msg{
 				message.ErrorOccurred{Err: errors.New("you must select an item")},
@@ -246,7 +246,7 @@ func TestRemoveItem(t *testing.T) {
 func TestConfirmAction(t *testing.T) {
 	// Test the fallback option when there is no active mode
 	// Create a new model. There is no special mode (like for instance, "remove item" mode)
-	model := NewMockListModel(false)
+	model := newMockListModel(false)
 	model.logger = &mocklogger.Logger{}
 	// Imagine that user triggers confirm action
 	cmd := model.confirmAction()
@@ -256,7 +256,7 @@ func TestConfirmAction(t *testing.T) {
 	require.Nil(t, cmd)
 
 	// Now test remove item mode
-	model = NewMockListModel(false)
+	model = newMockListModel(false)
 	// Now we enable remove mode
 	model.mode = modeRemoveItem
 	// Imagine that user triggers confirm action
@@ -267,7 +267,7 @@ func TestConfirmAction(t *testing.T) {
 	require.IsType(t, tea.Cmd(nil), cmd)
 
 	// Now test copy ssh ID item mode
-	model = NewMockListModel(false)
+	model = newMockListModel(false)
 	// Now we enable copy SSG ID mode
 	model.mode = modeSSHCopyID
 	// Imagine that user triggers confirm action
@@ -278,7 +278,7 @@ func TestConfirmAction(t *testing.T) {
 	require.IsType(t, tea.Cmd(nil), cmd)
 
 	// Now test close app mode
-	model = NewMockListModel(false)
+	model = newMockListModel(false)
 	// Now we enable close application mode
 	model.mode = modeCloseApp
 	// Imagine that user triggers confirm action
@@ -291,13 +291,13 @@ func TestConfirmAction(t *testing.T) {
 
 func TestEnterSSHCopyIDMode(t *testing.T) {
 	// Create a new model
-	model := *NewMockListModel(false)
+	model := *newMockListModel(false)
 	// Select non-existent index
 	model.Select(10)
 	// Call enterRemoveItemMode function
 	cmd := model.enterSSHCopyIDMode()
 	// and make sure that mode is unchanged
-	require.Len(t, model.mode, 0)
+	require.Empty(t, model.mode)
 	// cmd() should return msgErrorOccurred error
 	require.IsType(t, message.ErrorOccurred{}, cmd(), "Wrong message type")
 
@@ -314,19 +314,19 @@ func TestEnterSSHCopyIDMode(t *testing.T) {
 
 func TestEnterRemoveItemMode(t *testing.T) {
 	// Create a new model
-	model := *NewMockListModel(false)
+	model := *newMockListModel(false)
 	model.logger = &mocklogger.Logger{}
 	// Select non-existent index
 	model.Select(10)
 	// Call enterRemoveItemMode function
 	cmd := model.enterRemoveItemMode()
 	// and make sure that mode is unchanged
-	require.Len(t, model.mode, 0)
+	require.Empty(t, model.mode)
 	// cmd() should return msgErrorOccurred error
 	require.IsType(t, message.ErrorOccurred{}, cmd(), "Wrong message type")
 
 	// Create another model
-	model = *NewMockListModel(false)
+	model = *newMockListModel(false)
 	model.logger = &mocklogger.Logger{}
 	// Select a first item, which is valid
 	model.Select(0)
@@ -341,7 +341,7 @@ func TestEnterRemoveItemMode(t *testing.T) {
 
 func TestExitRemoveItemMode(t *testing.T) {
 	// Create a new model
-	model := *NewMockListModel(false)
+	model := *newMockListModel(false)
 	model.logger = &mocklogger.Logger{}
 	// Select a first item, which is valid
 	model.Select(0)
@@ -384,7 +384,7 @@ func TestExitRemoveItemMode(t *testing.T) {
 
 func TestListTitleUpdate(t *testing.T) {
 	// 1 Call updateTitle when host is not selected
-	model := *NewMockListModel(false)
+	model := *newMockListModel(false)
 	model.logger = &mocklogger.Logger{}
 	// Select non-existent item
 	model.Select(10)
@@ -394,7 +394,7 @@ func TestListTitleUpdate(t *testing.T) {
 	require.NotNil(t, model)
 
 	// 2 Call updateTitle when removeMode is active
-	model = *NewMockListModel(false)
+	model = *newMockListModel(false)
 	model.logger = &mocklogger.Logger{}
 	// Select a host by valid index
 	model.Select(0)
@@ -406,7 +406,7 @@ func TestListTitleUpdate(t *testing.T) {
 	require.Equal(t, "delete \"Mock Host 1\"? (y/N)", utils.StripStyles(model.Title))
 
 	// 3 Call updateTitle selected a host
-	model = *NewMockListModel(false)
+	model = *newMockListModel(false)
 	model.logger = &mocklogger.Logger{}
 	// Select a host by valid index
 	model.Select(0)
@@ -416,7 +416,7 @@ func TestListTitleUpdate(t *testing.T) {
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", utils.StripStyles(model.Title))
 
 	// 4 Call updateTitle selected a host and group is selected.
-	model = *NewMockListModel(false)
+	model = *newMockListModel(false)
 	model.logger = &mocklogger.Logger{}
 	//
 	model.appState.Group = "Group 1"
@@ -428,7 +428,7 @@ func TestListTitleUpdate(t *testing.T) {
 	require.Equal(t, "G1  ssh -i id_rsa -p 2222 -l root localhost", utils.StripStyles(model.Title))
 
 	// 5 Call updateTitle when exiting app.
-	model = *NewMockListModel(false)
+	model = *newMockListModel(false)
 	model.logger = &mocklogger.Logger{}
 	// Enter exit app mode
 	model.enterCloseAppMode()
@@ -440,7 +440,7 @@ func TestListTitleUpdate(t *testing.T) {
 
 func TestListModel_title_when_app_just_starts(t *testing.T) {
 	// This is just a sanity test, which checks title update function
-	model := *NewMockListModel(false)
+	model := *newMockListModel(false)
 	model.logger = &mocklogger.Logger{}
 	// When app just starts, it should display "press 'n' to add a new host"
 	require.Equal(t, "press 'n' to add a new host", utils.StripStyles(model.Title))
@@ -451,16 +451,16 @@ func TestListModel_title_when_app_just_starts(t *testing.T) {
 
 func TestListModel_title_when_filter_is_enabled(t *testing.T) {
 	// Test bugfix for https://github.com/grafviktor/goto/issues/37
-	model := *NewMockListModel(false)
+	model := *newMockListModel(false)
 	model.logger = &mocklogger.Logger{}
-	assert.Equal(t, model.FilterState(), list.Unfiltered)
+	assert.Equal(t, list.Unfiltered, model.FilterState())
 	// Enable filter
 	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
-	assert.Equal(t, model.FilterState(), list.Filtering)
+	assert.Equal(t, list.Filtering, model.FilterState())
 	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}})
 	// Press down key and make sure that title is properly updated
 	model.Update(tea.KeyMsg{Type: tea.KeyDown})
-	assert.Equal(t, model.FilterState(), list.FilterApplied)
+	assert.Equal(t, list.FilterApplied, model.FilterState())
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", utils.StripStyles(model.Title))
 }
 
@@ -487,7 +487,7 @@ func TestListModel_editItem(t *testing.T) {
 	// Note, that here we use NewMockListModel instead of just 'list.New(...)' like in the first case
 	// we need it to automatically preselect first item from the list of hosts and NewMockListModel
 	// will do that for us
-	lm = NewMockListModel(false)
+	lm = newMockListModel(false)
 	lm.logger = &mocklogger.Logger{}
 
 	teaCmd = lm.editItem()
@@ -508,7 +508,7 @@ func TestListModel_copyItem(t *testing.T) {
 	require.Equal(t, itemNotSelectedErrMsg, teaCmd().(message.ErrorOccurred).Err.Error())
 
 	// Second case: storage is OK, and we have to ensure that copied host title as we expect it to be:
-	lm = NewMockListModel(false)
+	lm = newMockListModel(false)
 	lm.logger = &mocklogger.Logger{}
 
 	lm.copyItem()
@@ -519,7 +519,7 @@ func TestListModel_copyItem(t *testing.T) {
 
 func TestListModel_updateKeyMap(t *testing.T) {
 	// Case 1: Test that if a host list contains items and item is selected, then all keyboard shortcuts are shown on the screen
-	lm := *NewMockListModel(false)
+	lm := *newMockListModel(false)
 	lm.logger = &mocklogger.Logger{}
 	lm.Init()
 
@@ -528,7 +528,7 @@ func TestListModel_updateKeyMap(t *testing.T) {
 	displayedKeys := lm.keyMap.ShortHelp()
 	availableKeys := newDelegateKeyMap()
 
-	require.Equal(t, 6, len(displayedKeys))
+	require.Len(t, displayedKeys, 6)
 	require.Contains(t, displayedKeys, availableKeys.append)
 	require.Contains(t, displayedKeys, availableKeys.clone)
 	require.Contains(t, displayedKeys, availableKeys.connect)
@@ -548,7 +548,7 @@ func TestListModel_updateKeyMap(t *testing.T) {
 	displayedKeys = lm.keyMap.ShortHelp()
 
 	// Only "new" and "change group" shortcuts are available
-	require.Equal(t, 2, len(displayedKeys))
+	require.Len(t, displayedKeys, 2)
 	require.Contains(t, displayedKeys, availableKeys.append)
 	require.NotContains(t, displayedKeys, availableKeys.clone)
 	require.NotContains(t, displayedKeys, availableKeys.connect)
@@ -558,17 +558,17 @@ func TestListModel_updateKeyMap(t *testing.T) {
 
 func TestUpdate_TeaSizeMsg(t *testing.T) {
 	// Test that if model is ready, WindowSizeMsg message will update inner model size
-	model := *NewMockListModel(false)
+	model := *newMockListModel(false)
 	model.logger = &mocklogger.Logger{}
 	model.Update(tea.WindowSizeMsg{Width: 100, Height: 100})
 
-	require.Greater(t, model.Height(), 0)
-	require.Greater(t, model.Width(), 0)
+	require.Positive(t, model.Height())
+	require.Positive(t, model.Width())
 }
 
 func TestUpdate_HostSSHConfigLoaded(t *testing.T) {
 	// Test that host receives SSH expectedConfig once HostConfigLoaded message is dispatched
-	lm := *NewMockListModel(false)
+	lm := *newMockListModel(false)
 	lm.Init()
 	expectedConfig := sshconfig.Config{
 		Hostname:     "mock_hostname",
@@ -587,11 +587,11 @@ func TestUpdate_HostSSHConfigLoaded(t *testing.T) {
 
 func TestUpdate_HostUpdated(t *testing.T) {
 	// Test that host is updated when hostlist model receives message.HostUpdated.
-	lm := *NewMockListModel(false)
+	lm := *newMockListModel(false)
 	lm.Init()
 
 	// Check that the host we're going to update exists and has the expected title
-	require.Equal(t, lm.Items()[0].(ListItemHost).Title(), "Mock Host 1")
+	require.Equal(t, "Mock Host 1", lm.Items()[0].(ListItemHost).Title())
 
 	updatedHost := host.Host{
 		ID:               1,
@@ -627,10 +627,10 @@ func TestUpdate_HostUpdated(t *testing.T) {
 func TestUpdate_HostCreated(t *testing.T) {
 	// Test that when host is created it is appended to the host list and
 	// its visual position in the list of hosts is correct
-	lm := *NewMockListModel(false)
+	lm := *newMockListModel(false)
 	lm.Init()
 
-	require.Equal(t, lm.Items()[0].(ListItemHost).Title(), "Mock Host 1")
+	require.Equal(t, "Mock Host 1", lm.Items()[0].(ListItemHost).Title())
 
 	createdHost1 := host.Host{
 		ID:               999,
@@ -709,7 +709,7 @@ func TestUpdate_msgHideNotification(t *testing.T) {
 func Test_handleKeyboardEvent_cancelWhileFiltering(t *testing.T) {
 	// Test that when user presses 'Esc' key while filtering, the model doesn't lose focus
 	// Create model
-	model := NewMockListModel(false)
+	model := newMockListModel(false)
 	model.Init()
 
 	// Make sure there are 3 items in the collection
@@ -766,7 +766,7 @@ func Test_handleKeyboardEvent_clearFilter(t *testing.T) {
 	// and after that press Escape button (to exit from filter mode),
 	// we must ensure that focus hasn't changed and the same host is still
 	// focused which was selected when filter was enabled.
-	model := NewMockListModel(false)
+	model := newMockListModel(false)
 	model.Init()
 
 	// Make sure there are 3 items in the collection
@@ -829,7 +829,7 @@ func Test_handleKeyboardEvent_clearFilter(t *testing.T) {
 }
 
 func Test_handleKeyboardEvent_selectGroup(t *testing.T) {
-	model := NewMockListModel(false)
+	model := newMockListModel(false)
 	model.Init()
 	_, cmd := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'z'}})
 	res := cmd()
@@ -839,7 +839,7 @@ func Test_handleKeyboardEvent_selectGroup(t *testing.T) {
 func Test_handleKeyboardEvent_connect(t *testing.T) {
 	// Check that when we press Enter button while host is selected
 	// we dispatch processConstruct command from the host list model
-	model := NewMockListModel(false)
+	model := newMockListModel(false)
 	model.Init()
 
 	// Make sure there are 3 items in the collection
@@ -855,7 +855,7 @@ func Test_handleKeyboardEvent_connect(t *testing.T) {
 
 func Test_handleKeyboardEvent_copyID(t *testing.T) {
 	// Just check that we enter copyID mode when a host is selected and press "t" button
-	model := NewMockListModel(false)
+	model := newMockListModel(false)
 	model.Init()
 
 	// Make sure there are 3 items in the collection
@@ -880,7 +880,7 @@ func Test_handleKeyboardEvent_copyID(t *testing.T) {
 
 func Test_handleKeyboardEvent_remove(t *testing.T) {
 	// Just check that we enter removeItem mode when a host is selected and press "t" button
-	model := NewMockListModel(false)
+	model := newMockListModel(false)
 	model.Init()
 
 	// Make sure there are 3 items in the collection
@@ -913,7 +913,7 @@ func Test_handleKeyboardEvent_append(t *testing.T) {
 
 func Test_constructProcessCmd(t *testing.T) {
 	// Test that we receive expected messages when invoke constructProcessCmd function
-	lm := *NewMockListModel(false)
+	lm := *newMockListModel(false)
 	lm.Init()
 	connectSSHResultCmd := lm.constructProcessCmd(constant.ProcessTypeSSHConnect)
 	selectedHost := lm.SelectedItem().(ListItemHost).Host
@@ -1018,14 +1018,14 @@ func TestUpdate_ToggleBetweenScreenLayouts(t *testing.T) {
 func Test_HandleKeyboardEvent_Escape(t *testing.T) {
 	// If group is selected and type Escape key, the model
 	// should dispatch open group view message
-	model := NewMockListModel(false)
+	model := newMockListModel(false)
 	model.appState.Group = "Group 1"
 	_, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	require.IsType(t, message.OpenViewSelectGroup{}, cmd())
 
 	// If group is NOT selected and press Escape key, the app
 	// should ask the user whether it wants to close the program
-	model = NewMockListModel(false)
+	model = newMockListModel(false)
 	model.appState.Group = ""
 	_, cmd = model.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	require.Nil(t, cmd)
@@ -1085,7 +1085,7 @@ func TestUpdate_HostFocusPreservedAfterClearFilterMessage(t *testing.T) {
 // ============== utility methods ===============
 // ==============================================
 
-func NewMockListModel(storageShouldFail bool) *listModel {
+func newMockListModel(storageShouldFail bool) *ListModel {
 	storage := testutils.NewMockStorage(storageShouldFail)
 	mockState := state.Application{Selected: 1}
 

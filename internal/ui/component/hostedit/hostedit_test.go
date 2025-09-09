@@ -125,7 +125,7 @@ func TestCopyInputValueFromTo(t *testing.T) {
 	storageHostNoFound := testutils.NewMockStorage(true)
 	hostEditModel := New(context.TODO(), storageHostNoFound, MockAppState(), &mocklogger.Logger{})
 	// Check that selected input is title
-	assert.Equal(t, hostEditModel.focusedInput, inputTitle)
+	assert.Equal(t, inputTitle, hostEditModel.focusedInput)
 
 	// Type word 'test' in title
 	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
@@ -140,7 +140,7 @@ func TestCopyInputValueFromTo(t *testing.T) {
 	// Select address input
 	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyDown})
 	// Check that selected input is now address
-	assert.Equal(t, hostEditModel.focusedInput, inputAddress)
+	assert.Equal(t, inputAddress, hostEditModel.focusedInput)
 
 	// Append word 'test' to address, so it will become "testtest"
 	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
@@ -155,7 +155,7 @@ func TestCopyInputValueFromTo(t *testing.T) {
 	// Select title again
 	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyUp})
 	// Check that selected input is title
-	assert.Equal(t, hostEditModel.focusedInput, inputTitle)
+	assert.Equal(t, inputTitle, hostEditModel.focusedInput)
 
 	// Append '123' to title, so it will become "test123"
 	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}})
@@ -272,7 +272,7 @@ func TestView(t *testing.T) {
 	// and view() returns non-empty string which will be used to build terminal user interface
 	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
 	assert.False(t, model.ready)
-	var ui string = model.View()
+	ui := model.View()
 
 	require.True(t, model.ready)
 	require.NotEmpty(t, ui)
@@ -379,7 +379,7 @@ func TestUpdate_KeyDiscard(t *testing.T) {
 		Type: tea.KeyEscape,
 	})
 
-	require.Equal(t, cmd(), message.CloseViewHostEdit{})
+	require.Equal(t, message.CloseViewHostEdit{}, cmd())
 }
 
 func TestUpdate_KeySave(t *testing.T) {
