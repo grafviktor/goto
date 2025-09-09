@@ -1,3 +1,4 @@
+//nolint:mnd // Magic numbers are allowed in unittest
 package testutils_test
 
 import (
@@ -11,7 +12,10 @@ import (
 	"github.com/grafviktor/goto/internal/model/sshconfig"
 )
 
-// =============================================== Storage
+type mockStorage struct {
+	shouldFail bool
+	Hosts      []host.Host
+}
 
 func NewMockStorage(shouldFail bool) *mockStorage {
 	hosts := []host.Host{
@@ -23,7 +27,7 @@ func NewMockStorage(shouldFail bool) *mockStorage {
 		host.NewHost(3, "Mock Host 3", "", "localhost", "root", "id_rsa", "2222"),
 	}
 
-	for i := 0; i < len(hosts); i++ {
+	for i := range hosts {
 		hosts[i].SSHHostConfig = &sshconfig.Config{}
 		hosts[i].Group = fmt.Sprintf("Group %d", i+1)
 	}
@@ -32,11 +36,6 @@ func NewMockStorage(shouldFail bool) *mockStorage {
 		shouldFail: shouldFail,
 		Hosts:      hosts,
 	}
-}
-
-type mockStorage struct {
-	shouldFail bool
-	Hosts      []host.Host
 }
 
 // Delete implements storage.HostStorage.

@@ -22,7 +22,13 @@ func TestNewHost(t *testing.T) {
 	}
 
 	// Create a new host using the NewHost function
-	newHost := NewHost(expectedHost.ID, expectedHost.Title, expectedHost.Description, expectedHost.Address, expectedHost.LoginName, expectedHost.IdentityFilePath, expectedHost.RemotePort)
+	newHost := NewHost(expectedHost.ID,
+		expectedHost.Title,
+		expectedHost.Description,
+		expectedHost.Address,
+		expectedHost.LoginName,
+		expectedHost.IdentityFilePath,
+		expectedHost.RemotePort)
 
 	// Check if the new host matches the expected host
 	if !reflect.DeepEqual(newHost, expectedHost) {

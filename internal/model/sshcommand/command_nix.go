@@ -15,9 +15,9 @@ func BaseCMD() string {
 
 // CopyIDCommand - builds ssh command to copy ssh key to a remote host.
 func CopyIDCommand(options ...Option) string {
-	baseCmd := "ssh-copy-id"
+	copyIdBaseCmd := "ssh-copy-id"
 	sb := strings.Builder{}
-	sb.WriteString(baseCmd)
+	sb.WriteString(copyIdBaseCmd)
 
 	var hostname string
 	var username string

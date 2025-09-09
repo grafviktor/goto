@@ -151,7 +151,7 @@ func createConfigurationOrExit() (application.Configuration, bool) {
 	}
 
 	// Check if "ssh" utility is in application path
-	if err := utils.CheckAppInstalled("ssh"); err != nil {
+	if err = utils.CheckAppInstalled("ssh"); err != nil {
 		log.Fatalf("[MAIN] ssh utility is not installed or cannot be found in the executable path: %v", err)
 	}
 

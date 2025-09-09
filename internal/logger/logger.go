@@ -104,7 +104,6 @@ func (l *AppLogger) Error(format string, args ...any) {
 // Close - closes the log file.
 func (l *AppLogger) Close() {
 	if l.logFile != nil {
-		//nolint:errcheck // we don't care if log file wasn't closed properly
-		l.logFile.Close()
+		_ = l.logFile.Close()
 	}
 }

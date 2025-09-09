@@ -133,7 +133,7 @@ func (c *combinedStorage) GetAll() ([]model.Host, error) {
 			return lo.Ternary(a.Title < b.Title, -1, 1)
 		})
 
-		for i := 0; i < len(storageHosts); i++ {
+		for i := range storageHosts {
 			storageHosts[i].StorageType = storageType
 			c.addHost(storageHosts[i], storageType)
 		}
@@ -146,7 +146,8 @@ func (c *combinedStorage) GetAll() ([]model.Host, error) {
 func (c *combinedStorage) Save(host model.Host) (model.Host, error) {
 	storage := c.getHostOrDefaultStorage(host)
 	if isNewHost(host) {
-		host, err := storage.Save(host)
+		var err error
+		host, err = storage.Save(host)
 		combinedStorageID := c.addHost(host, storage.Type())
 		host.ID = combinedStorageID
 		return host, err

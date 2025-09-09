@@ -143,7 +143,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	host.SSHHostConfig = sshconfig.StubConfig()
 
 	m := editModel{
-		inputs:       make([]input.Input, 7),
+		inputs:       make([]input.Input, 7), //nolint:mnd // Quantity of input components is 7
 		hostStorage:  storage,
 		host:         wrap(&host),
 		help:         help.New(),
@@ -474,7 +474,7 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 	}
 
 	// Should be extracted to "Validate" function
-	for i := 0; i < len(m.inputs); i++ {
+	for i := range m.inputs {
 		if m.inputs[i].Validate != nil {
 			m.inputs[i].Err = m.inputs[i].Validate(m.inputs[i].Value())
 			m.logger.Debug("[UI] Input '%v' is valid: %v", m.inputs[i].Label(), m.inputs[i].Err == nil)
@@ -530,9 +530,9 @@ func (m *editModel) handleEditableHost() {
 	m.logger.Debug("[UI] Update input components. Additional SSH parameters disabled: %v", customConnectString)
 
 	prefix := lo.Ternary(customConnectString, "readonly", "default")
-	m.inputs[inputTitle].Placeholder = "*required*" //nolint:goconst
+	m.inputs[inputTitle].Placeholder = "*required*"
 	m.inputs[inputAddress].Placeholder = "*required*"
-	m.inputs[inputGroup].Placeholder = "n/a" //nolint:goconst
+	m.inputs[inputGroup].Placeholder = "n/a"
 	m.inputs[inputDescription].Placeholder = "n/a"
 	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHHostConfig.User)
 	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHHostConfig.Port)

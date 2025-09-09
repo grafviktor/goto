@@ -46,7 +46,7 @@ func TestPrintConsole(t *testing.T) {
 	require.Equal(t, output, expectedOutput)
 }
 
-// captureOutput captures the output of a function and returns it as a string
+// captureOutput captures the output of a function and returns it as a string.
 func captureOutput(f func()) string {
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()

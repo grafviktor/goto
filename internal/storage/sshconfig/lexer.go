@@ -305,7 +305,8 @@ func (l *Lexer) handleIncludeToken(token sshToken) []sshToken {
 	}
 
 	for _, path := range matches {
-		info, err := os.Stat(path)
+		var info os.FileInfo
+		info, err = os.Stat(path)
 		if err != nil {
 			continue
 		}

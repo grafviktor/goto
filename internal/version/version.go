@@ -14,7 +14,7 @@ type buildInfo struct {
 
 var bi buildInfo
 
-func init() {
+func init() { //nolint:gochecknoinits // To set default values.
 	valueIsNotAvailable := "N/A"
 
 	bi = buildInfo{

@@ -33,7 +33,7 @@ type model struct {
 }
 
 var (
-	docStyle        = lipgloss.NewStyle().Margin(1, 2, 1, 0)
+	docStyle        = lipgloss.NewStyle().Margin(1, 2, 1, 0) //nolint:mnd // magic numbers are OK fo styles
 	noGroupSelected = "~ all ~"
 )
 

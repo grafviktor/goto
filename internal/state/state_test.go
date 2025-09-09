@@ -19,7 +19,7 @@ type MockLogger struct {
 	Logs []string
 }
 
-func (ml *MockLogger) print(format string, args ...interface{}) {
+func (ml *MockLogger) printf(format string, args ...interface{}) {
 	logMessage := format
 	if len(args) > 0 {
 		logMessage = fmt.Sprintf(format, args...)
@@ -28,19 +28,19 @@ func (ml *MockLogger) print(format string, args ...interface{}) {
 }
 
 func (l *MockLogger) Debug(format string, args ...any) {
-	l.print(format, args...)
+	l.printf(format, args...)
 }
 
 func (l *MockLogger) Info(format string, args ...any) {
-	l.print(format, args...)
+	l.printf(format, args...)
 }
 
 func (l *MockLogger) Warn(format string, args ...any) {
-	l.print(format, args...)
+	l.printf(format, args...)
 }
 
 func (l *MockLogger) Error(format string, args ...any) {
-	l.print(format, args...)
+	l.printf(format, args...)
 }
 
 func (l *MockLogger) Close() {
@@ -52,7 +52,7 @@ func (m *mockOnce) Do(f func()) {
 	f()
 }
 
-// Test reading app state
+// Test reading app state.
 func Test_CreateApplicationState(t *testing.T) {
 	// Use a mock to avoid sync.Once restrictions in tests
 	once = &mockOnce{}
@@ -60,10 +60,10 @@ func Test_CreateApplicationState(t *testing.T) {
 	// Create a mock logger for testing
 	mockLogger := MockLogger{}
 
-	appState := Create(context.TODO(), application.Configuration{}, &mockLogger)
+	underTest := Create(context.TODO(), application.Configuration{}, &mockLogger)
 
 	// Ensure that the application state is not nil
-	assert.NotNil(t, appState)
+	assert.NotNil(t, underTest)
 
 	// Ensure that the logger was called during the initialization.
 	// The first line always contains "Get application state"
@@ -78,13 +78,13 @@ func Test_GetApplicationState(t *testing.T) {
 	mockLogger := MockLogger{}
 
 	Create(context.TODO(), application.Configuration{}, &mockLogger)
-	appState := Get()
+	underTest := Get()
 
 	// Ensure that the application state is not nil
-	assert.NotNil(t, appState)
+	assert.NotNil(t, underTest)
 }
 
-// Test persisting app state
+// Test persisting app state.
 func Test_PersistApplicationState(t *testing.T) {
 	// Set up a temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "test")
@@ -97,14 +97,14 @@ func Test_PersistApplicationState(t *testing.T) {
 	mockLogger := MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
-	appState := Create(context.TODO(), application.Configuration{}, &mockLogger)
-	appState.appStateFilePath = path.Join(tempDir, "state.yaml")
+	underTest := Create(context.TODO(), application.Configuration{}, &mockLogger)
+	underTest.appStateFilePath = path.Join(tempDir, "state.yaml")
 
 	// Modify the application state
-	appState.Selected = 42
+	underTest.Selected = 42
 
 	// Persist the modified state to disk
-	err = appState.Persist()
+	err = underTest.Persist()
 	assert.NoError(t, err)
 
 	// Read the persisted state from disk
@@ -116,24 +116,24 @@ func Test_PersistApplicationState(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Ensure that the persisted state matches the modified state
-	assert.Equal(t, appState.Selected, persistedState.Selected)
+	assert.Equal(t, underTest.Selected, persistedState.Selected)
 }
 
-// Test persisting app state
+// Test persisting app state.
 func Test_PersistApplicationStateError(t *testing.T) {
 	t.Skip()
 	// Create a mock logger for testing
 	mockLogger := MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
-	appState := Create(context.TODO(), application.Configuration{}, &mockLogger)
-	appState.appStateFilePath = "non_exitent.yaml"
+	underTest := Create(context.TODO(), application.Configuration{}, &mockLogger)
+	underTest.appStateFilePath = "non_exitent.yaml"
 
 	// Modify the application state
-	appState.Selected = 42
+	underTest.Selected = 42
 
 	// Persist the modified state to disk
-	err := appState.Persist()
+	err := underTest.Persist()
 	assert.Error(t, err)
 }
 

@@ -70,25 +70,25 @@ func TestNetworkPortValidator(t *testing.T) {
 func TestGetKeyMap(t *testing.T) {
 	host := model.Host{}
 	// When title or address is selected, we can copy its values between each other using a shortcut
-	keyMap := getKeyMap(host, inputTitle)
-	require.True(t, keyMap.CopyInputValue.Enabled())
-	keyMap = getKeyMap(host, inputTitle)
-	require.True(t, keyMap.CopyInputValue.Enabled())
+	underTest := getKeyMap(host, inputTitle)
+	require.True(t, underTest.CopyInputValue.Enabled())
+	underTest = getKeyMap(host, inputTitle)
+	require.True(t, underTest.CopyInputValue.Enabled())
 
 	// However, when any other input selected, this keyboard shortcut should NOT be available.
-	keyMap = getKeyMap(host, inputDescription)
-	require.False(t, keyMap.CopyInputValue.Enabled())
+	underTest = getKeyMap(host, inputDescription)
+	require.False(t, underTest.CopyInputValue.Enabled())
 
 	// If host was loaded from read-only storage, then all hotkeys apart from 'Discard'
 	// should be disabled independently from which input is selected.
 	host.StorageType = constant.HostStorageType.SSHConfig
 	for i := range 7 {
-		keyMap = getKeyMap(host, i)
-		require.False(t, keyMap.Up.Enabled(), "Input %s shoud be disabled", keyMap.Up)
-		require.False(t, keyMap.Down.Enabled(), "Input %s shoud be disabled", keyMap.Down)
-		require.False(t, keyMap.Save.Enabled(), "Input %s shoud be disabled", keyMap.Save)
-		require.False(t, keyMap.CopyInputValue.Enabled(), "Input %s shoud be disabled", keyMap.CopyInputValue)
-		require.True(t, keyMap.Discard.Enabled(), "Input %s shoud be disabled", keyMap.Discard)
+		underTest = getKeyMap(host, i)
+		require.False(t, underTest.Up.Enabled(), "Input %s shoud be disabled", underTest.Up)
+		require.False(t, underTest.Down.Enabled(), "Input %s shoud be disabled", underTest.Down)
+		require.False(t, underTest.Save.Enabled(), "Input %s shoud be disabled", underTest.Save)
+		require.False(t, underTest.CopyInputValue.Enabled(), "Input %s shoud be disabled", underTest.CopyInputValue)
+		require.True(t, underTest.Discard.Enabled(), "Input %s shoud be disabled", underTest.Discard)
 	}
 }
 

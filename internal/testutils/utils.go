@@ -21,7 +21,7 @@ func CmdToMessage(cmd tea.Cmd, messages *[]tea.Msg) {
 	// See also github.com/charmbracelet/bubbletea@v0.25.0/tea.go#eventLoop
 	// which handles tea.Sequence
 	if valueOf.Kind() == reflect.Slice {
-		for i := 0; i < valueOf.Len(); i++ {
+		for i := range valueOf.Len() {
 			if valueOf.Index(i).Kind() == reflect.Func {
 				// If it's a function, then it's probably inner tea.Cmd
 				innerCmd, _ := valueOf.Index(i).Interface().(tea.Cmd)

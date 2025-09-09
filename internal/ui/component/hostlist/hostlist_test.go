@@ -140,7 +140,7 @@ func Test_listModel_Change_Selection(t *testing.T) {
 // When remove mode is enabled, test confirm action event.
 // Once confirmed, the item should be removed rom the list.
 // However, we can't check whether the item was really deleted
-// from the database, as we would have to wait for a while
+// from the database, as we would have to wait for a while.
 func TestRemoveItem(t *testing.T) {
 	tests := []struct {
 		name          string

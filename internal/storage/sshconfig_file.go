@@ -49,7 +49,7 @@ func (s *SSHConfigFile) GetAll() ([]model.Host, error) {
 	}
 
 	s.innerStorage = make(map[int]model.Host, len(hosts))
-	for i := 0; i < len(hosts); i++ {
+	for i := range hosts {
 		// Make sure that not assigning '0' as host id, because '0' is empty host identifier.
 		// Consider to use '-1' for all new hostnames.
 		hosts[i].ID = i + 1

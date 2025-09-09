@@ -51,7 +51,7 @@ func Test_IsHostMovedToAnotherGroup(t *testing.T) {
 	require.True(t, hostDelegate.isHostMovedToAnotherGroup("Group 2"))
 }
 
-// Test cases for Render function
+// Test cases for Render function.
 func TestHostDelegate_Render(t *testing.T) {
 	hostNoGroup := ListItemHost{Host: host.NewHost(0, "Mock Host 1", "", "localhost", "", "", "22")}
 	hostWithGroup := ListItemHost{Host: host.NewHost(0, "Mock Host 2", "", "localhost", "", "", "22")}
@@ -103,7 +103,9 @@ func TestHostDelegate_Render(t *testing.T) {
 	for _, tc := range tests {
 		var buf bytes.Buffer
 		mockModel := NewMockListModel(false)
-		mockModel.Update(tea.WindowSizeMsg{Width: 100, Height: 100}) // required, otherwise the model does not render anything
+		mockModel.Update(
+			tea.WindowSizeMsg{Width: 100, Height: 100},
+		) // required, otherwise the model does not render anything
 		hostDelegate := NewHostDelegate(&tc.layout, &tc.appStateGroup, &mocklogger.Logger{})
 		hostDelegate.Render(&buf, mockModel.Model, 0, tc.listItemHost)
 		require.Contains(t, buf.String(), tc.expectedDesc)
