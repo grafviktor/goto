@@ -28,23 +28,23 @@ func (ml *MockLogger) printf(format string, args ...interface{}) {
 	ml.Logs = append(ml.Logs, logMessage)
 }
 
-func (l *MockLogger) Debug(format string, args ...any) {
-	l.printf(format, args...)
+func (ml *MockLogger) Debug(format string, args ...any) {
+	ml.printf(format, args...)
 }
 
-func (l *MockLogger) Info(format string, args ...any) {
-	l.printf(format, args...)
+func (ml *MockLogger) Info(format string, args ...any) {
+	ml.printf(format, args...)
 }
 
-func (l *MockLogger) Warn(format string, args ...any) {
-	l.printf(format, args...)
+func (ml *MockLogger) Warn(format string, args ...any) {
+	ml.printf(format, args...)
 }
 
-func (l *MockLogger) Error(format string, args ...any) {
-	l.printf(format, args...)
+func (ml *MockLogger) Error(format string, args ...any) {
+	ml.printf(format, args...)
 }
 
-func (l *MockLogger) Close() {
+func (ml *MockLogger) Close() {
 }
 
 type mockOnce struct{}

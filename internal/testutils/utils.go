@@ -1,4 +1,4 @@
-// Package test contains utility methods for unit tests.
+// Package testutils_test contains utility methods for unit tests.
 package testutils_test
 
 import (

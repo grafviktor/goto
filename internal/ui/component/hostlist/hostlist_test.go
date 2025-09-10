@@ -238,7 +238,7 @@ func TestRemoveItem(t *testing.T) {
 			// Get all items from the database without error
 			items, _ := tt.model.repo.GetAll()
 			// Make sure that the list contains expected quantity of ite,s after remove operation
-			require.Equal(t, tt.expectedItems, len(items))
+			require.Len(t, items, tt.expectedItems)
 		})
 	}
 }

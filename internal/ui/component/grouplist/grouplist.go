@@ -24,7 +24,12 @@ type iLogger interface {
 	Error(format string, args ...any)
 }
 
-type model struct {
+var (
+	docStyle        = lipgloss.NewStyle().Margin(1, 2, 1, 0) //nolint:mnd // magic numbers are OK fo styles
+	noGroupSelected = "~ all ~"
+)
+
+type Model struct {
 	list.Model
 
 	repo     storage.HostStorage
@@ -32,14 +37,9 @@ type model struct {
 	logger   iLogger
 }
 
-var (
-	docStyle        = lipgloss.NewStyle().Margin(1, 2, 1, 0) //nolint:mnd // magic numbers are OK fo styles
-	noGroupSelected = "~ all ~"
-)
-
 // New - creates a new UI component which is used to select a host group from a list,
 // with pre-defined initial parameters.
-func New(_ context.Context, repo storage.HostStorage, appState *state.Application, log iLogger) *model {
+func New(_ context.Context, repo storage.HostStorage, appState *state.Application, log iLogger) *Model {
 	var listItems []list.Item
 	listDelegate := list.NewDefaultDelegate()
 	listDelegate.ShowDescription = false
@@ -47,7 +47,7 @@ func New(_ context.Context, repo storage.HostStorage, appState *state.Applicatio
 	listModel := list.New(listItems, listDelegate, 0, 0)
 	listModel.SetFilteringEnabled(false)
 
-	m := model{
+	m := Model{
 		Model:    listModel,
 		repo:     repo,
 		appState: appState,
@@ -60,9 +60,9 @@ func New(_ context.Context, repo storage.HostStorage, appState *state.Applicatio
 	return &m
 }
 
-func (m *model) Init() tea.Cmd { return nil }
+func (m *Model) Init() tea.Cmd { return nil }
 
-func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
@@ -82,11 +82,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *model) View() string {
+func (m *Model) View() string {
 	return docStyle.Render(m.Model.View())
 }
 
-func (m *model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
+func (m *Model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	var cmd tea.Cmd
 
 	//exhaustive:ignore
@@ -118,7 +118,7 @@ func (m *model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	return cmd
 }
 
-func (m *model) loadItems() tea.Cmd {
+func (m *Model) loadItems() tea.Cmd {
 	m.logger.Debug("[UI] Load groups from the database")
 	hosts, err := m.repo.GetAll()
 	if err != nil {
@@ -128,7 +128,7 @@ func (m *model) loadItems() tea.Cmd {
 
 	// Create a list of unique groups.
 	groupList := []string{}
-	lo.ForEach(hosts, func(h host.Host, index int) {
+	lo.ForEach(hosts, func(h host.Host, _ int) {
 		if strings.TrimSpace(h.Group) != "" {
 			_, found := lo.Find(groupList, func(g string) bool {
 				return strings.EqualFold(g, h.Group)

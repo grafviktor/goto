@@ -78,7 +78,7 @@ func (s *SSHConfigFile) Save(host model.Host) (model.Host, error) {
 }
 
 // Delete - throws not supported error.
-func (s *SSHConfigFile) Delete(id int) error {
+func (s *SSHConfigFile) Delete(_ int) error {
 	return ErrNotSupported
 }
 

@@ -14,9 +14,9 @@ import (
 
 type testLogger struct{}
 
-func (l *testLogger) Debug(format string, args ...any) {}
-func (l *testLogger) Info(format string, args ...any)  {}
-func (l *testLogger) Error(format string, args ...any) {}
+func (l *testLogger) Debug(_ string, _ ...any) {}
+func (l *testLogger) Info(_ string, _ ...any)  {}
+func (l *testLogger) Error(_ string, _ ...any) {}
 
 func TestYAMLFile_SaveAndGetAll(t *testing.T) {
 	tmpDir := t.TempDir()

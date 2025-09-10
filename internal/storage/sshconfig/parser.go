@@ -9,7 +9,7 @@ import (
 )
 
 type lexer interface {
-	Tokenize() []sshToken
+	Tokenize() []SSHToken
 }
 
 // Parser is responsible for parsing SSH configuration tokens into Host models.

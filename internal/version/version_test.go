@@ -50,12 +50,12 @@ func TestPrintConsole(t *testing.T) {
 func captureOutput(f func()) string {
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
-	os.Stdout = w
+	os.Stdout = w //nolint:reassign // For testing purposes
 
 	f()
 
 	w.Close()
-	os.Stdout = oldStdout
+	os.Stdout = oldStdout //nolint:reassign // For testing purposes
 
 	var buf bytes.Buffer
 	_, _ = io.Copy(&buf, r)

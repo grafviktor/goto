@@ -31,18 +31,18 @@ func NewFileLexer(filePath string, log iLogger) *Lexer {
 }
 
 // Tokenize reads the SSH config file and returns a slice of tokens representing the contents.
-func (l *Lexer) Tokenize() []sshToken {
-	parent := sshToken{
+func (l *Lexer) Tokenize() []SSHToken {
+	parent := SSHToken{
 		kind:  tokenKind.IncludeFile,
 		key:   "Include",
 		value: l.source,
 	}
 
-	tokens := []sshToken{}
+	tokens := []SSHToken{}
 	return l.loadFromDataSource(parent, tokens, 0)
 }
 
-func (l *Lexer) loadFromDataSource(includeToken sshToken, children []sshToken, currentDepth int) []sshToken {
+func (l *Lexer) loadFromDataSource(includeToken SSHToken, children []SSHToken, currentDepth int) []SSHToken {
 	currentDepth++
 	if currentDepth > maxFileIncludeDepth {
 		l.logger.Error("[SSHCONFIG]: Max include depth reached")
@@ -76,7 +76,7 @@ func (l *Lexer) loadFromDataSource(includeToken sshToken, children []sshToken, c
 
 		line = stripInlineComments(line)
 
-		var token sshToken
+		var token SSHToken
 		switch {
 		case matchToken(line, "User", true):
 			token = l.usernameToken(line)
@@ -95,7 +95,7 @@ func (l *Lexer) loadFromDataSource(includeToken sshToken, children []sshToken, c
 		case matchToken(line, "# GG:DESCRIPTION", true):
 			token = l.metaDataToken(tokenKind.Description, line)
 		default:
-			token = sshToken{kind: tokenKind.Unsupported}
+			token = SSHToken{kind: tokenKind.Unsupported}
 		}
 
 		if token.kind == tokenKind.IncludeFile {
@@ -196,31 +196,31 @@ func isTokenFollowedDelimiter(str, prefix string) bool {
 	return found
 }
 
-func (l *Lexer) hostToken(line string) sshToken {
+func (l *Lexer) hostToken(line string) SSHToken {
 	key, value, err := parseKeyValuesLine(line)
 	if err != nil {
-		return sshToken{kind: tokenKind.Unsupported}
+		return SSHToken{kind: tokenKind.Unsupported}
 	}
 
-	return sshToken{
+	return SSHToken{
 		kind:  tokenKind.Host,
 		key:   key,
 		value: value,
 	}
 }
 
-func (l *Lexer) usernameToken(rawLine string) sshToken {
+func (l *Lexer) usernameToken(rawLine string) SSHToken {
 	line := strings.TrimSpace(rawLine)
 	key, value, err := parseKeyValuesLine(line)
 	if err != nil {
-		return sshToken{kind: tokenKind.Unsupported}
+		return SSHToken{kind: tokenKind.Unsupported}
 	}
 
 	if !sshUsernameRegex.MatchString(value) {
-		return sshToken{kind: tokenKind.Unsupported}
+		return SSHToken{kind: tokenKind.Unsupported}
 	}
 
-	return sshToken{
+	return SSHToken{
 		kind:  tokenKind.User,
 		key:   key,
 		value: value,
@@ -229,67 +229,67 @@ func (l *Lexer) usernameToken(rawLine string) sshToken {
 
 const maxHostnameLength = 253
 
-func (l *Lexer) hostnameToken(rawLine string) sshToken {
+func (l *Lexer) hostnameToken(rawLine string) SSHToken {
 	line := strings.TrimSpace(rawLine)
 	key, value, err := parseKeyValuesLine(line)
 	if err != nil {
-		return sshToken{kind: tokenKind.Unsupported}
+		return SSHToken{kind: tokenKind.Unsupported}
 	}
 
 	if len(value) > maxHostnameLength {
-		return sshToken{kind: tokenKind.Unsupported}
+		return SSHToken{kind: tokenKind.Unsupported}
 	}
 
 	if !hostnameRegex.MatchString(value) {
-		return sshToken{kind: tokenKind.Unsupported}
+		return SSHToken{kind: tokenKind.Unsupported}
 	}
 
-	return sshToken{
+	return SSHToken{
 		kind:  tokenKind.Hostname,
 		key:   key,
 		value: value,
 	}
 }
 
-func (l *Lexer) networkPortToken(rawLine string) sshToken {
+func (l *Lexer) networkPortToken(rawLine string) SSHToken {
 	line := strings.TrimSpace(rawLine)
 	key, value, err := parseKeyValuesLine(line)
 	if err != nil {
-		return sshToken{kind: tokenKind.Unsupported}
+		return SSHToken{kind: tokenKind.Unsupported}
 	}
 
 	networkPort, err := strconv.ParseInt(value, 10, 32)
 	if err != nil {
-		return sshToken{kind: tokenKind.Unsupported}
+		return SSHToken{kind: tokenKind.Unsupported}
 	}
 
 	if !isNetworkPortNumberValid(int(networkPort)) {
-		return sshToken{kind: tokenKind.Unsupported}
+		return SSHToken{kind: tokenKind.Unsupported}
 	}
 
-	return sshToken{
+	return SSHToken{
 		kind:  tokenKind.NetworkPort,
 		key:   key,
 		value: value,
 	}
 }
 
-func (l *Lexer) identityFileToken(line string) sshToken {
+func (l *Lexer) identityFileToken(line string) SSHToken {
 	trimmedLine := strings.TrimSpace(line)
 	key, value, err := parseKeyValuesLine(trimmedLine)
 	if err != nil {
-		return sshToken{kind: tokenKind.Unsupported}
+		return SSHToken{kind: tokenKind.Unsupported}
 	}
 
-	return sshToken{
+	return SSHToken{
 		kind:  tokenKind.IdentityFile,
 		key:   key,
 		value: value,
 	}
 }
 
-func (l *Lexer) handleIncludeToken(token sshToken) []sshToken {
-	tokens := []sshToken{}
+func (l *Lexer) handleIncludeToken(token SSHToken) []SSHToken {
+	tokens := []SSHToken{}
 	if token.kind != tokenKind.IncludeFile {
 		return tokens
 	}
@@ -319,7 +319,7 @@ func (l *Lexer) handleIncludeToken(token sshToken) []sshToken {
 			continue
 		}
 
-		tokens = append(tokens, sshToken{
+		tokens = append(tokens, SSHToken{
 			kind:  tokenKind.IncludeFile,
 			key:   "Include",
 			value: path,
@@ -329,23 +329,23 @@ func (l *Lexer) handleIncludeToken(token sshToken) []sshToken {
 	return tokens
 }
 
-func (l *Lexer) metaDataToken(kind tokenEnum, line string) sshToken {
+func (l *Lexer) metaDataToken(kind tokenEnum, line string) SSHToken {
 	line = strings.TrimSpace(line)
 	line, tokenFound := strings.CutPrefix(line, "# GG:")
 	if !tokenFound {
-		return sshToken{kind: tokenKind.Unsupported}
+		return SSHToken{kind: tokenKind.Unsupported}
 	}
 
 	return l.keyValuesToken(kind, line)
 }
 
-func (l *Lexer) keyValuesToken(kind tokenEnum, line string) sshToken {
+func (l *Lexer) keyValuesToken(kind tokenEnum, line string) SSHToken {
 	key, value, err := parseKeyValuesLine(line)
 	if err != nil {
-		return sshToken{kind: tokenKind.Unsupported}
+		return SSHToken{kind: tokenKind.Unsupported}
 	}
 
-	return sshToken{
+	return SSHToken{
 		kind:  kind,
 		key:   key,
 		value: value,

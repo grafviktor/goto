@@ -33,7 +33,7 @@ type reader struct {
 	closer io.Closer
 }
 
-func (r reader) Read(p []byte) (n int, err error) {
+func (r reader) Read(p []byte) (int, error) {
 	if r.reader == nil {
 		return 0, io.EOF
 	}

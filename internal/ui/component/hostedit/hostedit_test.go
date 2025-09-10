@@ -3,6 +3,7 @@ package hostedit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -25,7 +26,7 @@ func TestNotEmptyValidator(t *testing.T) {
 		input    string
 		expected error
 	}{
-		{"", fmt.Errorf("value is required")},
+		{"", errors.New("value is required")},
 		{"non-empty", nil},
 	}
 
@@ -48,9 +49,9 @@ func TestNetworkPortValidator(t *testing.T) {
 		expected error
 	}{
 		{"", nil},
-		{"abc", fmt.Errorf("network port must be a number which is less than 65,535")},
-		{"0", fmt.Errorf("network port must be a number which is less than 65,535")},
-		{"65536", fmt.Errorf("network port must be a number which is less than 65,535")},
+		{"abc", errors.New("network port must be a number which is less than 65,535")},
+		{"0", errors.New("network port must be a number which is less than 65,535")},
+		{"65536", errors.New("network port must be a number which is less than 65,535")},
 		{"123", nil},
 	}
 

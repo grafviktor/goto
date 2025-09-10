@@ -228,7 +228,7 @@ type ProcessBufferWriter struct {
 }
 
 // Write - doesn't write anything, it saves all data in err variable, which can ve read later.
-func (writer *ProcessBufferWriter) Write(p []byte) (n int, err error) {
+func (writer *ProcessBufferWriter) Write(p []byte) (int, error) {
 	writer.Output = append(writer.Output, p...)
 
 	// Hide output from the console, otherwise it will be seen in a subsequent ssh calls

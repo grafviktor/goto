@@ -134,7 +134,7 @@ func (s *yamlFile) GetAll() ([]model.Host, error) {
 		s.innerStorage[s.nextID] = wrapped
 	}
 
-	hosts := lo.MapToSlice(s.innerStorage, func(key int, value yamlHostWrapper) model.Host {
+	hosts := lo.MapToSlice(s.innerStorage, func(_ int, value yamlHostWrapper) model.Host {
 		return value.Host
 	})
 

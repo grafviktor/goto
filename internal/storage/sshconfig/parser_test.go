@@ -9,16 +9,16 @@ import (
 )
 
 type mockLexer struct {
-	tokens []sshToken
+	tokens []SSHToken
 }
 
-func (m *mockLexer) Tokenize() []sshToken {
+func (m *mockLexer) Tokenize() []SSHToken {
 	return m.tokens
 }
 
 func TestParser_Parse_SingleHost(t *testing.T) {
 	lexer := &mockLexer{
-		tokens: []sshToken{
+		tokens: []SSHToken{
 			{kind: tokenKind.Host, value: "testhost"},
 			{kind: tokenKind.Hostname, value: "example.com"},
 			{kind: tokenKind.User, value: "alice"},
@@ -44,7 +44,7 @@ func TestParser_Parse_SingleHost(t *testing.T) {
 
 func TestParser_Parse_MultipleHosts(t *testing.T) {
 	lexer := &mockLexer{
-		tokens: []sshToken{
+		tokens: []SSHToken{
 			{kind: tokenKind.Host, value: "host1"},
 			{kind: tokenKind.Hostname, value: "host1.com"},
 			{kind: tokenKind.Host, value: "host2"},
@@ -63,7 +63,7 @@ func TestParser_Parse_MultipleHosts(t *testing.T) {
 
 func TestParser_Parse_InvalidHost(t *testing.T) {
 	lexer := &mockLexer{
-		tokens: []sshToken{
+		tokens: []SSHToken{
 			// This token is invalid because it does not have a hostname
 			{kind: tokenKind.Host, value: "*"},
 			{kind: tokenKind.Hostname, value: "bad.com"},
@@ -96,7 +96,7 @@ func TestParser_Parse_EmptyLexer(t *testing.T) {
 
 func TestParser_Parse_DefaultGroup(t *testing.T) {
 	lexer := &mockLexer{
-		tokens: []sshToken{
+		tokens: []SSHToken{
 			{kind: tokenKind.Host, value: "host1"},
 			{kind: tokenKind.Hostname, value: "host1.com"},
 		},
