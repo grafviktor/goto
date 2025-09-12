@@ -431,18 +431,10 @@ linters:
       - common-false-positives
     # Excluding configuration per-path, per-linter, per-text and per-source.
     rules:
-      - source: 'TODO'
-        linters: [ godot ]
       - text: 'should have a package comment'
         linters: [ revive ]
       - text: 'exported \S+ \S+ should have comment( \(or a comment on this block\))? or be unexported'
         linters: [ revive ]
-      - text: 'package comment should be of the form ".+"'
-        source: '// ?(nolint|TODO)'
-        linters: [ revive ]
-      - text: 'comment on exported \S+ \S+ should be of the form ".+"'
-        source: '// ?(nolint|TODO)'
-        linters: [ revive, staticcheck ]
       - path: '_test\.go'
         linters:
           - bodyclose
