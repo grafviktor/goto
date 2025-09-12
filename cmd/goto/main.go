@@ -112,7 +112,7 @@ func createApplicationOrExit() state.Application {
 	if applicationConfiguration.DisableFeature != "" {
 		lg.Info("[MAIN] Disable feature %q and exit", applicationConfiguration.DisableFeature)
 		fmt.Printf("Disabled: '%s'\n", applicationConfiguration.DisableFeature)
-		applicationState.SSHConfigEnabled = !(applicationConfiguration.DisableFeature == featureSSHConfig)
+		applicationState.SSHConfigEnabled = applicationConfiguration.DisableFeature != featureSSHConfig
 		err = applicationState.Persist()
 		if err != nil {
 			lg.Debug("[MAIN] Cannot save application configuration: %v", err)

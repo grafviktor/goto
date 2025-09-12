@@ -502,9 +502,10 @@ func (m *EditModel) handleCopyInputValueShortcut() {
 	// Allow a user to copy values between address and title,
 	// because the chances are that these two inputs will have
 	// the same values.
-	if m.focusedInput == inputTitle {
+	switch m.focusedInput {
+	case inputTitle:
 		m.copyInputValueFromTo(m.focusedInput, inputAddress)
-	} else if m.focusedInput == inputAddress {
+	case inputAddress:
 		m.copyInputValueFromTo(m.focusedInput, inputTitle)
 	}
 }

@@ -16,6 +16,14 @@ import (
 
 var groupHint = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#9B9B9B", Dark: "#5C5C5C"})
 
+type HostDelegate struct {
+	list.DefaultDelegate
+
+	layout        *constant.ScreenLayout
+	selectedGroup *string
+	logger        iLogger
+}
+
 // NewHostDelegate creates a new Delegate object which can be used for customizing the view of a host.
 func NewHostDelegate(layout *constant.ScreenLayout, group *string, log iLogger) *HostDelegate {
 	delegate := &HostDelegate{
@@ -46,14 +54,6 @@ func NewHostDelegate(layout *constant.ScreenLayout, group *string, log iLogger) 
 	}
 
 	return delegate
-}
-
-type HostDelegate struct {
-	list.DefaultDelegate
-
-	layout        *constant.ScreenLayout
-	selectedGroup *string
-	logger        iLogger
 }
 
 func (hd *HostDelegate) updateLayout() {

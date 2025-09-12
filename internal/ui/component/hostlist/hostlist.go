@@ -556,13 +556,14 @@ func (m *ListModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(errorText)})
 	}
 
-	if processType == constant.ProcessTypeSSHConnect {
+	switch processType { //nolint:exhaustive // allow missing cases
+	case constant.ProcessTypeSSHConnect:
 		return message.TeaCmd(message.RunProcessSSHConnect{Host: *host})
-	} else if processType == constant.ProcessTypeSSHCopyID {
+	case constant.ProcessTypeSSHCopyID:
 		return message.TeaCmd(message.RunProcessSSHCopyID{Host: *host})
+	default:
+		return nil
 	}
-
-	return nil
 }
 
 var sshConfigPathRe = regexp.MustCompile(`-F "([^"]+)"`)
@@ -702,14 +703,16 @@ func (m *ListModel) confirmAction() tea.Cmd {
 	m.logger.Debug("[UI] Exit %s mode. Confirm action.", m.mode)
 
 	var cmd tea.Cmd
-	if m.mode == modeRemoveItem { //nolint:QF1003 // better reads without switch
+
+	switch m.mode {
+	case modeRemoveItem:
 		m.mode = modeDefault
 		cmd = m.removeItem() // removeItem triggers title and keymap updates. See "onFocusChanged" method.
-	} else if m.mode == modeSSHCopyID {
+	case modeSSHCopyID:
 		m.mode = modeDefault
 		m.updateTitle()
 		cmd = m.constructProcessCmd(constant.ProcessTypeSSHCopyID)
-	} else if m.mode == modeCloseApp {
+	case modeCloseApp:
 		m.mode = modeDefault
 		cmd = tea.Quit
 	}
