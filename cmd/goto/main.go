@@ -1,6 +1,6 @@
 // Package main contains application entry point
 //
-//nolint:lll // disable line length check
+//nolint:lll,gochecknoglobals // Disable line length check, Ignore burn in these variables.
 package main
 
 import (
@@ -112,7 +112,7 @@ func createApplicationOrExit() state.Application {
 	if applicationConfiguration.DisableFeature != "" {
 		lg.Info("[MAIN] Disable feature %q and exit", applicationConfiguration.DisableFeature)
 		fmt.Printf("Disabled: '%s'\n", applicationConfiguration.DisableFeature)
-		applicationState.SSHConfigEnabled = !(applicationConfiguration.DisableFeature == featureSSHConfig)
+		applicationState.SSHConfigEnabled = applicationConfiguration.DisableFeature != featureSSHConfig
 		err = applicationState.Persist()
 		if err != nil {
 			lg.Debug("[MAIN] Cannot save application configuration: %v", err)
@@ -151,7 +151,7 @@ func createConfigurationOrExit() (application.Configuration, bool) {
 	}
 
 	// Check if "ssh" utility is in application path
-	if err := utils.CheckAppInstalled("ssh"); err != nil {
+	if err = utils.CheckAppInstalled("ssh"); err != nil {
 		log.Fatalf("[MAIN] ssh utility is not installed or cannot be found in the executable path: %v", err)
 	}
 
@@ -160,9 +160,22 @@ func createConfigurationOrExit() (application.Configuration, bool) {
 	flag.BoolVar(&cmdConfig.DisplayVersionAndExit, "v", false, "Display application details")
 	flag.StringVar(&cmdConfig.AppHome, "f", envConfig.AppHome, "Application home folder")
 	flag.StringVar(&cmdConfig.LogLevel, "l", envConfig.LogLevel, "Log verbosity level: debug, info")
-	flag.StringVar(&cmdConfig.SSHConfigFilePath, "s", envConfig.SSHConfigFilePath, "Specifies an alternative per-user SSH configuration file path")
-	flag.Var(&cmdConfig.EnableFeature, "e", fmt.Sprintf("Enable feature. Supported values: %s", strings.Join(application.SupportedFeatures, "|")))
-	flag.Var(&cmdConfig.DisableFeature, "d", fmt.Sprintf("Disable feature. Supported values: %s", strings.Join(application.SupportedFeatures, "|")))
+	flag.StringVar(
+		&cmdConfig.SSHConfigFilePath,
+		"s",
+		envConfig.SSHConfigFilePath,
+		"Specifies an alternative per-user SSH configuration file path",
+	)
+	flag.Var(
+		&cmdConfig.EnableFeature,
+		"e",
+		fmt.Sprintf("Enable feature. Supported values: %s", strings.Join(application.SupportedFeatures, "|")),
+	)
+	flag.Var(
+		&cmdConfig.DisableFeature,
+		"d",
+		fmt.Sprintf("Disable feature. Supported values: %s", strings.Join(application.SupportedFeatures, "|")),
+	)
 	flag.Parse()
 
 	// Set application home folder path

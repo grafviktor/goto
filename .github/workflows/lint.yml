@@ -1,20 +1,24 @@
+# golangci-lint GitHub Action repo: https://github.com/marketplace/actions/golangci-lint
 name: lint
 on:
   push:
     branches:
       - develop
   pull_request:
-  workflow_dispatch:
+permissions:
+  contents: read
+  # Optional: allow read access to pull requests. Use with `only-new-issues` option.
+  # pull-requests: read
 jobs:
   golangci:
     name: golangci-lint
-    concurrency:
-      group: lint-golangci-${{ github.ref }}
-      cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
-          version: v1.64.8
+          go-version: stable
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.2.1

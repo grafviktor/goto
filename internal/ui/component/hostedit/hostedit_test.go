@@ -3,6 +3,7 @@ package hostedit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -25,7 +26,7 @@ func TestNotEmptyValidator(t *testing.T) {
 		input    string
 		expected error
 	}{
-		{"", fmt.Errorf("value is required")},
+		{"", errors.New("value is required")},
 		{"non-empty", nil},
 	}
 
@@ -48,9 +49,9 @@ func TestNetworkPortValidator(t *testing.T) {
 		expected error
 	}{
 		{"", nil},
-		{"abc", fmt.Errorf("network port must be a number which is less than 65,535")},
-		{"0", fmt.Errorf("network port must be a number which is less than 65,535")},
-		{"65536", fmt.Errorf("network port must be a number which is less than 65,535")},
+		{"abc", errors.New("network port must be a number which is less than 65,535")},
+		{"0", errors.New("network port must be a number which is less than 65,535")},
+		{"65536", errors.New("network port must be a number which is less than 65,535")},
 		{"123", nil},
 	}
 
@@ -70,25 +71,25 @@ func TestNetworkPortValidator(t *testing.T) {
 func TestGetKeyMap(t *testing.T) {
 	host := model.Host{}
 	// When title or address is selected, we can copy its values between each other using a shortcut
-	keyMap := getKeyMap(host, inputTitle)
-	require.True(t, keyMap.CopyInputValue.Enabled())
-	keyMap = getKeyMap(host, inputTitle)
-	require.True(t, keyMap.CopyInputValue.Enabled())
+	underTest := getKeyMap(host, inputTitle)
+	require.True(t, underTest.CopyInputValue.Enabled())
+	underTest = getKeyMap(host, inputTitle)
+	require.True(t, underTest.CopyInputValue.Enabled())
 
 	// However, when any other input selected, this keyboard shortcut should NOT be available.
-	keyMap = getKeyMap(host, inputDescription)
-	require.False(t, keyMap.CopyInputValue.Enabled())
+	underTest = getKeyMap(host, inputDescription)
+	require.False(t, underTest.CopyInputValue.Enabled())
 
 	// If host was loaded from read-only storage, then all hotkeys apart from 'Discard'
 	// should be disabled independently from which input is selected.
 	host.StorageType = constant.HostStorageType.SSHConfig
 	for i := range 7 {
-		keyMap = getKeyMap(host, i)
-		require.False(t, keyMap.Up.Enabled(), "Input %s shoud be disabled", keyMap.Up)
-		require.False(t, keyMap.Down.Enabled(), "Input %s shoud be disabled", keyMap.Down)
-		require.False(t, keyMap.Save.Enabled(), "Input %s shoud be disabled", keyMap.Save)
-		require.False(t, keyMap.CopyInputValue.Enabled(), "Input %s shoud be disabled", keyMap.CopyInputValue)
-		require.True(t, keyMap.Discard.Enabled(), "Input %s shoud be disabled", keyMap.Discard)
+		underTest = getKeyMap(host, i)
+		require.False(t, underTest.Up.Enabled(), "Input %s shoud be disabled", underTest.Up)
+		require.False(t, underTest.Down.Enabled(), "Input %s shoud be disabled", underTest.Down)
+		require.False(t, underTest.Save.Enabled(), "Input %s shoud be disabled", underTest.Save)
+		require.False(t, underTest.CopyInputValue.Enabled(), "Input %s shoud be disabled", underTest.CopyInputValue)
+		require.True(t, underTest.Discard.Enabled(), "Input %s shoud be disabled", underTest.Discard)
 	}
 }
 
@@ -125,7 +126,7 @@ func TestCopyInputValueFromTo(t *testing.T) {
 	storageHostNoFound := testutils.NewMockStorage(true)
 	hostEditModel := New(context.TODO(), storageHostNoFound, MockAppState(), &mocklogger.Logger{})
 	// Check that selected input is title
-	assert.Equal(t, hostEditModel.focusedInput, inputTitle)
+	assert.Equal(t, inputTitle, hostEditModel.focusedInput)
 
 	// Type word 'test' in title
 	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
@@ -140,7 +141,7 @@ func TestCopyInputValueFromTo(t *testing.T) {
 	// Select address input
 	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyDown})
 	// Check that selected input is now address
-	assert.Equal(t, hostEditModel.focusedInput, inputAddress)
+	assert.Equal(t, inputAddress, hostEditModel.focusedInput)
 
 	// Append word 'test' to address, so it will become "testtest"
 	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
@@ -155,7 +156,7 @@ func TestCopyInputValueFromTo(t *testing.T) {
 	// Select title again
 	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyUp})
 	// Check that selected input is title
-	assert.Equal(t, hostEditModel.focusedInput, inputTitle)
+	assert.Equal(t, inputTitle, hostEditModel.focusedInput)
 
 	// Append '123' to title, so it will become "test123"
 	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}})
@@ -272,7 +273,7 @@ func TestView(t *testing.T) {
 	// and view() returns non-empty string which will be used to build terminal user interface
 	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
 	assert.False(t, model.ready)
-	var ui string = model.View()
+	ui := model.View()
 
 	require.True(t, model.ready)
 	require.NotEmpty(t, ui)
@@ -379,7 +380,7 @@ func TestUpdate_KeyDiscard(t *testing.T) {
 		Type: tea.KeyEscape,
 	})
 
-	require.Equal(t, cmd(), message.CloseViewHostEdit{})
+	require.Equal(t, message.CloseViewHostEdit{}, cmd())
 }
 
 func TestUpdate_KeySave(t *testing.T) {

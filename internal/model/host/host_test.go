@@ -22,7 +22,13 @@ func TestNewHost(t *testing.T) {
 	}
 
 	// Create a new host using the NewHost function
-	newHost := NewHost(expectedHost.ID, expectedHost.Title, expectedHost.Description, expectedHost.Address, expectedHost.LoginName, expectedHost.IdentityFilePath, expectedHost.RemotePort)
+	newHost := NewHost(expectedHost.ID,
+		expectedHost.Title,
+		expectedHost.Description,
+		expectedHost.Address,
+		expectedHost.LoginName,
+		expectedHost.IdentityFilePath,
+		expectedHost.RemotePort)
 
 	// Check if the new host matches the expected host
 	if !reflect.DeepEqual(newHost, expectedHost) {
@@ -47,8 +53,8 @@ func TestCloneHost(t *testing.T) {
 
 	// ID of the new host should always be "0", we should not copy the ID of the original host
 	require.Equal(t,
-		clonedHost.ID,
 		0,
+		clonedHost.ID,
 		"Clone function should create a new host, but host ID should be equal to '0'",
 	)
 

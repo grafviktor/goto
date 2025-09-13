@@ -16,16 +16,17 @@ import (
 
 var groupHint = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#9B9B9B", Dark: "#5C5C5C"})
 
-type hostDelegate struct {
+type HostDelegate struct {
 	list.DefaultDelegate
+
 	layout        *constant.ScreenLayout
 	selectedGroup *string
 	logger        iLogger
 }
 
 // NewHostDelegate creates a new Delegate object which can be used for customizing the view of a host.
-func NewHostDelegate(layout *constant.ScreenLayout, group *string, log iLogger) *hostDelegate {
-	delegate := &hostDelegate{
+func NewHostDelegate(layout *constant.ScreenLayout, group *string, log iLogger) *HostDelegate {
+	delegate := &HostDelegate{
 		DefaultDelegate: list.NewDefaultDelegate(),
 		logger:          log,
 		layout:          layout,
@@ -34,8 +35,9 @@ func NewHostDelegate(layout *constant.ScreenLayout, group *string, log iLogger) 
 
 	delegate.updateLayout()
 
-	delegate.UpdateFunc = func(msg tea.Msg, m *list.Model) tea.Cmd {
+	delegate.UpdateFunc = func(msg tea.Msg, _ *list.Model) tea.Cmd {
 		if _, ok := msg.(msgToggleLayout); ok {
+			//exhaustive:ignore
 			switch *delegate.layout {
 			case constant.ScreenLayoutCompact:
 				*delegate.layout = constant.ScreenLayoutDescription
@@ -54,7 +56,7 @@ func NewHostDelegate(layout *constant.ScreenLayout, group *string, log iLogger) 
 	return delegate
 }
 
-func (hd *hostDelegate) updateLayout() {
+func (hd *HostDelegate) updateLayout() {
 	if *hd.layout == constant.ScreenLayoutCompact {
 		hd.SetSpacing(0)
 		hd.ShowDescription = false
@@ -67,7 +69,7 @@ func (hd *hostDelegate) updateLayout() {
 	hd.logger.Debug("[UI] Change screen layout to: '%s'", *hd.layout)
 }
 
-func (hd *hostDelegate) isHostMovedToAnotherGroup(hostGroup string) bool {
+func (hd *HostDelegate) isHostMovedToAnotherGroup(hostGroup string) bool {
 	// Return false if group is not selected, as all hosts should be displayed.
 	if utils.StringEmpty(hd.selectedGroup) {
 		return false
@@ -76,7 +78,7 @@ func (hd *hostDelegate) isHostMovedToAnotherGroup(hostGroup string) bool {
 	return !strings.EqualFold(*hd.selectedGroup, hostGroup)
 }
 
-func (hd *hostDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+func (hd *HostDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 	if itemCopy, ok := item.(ListItemHost); ok {
 		if hd.layout != nil && *hd.layout == constant.ScreenLayoutGroup {
 			itemCopy.Host.Description = itemCopy.Group

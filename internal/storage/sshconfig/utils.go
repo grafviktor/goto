@@ -46,7 +46,9 @@ Valid hostname regex (RFC 1035 + RFC 1123).
 "superlonglabelnamethatiswaytoolongtobevalid.example.com", // Invalid (over 63 chars per label).
 "toolong......................................................................................................com", // Invalid (over 253 chars).
 */
-var hostnameRegex = regexp.MustCompile(`^(?i:[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*)$`)
+var hostnameRegex = regexp.MustCompile(
+	`^(?i:[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*)$`,
+)
 
 func isNetworkPortNumberValid(port int) bool {
 	return port >= 0 && port <= 65535
@@ -85,7 +87,7 @@ func isTextFileMime(filename string) bool {
 		}
 	}()
 
-	buf := make([]byte, 512) // Read first 512 bytes
+	buf := make([]byte, 512) //nolint:mnd // Read first 512 bytes
 	n, err := file.Read(buf)
 	if err != nil {
 		return false

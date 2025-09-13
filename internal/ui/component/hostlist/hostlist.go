@@ -6,9 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
-
-	"golang.org/x/exp/slices"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -25,7 +24,7 @@ import (
 )
 
 var (
-	styleDoc              = lipgloss.NewStyle().Margin(1, 2, 1, 0)
+	styleDoc              = lipgloss.NewStyle().Margin(1, 2, 1, 0) //nolint:mnd // magic numbers are OK fo styles
 	itemNotSelectedErrMsg = "you must select an item"
 	modeCloseApp          = "closeApp"
 	modeDefault           = ""
@@ -42,23 +41,13 @@ type iLogger interface {
 
 type msgToggleLayout struct{ layout constant.ScreenLayout }
 
-type listModel struct {
-	list.Model
-	repo     storage.HostStorage
-	keyMap   *keyMap
-	appState *state.Application
-	logger   iLogger
-	mode     string
-	Styles   styles
-}
-
 // New - creates new host list model.
 // context - is not used.
 // storage - is the data layer.
 // appState - is the application state, usually we want to restore previous state when application restarts,
 // for instance focus previously selected host.
 // log - application logger.
-func New(_ context.Context, storage storage.HostStorage, appState *state.Application, log iLogger) *listModel {
+func New(_ context.Context, storage storage.HostStorage, appState *state.Application, log iLogger) *ListModel {
 	delegate := NewHostDelegate(&appState.ScreenLayout, &appState.Group, log)
 	delegateKeys := newDelegateKeyMap()
 	customStyles := customStyles()
@@ -71,7 +60,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	model.Filter = list.UnsortedFilter
 	model.Styles = customStyles.Styles
 
-	m := listModel{
+	m := ListModel{
 		Model:    model,
 		keyMap:   delegateKeys,
 		repo:     storage,
@@ -96,12 +85,23 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	return &m
 }
 
-func (m *listModel) Init() tea.Cmd {
+type ListModel struct {
+	list.Model
+
+	repo     storage.HostStorage
+	keyMap   *keyMap
+	appState *state.Application
+	logger   iLogger
+	mode     string
+	Styles   styles
+}
+
+func (m *ListModel) Init() tea.Cmd {
 	// This function is called from model.go#init() file
 	return m.loadHosts()
 }
 
-func (m *listModel) loadHosts() tea.Cmd {
+func (m *ListModel) loadHosts() tea.Cmd {
 	m.logger.Debug("[UI] Load hostnames from the database")
 	hosts, err := m.repo.GetAll()
 	if err != nil {
@@ -111,7 +111,7 @@ func (m *listModel) loadHosts() tea.Cmd {
 
 	// If host group is selected only load hosts from this group.
 	if m.appState.Group != "" {
-		hosts = lo.Filter(hosts, func(h hostModel.Host, index int) bool {
+		hosts = lo.Filter(hosts, func(h hostModel.Host, _ int) bool {
 			return strings.EqualFold(h.Group, m.appState.Group)
 		})
 	}
@@ -128,7 +128,7 @@ func (m *listModel) loadHosts() tea.Cmd {
 	return tea.Sequence(setItemsCmd, selectHostByIDCmd)
 }
 
-func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m, m.handleKeyboardEvent(msg)
@@ -171,7 +171,7 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
+func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	switch {
 	case m.SettingFilter():
 		m.logger.Debug("[UI] Process key message when in filter mode")
@@ -195,7 +195,7 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		return m.updateChildModel(msg)
 	case key.Matches(msg, m.Model.KeyMap.ClearFilter):
 		// When user clears the host filter, child model resets the focus. Explicitly set focus on previously selected item.
-		selectedID := m.SelectedItem().(ListItemHost).ID
+		selectedID := m.SelectedItem().(ListItemHost).ID //nolint:errcheck // SelectedItem always returns ListItemHost
 		return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
 	case m.mode != modeDefault:
 		// Handle key event when some mode is enabled. For instance "removeMode".
@@ -233,11 +233,11 @@ func (m *listModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	}
 }
 
-func (m *listModel) View() string {
+func (m *ListModel) View() string {
 	return styleDoc.Render(m.Model.View())
 }
 
-func (m *listModel) updateChildModel(msg tea.Msg) tea.Cmd {
+func (m *ListModel) updateChildModel(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	m.Model, cmd = m.Model.Update(msg)
 
@@ -248,7 +248,7 @@ func (m *listModel) updateChildModel(msg tea.Msg) tea.Cmd {
  * Actions.
  */
 
-func (m *listModel) removeItem() tea.Cmd {
+func (m *ListModel) removeItem() tea.Cmd {
 	m.logger.Debug("[UI] Remove host from the database")
 	// Potential bug when filter is enabled as selected item reads from collection duplicate!
 	// Consider taking "item" from m.Items()
@@ -267,7 +267,7 @@ func (m *listModel) removeItem() tea.Cmd {
 	}
 
 	_, index, _ := lo.FindIndexOf(m.Items(), func(i list.Item) bool {
-		return i.(ListItemHost).ID == item.ID
+		return i.(ListItemHost).ID == item.ID //nolint:errcheck // i always contains ListItemHost
 	})
 
 	/*
@@ -335,7 +335,7 @@ func (m *listModel) removeItem() tea.Cmd {
 	)
 }
 
-func (m *listModel) editItem() tea.Cmd {
+func (m *ListModel) editItem() tea.Cmd {
 	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedErrMsg)})
@@ -350,7 +350,7 @@ func (m *listModel) editItem() tea.Cmd {
 	)
 }
 
-func (m *listModel) copyItem() tea.Cmd {
+func (m *ListModel) copyItem() tea.Cmd {
 	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Error("[UI] Cannot cast selected item to host model")
@@ -365,7 +365,7 @@ func (m *listModel) copyItem() tea.Cmd {
 		clonedHostTitle := fmt.Sprintf("%s (%d)", originalHost.Title, i)
 		listItems := m.Items()
 		idx := slices.IndexFunc(listItems, func(li list.Item) bool {
-			return li.(ListItemHost).Title() == clonedHostTitle
+			return li.(ListItemHost).Title() == clonedHostTitle //nolint:errcheck // list item always contains ListItemHost
 		})
 
 		// If title is unique, then we assign the title to the cloned host
@@ -381,8 +381,8 @@ func (m *listModel) copyItem() tea.Cmd {
 		return message.TeaCmd(message.ErrorOccurred{Err: err})
 	}
 
-	titles := lo.Reduce(m.Items(), func(agg []string, item list.Item, index int) []string {
-		return append(agg, item.(ListItemHost).Title())
+	titles := lo.Reduce(m.Items(), func(agg []string, item list.Item, _ int) []string {
+		return append(agg, item.(ListItemHost).Title()) //nolint:errcheck // item always contains ListItemHost
 	}, []string{clonedHost.Title})
 
 	slices.Sort(titles)
@@ -400,21 +400,21 @@ func (m *listModel) copyItem() tea.Cmd {
 
 // onHostUpdated - not only updates a host, it also re-inserts the host into
 // a correct position of the host list, to keep it sorted.
-func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
+func (m *ListModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
 	updatedHost := ListItemHost{Host: msg.Host}
 	// Get all item titles, replacing the updated host's title
 	allItems := lo.Map(m.Items(), func(item list.Item, _ int) list.Item {
-		host := item.(ListItemHost)
+		host, _ := item.(ListItemHost)
 		return lo.Ternary(host.ID == updatedHost.ID, updatedHost, host)
 	})
 
 	slices.SortFunc(allItems, hostComparator)
 	_, newIndex, _ := lo.FindIndexOf(allItems, func(item list.Item) bool {
-		return updatedHost.ID == item.(ListItemHost).ID
+		return updatedHost.ID == item.(ListItemHost).ID //nolint:errcheck // item always contains ListItemHost
 	})
 
 	_, currentIndex, _ := lo.FindIndexOf(m.Items(), func(item list.Item) bool {
-		return updatedHost.ID == item.(ListItemHost).ID
+		return updatedHost.ID == item.(ListItemHost).ID //nolint:errcheck // item always contains ListItemHost
 	})
 
 	// Do not use m.Index(), as it returns Visible Index, whilst
@@ -432,27 +432,27 @@ func (m *listModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
 	)
 }
 
-func (m *listModel) setItemAndReorder(newIndex, currentIndex int, updatedHost ListItemHost) tea.Cmd {
+func (m *ListModel) setItemAndReorder(newIndex, currentIndex int, updatedHost ListItemHost) tea.Cmd {
 	m.Model.RemoveItem(currentIndex)
 	cmd := m.Model.InsertItem(newIndex, updatedHost)
 
 	// The collection is not yet updated and m.VisibleItems() may NOT contain the updated host yet,
 	// filtering is enabled. However, we must predict the new host index.
 	visibleItems := lo.Map(m.VisibleItems(), func(item list.Item, _ int) list.Item {
-		host := item.(ListItemHost)
+		host, _ := item.(ListItemHost)
 		return lo.Ternary(host.ID == updatedHost.ID, updatedHost, host)
 	})
 
 	slices.SortFunc(visibleItems, hostComparator)
 	_, newVisibleItemsIndex, _ := lo.FindIndexOf(visibleItems, func(item list.Item) bool {
-		return updatedHost.ID == item.(ListItemHost).ID
+		return updatedHost.ID == item.(ListItemHost).ID //nolint:errcheck // item always contains ListItemHost
 	})
 
 	m.Select(newVisibleItemsIndex)
 	return cmd
 }
 
-func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
+func (m *ListModel) onHostCreated(msg message.HostCreated) tea.Cmd {
 	// ResetFilter is required here because, user can create a new Item which will be filtered out,
 	// therefore the user will not see any changes in the UI which is confusing.
 	// ResetFilter must be done before calculating index of the new item.
@@ -464,7 +464,7 @@ func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
 	items := append([]list.Item{createdHostItem}, m.VisibleItems()...)
 	slices.SortFunc(items, hostComparator)
 	_, index, _ := lo.FindIndexOf(items, func(item list.Item) bool {
-		return createdHostItem.ID == item.(ListItemHost).ID
+		return createdHostItem.ID == item.(ListItemHost).ID //nolint:errcheck // item always contains ListItemHost
 	})
 
 	cmd := m.Model.InsertItem(index, createdHostItem)
@@ -480,7 +480,7 @@ func (m *listModel) onHostCreated(msg message.HostCreated) tea.Cmd {
 	)
 }
 
-func (m *listModel) onFocusChanged() tea.Cmd {
+func (m *ListModel) onFocusChanged() tea.Cmd {
 	m.updateTitle()
 	m.updateKeyMap()
 
@@ -497,7 +497,7 @@ func (m *listModel) onFocusChanged() tea.Cmd {
 	return nil
 }
 
-func (m *listModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoaded) {
+func (m *ListModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoaded) {
 	for index, item := range m.Items() {
 		if hostListItem, ok := item.(ListItemHost); ok && hostListItem.ID == msg.HostID {
 			hostListItem.SSHHostConfig = &msg.Config
@@ -507,7 +507,7 @@ func (m *listModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoaded) {
 	}
 }
 
-func (m *listModel) onToggleLayout() tea.Cmd {
+func (m *ListModel) onToggleLayout() tea.Cmd {
 	m.updateChildModel(msgToggleLayout{m.appState.ScreenLayout})
 	// When switch between screen layouts, it's required to update pagination.
 	// ListModel's updatePagination method is private and cannot be called from
@@ -533,7 +533,7 @@ func (m *listModel) onToggleLayout() tea.Cmd {
  * Helper methods.
  */
 
-func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cmd {
+func (m *ListModel) constructProcessCmd(processType constant.ProcessType) tea.Cmd {
 	// Do not use m.SelectedItem() here!
 	// list.Model keeps 2 collections - m.items and m.filteredItems, which can be inconsistent
 	// as a result in some hosts taken from m.filteredItems ssh config is nil.
@@ -556,18 +556,19 @@ func (m *listModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(errorText)})
 	}
 
-	if processType == constant.ProcessTypeSSHConnect {
+	switch processType { //nolint:exhaustive // allow missing cases
+	case constant.ProcessTypeSSHConnect:
 		return message.TeaCmd(message.RunProcessSSHConnect{Host: *host})
-	} else if processType == constant.ProcessTypeSSHCopyID {
+	case constant.ProcessTypeSSHCopyID:
 		return message.TeaCmd(message.RunProcessSSHCopyID{Host: *host})
+	default:
+		return nil
 	}
-
-	return nil
 }
 
 var sshConfigPathRe = regexp.MustCompile(`-F "([^"]+)"`)
 
-func (m *listModel) updateTitle() {
+func (m *ListModel) updateTitle() {
 	var newTitle string
 	item, isHost := m.SelectedItem().(ListItemHost)
 
@@ -596,7 +597,7 @@ func (m *listModel) updateTitle() {
 	}
 }
 
-func (m *listModel) prefixWithGroupName(title string) string {
+func (m *ListModel) prefixWithGroupName(title string) string {
 	if !utils.StringEmpty(&m.appState.Group) {
 		shortGroupName := utils.StringAbbreviation(m.appState.Group)
 		shortGroupName = m.Styles.Group.Render(shortGroupName)
@@ -606,12 +607,12 @@ func (m *listModel) prefixWithGroupName(title string) string {
 	return m.Styles.Title.Render(title)
 }
 
-func (m *listModel) updateKeyMap() {
+func (m *ListModel) updateKeyMap() {
 	keyMapState := m.keyMap.UpdateKeyVisibility(m.SelectedItem())
 	m.logger.Debug("[UI] Edit keyboard shortcuts: %v", keyMapState)
 }
 
-func (m *listModel) selectHostByID(id int) tea.Cmd {
+func (m *ListModel) selectHostByID(id int) tea.Cmd {
 	// Use VisibleItems() instead of Items() because we need to find the correct index when deleting an item
 	// while in filter mode where part of the collection is hidden. You can replicate a wrong behavior when using Items():
 	// Enter filter mode, enter remove mode and then cancel it. The focus will be lost.
@@ -635,14 +636,14 @@ func (m *listModel) selectHostByID(id int) tea.Cmd {
 }
 
 func hostComparator(a, b list.Item) int {
-	return a.(ListItemHost).CompareTo(b.(ListItemHost))
+	return a.(ListItemHost).CompareTo(b.(ListItemHost)) //nolint:errcheck // a and b always contain ListItemHost
 }
 
 /*
  * Deal with actions which require confirmation from the user.
  */
 
-func (m *listModel) enterSSHCopyIDMode() tea.Cmd {
+func (m *ListModel) enterSSHCopyIDMode() tea.Cmd {
 	// Check if item is selected.
 	_, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
@@ -657,7 +658,7 @@ func (m *listModel) enterSSHCopyIDMode() tea.Cmd {
 	return nil
 }
 
-func (m *listModel) enterRemoveItemMode() tea.Cmd {
+func (m *ListModel) enterRemoveItemMode() tea.Cmd {
 	// Check if item is selected.
 	_, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
@@ -672,13 +673,13 @@ func (m *listModel) enterRemoveItemMode() tea.Cmd {
 	return nil
 }
 
-func (m *listModel) enterCloseAppMode() {
+func (m *ListModel) enterCloseAppMode() {
 	m.mode = modeCloseApp
 	m.logger.Debug("[UI] Enter %s mode. Ask user for confirmation.", m.mode)
 	m.updateTitle()
 }
 
-func (m *listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
+func (m *ListModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
 	if key.Matches(msg, m.keyMap.confirm) {
 		return m.confirmAction()
 	}
@@ -698,18 +699,20 @@ func (m *listModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
 	return nil
 }
 
-func (m *listModel) confirmAction() tea.Cmd {
+func (m *ListModel) confirmAction() tea.Cmd {
 	m.logger.Debug("[UI] Exit %s mode. Confirm action.", m.mode)
 
 	var cmd tea.Cmd
-	if m.mode == modeRemoveItem { //nolint:gocritic // better readable without switch
+
+	switch m.mode {
+	case modeRemoveItem:
 		m.mode = modeDefault
 		cmd = m.removeItem() // removeItem triggers title and keymap updates. See "onFocusChanged" method.
-	} else if m.mode == modeSSHCopyID {
+	case modeSSHCopyID:
 		m.mode = modeDefault
 		m.updateTitle()
 		cmd = m.constructProcessCmd(constant.ProcessTypeSSHCopyID)
-	} else if m.mode == modeCloseApp {
+	case modeCloseApp:
 		m.mode = modeDefault
 		cmd = tea.Quit
 	}
@@ -717,11 +720,11 @@ func (m *listModel) confirmAction() tea.Cmd {
 	return cmd
 }
 
-func (m *listModel) SetTitle(title string) {
+func (m *ListModel) SetTitle(title string) {
 	m.Title = m.Styles.Title.Render(title)
 }
 
-func (m *listModel) displayNotificationMsg(msg string) tea.Cmd {
+func (m *ListModel) displayNotificationMsg(msg string) tea.Cmd {
 	if utils.StringEmpty(&msg) {
 		return nil
 	}

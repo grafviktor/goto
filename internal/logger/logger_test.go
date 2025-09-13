@@ -40,7 +40,7 @@ func TestLoggerConstructor(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			logger, err := Create(tc.appPath, tc.userSetLogLevel)
 
-			if tc.expectError {
+			if tc.expectError { //nolint:nestif // don't care about nested "if"s in unit tests
 				if err == nil {
 					t.Errorf("Expected an error but got none")
 				}
@@ -56,7 +56,7 @@ func TestLoggerConstructor(t *testing.T) {
 
 				// Check if the log file is created
 				logFilePath := path.Join(tc.appPath, logFileName)
-				_, err := os.Stat(logFilePath)
+				_, err = os.Stat(logFilePath)
 				if os.IsNotExist(err) {
 					t.Errorf("Log file not created at %s", logFilePath)
 				}
@@ -115,11 +115,9 @@ func TestLoggerMethods(t *testing.T) {
 				if output := buf.String(); !strings.Contains(output, expectedLog) {
 					t.Errorf("Expected log output:\n%s\nGot:\n%s", expectedLog, output)
 				}
-			} else {
+			} else if buf.Len() > 0 {
 				// Check if the log was not produced
-				if buf.Len() > 0 {
-					t.Errorf("Unexpected log output: %s", buf.String())
-				}
+				t.Errorf("Unexpected log output: %s", buf.String())
 			}
 		})
 	}

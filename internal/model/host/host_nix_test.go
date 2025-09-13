@@ -12,7 +12,7 @@ import (
 )
 
 // The only difference between Unix and Windows version tests is that Windows
-// version prefixes the original command with "cmd /c "
+// version prefixes the original command with "cmd /c ".
 var osCmdPrefix = ""
 
 func TestCmdSSHCopyID(t *testing.T) {

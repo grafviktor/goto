@@ -1,3 +1,4 @@
+//nolint:mnd // Magic numbers are allowed in unittest
 package testutils_test
 
 import (
@@ -11,9 +12,12 @@ import (
 	"github.com/grafviktor/goto/internal/model/sshconfig"
 )
 
-// =============================================== Storage
+type MockStorage struct {
+	shouldFail bool
+	Hosts      []host.Host
+}
 
-func NewMockStorage(shouldFail bool) *mockStorage {
+func NewMockStorage(shouldFail bool) *MockStorage {
 	hosts := []host.Host{
 		// Yaml storage specific: if host has id which is equal to "0"
 		// that means that this host doesn't yet exist. It's a hack,
@@ -23,24 +27,19 @@ func NewMockStorage(shouldFail bool) *mockStorage {
 		host.NewHost(3, "Mock Host 3", "", "localhost", "root", "id_rsa", "2222"),
 	}
 
-	for i := 0; i < len(hosts); i++ {
+	for i := range hosts {
 		hosts[i].SSHHostConfig = &sshconfig.Config{}
 		hosts[i].Group = fmt.Sprintf("Group %d", i+1)
 	}
 
-	return &mockStorage{
+	return &MockStorage{
 		shouldFail: shouldFail,
 		Hosts:      hosts,
 	}
 }
 
-type mockStorage struct {
-	shouldFail bool
-	Hosts      []host.Host
-}
-
 // Delete implements storage.HostStorage.
-func (ms *mockStorage) Delete(id int) error {
+func (ms *MockStorage) Delete(id int) error {
 	if ms.shouldFail {
 		return errors.New("mock error")
 	}
@@ -59,7 +58,7 @@ func (ms *mockStorage) Delete(id int) error {
 }
 
 // Get implements storage.HostStorage.
-func (ms *mockStorage) Get(hostID int) (host.Host, error) {
+func (ms *MockStorage) Get(hostID int) (host.Host, error) {
 	if ms.shouldFail {
 		return host.Host{}, errors.New("mock error")
 	}
@@ -68,7 +67,7 @@ func (ms *mockStorage) Get(hostID int) (host.Host, error) {
 }
 
 // GetAll implements storage.HostStorage.
-func (ms *mockStorage) GetAll() ([]host.Host, error) {
+func (ms *MockStorage) GetAll() ([]host.Host, error) {
 	if ms.shouldFail {
 		return ms.Hosts, errors.New("mock error")
 	}
@@ -77,7 +76,7 @@ func (ms *mockStorage) GetAll() ([]host.Host, error) {
 }
 
 // Save implements storage.HostStorage.
-func (ms *mockStorage) Save(m host.Host) (host.Host, error) {
+func (ms *MockStorage) Save(m host.Host) (host.Host, error) {
 	if ms.shouldFail {
 		return m, errors.New("mock error")
 	}
@@ -87,6 +86,6 @@ func (ms *mockStorage) Save(m host.Host) (host.Host, error) {
 	return m, nil
 }
 
-func (ms *mockStorage) Type() constant.HostStorageEnum {
+func (ms *MockStorage) Type() constant.HostStorageEnum {
 	return "MOCK STORAGE"
 }

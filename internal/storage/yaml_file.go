@@ -5,8 +5,7 @@ import (
 	"errors"
 	"os"
 	"path"
-
-	"golang.org/x/exp/slices"
+	"slices"
 
 	"github.com/samber/lo"
 	"gopkg.in/yaml.v2"
@@ -135,7 +134,7 @@ func (s *yamlFile) GetAll() ([]model.Host, error) {
 		s.innerStorage[s.nextID] = wrapped
 	}
 
-	hosts := lo.MapToSlice(s.innerStorage, func(key int, value yamlHostWrapper) model.Host {
+	hosts := lo.MapToSlice(s.innerStorage, func(_ int, value yamlHostWrapper) model.Host {
 		return value.Host
 	})
 

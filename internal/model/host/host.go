@@ -9,19 +9,6 @@ import (
 	"github.com/grafviktor/goto/internal/model/sshconfig"
 )
 
-// NewHost - constructs new Host model.
-func NewHost(id int, title, description, address, loginName, identityFilePath, remotePort string) Host {
-	return Host{
-		ID:               id,
-		Title:            title,
-		Description:      description,
-		Address:          address,
-		LoginName:        loginName,
-		RemotePort:       remotePort,
-		IdentityFilePath: identityFilePath,
-	}
-}
-
 // Host model definition.
 type Host struct {
 	Address          string                   `yaml:"address"`
@@ -34,6 +21,19 @@ type Host struct {
 	SSHHostConfig    *sshconfig.Config        `yaml:"-"`
 	StorageType      constant.HostStorageEnum `yaml:"-"`
 	Title            string                   `yaml:"title"`
+}
+
+// NewHost - constructs new Host model.
+func NewHost(id int, title, description, address, loginName, identityFilePath, remotePort string) Host {
+	return Host{
+		ID:               id,
+		Title:            title,
+		Description:      description,
+		Address:          address,
+		LoginName:        loginName,
+		RemotePort:       remotePort,
+		IdentityFilePath: identityFilePath,
+	}
 }
 
 // Clone host model.

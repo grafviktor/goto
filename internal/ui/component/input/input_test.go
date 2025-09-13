@@ -26,7 +26,7 @@ func TestInput_Update_KeyMsg(t *testing.T) {
 		Type:  tea.KeyRunes,
 		Runes: []rune{'t', 'e', 's', 't', '2'},
 	})
-	require.Equal(t, "", model.Value())
+	require.Empty(t, model.Value())
 }
 
 func TestInput_Display_Tooltip(t *testing.T) {

@@ -24,7 +24,7 @@ var tokenKind = struct {
 	Description:  "Description",
 }
 
-type sshToken struct {
+type SSHToken struct {
 	key   string
 	value string
 	kind  tokenEnum

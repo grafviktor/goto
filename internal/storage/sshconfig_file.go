@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"os"
+	"slices"
 
 	"github.com/samber/lo"
-	"golang.org/x/exp/slices"
 
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
@@ -49,7 +49,7 @@ func (s *SSHConfigFile) GetAll() ([]model.Host, error) {
 	}
 
 	s.innerStorage = make(map[int]model.Host, len(hosts))
-	for i := 0; i < len(hosts); i++ {
+	for i := range hosts {
 		// Make sure that not assigning '0' as host id, because '0' is empty host identifier.
 		// Consider to use '-1' for all new hostnames.
 		hosts[i].ID = i + 1
@@ -78,7 +78,7 @@ func (s *SSHConfigFile) Save(host model.Host) (model.Host, error) {
 }
 
 // Delete - throws not supported error.
-func (s *SSHConfigFile) Delete(id int) error {
+func (s *SSHConfigFile) Delete(_ int) error {
 	return ErrNotSupported
 }
 

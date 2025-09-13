@@ -35,8 +35,8 @@ func New(
 	storage storage.HostStorage,
 	appState *state.Application,
 	log iLogger,
-) mainModel {
-	m := mainModel{
+) MainModel {
+	m := MainModel{
 		modelHostList:  hostlist.New(ctx, storage, appState, log),
 		modelGroupList: grouplist.New(ctx, storage, appState, log),
 		appContext:     ctx,
@@ -48,7 +48,7 @@ func New(
 	return m
 }
 
-type mainModel struct {
+type MainModel struct {
 	appContext         context.Context
 	hostStorage        storage.HostStorage
 	modelHostList      tea.Model
@@ -61,14 +61,15 @@ type mainModel struct {
 	ready              bool
 }
 
-func (m *mainModel) Init() tea.Cmd {
+func (m *MainModel) Init() tea.Cmd {
 	m.logger.Debug("[UI] Run init function")
 
 	// Loads hosts from DB
 	return m.modelHostList.Init()
 }
 
-func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+//nolint:funlen
+func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
@@ -130,7 +131,7 @@ func (m *mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m *mainModel) View() string {
+func (m *MainModel) View() string {
 	// Build UI
 	var content string
 	switch m.appState.CurrentView {
@@ -151,7 +152,7 @@ func (m *mainModel) View() string {
 	return viewPortContent
 }
 
-func (m *mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *MainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if msg.Type == tea.KeyCtrlC {
 		m.logger.Debug("[UI] Receive Ctrl+C. Quit the application")
 		return m, tea.Quit
@@ -178,7 +179,7 @@ func (m *mainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *mainModel) updateViewPort(w, h int) tea.Model {
+func (m *MainModel) updateViewPort(w, h int) tea.Model {
 	if !m.ready {
 		m.ready = true
 		m.viewport = viewport.New(m.appState.Width, m.appState.Height)
@@ -190,7 +191,7 @@ func (m *mainModel) updateViewPort(w, h int) tea.Model {
 	return m
 }
 
-func (m *mainModel) dispatchProcess(
+func (m *MainModel) dispatchProcess(
 	processType constant.ProcessType,
 	process *exec.Cmd,
 	inBackground,
@@ -255,7 +256,7 @@ func (m *mainModel) dispatchProcess(
 	return tea.ExecProcess(process, onProcessExitCallback)
 }
 
-func (m *mainModel) dispatchProcessSSHConnect(msg message.RunProcessSSHConnect) tea.Cmd {
+func (m *MainModel) dispatchProcessSSHConnect(msg message.RunProcessSSHConnect) tea.Cmd {
 	m.logger.Debug("[EXEC] Build ssh connect command for hostname: %v, title: %v", msg.Host.Address, msg.Host.Title)
 	process := utils.BuildProcessInterceptStdErr(msg.Host.CmdSSHConnect())
 	m.logger.Info("[EXEC] Run process: '%s'", process.String())
@@ -263,7 +264,7 @@ func (m *mainModel) dispatchProcessSSHConnect(msg message.RunProcessSSHConnect) 
 	return m.dispatchProcess(constant.ProcessTypeSSHConnect, process, false, false)
 }
 
-func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadConfig) tea.Cmd {
+func (m *MainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadConfig) tea.Cmd {
 	m.logger.Debug("[EXEC] Read ssh configuration for host: '%+v'", msg.Host)
 	process := utils.BuildProcessInterceptStdAll(msg.Host.CmdSSHConfig())
 	m.logger.Info("[EXEC] Run process: '%s'", process.String())
@@ -272,7 +273,7 @@ func (m *mainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadCo
 	return m.dispatchProcess(constant.ProcessTypeSSHLoadConfig, process, true, true)
 }
 
-func (m *mainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) tea.Cmd {
+func (m *MainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) tea.Cmd {
 	identityFile, hostname := msg.Host.SSHHostConfig.IdentityFile, msg.Host.SSHHostConfig.Hostname
 	m.logger.Debug("[EXEC] Copy ssh-key '%s.pub' to host '%s'", identityFile, hostname)
 	if sshconfig.IsAlternativeFilePathDefined() {
@@ -286,7 +287,7 @@ func (m *mainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) te
 	return m.dispatchProcess(constant.ProcessTypeSSHCopyID, process, false, false)
 }
 
-func (m *mainModel) handleProcessSuccess(msg message.RunProcessSuccess) tea.Cmd {
+func (m *MainModel) handleProcessSuccess(msg message.RunProcessSuccess) tea.Cmd {
 	if msg.ProcessType == constant.ProcessTypeSSHLoadConfig {
 		parsedSSHConfig := sshconfig.Parse(msg.StdOut)
 		m.logger.Debug("[EXEC] Host SSH config loaded: %+v", *parsedSSHConfig)
@@ -311,7 +312,7 @@ func (m *mainModel) handleProcessSuccess(msg message.RunProcessSuccess) tea.Cmd 
 	return nil
 }
 
-func (m *mainModel) handleProcessError(msg message.RunProcessErrorOccurred) {
+func (m *MainModel) handleProcessError(msg message.RunProcessErrorOccurred) {
 	var errMsg string
 	if !utils.StringEmpty(&msg.StdOut) {
 		errMsg = fmt.Sprintf("%s\nDetails: %s", msg.StdErr, msg.StdOut)

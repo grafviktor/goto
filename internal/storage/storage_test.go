@@ -77,7 +77,11 @@ func TestCombinedStorage_GetAll(t *testing.T) {
 	require.Len(t, hosts, 3)
 }
 
-func getMockStorages(ctx context.Context, appConfig application.Configuration, logger iLogger) map[constant.HostStorageEnum]HostStorage {
+func getMockStorages(
+	_ context.Context,
+	_ application.Configuration,
+	_ iLogger,
+) map[constant.HostStorageEnum]HostStorage {
 	// Setup fake storages
 	yamlStorage := &fakeHostStorage{
 		hosts: []model.Host{

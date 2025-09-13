@@ -3,6 +3,7 @@ package hostedit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -68,7 +69,7 @@ type iLogger interface {
 
 func notEmptyValidator(s string) error {
 	if utils.StringEmpty(&s) {
-		return fmt.Errorf("value is required")
+		return errors.New("value is required")
 	}
 
 	return nil
@@ -82,7 +83,7 @@ func networkPortValidator(s string) error {
 	auto := 0 // 0 is used to autodetect base, see strconv.ParseUint
 	maxLengthBit := 16
 	if num, err := strconv.ParseUint(s, auto, maxLengthBit); err != nil || num < 1 {
-		return fmt.Errorf("network port must be a number which is less than 65,535")
+		return errors.New("network port must be a number which is less than 65,535")
 	}
 
 	return nil
@@ -113,7 +114,7 @@ func getKeyMap(host hostModel.Host, focusedInput int) keyMap {
 	return keys
 }
 
-type editModel struct {
+type EditModel struct {
 	appState     *state.Application
 	focusedInput int
 	help         help.Model
@@ -130,7 +131,7 @@ type editModel struct {
 }
 
 // New - returns new edit host form.
-func New(ctx context.Context, storage storage.HostStorage, state *state.Application, log iLogger) *editModel {
+func New(ctx context.Context, storage storage.HostStorage, state *state.Application, log iLogger) *EditModel {
 	initialFocusedInput := inputTitle
 
 	// If we can't cast host id to int, that means we're adding a new host. Ignore the error
@@ -142,8 +143,8 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	}
 	host.SSHHostConfig = sshconfig.StubConfig()
 
-	m := editModel{
-		inputs:       make([]input.Input, 7),
+	m := EditModel{
+		inputs:       make([]input.Input, 7), //nolint:mnd // Quantity of input components is 7
 		hostStorage:  storage,
 		host:         wrap(&host),
 		help:         help.New(),
@@ -208,9 +209,9 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	return &m
 }
 
-func (m *editModel) Init() tea.Cmd { return nil }
+func (m *EditModel) Init() tea.Cmd { return nil }
 
-func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *EditModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
@@ -238,7 +239,7 @@ func (m *editModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *editModel) View() string {
+func (m *EditModel) View() string {
 	if !m.ready {
 		// Create viewport, ideally this call should be located in init function,
 		// but this function does not trigger for child components
@@ -249,7 +250,7 @@ func (m *editModel) View() string {
 	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), viewPortContent, m.helpView())
 }
 
-func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
+func (m *EditModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	// If title displays an error, due to an incorrect title for instance
 	// once user presses any button, we should reset it to default value
 	m.title = defaultTitle
@@ -283,7 +284,7 @@ func (m *editModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	}
 }
 
-func (m *editModel) handleDebouncedMessage(msg debouncedMessage) tea.Cmd {
+func (m *EditModel) handleDebouncedMessage(msg debouncedMessage) tea.Cmd {
 	// This function debounces a tea.Message. In order to find the last message from a list of duplicate messages
 	// debounceTag is used. Every time a tea.Tick message is dispatched, debounceTag is incremented. Then, when
 	// tea.Tick message triggers by timer (by debounceTime) it compares its own debounceTag with the model's
@@ -301,7 +302,7 @@ func (m *editModel) handleDebouncedMessage(msg debouncedMessage) tea.Cmd {
 	})
 }
 
-func (m *editModel) save(_ tea.Msg) tea.Cmd {
+func (m *EditModel) save(_ tea.Msg) tea.Cmd {
 	for i := range m.inputs {
 		if m.inputs[i].Validate != nil {
 			if err := m.inputs[i].Validate(m.inputs[i].Value()); err != nil {
@@ -347,7 +348,7 @@ func (m *editModel) save(_ tea.Msg) tea.Cmd {
 	)
 }
 
-func (m *editModel) copyInputValueFromTo(sourceInput, destinationInput int) {
+func (m *EditModel) copyInputValueFromTo(sourceInput, destinationInput int) {
 	newValue := m.inputs[sourceInput].Value()
 
 	// Temporary remove input validator.
@@ -374,7 +375,7 @@ func (m *editModel) copyInputValueFromTo(sourceInput, destinationInput int) {
 	m.host.setHostAttributeByIndex(destinationInput, newValue)
 }
 
-func (m *editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
+func (m *EditModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	var shouldUpdateTitle bool
 	previousValue := m.inputs[m.focusedInput].Value()
@@ -423,7 +424,7 @@ func (m *editModel) focusedInputProcessKeyEvent(msg tea.Msg) tea.Cmd {
 	return cmd
 }
 
-func (m *editModel) updateViewPort(msg tea.Msg) {
+func (m *EditModel) updateViewPort(msg tea.Msg) {
 	headerHeight := lipgloss.Height(m.headerView())
 	helpMenuHeight := lipgloss.Height(m.helpView())
 
@@ -438,11 +439,11 @@ func (m *editModel) updateViewPort(msg tea.Msg) {
 	}
 }
 
-func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
+func (m *EditModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
-	keyMsg := msg.(tea.KeyMsg)
+	keyMsg, _ := msg.(tea.KeyMsg)
 
-	enabledInputs := lo.Filter(m.inputs, func(i input.Input, n int) bool {
+	enabledInputs := lo.Filter(m.inputs, func(i input.Input, _ int) bool {
 		return i.Enabled()
 	})
 
@@ -474,7 +475,7 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 	}
 
 	// Should be extracted to "Validate" function
-	for i := 0; i < len(m.inputs); i++ {
+	for i := range m.inputs {
 		if m.inputs[i].Validate != nil {
 			m.inputs[i].Err = m.inputs[i].Validate(m.inputs[i].Value())
 			m.logger.Debug("[UI] Input '%v' is valid: %v", m.inputs[i].Label(), m.inputs[i].Err == nil)
@@ -497,18 +498,19 @@ func (m *editModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (m *editModel) handleCopyInputValueShortcut() {
+func (m *EditModel) handleCopyInputValueShortcut() {
 	// Allow a user to copy values between address and title,
 	// because the chances are that these two inputs will have
 	// the same values.
-	if m.focusedInput == inputTitle {
+	switch m.focusedInput {
+	case inputTitle:
 		m.copyInputValueFromTo(m.focusedInput, inputAddress)
-	} else if m.focusedInput == inputAddress {
+	case inputAddress:
 		m.copyInputValueFromTo(m.focusedInput, inputTitle)
 	}
 }
 
-func (m *editModel) updateInputFields() {
+func (m *EditModel) updateInputFields() {
 	if m.host.IsReadOnly() {
 		m.handleReadonlyHost()
 	} else {
@@ -516,23 +518,23 @@ func (m *editModel) updateInputFields() {
 	}
 }
 
-func (m *editModel) handleReadonlyHost() {
+func (m *EditModel) handleReadonlyHost() {
 	m.logger.Debug("[UI] Update input components. All parameters are disabled.")
-	lo.ForEach(m.inputs, func(i input.Input, n int) {
+	lo.ForEach(m.inputs, func(_ input.Input, n int) {
 		m.inputs[n].Placeholder = fmt.Sprintf("%s: %s", "readonly", m.host.getHostAttributeValueByIndex(n))
 		m.inputs[n].SetValue("")
 		m.inputs[n].SetEnabled(false)
 	})
 }
 
-func (m *editModel) handleEditableHost() {
+func (m *EditModel) handleEditableHost() {
 	customConnectString := m.host.IsUserDefinedSSHCommand()
 	m.logger.Debug("[UI] Update input components. Additional SSH parameters disabled: %v", customConnectString)
 
 	prefix := lo.Ternary(customConnectString, "readonly", "default")
-	m.inputs[inputTitle].Placeholder = "*required*" //nolint:goconst
+	m.inputs[inputTitle].Placeholder = "*required*"
 	m.inputs[inputAddress].Placeholder = "*required*"
-	m.inputs[inputGroup].Placeholder = "n/a" //nolint:goconst
+	m.inputs[inputGroup].Placeholder = "n/a"
 	m.inputs[inputDescription].Placeholder = "n/a"
 	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHHostConfig.User)
 	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHHostConfig.Port)
@@ -551,11 +553,11 @@ func (m *editModel) handleEditableHost() {
 		&m.inputs[inputIdentityFile],
 	}
 
-	lo.ForEach(sshParamsInputFields, func(i *input.Input, n int) {
+	lo.ForEach(sshParamsInputFields, func(i *input.Input, _ int) {
 		i.SetEnabled(!customConnectString)
 	})
 
-	lo.ForEach(m.inputs, func(i input.Input, n int) {
+	lo.ForEach(m.inputs, func(_ input.Input, n int) {
 		if m.inputs[n].Enabled() {
 			m.inputs[n].SetValue(m.host.getHostAttributeValueByIndex(n))
 		} else {
@@ -564,7 +566,7 @@ func (m *editModel) handleEditableHost() {
 	})
 }
 
-func (m *editModel) inputsView() string {
+func (m *EditModel) inputsView() string {
 	var b strings.Builder
 	for i := range m.inputs {
 		b.WriteString(m.inputs[i].View())
@@ -576,19 +578,19 @@ func (m *editModel) inputsView() string {
 	return docStyle.Render(b.String())
 }
 
-func (m *editModel) headerView() string {
+func (m *EditModel) headerView() string {
 	return titleStyle.Render(m.title)
 }
 
-func (m *editModel) helpView() string {
+func (m *EditModel) helpView() string {
 	return menuStyle.Render(m.help.View(m.keyMap))
 }
 
-func (m *editModel) SetTitle(title string) {
+func (m *EditModel) SetTitle(title string) {
 	m.title = title
 }
 
-func (m *editModel) displayNotificationMsg(msg string) tea.Cmd {
+func (m *EditModel) displayNotificationMsg(msg string) tea.Cmd {
 	if utils.StringEmpty(&msg) {
 		return nil
 	}

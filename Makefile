@@ -30,7 +30,7 @@ audit:
 	@echo '  * If gofumpt is not installed, then: go install mvdan.cc/gofumpt@latest'
 	@echo '  * For staticcheck: go install honnef.co/go/tools/cmd/staticcheck@2025.1.1'
 	@echo '  * If goimports is not installed, then: go install golang.org/x/tools/cmd/goimports@latest'
-	@echo '  * For golangci-lint: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.64.8'
+	@echo '  * For golangci-lint: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $$(go env GOPATH)/bin v2.2.1'
 	@echo 'Tidy and verify module dependencies...'
 	go mod tidy
 	go mod verify

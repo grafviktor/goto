@@ -18,7 +18,7 @@ func TestNew(t *testing.T) {
 	require.False(t, model.FilteringEnabled())
 	require.False(t, model.ShowStatusBar())
 	require.False(t, model.FilteringEnabled())
-	require.Equal(t, model.Title, "select group")
+	require.Equal(t, "select group", model.Title)
 }
 
 func TestInit(t *testing.T) {
@@ -31,12 +31,12 @@ func TestUpdate(t *testing.T) {
 	listModel := NewMockGroupModel(false)
 
 	// Can handle tea.WindowSizeMsg
-	require.Equal(t, listModel.Height(), 0)
-	require.Equal(t, listModel.Width(), 0)
+	require.Equal(t, 0, listModel.Height())
+	require.Equal(t, 0, listModel.Width())
 	windowSizeMsg := tea.WindowSizeMsg{Width: 100, Height: 100}
 	listModel.Update(windowSizeMsg)
-	require.Greater(t, listModel.Height(), 0)
-	require.Greater(t, listModel.Width(), 0)
+	require.Positive(t, listModel.Height())
+	require.Positive(t, listModel.Width())
 
 	// Loads hosts when the form is shown
 	listModel = NewMockGroupModel(false)
@@ -105,14 +105,14 @@ func TestLoadItems(t *testing.T) {
 	model = NewMockGroupModel(true)
 	cmd := model.loadItems()
 	require.IsType(t, message.ErrorOccurred{}, cmd())
-	require.Len(t, model.Items(), 0)
+	require.Empty(t, model.Items())
 }
 
 // ==============================================
 // ============== utility methods ===============
 // ==============================================
 
-func NewMockGroupModel(storageShouldFail bool) *model {
+func NewMockGroupModel(storageShouldFail bool) *Model {
 	mockState := state.Application{Selected: 1}
 	storage := testutils.NewMockStorage(storageShouldFail)
 	return New(context.TODO(), storage, &mockState, &mocklogger.Logger{})

@@ -16,12 +16,12 @@ var (
 		Padding(0, 1).
 		// Instead of placing "1" to have a padding at the bottom,
 		// I use '\n' in the code base. That is to a rendering artifacts
-		Margin(1, 2, 0)
+		Margin(1, 2, 0) //nolint:mnd // magic numbers are OK fo styles
 
-	menuStyle = lipgloss.NewStyle().Margin(2, 2, 1)
+	menuStyle = lipgloss.NewStyle().Margin(2, 2, 1) //nolint:mnd // magic numbers are OK fo styles
 )
 
-//nolint:dupword
+//nolint:dupword // Commented block left for reference
 /*
 
 // DefaultItemStyles defines styling for a default list item.

@@ -14,9 +14,9 @@ import (
 
 type testLogger struct{}
 
-func (l *testLogger) Debug(format string, args ...any) {}
-func (l *testLogger) Info(format string, args ...any)  {}
-func (l *testLogger) Error(format string, args ...any) {}
+func (l *testLogger) Debug(_ string, _ ...any) {}
+func (l *testLogger) Info(_ string, _ ...any)  {}
+func (l *testLogger) Error(_ string, _ ...any) {}
 
 func TestYAMLFile_SaveAndGetAll(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -77,7 +77,7 @@ func TestYAMLFile_GetAll_EmptyFile(t *testing.T) {
 
 	hosts, err := st.GetAll()
 	require.NoError(t, err)
-	require.Len(t, hosts, 0)
+	require.Empty(t, hosts)
 }
 
 func TestYAMLFile_GetAll_InvalidYAML(t *testing.T) {

@@ -28,7 +28,7 @@ Host test
 		source:     config,
 		logger:     &mocklogger.Logger{},
 	}
-	parent := sshToken{
+	parent := SSHToken{
 		kind:  tokenKind.IncludeFile,
 		key:   "Include",
 		value: config,
@@ -80,7 +80,7 @@ Host test
 		source:     config,
 		logger:     &mocklogger.Logger{},
 	}
-	parent := sshToken{
+	parent := SSHToken{
 		kind:  tokenKind.IncludeFile,
 		key:   "Include",
 		value: config,
@@ -104,7 +104,7 @@ User invalid!user
 		source:     config,
 		logger:     &mocklogger.Logger{},
 	}
-	parent := sshToken{
+	parent := SSHToken{
 		kind:  tokenKind.IncludeFile,
 		key:   "Include",
 		value: config,
@@ -124,7 +124,7 @@ Port notaport
 		source:     config,
 		logger:     &mocklogger.Logger{},
 	}
-	parent := sshToken{
+	parent := SSHToken{
 		kind:  tokenKind.IncludeFile,
 		key:   "Include",
 		value: config,
@@ -142,7 +142,7 @@ func TestLexer_Tokenize_IncludeDepthLimit(t *testing.T) {
 		source:     "irrelevant",
 		logger:     &mocklogger.Logger{},
 	}
-	parent := sshToken{
+	parent := SSHToken{
 		kind:  tokenKind.IncludeFile,
 		key:   "Include",
 		value: "irrelevant",
@@ -195,7 +195,7 @@ func TestLexer_handleIncludeToken(t *testing.T) {
 		logger:     &mocklogger.Logger{},
 	}
 
-	token := sshToken{
+	token := SSHToken{
 		kind:  tokenKind.IncludeFile,
 		key:   "Include",
 		value: filepath.Join(tmpDir, "*_included"),
@@ -209,6 +209,6 @@ func TestLexer_MetaDataToken(t *testing.T) {
 	lex := &Lexer{}
 	line := "# GG:GROUP mock_group"
 	token := lex.metaDataToken(tokenKind.Group, line)
-	require.Equal(t, token.key, "GROUP", "wrong token key")
-	require.Equal(t, token.value, "mock_group", "wrong token value")
+	require.Equal(t, "GROUP", token.key, "wrong token key")
+	require.Equal(t, "mock_group", token.value, "wrong token value")
 }
