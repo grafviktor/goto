@@ -80,7 +80,8 @@ func TestCombinedStorage_GetAll(t *testing.T) {
 func getMockStorages(
 	_ context.Context,
 	_ application.Configuration,
-	_ iLogger) map[constant.HostStorageEnum]HostStorage {
+	_ iLogger,
+) map[constant.HostStorageEnum]HostStorage {
 	// Setup fake storages
 	yamlStorage := &fakeHostStorage{
 		hosts: []model.Host{

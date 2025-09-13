@@ -40,8 +40,8 @@ func Test_StringAbbreviation(t *testing.T) {
 }
 
 func Test_CreateAppDirIfNotExists(t *testing.T) {
-	tmpFile, _ := os.CreateTemp(t.TempDir(), "unit_test_tmp*")
-	defer os.RemoveAll(tmpFile.Name()) // clean up
+	tmpFile, _ := os.CreateTemp(t.TempDir(), "unit_test_tmp.")
+	defer tmpFile.Close()
 	err := CreateAppDirIfNotExists(tmpFile.Name())
 	require.Error(
 		t,
@@ -73,6 +73,7 @@ func Test_GetAppDir(t *testing.T) {
 	require.Equal(t, expected, got, "Should ignore application name and use a user-defined folder")
 
 	tmp, _ := os.CreateTemp(t.TempDir(), "unit_test_tmp*")
+	defer tmp.Close()
 	_, err := AppDir("", tmp.Name())
 	require.Error(t, err, "Should not accept file as a user dir")
 
@@ -96,9 +97,9 @@ func Test(t *testing.T) {
 	require.Error(t, err, "SSH config file path is a directory")
 
 	// Test case: custom file path
-	tempFile, err := os.CreateTemp(t.TempDir(), "ssh_config*")
+	tempFile, err := os.CreateTemp(t.TempDir(), "ssh_config_tmp.")
 	require.NoError(t, err, "Should create a temporary file for testing")
-	defer os.Remove(tempFile.Name()) // clean up
+	defer tempFile.Close() // clean up
 	customPath := tempFile.Name()
 	got, err = SSHConfigFilePath(customPath)
 	require.NoError(t, err, "Should not return any errors because the path is valid")
