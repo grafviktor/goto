@@ -130,6 +130,11 @@ func (s *yamlFile) GetAll() ([]model.Host, error) {
 		s.nextID++
 		wrapped.Host.ID = s.nextID
 
+		// Set default command if empty
+		if wrapped.Host.Command == "" {
+			wrapped.Host.Command = "ssh"
+		}
+
 		// Maintain an internal map which is keyed by int
 		s.innerStorage[s.nextID] = wrapped
 	}

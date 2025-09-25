@@ -6,10 +6,8 @@ import (
 	"github.com/grafviktor/goto/internal/model/sshconfig"
 )
 
-var baseCmd = BaseCMD()
-
 // ConnectCommand - builds ssh command to connect to a remote host.
-func ConnectCommand(options ...Option) string {
+func ConnectCommand(baseCmd string, options ...Option) string {
 	sb := strings.Builder{}
 	sb.WriteString(baseCmd)
 
@@ -25,7 +23,7 @@ func ConnectCommand(options ...Option) string {
 }
 
 // LoadConfigCommand - builds ssh command to load config from ssh_config file.
-func LoadConfigCommand(options ...Option) string {
+func LoadConfigCommand(baseCmd string, options ...Option) string {
 	sb := strings.Builder{}
 	sb.WriteString(baseCmd)
 

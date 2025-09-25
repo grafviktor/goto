@@ -11,6 +11,7 @@ import (
 
 // Host model definition.
 type Host struct {
+	Command          string                   `yaml:"command,omitempty"`
 	Address          string                   `yaml:"address"`
 	Description      string                   `yaml:"description,omitempty"`
 	Group            string                   `yaml:"group,omitempty"`
@@ -26,6 +27,7 @@ type Host struct {
 // NewHost - constructs new Host model.
 func NewHost(id int, title, description, address, loginName, identityFilePath, remotePort string) Host {
 	return Host{
+		Command:          "ssh",
 		ID:               id,
 		Title:            title,
 		Description:      description,
@@ -39,6 +41,7 @@ func NewHost(id int, title, description, address, loginName, identityFilePath, r
 // Clone host model.
 func (h *Host) Clone() Host {
 	newHost := Host{
+		Command:          h.Command,
 		Title:            h.Title,
 		Group:            h.Group,
 		Description:      h.Description,
@@ -66,16 +69,16 @@ func (h *Host) IsUserDefinedSSHCommand() bool {
 // CmdSSHConnect - returns SSH command for connecting to a remote host.
 func (h *Host) CmdSSHConnect() string {
 	if h.IsUserDefinedSSHCommand() {
-		return sshcommand.ConnectCommand(sshcommand.OptionAddress{Value: h.Address})
+		return sshcommand.ConnectCommand(h.Command, sshcommand.OptionAddress{Value: h.Address})
 	}
 
 	if h.StorageType == constant.HostStorageType.SSHConfig {
 		// When it's SSHConfig storage type, we need to use the title as a host name.
 		// This is because the by addressing the host by alias, we get all its settings from ssh_config.
-		return sshcommand.ConnectCommand(sshcommand.OptionAddress{Value: h.Title})
+		return sshcommand.ConnectCommand(h.Command, sshcommand.OptionAddress{Value: h.Title})
 	}
 
-	return sshcommand.ConnectCommand([]sshcommand.Option{
+	return sshcommand.ConnectCommand(h.Command, []sshcommand.Option{
 		sshcommand.OptionPrivateKey{Value: h.IdentityFilePath},
 		sshcommand.OptionRemotePort{Value: h.RemotePort},
 		sshcommand.OptionLoginName{Value: h.LoginName},
@@ -86,14 +89,14 @@ func (h *Host) CmdSSHConnect() string {
 // CmdSSHConfig - returns SSH command for loading host default configuration.
 func (h *Host) CmdSSHConfig() string {
 	if h.StorageType == constant.HostStorageType.SSHConfig {
-		return sshcommand.LoadConfigCommand(sshcommand.OptionReadHostConfig{Value: h.Title})
+		return sshcommand.LoadConfigCommand(h.Command, sshcommand.OptionReadHostConfig{Value: h.Title})
 	}
 
 	if h.IsUserDefinedSSHCommand() {
-		return sshcommand.LoadConfigCommand(sshcommand.OptionReadHostConfig{Value: h.Address})
+		return sshcommand.LoadConfigCommand(h.Command, sshcommand.OptionReadHostConfig{Value: h.Address})
 	}
 
-	return sshcommand.LoadConfigCommand([]sshcommand.Option{
+	return sshcommand.LoadConfigCommand(h.Command, []sshcommand.Option{
 		sshcommand.OptionPrivateKey{Value: h.IdentityFilePath},
 		sshcommand.OptionRemotePort{Value: h.RemotePort},
 		sshcommand.OptionLoginName{Value: h.LoginName},

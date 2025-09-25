@@ -34,6 +34,7 @@ func TestListModel_Init(t *testing.T) {
 		message.HostSelected{HostID: 1},
 		message.RunProcessSSHLoadConfig{
 			Host: host.Host{
+				Command:          "ssh",
 				ID:               1,
 				Title:            "Mock Host 1",
 				Description:      "",
@@ -161,6 +162,7 @@ func TestRemoveItem(t *testing.T) {
 				message.HostSelected{HostID: 2},
 				message.RunProcessSSHLoadConfig{
 					Host: host.Host{
+						Command:          "ssh",
 						ID:               2,
 						Title:            "Mock Host 2",
 						Description:      "",
@@ -188,6 +190,7 @@ func TestRemoveItem(t *testing.T) {
 				message.HostSelected{HostID: 2},
 				message.RunProcessSSHLoadConfig{
 					Host: host.Host{
+						Command:          "ssh",
 						ID:               2,
 						Title:            "Mock Host 2",
 						Description:      "",
@@ -361,6 +364,7 @@ func TestExitRemoveItemMode(t *testing.T) {
 		message.HostSelected{HostID: 1},
 		message.RunProcessSSHLoadConfig{
 			Host: host.Host{
+				Command:          "ssh",
 				ID:               1,
 				Title:            "Mock Host 1",
 				Description:      "",
@@ -594,6 +598,7 @@ func TestUpdate_HostUpdated(t *testing.T) {
 	require.Equal(t, "Mock Host 1", lm.Items()[0].(ListItemHost).Title())
 
 	updatedHost := host.Host{
+		Command:          "ssh",
 		ID:               1,
 		Title:            "Mock Host 11",
 		Description:      "Mock Host Updated",
@@ -609,6 +614,7 @@ func TestUpdate_HostUpdated(t *testing.T) {
 
 	// Also check that host is inserted into a correct position of the hostlist model
 	updatedHost = host.Host{
+		Command:          "ssh",
 		ID:               1,
 		Title:            "zzz", // Title is now updated, the host should be positioned at the last index
 		Description:      "Mock Host Updated",
@@ -633,6 +639,7 @@ func TestUpdate_HostCreated(t *testing.T) {
 	require.Equal(t, "Mock Host 1", lm.Items()[0].(ListItemHost).Title())
 
 	createdHost1 := host.Host{
+		Command:          "ssh",
 		ID:               999,
 		Title:            "AAA new host", // Should be positioned first
 		Description:      "Mock Host Updated",
@@ -649,6 +656,7 @@ func TestUpdate_HostCreated(t *testing.T) {
 
 	// Also check that host is inserted into a correct position of the hostlist model
 	createdHost2 := host.Host{
+		Command:          "ssh",
 		ID:               666,
 		Title:            "ZZZ new host", // Should be positioned at last index
 		Description:      "Mock Host Updated",

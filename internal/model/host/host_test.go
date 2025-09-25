@@ -12,6 +12,7 @@ import (
 
 func TestNewHost(t *testing.T) {
 	expectedHost := Host{
+		Command:          "ssh",
 		ID:               1,
 		Title:            "TestTitle",
 		Description:      "TestDescription",
@@ -82,6 +83,7 @@ func TestIsUserDefinedSSHCommand(t *testing.T) {
 		{
 			name: "NOT user defined ssh command",
 			host: Host{
+				Command:          "ssh",
 				Address:          "localhost",
 				RemotePort:       "2222",
 				LoginName:        "root",
@@ -92,6 +94,7 @@ func TestIsUserDefinedSSHCommand(t *testing.T) {
 		{
 			name: "User defined ssh command",
 			host: Host{
+				Command: "ssh",
 				Address: "username@localhost",
 			},
 			expected: fmt.Sprintf("%s%s", osCmdPrefix, "ssh username@localhost"),
@@ -99,6 +102,7 @@ func TestIsUserDefinedSSHCommand(t *testing.T) {
 		{
 			name: "User defined ssh command - other parameters ignored",
 			host: Host{
+				Command:          "ssh",
 				Address:          "username@localhost",
 				RemotePort:       "2222",
 				LoginName:        "root",
@@ -109,6 +113,7 @@ func TestIsUserDefinedSSHCommand(t *testing.T) {
 		{
 			name: "Host loaded from SSH config",
 			host: Host{
+				Command:     "ssh",
 				Address:     "localhost",
 				Title:       "LOCALHOST_ALIAS",
 				StorageType: constant.HostStorageType.SSHConfig,
@@ -134,6 +139,7 @@ func TestCmdSSHConfig(t *testing.T) {
 		{
 			name: "NOT user defined ssh command",
 			host: Host{
+				Command:          "ssh",
 				Address:          "localhost",
 				RemotePort:       "2222",
 				LoginName:        "root",
@@ -144,6 +150,7 @@ func TestCmdSSHConfig(t *testing.T) {
 		{
 			name: "User defined ssh command",
 			host: Host{
+				Command: "ssh",
 				Address: "username@localhost",
 			},
 			expected: fmt.Sprintf("%s%s", osCmdPrefix, "ssh -G username@localhost"),
@@ -151,6 +158,7 @@ func TestCmdSSHConfig(t *testing.T) {
 		{
 			name: "User defined ssh command - other parameters ignored",
 			host: Host{
+				Command:          "ssh",
 				Address:          "username@localhost",
 				RemotePort:       "2222",
 				LoginName:        "root",
@@ -161,6 +169,7 @@ func TestCmdSSHConfig(t *testing.T) {
 		{
 			name: "Host loaded from SSH config",
 			host: Host{
+				Command:     "ssh",
 				Address:     "localhost",
 				Title:       "LOCALHOST_ALIAS",
 				StorageType: constant.HostStorageType.SSHConfig,

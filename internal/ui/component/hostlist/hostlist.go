@@ -550,7 +550,7 @@ func (m *ListModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedErrMsg)})
 	}
 
-	if host.SSHHostConfig == nil {
+	if host.Command == "ssh" && host.SSHHostConfig == nil {
 		errorText := fmt.Sprintf("[UI] SSH config is not set for host ID='%d', Title='%s'", host.ID, host.Title)
 		m.logger.Error(errorText)
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(errorText)})

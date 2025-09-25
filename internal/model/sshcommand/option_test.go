@@ -117,7 +117,7 @@ func Test_ConnectCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := ConnectCommand(tt.options...)
+			actual := ConnectCommand("ssh", tt.options...)
 			// Use Contains in order to pass Windows tests. On Windows,
 			// the command starts from 'cmd /c ssh' instead of just 'ssh'
 			require.Contains(t, actual, tt.expectedResult)
@@ -128,7 +128,7 @@ func Test_ConnectCommand(t *testing.T) {
 	state.Create(context.TODO(),
 		application.Configuration{SSHConfigFilePath: "~/.ssh/custom_config"},
 		&mocklogger.Logger{})
-	actual := ConnectCommand(OptionAddress{Value: "example.com"})
+	actual := ConnectCommand("ssh", OptionAddress{Value: "example.com"})
 	require.Contains(t, actual, `ssh example.com -F "~/.ssh/custom_config"`)
 }
 
@@ -152,7 +152,7 @@ func Test_LoadConfigCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := LoadConfigCommand(tt.option)
+			actual := LoadConfigCommand("ssh", tt.option)
 			// Use Contains in order to pass Windows tests. On Windows,
 			// the command starts from 'cmd /c ssh' instead of just 'ssh'
 			require.Contains(t, actual, tt.expectedResult)
@@ -162,7 +162,7 @@ func Test_LoadConfigCommand(t *testing.T) {
 	// Repeat the first test with a custom SSH config file path
 	mockLogger := mocklogger.Logger{}
 	state.Create(context.TODO(), application.Configuration{SSHConfigFilePath: "~/.ssh/custom_config"}, &mockLogger)
-	actual := LoadConfigCommand(tests[0].option)
+	actual := LoadConfigCommand("ssh", tests[0].option)
 	// Should use contains because on Windows version the command starts from 'cmd /c ...'
 	require.Contains(t, actual, `ssh -G example.com -F "~/.ssh/custom_config"`)
 }
