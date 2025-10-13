@@ -72,7 +72,7 @@ func getStorages(
 	logger.Debug("[STORAGE] SSH config storage enable: '%t'", sshConfigEnabled)
 	if sshConfigEnabled {
 		logger.Info("[STORAGE] Load ssh hosts from ssh config file: %q", appConfig.SSHConfigFilePath)
-		sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.SSHConfigFilePath, logger)
+		sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.AppHome, appConfig.SSHConfigFilePath, logger)
 		if err != nil {
 			logger.Error("[STORAGE] Cannot load ssh hosts from file: %q. Error: %v", appConfig.SSHConfigFilePath, err)
 		} else {
@@ -148,6 +148,7 @@ func (c *combinedStorage) Save(host model.Host) (model.Host, error) {
 	if isNewHost(host) {
 		var err error
 		host, err = storage.Save(host)
+		c.saveToSSHStorage()
 		combinedStorageID := c.addHost(host, storage.Type())
 		host.ID = combinedStorageID
 		return host, err
@@ -156,8 +157,25 @@ func (c *combinedStorage) Save(host model.Host) (model.Host, error) {
 	mapping := c.hostStorageMap[host.ID]
 	host.ID = mapping.innerStorageID
 	host, err := storage.Save(host)
+	c.saveToSSHStorage()
 	host.ID = mapping.combinedStorageID
 	return host, err
+}
+
+func (c *combinedStorage) saveToSSHStorage() {
+	if !state.Get().SSHConfigEnabled {
+		return
+	}
+
+	sshStorage := c.storages[constant.HostStorageType.SSHConfig]
+	yamlStorage := c.storages[constant.HostStorageType.YAMLFile]
+
+	// Save host to ssh config storage. This is not critical, as it's an
+	// experimental feature and it's not required for the app to work.
+	yamlHosts, _ := yamlStorage.GetAll()
+	// Don't fail the entire operation if SSH config write fails
+	// The YAML file is the primary storage
+	_ = sshStorage.(*SSHConfigFile).SaveAll(yamlHosts)
 }
 
 // Type implements HostStorage.

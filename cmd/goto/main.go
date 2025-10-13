@@ -43,14 +43,14 @@ func main() {
 	appState := createApplicationOrExit()
 
 	// Init storage
-	strg, fatalErr := storage.Get(appState.Context, appState.ApplicationConfig, appState.Logger)
+	str, fatalErr := storage.Get(appState.Context, appState.ApplicationConfig, appState.Logger)
 	if fatalErr != nil {
 		appState.Logger.Error("[MAIN] Cannot access application storage: %v\n", fatalErr)
 		os.Exit(1)
 	}
 
 	// Run user interface
-	ui.Start(appState.Context, strg, &appState)
+	ui.Start(appState.Context, str, &appState)
 
 	// Quit signal should be intercepted on the UI level, however it will require an
 	// additional switch-case block with an appropriate checks. Leaving this message here.
