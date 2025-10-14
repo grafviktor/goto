@@ -1,4 +1,4 @@
-// Package main contains application entry point
+// Package main contains the application entry point for the GOTO SSH Manager.
 //
 //nolint:lll,gochecknoglobals // Disable line length check, Ignore burn in these variables.
 package main
@@ -30,9 +30,12 @@ var (
 )
 
 const (
-	appName          = "goto"
-	featureSSHConfig = "ssh_config"
-	logMsgCloseApp   = "--------= Close application =-------"
+	appName             = "goto"
+	featureSSHConfig    = "ssh_config"
+	logMsgCloseApp      = "--------= Close application =-------"
+	logMsgCloseAppError = "--------= Close application with non-zero code =--------"
+	exitCodeError       = 1
+	exitCodeSuccess     = 0
 )
 
 func main() {
@@ -43,26 +46,24 @@ func main() {
 	appState := createApplicationOrExit()
 
 	// Init storage
-	strg, fatalErr := storage.Get(appState.Context, appState.ApplicationConfig, appState.Logger)
-	if fatalErr != nil {
-		appState.Logger.Error("[MAIN] Cannot access application storage: %v\n", fatalErr)
-		os.Exit(1)
+	str, err := storage.Get(appState.Context, appState.ApplicationConfig, appState.Logger)
+	if err != nil {
+		appState.Logger.Error("[MAIN] Cannot access application storage: %v", err)
+		logCloseAndExit(appState.Logger, exitCodeError)
 	}
 
 	// Run user interface
-	ui.Start(appState.Context, strg, &appState)
+	ui.Start(appState.Context, str, &appState)
 
-	// Quit signal should be intercepted on the UI level, however it will require an
-	// additional switch-case block with an appropriate checks. Leaving this message here.
+	// Quit signal should be intercepted on the UI level, however it will require
+	// additional switch-case block with appropriate checks. Leaving this message here.
 	appState.Logger.Debug("[MAIN] Receive quit signal")
 	appState.Logger.Debug("[MAIN] Save application state")
-	fatalErr = appState.Persist()
-	if fatalErr != nil {
-		appState.Logger.Error("[MAIN] Can't save application state before closing %v", fatalErr)
+	if err = appState.Persist(); err != nil {
+		appState.Logger.Error("[MAIN] Can't save application state before closing: %v", err)
 	}
 
-	appState.Logger.Info("[MAIN] %s", logMsgCloseApp)
-	appState.Logger.Close()
+	logCloseAndExit(appState.Logger, exitCodeSuccess)
 }
 
 func createApplicationOrExit() state.Application {
@@ -81,7 +82,7 @@ func createApplicationOrExit() state.Application {
 	lg.Debug("[CONFIG] Disabled features: %q\n", applicationConfiguration.DisableFeature)
 	lg.Debug("[CONFIG] Set SSH config path to %q\n", applicationConfiguration.SSHConfigFilePath)
 
-	// Create applicationContext state
+	// Create application state
 	applicationState := state.Create(context.Background(), applicationConfiguration, lg)
 
 	// If "-v" parameter provided, display application version configuration and exit
@@ -90,36 +91,25 @@ func createApplicationOrExit() state.Application {
 		version.Print()
 		fmt.Println()
 		applicationState.PrintConfig()
-		lg.Debug("[MAIN] %s", logMsgCloseApp)
-		os.Exit(0)
+		logCloseAndExit(lg, exitCodeSuccess)
 	}
 
 	// If "-e" parameter provided, display enabled features and exit
 	if applicationConfiguration.EnableFeature != "" {
-		lg.Info("[MAIN] Enable feature %q and exit", applicationConfiguration.EnableFeature)
-		fmt.Printf("Enabled: '%s'\n", applicationConfiguration.EnableFeature)
-		applicationState.SSHConfigEnabled = applicationConfiguration.EnableFeature == featureSSHConfig
-		err = applicationState.Persist()
+		err = handleFeatureToggle(lg, applicationState, string(applicationConfiguration.EnableFeature), true)
 		if err != nil {
 			lg.Debug("[MAIN] Cannot save application configuration: %v", err)
 		}
-
-		lg.Debug("[MAIN] %s", logMsgCloseApp)
-		os.Exit(0)
+		logCloseAndExit(lg, exitCodeSuccess)
 	}
 
 	// If "-d" parameter provided, display disabled features and exit
 	if applicationConfiguration.DisableFeature != "" {
-		lg.Info("[MAIN] Disable feature %q and exit", applicationConfiguration.DisableFeature)
-		fmt.Printf("Disabled: '%s'\n", applicationConfiguration.DisableFeature)
-		applicationState.SSHConfigEnabled = applicationConfiguration.DisableFeature != featureSSHConfig
-		err = applicationState.Persist()
+		err = handleFeatureToggle(lg, applicationState, string(applicationConfiguration.DisableFeature), false)
 		if err != nil {
 			lg.Debug("[MAIN] Cannot save application configuration: %v", err)
 		}
-
-		lg.Debug("[MAIN] %s", logMsgCloseApp)
-		os.Exit(0)
+		logCloseAndExit(lg, exitCodeSuccess)
 	}
 
 	// Log application version
@@ -132,22 +122,18 @@ func createApplicationOrExit() state.Application {
 	// Check errors at the very end. That allows to check application version and enable/disable
 	// features, even if something is not right with the app.
 	if !success {
-		lg.Warn("--------= Close application with non-zero code =--------")
+		lg.Warn(logMsgCloseAppError)
 		log.Printf("[MAIN] Exit due to a fatal error.")
-		os.Exit(1)
+		os.Exit(exitCodeError)
 	}
 
 	return *applicationState
 }
 
 func createConfigurationOrExit() (application.Configuration, bool) {
-	var err error
-	success := true
-
-	envConfig := application.Configuration{}
-	// Parse environment parameters. These parameters have lower precedence than command line flags
-	if err = env.Parse(&envConfig); err != nil {
-		fmt.Printf("%+v\n", err)
+	envConfig, err := parseEnvironmentConfig()
+	if err != nil {
+		fmt.Printf("Error parsing environment configuration: %+v\n", err)
 	}
 
 	// Check if "ssh" utility is in application path
@@ -155,7 +141,52 @@ func createConfigurationOrExit() (application.Configuration, bool) {
 		log.Fatalf("[MAIN] ssh utility is not installed or cannot be found in the executable path: %v", err)
 	}
 
+	cmdConfig := parseCommandLineFlags(envConfig)
+	return setupApplicationConfiguration(cmdConfig)
+}
+
+type loggerInterface interface {
+	Info(format string, args ...any)
+	Close()
+}
+
+// logCloseAndExit logs the close message, closes the logger, and exits with the specified code.
+func logCloseAndExit(lg loggerInterface, exitCode int) {
+	lg.Info("[MAIN] %s", logMsgCloseApp)
+	lg.Close()
+	os.Exit(exitCode)
+}
+
+// handleFeatureToggle handles enabling or disabling features.
+func handleFeatureToggle(lg loggerInterface, appState *state.Application, featureName string, enable bool) error {
+	action := "Disable"
+	if enable {
+		action = "Enable"
+	}
+
+	lg.Info("[MAIN] %s feature %q and exit", action, featureName)
+	fmt.Printf("%sd: '%s'\n", action, featureName)
+
+	if enable {
+		appState.SSHConfigEnabled = featureName == featureSSHConfig
+	} else {
+		appState.SSHConfigEnabled = featureName != featureSSHConfig
+	}
+
+	return appState.Persist()
+}
+
+// parseEnvironmentConfig parses environment configuration.
+func parseEnvironmentConfig() (application.Configuration, error) {
+	envConfig := application.Configuration{}
+	err := env.Parse(&envConfig)
+	return envConfig, err
+}
+
+// parseCommandLineFlags parses command line flags and returns the configuration.
+func parseCommandLineFlags(envConfig application.Configuration) application.Configuration {
 	cmdConfig := application.Configuration{}
+
 	// Command line parameters have the highest precedence
 	flag.BoolVar(&cmdConfig.DisplayVersionAndExit, "v", false, "Display application details")
 	flag.StringVar(&cmdConfig.AppHome, "f", envConfig.AppHome, "Application home folder")
@@ -178,27 +209,35 @@ func createConfigurationOrExit() (application.Configuration, bool) {
 	)
 	flag.Parse()
 
+	return cmdConfig
+}
+
+// setupApplicationConfiguration sets up the application configuration and validates it.
+func setupApplicationConfiguration(config application.Configuration) (application.Configuration, bool) {
+	success := true
+	var err error
+
 	// Set application home folder path
-	cmdConfig.AppHome, err = utils.AppDir(appName, cmdConfig.AppHome)
+	config.AppHome, err = utils.AppDir(appName, config.AppHome)
 	if err != nil {
-		log.Printf("[MAIN] Application home folder: %v\n", err)
+		log.Printf("[MAIN] Application home folder error: %v", err)
 		success = false
 	}
 
 	// Create application folder
-	if err = utils.CreateAppDirIfNotExists(cmdConfig.AppHome); err != nil {
-		log.Printf("[MAIN] Can't create application home folder: %v\n", err)
+	if err = utils.CreateAppDirIfNotExists(config.AppHome); err != nil {
+		log.Printf("[MAIN] Can't create application home folder: %v", err)
 	} else {
-		// Even, if there was an error, we created the application home folder.
+		// Even if there was an error, we created the application home folder.
 		success = true
 	}
 
 	// Set ssh config file path
-	cmdConfig.SSHConfigFilePath, err = utils.SSHConfigFilePath(cmdConfig.SSHConfigFilePath)
+	config.SSHConfigFilePath, err = utils.SSHConfigFilePath(config.SSHConfigFilePath)
 	if err != nil {
-		log.Printf("[MAIN] Can't open SSH config file: %v\n", err)
+		log.Printf("[MAIN] Can't open SSH config file: %v", err)
 		success = false
 	}
 
-	return cmdConfig, success
+	return config, success
 }
