@@ -11,6 +11,7 @@ import (
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/storage/sshconfig"
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 var _ HostStorage = &SSHConfigFile{}
@@ -31,9 +32,12 @@ type SSHConfigFile struct {
 
 // newSSHConfigStorage - constructs new SSHStorage.
 func newSSHConfigStorage(_ context.Context, sshConfigPath string, logger iLogger) (*SSHConfigFile, error) {
-	_, err := os.Stat(sshConfigPath)
-	if err != nil {
-		return nil, err
+	// Skip file existence check for URLs
+	if !utils.IsURLPath(sshConfigPath) {
+		_, err := os.Stat(sshConfigPath)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	lexer := sshconfig.NewFileLexer(sshConfigPath, logger)

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -12,6 +14,8 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
+
+	"github.com/samber/lo"
 )
 
 // StringEmpty - checks if string is empty or contains only spaces.
@@ -137,9 +141,47 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 	return path.Join(userConfigDir, appName), nil
 }
 
+// IsURLPath checks if the given path is a URL starting with http, https, or ftp.
+func IsURLPath(path string) bool {
+	if StringEmpty(&path) {
+		return false
+	}
+
+	path = strings.TrimSpace(path)
+	return lo.Contains([]string{"http://", "https://", "ftp://"}, strings.ToLower(path))
+}
+
+// FetchFromURL fetches content from a URL and returns it as a string.
+func FetchFromURL(urlPath string) (io.ReadCloser, error) {
+	if !IsURLPath(urlPath) {
+		return nil, fmt.Errorf("not a valid URL: %s", urlPath)
+	}
+
+	parsedURL, err := url.Parse(urlPath)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL format: %w", err)
+	}
+
+	resp, err := http.Get(parsedURL.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch URL %s: %w", urlPath, err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		_ = resp.Body.Close()
+		return nil, fmt.Errorf("failed to fetch URL %s: HTTP %d", urlPath, resp.StatusCode)
+	}
+
+	return resp.Body, nil
+}
+
 // SSHConfigFilePath - returns ssh_config path or error.
 func SSHConfigFilePath(userDefinedPath string) (string, error) {
 	if !StringEmpty(&userDefinedPath) {
+		if IsURLPath(userDefinedPath) {
+			return userDefinedPath, nil
+		}
+
 		absolutePath, err := filepath.Abs(userDefinedPath)
 		if err != nil {
 			return "", err
