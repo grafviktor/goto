@@ -20,11 +20,13 @@ import (
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/message"
+	"github.com/grafviktor/goto/internal/ui/theme"
 	"github.com/grafviktor/goto/internal/utils"
 )
 
 var (
 	styleDoc              = lipgloss.NewStyle().Margin(1, 2, 1, 0) //nolint:mnd // magic numbers are OK fo styles
+	colorTheme            = theme.GetTheme()
 	itemNotSelectedErrMsg = "you must select an item"
 	modeCloseApp          = "closeApp"
 	modeDefault           = ""
@@ -41,6 +43,16 @@ type iLogger interface {
 
 type msgToggleLayout struct{ layout constant.ScreenLayout }
 
+type ListModel struct {
+	list.Model
+
+	repo     storage.HostStorage
+	keyMap   *keyMap
+	appState *state.Application
+	logger   iLogger
+	mode     string
+}
+
 // New - creates new host list model.
 // context - is not used.
 // storage - is the data layer.
@@ -50,7 +62,7 @@ type msgToggleLayout struct{ layout constant.ScreenLayout }
 func New(_ context.Context, storage storage.HostStorage, appState *state.Application, log iLogger) *ListModel {
 	delegate := NewHostDelegate(&appState.ScreenLayout, &appState.Group, log)
 	delegateKeys := newDelegateKeyMap()
-	customStyles := customStyles()
+	// delegate.Styles = colorTheme.Styles.ListDelegate
 
 	var listItems []list.Item
 	model := list.New(listItems, delegate, 0, 0)
@@ -58,7 +70,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	// does - it filters the collection, but leaves initial items order unchanged.
 	// Default filter on the contrary - filters the collection based on the match rank.
 	model.Filter = list.UnsortedFilter
-	model.Styles = customStyles.Styles
+	model.Styles = colorTheme.Styles.List
 
 	m := ListModel{
 		Model:    model,
@@ -66,7 +78,6 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 		repo:     storage,
 		appState: appState,
 		logger:   log,
-		Styles:   customStyles,
 	}
 
 	m.KeyMap.CursorUp.Unbind()
@@ -80,20 +91,10 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	m.AdditionalShortHelpKeys = delegateKeys.ShortHelp
 	m.AdditionalFullHelpKeys = delegateKeys.FullHelp
 
-	m.Title = m.Styles.Title.Render(defaultListTitle)
+	// m.Title = colorTheme.Styles.Common.Title.Render(defaultListTitle)
+	m.Title = defaultListTitle
 
 	return &m
-}
-
-type ListModel struct {
-	list.Model
-
-	repo     storage.HostStorage
-	keyMap   *keyMap
-	appState *state.Application
-	logger   iLogger
-	mode     string
-	Styles   styles
 }
 
 func (m *ListModel) Init() tea.Cmd {
@@ -566,11 +567,12 @@ func (m *ListModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 	}
 }
 
-var sshConfigPathRe = regexp.MustCompile(`-F "([^"]+)"`)
+var sshConfigPathRe = regexp.MustCompile(`\s-F "([^"]+)"`)
 
 func (m *ListModel) updateTitle() {
 	var newTitle string
 	item, isHost := m.SelectedItem().(ListItemHost)
+	m.resetTitleStyle()
 
 	switch {
 	case m.mode == modeSSHCopyID && isHost:
@@ -600,11 +602,13 @@ func (m *ListModel) updateTitle() {
 func (m *ListModel) prefixWithGroupName(title string) string {
 	if !utils.StringEmpty(&m.appState.Group) {
 		shortGroupName := utils.StringAbbreviation(m.appState.Group)
-		shortGroupName = m.Styles.Group.Render(shortGroupName)
-		return fmt.Sprintf("%s%s", shortGroupName, m.Styles.Title.Render(title))
+		groupStyle := colorTheme.Styles.HostList.Group
+		title = m.Styles.Title.Render(title)
+		m.Styles.Title = m.Styles.Title.Padding(0)
+		return fmt.Sprintf("%s%s", groupStyle.Render(shortGroupName), title)
 	}
 
-	return m.Styles.Title.Render(title)
+	return title
 }
 
 func (m *ListModel) updateKeyMap() {
@@ -721,7 +725,12 @@ func (m *ListModel) confirmAction() tea.Cmd {
 }
 
 func (m *ListModel) SetTitle(title string) {
-	m.Title = m.Styles.Title.Render(title)
+	m.resetTitleStyle()
+	m.Title = title
+}
+
+func (m *ListModel) resetTitleStyle() {
+	m.Styles.Title = colorTheme.Styles.List.Title
 }
 
 func (m *ListModel) displayNotificationMsg(msg string) tea.Cmd {

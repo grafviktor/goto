@@ -16,6 +16,7 @@ import (
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/message"
+	"github.com/grafviktor/goto/internal/ui/theme"
 )
 
 type iLogger interface {
@@ -44,6 +45,7 @@ func New(_ context.Context, repo storage.HostStorage, appState *state.Applicatio
 	listDelegate := list.NewDefaultDelegate()
 	listDelegate.ShowDescription = false
 	listDelegate.SetSpacing(0)
+	listDelegate.Styles = theme.GetTheme().Styles.ListDelegate
 	listModel := list.New(listItems, listDelegate, 0, 0)
 	listModel.SetFilteringEnabled(false)
 

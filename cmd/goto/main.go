@@ -18,6 +18,7 @@ import (
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui"
+	"github.com/grafviktor/goto/internal/ui/theme"
 	"github.com/grafviktor/goto/internal/utils"
 	"github.com/grafviktor/goto/internal/version"
 )
@@ -83,6 +84,11 @@ func createApplicationOrExit() state.Application {
 
 	// Create applicationContext state
 	applicationState := state.Create(context.Background(), applicationConfiguration, lg)
+
+	// Initialize theme system
+	lg.Debug("[MAIN] Loading application theme")
+	appTheme := theme.LoadTheme(applicationConfiguration.AppHome)
+	lg.Debug("[MAIN] Using theme: %s", appTheme.Name)
 
 	// If "-v" parameter provided, display application version configuration and exit
 	if applicationConfiguration.DisplayVersionAndExit {
