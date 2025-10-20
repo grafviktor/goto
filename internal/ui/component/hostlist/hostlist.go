@@ -62,7 +62,6 @@ type ListModel struct {
 func New(_ context.Context, storage storage.HostStorage, appState *state.Application, log iLogger) *ListModel {
 	delegate := NewHostDelegate(&appState.ScreenLayout, &appState.Group, log)
 	delegateKeys := newDelegateKeyMap()
-	// delegate.Styles = colorTheme.Styles.ListDelegate
 
 	var listItems []list.Item
 	model := list.New(listItems, delegate, 0, 0)
@@ -71,6 +70,25 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	// Default filter on the contrary - filters the collection based on the match rank.
 	model.Filter = list.UnsortedFilter
 	model.Styles = colorTheme.Styles.List
+	model.FilterInput.PromptStyle = lipgloss.NewStyle().
+		Foreground(colorTheme.Colors.TextColorSelected1.ToLipgloss())
+	model.FilterInput.TextStyle = lipgloss.NewStyle().
+		Foreground(colorTheme.Colors.TextColor.ToLipgloss())
+
+	// These 2 styles accept strings, so we have to re-create them in full.
+	model.Paginator.ActiveDot = lipgloss.NewStyle().
+		Foreground(colorTheme.Colors.TextColor.ToLipgloss()).
+		SetString("•").String()
+	model.Paginator.InactiveDot = lipgloss.NewStyle().
+		Foreground(colorTheme.Colors.TextColorReadonly.ToLipgloss()).
+		SetString("•").String()
+
+	model.Help.Styles.ShortKey = model.Help.Styles.ShortKey.Foreground(colorTheme.Colors.TextColorReadonly.ToLipgloss())
+	model.Help.Styles.ShortDesc = model.Help.Styles.ShortKey.Foreground(
+		colorTheme.Colors.TextColorReadonly.ToLipgloss(),
+	)
+	model.Help.Styles.FullKey = model.Help.Styles.ShortKey.Foreground(colorTheme.Colors.TextColorReadonly.ToLipgloss())
+	model.Help.Styles.FullDesc = model.Help.Styles.ShortKey.Foreground(colorTheme.Colors.TextColorReadonly.ToLipgloss())
 
 	m := ListModel{
 		Model:    model,

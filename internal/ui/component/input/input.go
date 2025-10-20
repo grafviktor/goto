@@ -59,13 +59,15 @@ func (l *Input) View() string {
 	view := l.Model.View()
 
 	if l.Focused() {
-		view = focusedInputText.Render(view)
+		view = styleTextFocused.Render(view)
 	} else if !l.Enabled() {
-		view = greyedOutStyle.Render(view)
+		view = styleTextReadonly.Render(view)
+	} else {
+		view = styleText.Render(view)
 	}
 
 	if l.displayTooltip && strings.TrimSpace(l.Tooltip) != "" {
-		tooltip := lo.Ternary(l.Focused(), focusedStyle.Render(l.Tooltip), l.Tooltip)
+		tooltip := lo.Ternary(l.Focused(), styleInputFocused.Render(l.Tooltip), l.Tooltip)
 		view = fmt.Sprintf("%s %s", tooltip, view)
 	}
 
@@ -83,7 +85,7 @@ func (l *Input) Focus() tea.Cmd {
 
 func (l *Input) prompt() string {
 	if l.Focused() {
-		return focusedStyle.Render(l.FocusedPrompt)
+		return styleInputFocused.Render(l.FocusedPrompt)
 	}
 
 	return strings.Repeat(" ", utf8.RuneCountInString(l.FocusedPrompt))
@@ -92,13 +94,13 @@ func (l *Input) prompt() string {
 func (l *Input) labelView() string {
 	switch {
 	case l.Err != nil:
-		return l.prompt() + errorStyle.Render(l.Label())
+		return l.prompt() + styleInputError.Render(l.Label())
 	case l.Focused():
-		return l.prompt() + focusedStyle.Render(l.Label())
+		return l.prompt() + styleInputFocused.Render(l.Label())
 	case !l.Enabled():
-		return l.prompt() + greyedOutStyle.Render(l.Label())
+		return l.prompt() + styleTextReadonly.Render(l.Label())
 	default:
-		return l.prompt() + noStyle.Render(l.Label())
+		return l.prompt() + styleText.Render(l.Label())
 	}
 }
 

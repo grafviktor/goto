@@ -52,16 +52,16 @@ type HostListStyles struct {
 	Group lipgloss.Style
 }
 
-// InputStyles contains styles for input components
+// InputStyles contains styles for input components.
 type InputStyles struct {
-	Focused     lipgloss.Style
-	Error       lipgloss.Style
-	FocusedText lipgloss.Style
-	Disabled    lipgloss.Style
-	Normal      lipgloss.Style
+	InputFocused lipgloss.Style
+	InputError   lipgloss.Style
+	TextFocused  lipgloss.Style
+	TextReadonly lipgloss.Style
+	TextNormal   lipgloss.Style
 }
 
-// HostEditStyles contains styles for host edit components
+// HostEditStyles contains styles for host edit components.
 type HostEditStyles struct {
 	Doc    lipgloss.Style
 	Cursor lipgloss.Style
@@ -69,7 +69,8 @@ type HostEditStyles struct {
 	Menu   lipgloss.Style
 }
 
-// DefaultTheme returns the default application theme
+// DefaultTheme returns the default application theme.
+// See cheat-sheet: https://www.ditig.com/publications/256-colors-cheat-sheet
 func DefaultTheme() *Theme {
 	theme := &Theme{
 		Name: "default",
@@ -89,34 +90,11 @@ func DefaultTheme() *Theme {
 
 func (t *Theme) listStyles() list.Styles {
 	s := list.DefaultStyles()
-	// bullet := "•"
-	// verySubduedColor := lipgloss.AdaptiveColor{Light: "#DDDADA", Dark: "#3C3C3C"}
-	// subduedColor := lipgloss.AdaptiveColor{Light: "#9B9B9B", Dark: "#5C5C5C"}
-	// subduedColor := t.Colors.GroupHint.ToLipgloss()
-	// subduedColor := t.Colors.FontColorReadonly.ToLipgloss()
-
 	s.TitleBar = lipgloss.NewStyle().Padding(0, 0, 1, 2)
-
-	// s.Title = lipgloss.NewStyle().
-	// 	Background(lipgloss.Color("62")).
-	// 	Foreground(lipgloss.Color("230")).
-	// 	Padding(0, 1)
 	s.Title = lipgloss.NewStyle().
 		Background(t.Colors.BackgroundTitle.ToLipgloss()).
 		Foreground(t.Colors.TextColor.ToLipgloss()).
 		Padding(0, 1)
-
-	// s.Spinner = lipgloss.NewStyle().
-	// 	Foreground(lipgloss.AdaptiveColor{Light: "#8E8E8E", Dark: "#747373"})
-
-	// s.FilterPrompt = lipgloss.NewStyle().
-	// 	Foreground(lipgloss.AdaptiveColor{Light: "#04B575", Dark: "#ECFD65"})
-	// Does not work: the filter is still yellow
-	s.FilterPrompt = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#ff0000", Dark: "#ff0000"})
-
-	s.FilterCursor = lipgloss.NewStyle().
-		Foreground(t.Colors.TextColor.ToLipgloss())
 
 	// s.DefaultFilterCharacterMatch = lipgloss.NewStyle().Underline(true)
 
@@ -138,14 +116,9 @@ func (t *Theme) listStyles() list.Styles {
 
 	s.ArabicPagination = lipgloss.NewStyle().Foreground(t.Colors.TextColorReadonly.ToLipgloss())
 
-	// s.PaginationStyle = lipgloss.NewStyle().PaddingLeft(2) //nolint:mnd
-
 	// s.HelpStyle = lipgloss.NewStyle().Padding(1, 0, 0, 2)
 
-	// s.ActivePaginationDot = lipgloss.NewStyle().
-	// 	Foreground(lipgloss.AdaptiveColor{Light: "#847A85", Dark: "#979797"}).
-	// 	SetString(bullet)
-	s.ActivePaginationDot = s.ActivePaginationDot.Foreground(t.Colors.TextColor.ToLipgloss())
+	s.ActivePaginationDot = s.ActivePaginationDot.Foreground(t.Colors.TextColorSelected1.ToLipgloss())
 	s.InactivePaginationDot = s.InactivePaginationDot.Foreground(t.Colors.TextColorReadonly.ToLipgloss())
 	s.DividerDot = s.DividerDot.Foreground(t.Colors.TextColorReadonly.ToLipgloss())
 
@@ -195,17 +168,18 @@ func (t *Theme) hostListStyles() (s HostListStyles) {
 func (t *Theme) computeStyles() {
 	t.Styles = AppStyles{
 		Input: InputStyles{
-			Focused: lipgloss.NewStyle().
+			InputFocused: lipgloss.NewStyle().
 				BorderForeground(t.Colors.TextColorSelected2.ToLipgloss()).
 				Foreground(t.Colors.TextColorSelected1.ToLipgloss()),
-			Error: lipgloss.NewStyle().
+			InputError: lipgloss.NewStyle().
 				BorderForeground(t.Colors.TextColorSelected2.ToLipgloss()).
 				Foreground(t.Colors.TextColorError.ToLipgloss()),
-			FocusedText: lipgloss.NewStyle().
+			TextFocused: lipgloss.NewStyle().
 				Foreground(t.Colors.TextColorSelected2.ToLipgloss()),
-			Disabled: lipgloss.NewStyle().
+			TextReadonly: lipgloss.NewStyle().
 				Foreground(t.Colors.TextColorReadonly.ToLipgloss()),
-			Normal: lipgloss.NewStyle(),
+			TextNormal: lipgloss.NewStyle().
+				Foreground(t.Colors.TextColor.ToLipgloss()),
 		},
 		List:         t.listStyles(),
 		ListDelegate: t.listDelegateStyles(),
