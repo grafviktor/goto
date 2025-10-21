@@ -9,14 +9,12 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/message"
-	"github.com/grafviktor/goto/internal/ui/theme"
 )
 
 type iLogger interface {
@@ -26,7 +24,6 @@ type iLogger interface {
 }
 
 var (
-	docStyle        = lipgloss.NewStyle().Margin(1, 2, 1, 0) //nolint:mnd // magic numbers are OK fo styles
 	noGroupSelected = "~ all ~"
 )
 
@@ -42,15 +39,24 @@ type Model struct {
 // with pre-defined initial parameters.
 func New(_ context.Context, repo storage.HostStorage, appState *state.Application, log iLogger) *Model {
 	var listItems []list.Item
-	listDelegate := list.NewDefaultDelegate()
-	listDelegate.ShowDescription = false
-	listDelegate.SetSpacing(0)
-	listDelegate.Styles = theme.GetTheme().Styles.ListDelegate
-	listModel := list.New(listItems, listDelegate, 0, 0)
-	listModel.SetFilteringEnabled(false)
+	delegate := list.NewDefaultDelegate()
+	delegate.ShowDescription = false
+	delegate.SetSpacing(0)
+	delegate.Styles = styleListDelegate
+
+	model := list.New(listItems, delegate, 0, 0)
+	model.SetFilteringEnabled(false)
+
+	// Setup styles.
+	model.Styles = styleList
+	model.FilterInput.PromptStyle = stylePrompt
+	model.FilterInput.TextStyle = styleFilterInput
+	model.Paginator.ActiveDot = stylePaginatorActiveDot
+	model.Paginator.InactiveDot = stylePaginatorInactiveDot
+	model.Help.Styles = styleHelp
 
 	m := Model{
-		Model:    listModel,
+		Model:    model,
 		repo:     repo,
 		appState: appState,
 		logger:   log,
@@ -69,7 +75,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		h, v := docStyle.GetFrameSize()
+		h, v := styleComponentMargins.GetFrameSize()
 		m.SetSize(msg.Width-h, msg.Height-v)
 		m.logger.Debug("[UI] Set group list size: %d %d", m.Width(), m.Height())
 		return m, nil
@@ -85,7 +91,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) View() string {
-	return docStyle.Render(m.Model.View())
+	return styleComponentMargins.Render(m.Model.View())
 }
 
 func (m *Model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {

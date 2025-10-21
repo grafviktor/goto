@@ -11,18 +11,6 @@ import (
 	"github.com/samber/lo"
 )
 
-// New - component which consists from input and label.
-func New() *Input {
-	inputModel := textinput.New()
-	inputModel.Prompt = ""
-
-	return &Input{
-		Model:         inputModel,
-		FocusedPrompt: "│ ",
-		enabled:       true,
-	}
-}
-
 // Input - input UI component.
 type Input struct {
 	textinput.Model
@@ -33,6 +21,18 @@ type Input struct {
 	Err            error
 	enabled        bool
 	displayTooltip bool
+}
+
+// New - component which consists from input and label.
+func New() *Input {
+	inputModel := textinput.New()
+	inputModel.Prompt = ""
+
+	return &Input{
+		Model:         inputModel,
+		FocusedPrompt: "│ ",
+		enabled:       true,
+	}
 }
 
 func (l *Input) Init() tea.Cmd { return nil }

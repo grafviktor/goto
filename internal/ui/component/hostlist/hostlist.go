@@ -12,7 +12,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/constant"
@@ -20,13 +19,10 @@ import (
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/message"
-	"github.com/grafviktor/goto/internal/ui/theme"
 	"github.com/grafviktor/goto/internal/utils"
 )
 
 var (
-	styleDoc              = lipgloss.NewStyle().Margin(1, 2, 1, 0) //nolint:mnd // magic numbers are OK fo styles
-	colorTheme            = theme.GetTheme()
 	itemNotSelectedErrMsg = "you must select an item"
 	modeCloseApp          = "closeApp"
 	modeDefault           = ""
@@ -69,26 +65,14 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	// does - it filters the collection, but leaves initial items order unchanged.
 	// Default filter on the contrary - filters the collection based on the match rank.
 	model.Filter = list.UnsortedFilter
-	model.Styles = colorTheme.Styles.List
-	model.FilterInput.PromptStyle = lipgloss.NewStyle().
-		Foreground(colorTheme.Colors.TextColorSelected1.ToLipgloss())
-	model.FilterInput.TextStyle = lipgloss.NewStyle().
-		Foreground(colorTheme.Colors.TextColor.ToLipgloss())
 
-	// These 2 styles accept strings, so we have to re-create them in full.
-	model.Paginator.ActiveDot = lipgloss.NewStyle().
-		Foreground(colorTheme.Colors.TextColor.ToLipgloss()).
-		SetString("•").String()
-	model.Paginator.InactiveDot = lipgloss.NewStyle().
-		Foreground(colorTheme.Colors.TextColorReadonly.ToLipgloss()).
-		SetString("•").String()
-
-	model.Help.Styles.ShortKey = model.Help.Styles.ShortKey.Foreground(colorTheme.Colors.TextColorReadonly.ToLipgloss())
-	model.Help.Styles.ShortDesc = model.Help.Styles.ShortKey.Foreground(
-		colorTheme.Colors.TextColorReadonly.ToLipgloss(),
-	)
-	model.Help.Styles.FullKey = model.Help.Styles.ShortKey.Foreground(colorTheme.Colors.TextColorReadonly.ToLipgloss())
-	model.Help.Styles.FullDesc = model.Help.Styles.ShortKey.Foreground(colorTheme.Colors.TextColorReadonly.ToLipgloss())
+	// Setup styles.
+	model.Styles = styleList
+	model.FilterInput.PromptStyle = stylePrompt
+	model.FilterInput.TextStyle = styleFilterInput
+	model.Paginator.ActiveDot = stylePaginatorActiveDot
+	model.Paginator.InactiveDot = stylePaginatorInactiveDot
+	model.Help.Styles = styleHelp
 
 	m := ListModel{
 		Model:    model,
@@ -153,7 +137,7 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleKeyboardEvent(msg)
 	case tea.WindowSizeMsg:
 		// Triggers immediately after app start because we render this component by default
-		h, v := styleDoc.GetFrameSize()
+		h, v := styleComponentMargins.GetFrameSize()
 		m.SetSize(msg.Width-h, msg.Height-v)
 		m.logger.Debug("[UI] Set host list size: %d %d", m.Width(), m.Height())
 		return m, nil
@@ -253,7 +237,7 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 }
 
 func (m *ListModel) View() string {
-	return styleDoc.Render(m.Model.View())
+	return styleComponentMargins.Render(m.Model.View())
 }
 
 func (m *ListModel) updateChildModel(msg tea.Msg) tea.Cmd {
@@ -594,12 +578,11 @@ func (m *ListModel) updateTitle() {
 
 	switch {
 	case m.mode == modeSSHCopyID && isHost:
-		newTitle = m.Styles.Title.Render("copy ssh key to the remote host? (y/N)")
+		newTitle = "copy ssh key to the remote host? (y/N)"
 	case m.mode == modeRemoveItem && isHost:
 		newTitle = fmt.Sprintf("delete \"%s\"? (y/N)", item.Title())
-		newTitle = m.Styles.Title.Render(newTitle)
 	case m.mode == modeCloseApp:
-		newTitle = m.Styles.Title.Render("close app? (y/N)")
+		newTitle = "close app? (y/N)"
 	case isHost:
 		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
 		connectCmd := strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
@@ -620,10 +603,9 @@ func (m *ListModel) updateTitle() {
 func (m *ListModel) prefixWithGroupName(title string) string {
 	if !utils.StringEmpty(&m.appState.Group) {
 		shortGroupName := utils.StringAbbreviation(m.appState.Group)
-		groupStyle := colorTheme.Styles.HostList.Group
 		title = m.Styles.Title.Render(title)
 		m.Styles.Title = m.Styles.Title.Padding(0)
-		return fmt.Sprintf("%s%s", groupStyle.Render(shortGroupName), title)
+		return fmt.Sprintf("%s%s", styleGroupAbbreviation.Render(shortGroupName), title)
 	}
 
 	return title
@@ -748,7 +730,7 @@ func (m *ListModel) SetTitle(title string) {
 }
 
 func (m *ListModel) resetTitleStyle() {
-	m.Styles.Title = colorTheme.Styles.List.Title
+	m.Styles.Title = themeSettings.Styles.List.Title
 }
 
 func (m *ListModel) displayNotificationMsg(msg string) tea.Cmd {

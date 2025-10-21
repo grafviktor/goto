@@ -10,24 +10,24 @@ import (
 func GetStyles() *hostEditStyles {
 	t := theme.GetTheme()
 	return &hostEditStyles{
-		Doc:    t.Styles.HostEdit.Doc,
-		Cursor: t.Styles.HostEdit.Cursor,
-		Title:  t.Styles.HostEdit.Title,
-		Menu:   t.Styles.HostEdit.Menu,
+		VerticalMargin: t.Styles.EditForm.VericalMargin,
+		SelectedTitle:  t.Styles.EditForm.SelectedTitle,
+		Title:          t.Styles.EditForm.Title,
+		Menu:           t.Styles.EditForm.TextReadonly,
 	}
 }
 
 type hostEditStyles struct {
-	Doc    lipgloss.Style
-	Cursor lipgloss.Style
-	Title  lipgloss.Style
-	Menu   lipgloss.Style
+	VerticalMargin lipgloss.Style
+	SelectedTitle  lipgloss.Style
+	Title          lipgloss.Style
+	Menu           lipgloss.Style
 }
 
-// Legacy style variables for backward compatibility
+// Legacy style variables for backward compatibility.
 var (
-	docStyle    = GetStyles().Doc
-	cursorStyle = GetStyles().Cursor
+	docStyle    = GetStyles().VerticalMargin
+	cursorStyle = GetStyles().SelectedTitle
 	titleStyle  = GetStyles().Title
 	menuStyle   = GetStyles().Menu
 )

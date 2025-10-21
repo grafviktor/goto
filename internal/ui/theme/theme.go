@@ -7,16 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/lipgloss"
 )
-
-// Theme defines the color scheme and styling for the application.
-type Theme struct {
-	Name   string     `json:"name"`
-	Colors ColorsList `json:"colors"`
-	Styles AppStyles  `json:"-"` // Not serialized, computed from colors
-}
 
 // ColorsList defines all colors which can be overridden in the application.
 type ColorsList struct {
@@ -39,34 +33,11 @@ func (c AdaptiveColor) ToLipgloss() lipgloss.AdaptiveColor {
 	return lipgloss.AdaptiveColor{Light: c.Light, Dark: c.Dark}
 }
 
-// AppStyles contains all computed styles for the application.
-type AppStyles struct {
-	Input        InputStyles
-	List         list.Styles
-	ListDelegate list.DefaultItemStyles
-	HostEdit     HostEditStyles
-	HostList     HostListStyles
-}
-
-type HostListStyles struct {
-	Group lipgloss.Style
-}
-
-// InputStyles contains styles for input components.
-type InputStyles struct {
-	InputFocused lipgloss.Style
-	InputError   lipgloss.Style
-	TextFocused  lipgloss.Style
-	TextReadonly lipgloss.Style
-	TextNormal   lipgloss.Style
-}
-
-// HostEditStyles contains styles for host edit components.
-type HostEditStyles struct {
-	Doc    lipgloss.Style
-	Cursor lipgloss.Style
-	Title  lipgloss.Style
-	Menu   lipgloss.Style
+// Theme defines the color scheme and styling for the application.
+type Theme struct {
+	Name   string     `json:"name"`
+	Colors ColorsList `json:"colors"`
+	Styles AppStyles  `json:"-"` // Not serialized, computed from colors
 }
 
 // DefaultTheme returns the default application theme.
@@ -88,6 +59,16 @@ func DefaultTheme() *Theme {
 	return theme
 }
 
+// AppStyles contains all computed styles for the application.
+type AppStyles struct {
+	Input        InputStyles
+	List         list.Styles
+	ListDelegate list.DefaultItemStyles
+	ListHelp     help.Styles
+	EditForm     EditForm
+	ListExtra    ListExtraStyles
+}
+
 func (t *Theme) listStyles() list.Styles {
 	s := list.DefaultStyles()
 	s.TitleBar = lipgloss.NewStyle().Padding(0, 0, 1, 2)
@@ -95,8 +76,6 @@ func (t *Theme) listStyles() list.Styles {
 		Background(t.Colors.BackgroundTitle.ToLipgloss()).
 		Foreground(t.Colors.TextColor.ToLipgloss()).
 		Padding(0, 1)
-
-	// s.DefaultFilterCharacterMatch = lipgloss.NewStyle().Underline(true)
 
 	s.StatusBar = lipgloss.NewStyle().
 		// Foreground(t.Colors.Muted.ToLipgloss()). // Decided to get rid of specific umatched filtered items color
@@ -108,15 +87,12 @@ func (t *Theme) listStyles() list.Styles {
 	s.StatusBarActiveFilter = lipgloss.NewStyle().
 		Foreground(t.Colors.TextColor.ToLipgloss())
 
-	// s.StatusBarFilterCount = lipgloss.NewStyle().Foreground(verySubduedColor)
 	s.StatusBarFilterCount = lipgloss.NewStyle().Foreground(t.Colors.TextColorReadonly.ToLipgloss())
 
 	s.NoItems = lipgloss.NewStyle().
 		Foreground(t.Colors.TextColorReadonly.ToLipgloss())
 
 	s.ArabicPagination = lipgloss.NewStyle().Foreground(t.Colors.TextColorReadonly.ToLipgloss())
-
-	// s.HelpStyle = lipgloss.NewStyle().Padding(1, 0, 0, 2)
 
 	s.ActivePaginationDot = s.ActivePaginationDot.Foreground(t.Colors.TextColorSelected1.ToLipgloss())
 	s.InactivePaginationDot = s.InactivePaginationDot.Foreground(t.Colors.TextColorReadonly.ToLipgloss())
@@ -135,7 +111,6 @@ func (t *Theme) listDelegateStyles() (s list.DefaultItemStyles) {
 
 	s.SelectedTitle = lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder(), false, false, false, true).
-		// BorderForeground(t.Colors.Border.ToLipgloss()). // Decided to get rid of specific border color
 		BorderForeground(t.Colors.TextColorSelected2.ToLipgloss()).
 		Foreground(t.Colors.TextColorSelected1.ToLipgloss()).
 		Padding(0, 0, 0, 1)
@@ -155,48 +130,110 @@ func (t *Theme) listDelegateStyles() (s list.DefaultItemStyles) {
 	return s
 }
 
-func (t *Theme) hostListStyles() (s HostListStyles) {
-	s.Group = lipgloss.NewStyle().
-		// Background(t.Colors.Selection.ToLipgloss()).
+func (t *Theme) listHelpStyles() (s help.Styles) {
+	s.ShortKey = s.ShortKey.Foreground(t.Colors.TextColorReadonly.ToLipgloss())
+	s.ShortDesc = s.ShortKey.Foreground(t.Colors.TextColorReadonly.ToLipgloss())
+	s.ShortSeparator = s.ShortKey.Foreground(t.Colors.TextColorReadonly.ToLipgloss())
+
+	s.FullKey = s.FullKey.Foreground(t.Colors.TextColorReadonly.ToLipgloss())
+	s.FullDesc = s.FullKey.Foreground(t.Colors.TextColorReadonly.ToLipgloss())
+	s.FullSeparator = s.FullKey.Foreground(t.Colors.TextColorReadonly.ToLipgloss())
+
+	return s
+}
+
+type ListExtraStyles struct {
+	GroupAbbreviation lipgloss.Style
+	GroupHint         lipgloss.Style
+	Prompt            lipgloss.Style
+	FilterInput       lipgloss.Style
+	// These 2 paginator styles are string values.
+	PaginatorActiveDot   string
+	PaginatorInactiveDot string
+}
+
+func (t *Theme) listExtraStyles() (s ListExtraStyles) {
+	s.GroupAbbreviation = lipgloss.NewStyle().
 		Background(t.Colors.TextColor.ToLipgloss()).
 		Foreground(t.Colors.BackgroundTitle.ToLipgloss()).
 		Padding(0, 1)
 
+	s.GroupHint = lipgloss.NewStyle().
+		Foreground(t.Colors.TextColorReadonly.ToLipgloss())
+
+	s.Prompt = lipgloss.NewStyle().
+		Foreground(t.Colors.TextColorSelected1.ToLipgloss())
+	s.FilterInput = lipgloss.NewStyle().
+		Foreground(t.Colors.TextColor.ToLipgloss())
+
+	s.PaginatorActiveDot = lipgloss.NewStyle().
+		Foreground(t.Colors.TextColor.ToLipgloss()).
+		SetString("•").String()
+	s.PaginatorInactiveDot = lipgloss.NewStyle().
+		Foreground(t.Colors.TextColorReadonly.ToLipgloss()).
+		SetString("•").String()
+
+	return s
+}
+
+// InputStyles contains styles for input components.
+type InputStyles struct {
+	InputFocused lipgloss.Style
+	InputError   lipgloss.Style
+	TextFocused  lipgloss.Style
+	TextReadonly lipgloss.Style
+	TextNormal   lipgloss.Style
+}
+
+func (t *Theme) inputStyles() (s InputStyles) {
+	s.InputFocused = lipgloss.NewStyle().
+		BorderForeground(t.Colors.TextColorSelected2.ToLipgloss()).
+		Foreground(t.Colors.TextColorSelected1.ToLipgloss())
+	s.InputError = lipgloss.NewStyle().
+		BorderForeground(t.Colors.TextColorSelected2.ToLipgloss()).
+		Foreground(t.Colors.TextColorError.ToLipgloss())
+	s.TextFocused = lipgloss.NewStyle().
+		Foreground(t.Colors.TextColorSelected2.ToLipgloss())
+	s.TextReadonly = lipgloss.NewStyle().
+		Foreground(t.Colors.TextColorReadonly.ToLipgloss())
+	s.TextNormal = lipgloss.NewStyle().
+		Foreground(t.Colors.TextColor.ToLipgloss())
+
+	return s
+}
+
+// EditForm contains styles for host edit components.
+type EditForm struct {
+	VericalMargin lipgloss.Style
+	SelectedTitle lipgloss.Style
+	Title         lipgloss.Style
+	TextReadonly  lipgloss.Style
+}
+
+func (t *Theme) editFormStyles() (s EditForm) {
+	s.VericalMargin = lipgloss.NewStyle().Margin(1, 0)
+	s.SelectedTitle = lipgloss.NewStyle().
+		BorderForeground(t.Colors.TextColorSelected2.ToLipgloss()).
+		Foreground(t.Colors.TextColorSelected1.ToLipgloss())
+	s.Title = lipgloss.NewStyle().
+		Background(t.Colors.BackgroundTitle.ToLipgloss()).
+		Foreground(t.Colors.TextColor.ToLipgloss()).
+		Padding(0, 1).
+		Margin(1, 2, 0)
+	s.TextReadonly = lipgloss.NewStyle().
+		Foreground(t.Colors.TextColorReadonly.ToLipgloss()).
+		Margin(2, 2, 1)
 	return s
 }
 
 func (t *Theme) computeStyles() {
 	t.Styles = AppStyles{
-		Input: InputStyles{
-			InputFocused: lipgloss.NewStyle().
-				BorderForeground(t.Colors.TextColorSelected2.ToLipgloss()).
-				Foreground(t.Colors.TextColorSelected1.ToLipgloss()),
-			InputError: lipgloss.NewStyle().
-				BorderForeground(t.Colors.TextColorSelected2.ToLipgloss()).
-				Foreground(t.Colors.TextColorError.ToLipgloss()),
-			TextFocused: lipgloss.NewStyle().
-				Foreground(t.Colors.TextColorSelected2.ToLipgloss()),
-			TextReadonly: lipgloss.NewStyle().
-				Foreground(t.Colors.TextColorReadonly.ToLipgloss()),
-			TextNormal: lipgloss.NewStyle().
-				Foreground(t.Colors.TextColor.ToLipgloss()),
-		},
+		Input:        t.inputStyles(),
+		ListExtra:    t.listExtraStyles(),
 		List:         t.listStyles(),
 		ListDelegate: t.listDelegateStyles(),
-		HostList:     t.hostListStyles(),
-		HostEdit: HostEditStyles{
-			Doc: lipgloss.NewStyle().Margin(1, 0),
-			Cursor: lipgloss.NewStyle().
-				BorderForeground(t.Colors.TextColorSelected2.ToLipgloss()).
-				Foreground(t.Colors.TextColorSelected1.ToLipgloss()),
-			Title: lipgloss.NewStyle().
-				Background(t.Colors.BackgroundTitle.ToLipgloss()).
-				// Foreground(t.Colors.Selection.ToLipgloss()).
-				Foreground(t.Colors.TextColor.ToLipgloss()).
-				Padding(0, 1).
-				Margin(1, 2, 0),
-			Menu: lipgloss.NewStyle().Margin(2, 2, 1),
-		},
+		ListHelp:     t.listHelpStyles(),
+		EditForm:     t.editFormStyles(),
 	}
 }
 

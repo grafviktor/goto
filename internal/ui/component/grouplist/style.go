@@ -1,4 +1,4 @@
-package hostlist
+package grouplist
 
 import (
 	"github.com/charmbracelet/lipgloss"
@@ -19,10 +19,6 @@ var (
 	// Paginator styles.
 	stylePaginatorActiveDot   = styleListExtra.PaginatorActiveDot
 	stylePaginatorInactiveDot = styleListExtra.PaginatorInactiveDot
-	// Group hint - where we display a host group abbreviation in host list title.
-	styleGroupAbbreviation = themeSettings.Styles.ListExtra.GroupAbbreviation
-	// Status empty - where we display a host group, if it was changed.
-	styleGroupHint = themeSettings.Styles.ListExtra.GroupHint
 	// Margings for the whole UI component.
 	styleComponentMargins = lipgloss.NewStyle().Margin(1, 2, 1, 0) //nolint:mnd // magic numbers are OK fo styles
 )

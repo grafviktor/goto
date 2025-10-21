@@ -10,7 +10,6 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/constant"
-	"github.com/grafviktor/goto/internal/ui/theme"
 	"github.com/grafviktor/goto/internal/utils"
 )
 
@@ -30,7 +29,7 @@ func NewHostDelegate(layout *constant.ScreenLayout, group *string, log iLogger) 
 		layout:          layout,
 		selectedGroup:   group,
 	}
-	delegate.Styles = theme.GetTheme().Styles.ListDelegate
+	delegate.Styles = styleListDelegate
 	delegate.updateLayout()
 
 	delegate.UpdateFunc = func(msg tea.Msg, _ *list.Model) tea.Cmd {
@@ -83,7 +82,7 @@ func (hd *HostDelegate) Render(w io.Writer, m list.Model, index int, item list.I
 		} else if hd.isHostMovedToAnotherGroup(itemCopy.Group) {
 			groupIsEmpty := utils.StringEmpty(&itemCopy.Group)
 			groupName := lo.Ternary(groupIsEmpty, "[no group]", fmt.Sprintf("(%s)", itemCopy.Group))
-			itemCopy.Host.Title = fmt.Sprintf("%s %s", itemCopy.Title(), colorTheme.Styles.List.StatusEmpty.Render(groupName))
+			itemCopy.Host.Title = fmt.Sprintf("%s %s", itemCopy.Title(), styleGroupHint.Render(groupName))
 		}
 
 		hd.DefaultDelegate.Render(w, m, index, itemCopy)
