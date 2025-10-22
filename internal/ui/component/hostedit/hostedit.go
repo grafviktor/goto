@@ -159,10 +159,12 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		isNewHost: hostNotFoundErr != nil,
 	}
 
+	m.help.Styles = styleHelp
+
 	var t input.Input
 	for i := range m.inputs {
 		t = *input.New()
-		t.Cursor.Style = cursorStyle
+		t.Cursor.Style = styleSelectedTitle
 
 		switch i {
 		case inputTitle:
@@ -521,6 +523,7 @@ func (m *EditModel) updateInputFields() {
 func (m *EditModel) handleReadonlyHost() {
 	m.logger.Debug("[UI] Update input components. All parameters are disabled.")
 	lo.ForEach(m.inputs, func(_ input.Input, n int) {
+		m.inputs[n].PlaceholderStyle = styleTextReadonly
 		m.inputs[n].Placeholder = fmt.Sprintf("%s: %s", "readonly", m.host.getHostAttributeValueByIndex(n))
 		m.inputs[n].SetValue("")
 		m.inputs[n].SetEnabled(false)
@@ -575,15 +578,15 @@ func (m *EditModel) inputsView() string {
 		}
 	}
 
-	return docStyle.Render(b.String())
+	return styleComponentMargins.Render(b.String())
 }
 
 func (m *EditModel) headerView() string {
-	return titleStyle.Render(m.title)
+	return styleTitle.Render(m.title)
 }
 
 func (m *EditModel) helpView() string {
-	return menuStyle.Render(m.help.View(m.keyMap))
+	return styleTextReadonly.Render(m.help.View(m.keyMap))
 }
 
 func (m *EditModel) SetTitle(title string) {

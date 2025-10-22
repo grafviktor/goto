@@ -27,6 +27,7 @@ type Input struct {
 func New() *Input {
 	inputModel := textinput.New()
 	inputModel.Prompt = ""
+	inputModel.PlaceholderStyle = styleTextReadonly
 
 	return &Input{
 		Model:         inputModel,
@@ -58,11 +59,12 @@ func (l *Input) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (l *Input) View() string {
 	view := l.Model.View()
 
-	if l.Focused() {
+	switch {
+	case l.Focused():
 		view = styleTextFocused.Render(view)
-	} else if !l.Enabled() {
+	case !l.Enabled():
 		view = styleTextReadonly.Render(view)
-	} else {
+	default:
 		view = styleText.Render(view)
 	}
 

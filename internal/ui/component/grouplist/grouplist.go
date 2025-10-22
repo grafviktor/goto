@@ -23,9 +23,7 @@ type iLogger interface {
 	Error(format string, args ...any)
 }
 
-var (
-	noGroupSelected = "~ all ~"
-)
+var noGroupSelected = "~ all ~"
 
 type Model struct {
 	list.Model
