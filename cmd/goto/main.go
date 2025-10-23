@@ -50,6 +50,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Initialize theme system
+	appState.Logger.Debug("[MAIN] Loading application theme")
+	appTheme := theme.LoadTheme(appState.ApplicationConfig.AppHome, "default")
+	appState.Logger.Debug("[MAIN] Using theme: %s", appTheme.Name)
+
 	// Run user interface
 	ui.Start(appState.Context, strg, &appState)
 
@@ -84,11 +89,6 @@ func createApplicationOrExit() state.Application {
 
 	// Create applicationContext state
 	applicationState := state.Create(context.Background(), applicationConfiguration, lg)
-
-	// Initialize theme system
-	lg.Debug("[MAIN] Loading application theme")
-	appTheme := theme.LoadTheme(applicationConfiguration.AppHome)
-	lg.Debug("[MAIN] Using theme: %s", appTheme.Name)
 
 	// If "-v" parameter provided, display application version configuration and exit
 	if applicationConfiguration.DisplayVersionAndExit {

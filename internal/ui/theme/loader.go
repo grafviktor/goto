@@ -25,8 +25,8 @@ func GetTheme() *Theme {
 }
 
 // LoadTheme loads a theme from file or falls back to default.
-func LoadTheme(configDir string) *Theme {
-	themeFile := filepath.Join(configDir, "theme.json")
+func LoadTheme(configDir, themeName string) *Theme {
+	themeFile := filepath.Join(configDir, "themes", themeName+".json")
 
 	theme, err := LoadThemeFromFile(themeFile)
 	if err != nil {
@@ -60,6 +60,11 @@ func LoadThemeFromFile(filePath string) (*Theme, error) {
 
 // SaveThemeToFile saves a theme to a JSON file.
 func SaveThemeToFile(theme *Theme, filePath string) error {
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // Folder permissions are sufficient
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
 	data, err := json.MarshalIndent(theme, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal theme: %w", err)

@@ -22,12 +22,12 @@ func (c AdaptiveColor) toLipgloss() lipgloss.AdaptiveColor {
 
 // ColorsList defines all colors which can be overridden in the application.
 type ColorsList struct {
-	BackgroundTitle    AdaptiveColor `json:"backgroundTitle"`
-	TextColor          AdaptiveColor `json:"textColor"`
-	TextColorError     AdaptiveColor `json:"textColorError"`
-	TextColorReadonly  AdaptiveColor `json:"textColorReadonly"`
-	TextColorSelected1 AdaptiveColor `json:"textColorSelected1"`
-	TextColorSelected2 AdaptiveColor `json:"textColorSelected2"`
+	TextColor            AdaptiveColor `json:"textColor"`
+	TextColorError       AdaptiveColor `json:"textColorError"`
+	TextColorReadonly    AdaptiveColor `json:"textColorReadonly"`
+	TextColorSelected1   AdaptiveColor `json:"textColorSelected1"`
+	TextColorSelected2   AdaptiveColor `json:"textColorSelected2"`
+	TitleBackgroundColor AdaptiveColor `json:"titleBackgroundColor"`
 }
 
 // Theme defines the color scheme and styling for the application.
@@ -62,7 +62,7 @@ func (t *Theme) listStyles() list.Styles {
 	s := list.DefaultStyles()
 	s.TitleBar = lipgloss.NewStyle().Padding(0, 0, 1, 2)
 	s.Title = lipgloss.NewStyle().
-		Background(t.Colors.BackgroundTitle.toLipgloss()).
+		Background(t.Colors.TitleBackgroundColor.toLipgloss()).
 		Foreground(t.Colors.TextColor.toLipgloss()).
 		Padding(0, 1)
 
@@ -152,7 +152,7 @@ func (t *Theme) listExtraStyles() ListExtraStyles {
 
 	s.GroupAbbreviation = lipgloss.NewStyle().
 		Background(t.Colors.TextColor.toLipgloss()).
-		Foreground(t.Colors.BackgroundTitle.toLipgloss()).
+		Foreground(t.Colors.TitleBackgroundColor.toLipgloss()).
 		Padding(0, 1)
 
 	s.GroupHint = lipgloss.NewStyle().
@@ -215,7 +215,7 @@ func (t *Theme) editFormStyles() EditForm {
 		BorderForeground(t.Colors.TextColorSelected2.toLipgloss()).
 		Foreground(t.Colors.TextColorSelected1.toLipgloss())
 	s.Title = lipgloss.NewStyle().
-		Background(t.Colors.BackgroundTitle.toLipgloss()).
+		Background(t.Colors.TitleBackgroundColor.toLipgloss()).
 		Foreground(t.Colors.TextColor.toLipgloss()).
 		Padding(0, 1).
 		Margin(1, 2, 0)
