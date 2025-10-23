@@ -134,6 +134,7 @@ func (t *Theme) listHelpStyles() help.Styles {
 }
 
 type ListExtraStyles struct {
+	Cursor            lipgloss.Style
 	GroupAbbreviation lipgloss.Style
 	GroupHint         lipgloss.Style
 	Prompt            lipgloss.Style
@@ -145,6 +146,9 @@ type ListExtraStyles struct {
 
 func (t *Theme) listExtraStyles() ListExtraStyles {
 	s := ListExtraStyles{}
+
+	s.Cursor = lipgloss.NewStyle().
+		Foreground(t.Colors.TextColorSelected2.toLipgloss())
 
 	s.GroupAbbreviation = lipgloss.NewStyle().
 		Background(t.Colors.TextColor.toLipgloss()).

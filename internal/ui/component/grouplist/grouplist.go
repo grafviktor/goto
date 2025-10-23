@@ -31,6 +31,7 @@ type Model struct {
 	repo     storage.HostStorage
 	appState *state.Application
 	logger   iLogger
+	styles   styles
 }
 
 // New - creates a new UI component which is used to select a host group from a list,
@@ -40,24 +41,26 @@ func New(_ context.Context, repo storage.HostStorage, appState *state.Applicatio
 	delegate := list.NewDefaultDelegate()
 	delegate.ShowDescription = false
 	delegate.SetSpacing(0)
-	delegate.Styles = styleListDelegate
 
 	model := list.New(listItems, delegate, 0, 0)
 	model.SetFilteringEnabled(false)
 
 	// Setup styles.
-	model.Styles = styleList
-	model.FilterInput.PromptStyle = stylePrompt
-	model.FilterInput.TextStyle = styleFilterInput
-	model.Paginator.ActiveDot = stylePaginatorActiveDot
-	model.Paginator.InactiveDot = stylePaginatorInactiveDot
-	model.Help.Styles = styleHelp
+	styles := defaultStyles()
+	delegate.Styles = styles.styleListDelegate
+	model.Styles = styles.styleList
+	model.FilterInput.PromptStyle = styles.stylePrompt
+	model.FilterInput.TextStyle = styles.styleFilterInput
+	model.Paginator.ActiveDot = styles.stylePaginatorActiveDot
+	model.Paginator.InactiveDot = styles.stylePaginatorInactiveDot
+	model.Help.Styles = styles.styleHelp
 
 	m := Model{
 		Model:    model,
 		repo:     repo,
 		appState: appState,
 		logger:   log,
+		styles:   styles,
 	}
 
 	m.Title = "select group"
@@ -73,7 +76,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		h, v := styleComponentMargins.GetFrameSize()
+		h, v := m.styles.styleComponentMargins.GetFrameSize()
 		m.SetSize(msg.Width-h, msg.Height-v)
 		m.logger.Debug("[UI] Set group list size: %d %d", m.Width(), m.Height())
 		return m, nil
@@ -89,7 +92,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) View() string {
-	return styleComponentMargins.Render(m.Model.View())
+	return m.styles.styleComponentMargins.Render(m.Model.View())
 }
 
 func (m *Model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {

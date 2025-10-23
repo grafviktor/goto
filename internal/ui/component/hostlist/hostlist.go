@@ -47,6 +47,7 @@ type ListModel struct {
 	appState *state.Application
 	logger   iLogger
 	mode     string
+	styles   styles
 }
 
 // New - creates new host list model.
@@ -67,12 +68,14 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	model.Filter = list.UnsortedFilter
 
 	// Setup styles.
-	model.Styles = styleList
-	model.FilterInput.PromptStyle = stylePrompt
-	model.FilterInput.TextStyle = styleFilterInput
-	model.Paginator.ActiveDot = stylePaginatorActiveDot
-	model.Paginator.InactiveDot = stylePaginatorInactiveDot
-	model.Help.Styles = styleHelp
+	styles := defaultStyles()
+	model.Styles = styles.list
+	model.FilterInput.PromptStyle = styles.prompt
+	model.FilterInput.TextStyle = styles.filterInput
+	model.FilterInput.Cursor.Style = styles.cursor
+	model.Paginator.ActiveDot = styles.paginatorActiveDot
+	model.Paginator.InactiveDot = styles.paginatorInactiveDot
+	model.Help.Styles = styles.help
 
 	m := ListModel{
 		Model:    model,
@@ -80,6 +83,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 		repo:     storage,
 		appState: appState,
 		logger:   log,
+		styles:   styles,
 	}
 
 	m.KeyMap.CursorUp.Unbind()
@@ -137,7 +141,7 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleKeyboardEvent(msg)
 	case tea.WindowSizeMsg:
 		// Triggers immediately after app start because we render this component by default
-		h, v := styleComponentMargins.GetFrameSize()
+		h, v := m.styles.componentMargins.GetFrameSize()
 		m.SetSize(msg.Width-h, msg.Height-v)
 		m.logger.Debug("[UI] Set host list size: %d %d", m.Width(), m.Height())
 		return m, nil
@@ -237,7 +241,7 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 }
 
 func (m *ListModel) View() string {
-	return styleComponentMargins.Render(m.Model.View())
+	return m.styles.componentMargins.Render(m.Model.View())
 }
 
 func (m *ListModel) updateChildModel(msg tea.Msg) tea.Cmd {
@@ -605,7 +609,7 @@ func (m *ListModel) prefixWithGroupName(title string) string {
 		shortGroupName := utils.StringAbbreviation(m.appState.Group)
 		title = m.Styles.Title.Render(title)
 		m.Styles.Title = m.Styles.Title.Padding(0)
-		return fmt.Sprintf("%s%s", styleGroupAbbreviation.Render(shortGroupName), title)
+		return fmt.Sprintf("%s%s", m.styles.groupAbbreviation.Render(shortGroupName), title)
 	}
 
 	return title
@@ -730,7 +734,7 @@ func (m *ListModel) SetTitle(title string) {
 }
 
 func (m *ListModel) resetTitleStyle() {
-	m.Styles.Title = themeSettings.Styles.List.Title
+	m.Styles.Title = m.styles.list.Title
 }
 
 func (m *ListModel) displayNotificationMsg(msg string) tea.Cmd {

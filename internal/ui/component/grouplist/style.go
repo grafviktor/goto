@@ -1,24 +1,43 @@
 package grouplist
 
 import (
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/grafviktor/goto/internal/ui/theme"
 )
 
-var (
-	themeSettings = theme.GetTheme()
+type styles struct {
+	styleList         list.Styles
+	styleHelp         help.Styles
+	styleListDelegate list.DefaultItemStyles
+	styleListExtra    theme.ListExtraStyles
 
-	styleList         = themeSettings.Styles.List
-	styleHelp         = themeSettings.Styles.ListHelp
-	styleListDelegate = themeSettings.Styles.ListDelegate
-	styleListExtra    = themeSettings.Styles.ListExtra
 	// Filter styles.
-	stylePrompt      = styleListExtra.Prompt
-	styleFilterInput = styleListExtra.FilterInput
+	stylePrompt      lipgloss.Style
+	styleFilterInput lipgloss.Style
+
 	// Paginator styles.
-	stylePaginatorActiveDot   = styleListExtra.PaginatorActiveDot
-	stylePaginatorInactiveDot = styleListExtra.PaginatorInactiveDot
+	stylePaginatorActiveDot   string
+	stylePaginatorInactiveDot string
+
 	// Margings for the whole UI component.
-	styleComponentMargins = lipgloss.NewStyle().Margin(1, 2, 1, 0) //nolint:mnd // magic numbers are OK fo styles
-)
+	styleComponentMargins lipgloss.Style
+}
+
+func defaultStyles() styles {
+	themeSettings := theme.GetTheme().Styles
+
+	return styles{
+		styleComponentMargins:     lipgloss.NewStyle().Margin(1, 2, 1, 0), //nolint:mnd // magic nums are OK for styles
+		styleFilterInput:          themeSettings.ListExtra.FilterInput,
+		styleHelp:                 themeSettings.ListHelp,
+		styleList:                 themeSettings.List,
+		styleListDelegate:         themeSettings.ListDelegate,
+		styleListExtra:            themeSettings.ListExtra,
+		stylePaginatorActiveDot:   themeSettings.ListExtra.PaginatorActiveDot,
+		stylePaginatorInactiveDot: themeSettings.ListExtra.PaginatorInactiveDot,
+		stylePrompt:               themeSettings.ListExtra.Prompt,
+	}
+}

@@ -19,6 +19,7 @@ type HostDelegate struct {
 	layout        *constant.ScreenLayout
 	selectedGroup *string
 	logger        iLogger
+	styles        styles
 }
 
 // NewHostDelegate creates a new Delegate object which can be used for customizing the view of a host.
@@ -28,8 +29,10 @@ func NewHostDelegate(layout *constant.ScreenLayout, group *string, log iLogger) 
 		logger:          log,
 		layout:          layout,
 		selectedGroup:   group,
+		styles:          defaultStyles(),
 	}
-	delegate.Styles = styleListDelegate
+
+	delegate.Styles = delegate.styles.listDelegate
 	delegate.updateLayout()
 
 	delegate.UpdateFunc = func(msg tea.Msg, _ *list.Model) tea.Cmd {
@@ -82,7 +85,7 @@ func (hd *HostDelegate) Render(w io.Writer, m list.Model, index int, item list.I
 		} else if hd.isHostMovedToAnotherGroup(itemCopy.Group) {
 			groupIsEmpty := utils.StringEmpty(&itemCopy.Group)
 			groupName := lo.Ternary(groupIsEmpty, "[no group]", fmt.Sprintf("(%s)", itemCopy.Group))
-			itemCopy.Host.Title = fmt.Sprintf("%s %s", itemCopy.Title(), styleGroupHint.Render(groupName))
+			itemCopy.Host.Title = fmt.Sprintf("%s %s", itemCopy.Title(), hd.styles.groupHint.Render(groupName))
 		}
 
 		hd.DefaultDelegate.Render(w, m, index, itemCopy)

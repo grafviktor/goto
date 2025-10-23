@@ -21,18 +21,21 @@ type Input struct {
 	Err            error
 	enabled        bool
 	displayTooltip bool
+	styles         styles
 }
 
 // New - component which consists from input and label.
 func New() *Input {
 	inputModel := textinput.New()
 	inputModel.Prompt = ""
-	inputModel.PlaceholderStyle = styleTextReadonly
+	styles := defaultStyles()
+	inputModel.PlaceholderStyle = styles.textReadonly
 
 	return &Input{
 		Model:         inputModel,
 		FocusedPrompt: "│ ",
 		enabled:       true,
+		styles:        styles,
 	}
 }
 
@@ -61,15 +64,15 @@ func (l *Input) View() string {
 
 	switch {
 	case l.Focused():
-		view = styleTextFocused.Render(view)
+		view = l.styles.textFocused.Render(view)
 	case !l.Enabled():
-		view = styleTextReadonly.Render(view)
+		view = l.styles.textReadonly.Render(view)
 	default:
-		view = styleText.Render(view)
+		view = l.styles.textNormal.Render(view)
 	}
 
 	if l.displayTooltip && strings.TrimSpace(l.Tooltip) != "" {
-		tooltip := lo.Ternary(l.Focused(), styleInputFocused.Render(l.Tooltip), l.Tooltip)
+		tooltip := lo.Ternary(l.Focused(), l.styles.textFocused.Render(l.Tooltip), l.Tooltip)
 		view = fmt.Sprintf("%s %s", tooltip, view)
 	}
 
@@ -87,7 +90,7 @@ func (l *Input) Focus() tea.Cmd {
 
 func (l *Input) prompt() string {
 	if l.Focused() {
-		return styleInputFocused.Render(l.FocusedPrompt)
+		return l.styles.textFocused.Render(l.FocusedPrompt)
 	}
 
 	return strings.Repeat(" ", utf8.RuneCountInString(l.FocusedPrompt))
@@ -96,13 +99,13 @@ func (l *Input) prompt() string {
 func (l *Input) labelView() string {
 	switch {
 	case l.Err != nil:
-		return l.prompt() + styleInputError.Render(l.Label())
+		return l.prompt() + l.styles.inputError.Render(l.Label())
 	case l.Focused():
-		return l.prompt() + styleInputFocused.Render(l.Label())
+		return l.prompt() + l.styles.inputFocused.Render(l.Label())
 	case !l.Enabled():
-		return l.prompt() + styleTextReadonly.Render(l.Label())
+		return l.prompt() + l.styles.textReadonly.Render(l.Label())
 	default:
-		return l.prompt() + styleText.Render(l.Label())
+		return l.prompt() + l.styles.textNormal.Render(l.Label())
 	}
 }
 
