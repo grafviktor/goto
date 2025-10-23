@@ -1,76 +1,30 @@
 package hostedit
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/lipgloss"
 
-var (
-	docStyle    = lipgloss.NewStyle().Margin(1, 0)
-	cursorStyle = lipgloss.NewStyle().
-			BorderForeground(lipgloss.AdaptiveColor{Light: "#F793FF", Dark: "#AD58B4"}).
-			Foreground(lipgloss.AdaptiveColor{Light: "#EE6FF8", Dark: "#EE6FF8"})
-
-	titleStyle = lipgloss.NewStyle(). //
-			Background(lipgloss.Color("#5f5fd7")).
-			Foreground(lipgloss.Color("#ffffd7	")).
-		// Background(lipgloss.Color("62")).
-		// Foreground(lipgloss.Color("230")).
-		Padding(0, 1).
-		// Instead of placing "1" to have a padding at the bottom,
-		// I use '\n' in the code base. That is to a rendering artifacts
-		Margin(1, 2, 0) //nolint:mnd // magic numbers are OK fo styles
-
-	menuStyle = lipgloss.NewStyle().Margin(2, 2, 1) //nolint:mnd // magic numbers are OK fo styles
+	"github.com/grafviktor/goto/internal/ui/theme"
 )
 
-//nolint:dupword // Commented block left for reference
-/*
-
-// DefaultItemStyles defines styling for a default list item.
-// See DefaultItemView for when these come into play.
-type DefaultItemStyles struct {
-	// The Normal state.
-	NormalTitle lipgloss.Style
-	NormalDesc  lipgloss.Style
-
-	// The selected item state.
-	SelectedTitle lipgloss.Style
-	SelectedDesc  lipgloss.Style
-
-	// The dimmed state, for when the filter input is initially activated.
-	DimmedTitle lipgloss.Style
-	DimmedDesc  lipgloss.Style
-
-	// Characters matching the current filter, if any.
-	FilterMatch lipgloss.Style
+type styles struct {
+	componentMargins lipgloss.Style
+	cursor           lipgloss.Style
+	selectedTitle    lipgloss.Style
+	title            lipgloss.Style
+	textReadonly     lipgloss.Style
+	help             help.Styles
 }
 
-// NewDefaultItemStyles returns style definitions for a default item. See
-// DefaultItemView for when these come into play.
-func NewDefaultItemStyles() (s DefaultItemStyles) {
-	s.NormalTitle = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#1a1a1a", Dark: "#dddddd"}).
-		Padding(0, 0, 0, 2)
+func defaultStyles() styles {
+	themeSettings := theme.GetTheme().Styles
 
-	s.NormalDesc = s.NormalTitle.Copy().
-		Foreground(lipgloss.AdaptiveColor{Light: "#A49FA5", Dark: "#777777"})
-
-	s.SelectedTitle = lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder(), false, false, false, true).
-		BorderForeground(lipgloss.AdaptiveColor{Light: "#F793FF", Dark: "#AD58B4"}).
-		Foreground(lipgloss.AdaptiveColor{Light: "#EE6FF8", Dark: "#EE6FF8"}).
-		Padding(0, 0, 0, 1)
-
-	s.SelectedDesc = s.SelectedTitle.Copy().
-		Foreground(lipgloss.AdaptiveColor{Light: "#F793FF", Dark: "#AD58B4"})
-
-	s.DimmedTitle = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#A49FA5", Dark: "#777777"}).
-		Padding(0, 0, 0, 2)
-
-	s.DimmedDesc = s.DimmedTitle.Copy().
-		Foreground(lipgloss.AdaptiveColor{Light: "#C2B8C2", Dark: "#4D4D4D"})
-
-	s.FilterMatch = lipgloss.NewStyle().Underline(true)
-
-	return s
+	return styles{
+		componentMargins: lipgloss.NewStyle().Margin(1, 0),
+		cursor:           themeSettings.ListExtra.Cursor,
+		help:             themeSettings.ListHelp,
+		selectedTitle:    themeSettings.EditForm.SelectedTitle,
+		textReadonly:     themeSettings.EditForm.TextReadonly,
+		title:            themeSettings.EditForm.Title,
+	}
 }
-*/

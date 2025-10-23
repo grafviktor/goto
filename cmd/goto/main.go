@@ -18,6 +18,7 @@ import (
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui"
+	"github.com/grafviktor/goto/internal/ui/theme"
 	"github.com/grafviktor/goto/internal/utils"
 	"github.com/grafviktor/goto/internal/version"
 )
@@ -48,6 +49,11 @@ func main() {
 		appState.Logger.Error("[MAIN] Cannot access application storage: %v\n", fatalErr)
 		os.Exit(1)
 	}
+
+	// Initialize theme system
+	appState.Logger.Debug("[MAIN] Loading application theme")
+	appTheme := theme.LoadTheme(appState.ApplicationConfig.AppHome, "default")
+	appState.Logger.Debug("[MAIN] Using theme: %s", appTheme.Name)
 
 	// Run user interface
 	ui.Start(appState.Context, strg, &appState)

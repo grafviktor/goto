@@ -12,7 +12,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/constant"
@@ -24,7 +23,6 @@ import (
 )
 
 var (
-	styleDoc              = lipgloss.NewStyle().Margin(1, 2, 1, 0) //nolint:mnd // magic numbers are OK fo styles
 	itemNotSelectedErrMsg = "you must select an item"
 	modeCloseApp          = "closeApp"
 	modeDefault           = ""
@@ -41,6 +39,17 @@ type iLogger interface {
 
 type msgToggleLayout struct{ layout constant.ScreenLayout }
 
+type ListModel struct {
+	list.Model
+
+	repo     storage.HostStorage
+	keyMap   *keyMap
+	appState *state.Application
+	logger   iLogger
+	mode     string
+	styles   styles
+}
+
 // New - creates new host list model.
 // context - is not used.
 // storage - is the data layer.
@@ -50,7 +59,6 @@ type msgToggleLayout struct{ layout constant.ScreenLayout }
 func New(_ context.Context, storage storage.HostStorage, appState *state.Application, log iLogger) *ListModel {
 	delegate := NewHostDelegate(&appState.ScreenLayout, &appState.Group, log)
 	delegateKeys := newDelegateKeyMap()
-	customStyles := customStyles()
 
 	var listItems []list.Item
 	model := list.New(listItems, delegate, 0, 0)
@@ -58,7 +66,16 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	// does - it filters the collection, but leaves initial items order unchanged.
 	// Default filter on the contrary - filters the collection based on the match rank.
 	model.Filter = list.UnsortedFilter
-	model.Styles = customStyles.Styles
+
+	// Setup styles.
+	styles := defaultStyles()
+	model.Styles = styles.list
+	model.FilterInput.PromptStyle = styles.prompt
+	model.FilterInput.TextStyle = styles.filterInput
+	model.FilterInput.Cursor.Style = styles.cursor
+	model.Paginator.ActiveDot = styles.paginatorActiveDot
+	model.Paginator.InactiveDot = styles.paginatorInactiveDot
+	model.Help.Styles = styles.help
 
 	m := ListModel{
 		Model:    model,
@@ -66,7 +83,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 		repo:     storage,
 		appState: appState,
 		logger:   log,
-		Styles:   customStyles,
+		styles:   styles,
 	}
 
 	m.KeyMap.CursorUp.Unbind()
@@ -80,20 +97,10 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.Applica
 	m.AdditionalShortHelpKeys = delegateKeys.ShortHelp
 	m.AdditionalFullHelpKeys = delegateKeys.FullHelp
 
-	m.Title = m.Styles.Title.Render(defaultListTitle)
+	// m.Title = colorTheme.Styles.Common.Title.Render(defaultListTitle)
+	m.Title = defaultListTitle
 
 	return &m
-}
-
-type ListModel struct {
-	list.Model
-
-	repo     storage.HostStorage
-	keyMap   *keyMap
-	appState *state.Application
-	logger   iLogger
-	mode     string
-	Styles   styles
 }
 
 func (m *ListModel) Init() tea.Cmd {
@@ -134,7 +141,7 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleKeyboardEvent(msg)
 	case tea.WindowSizeMsg:
 		// Triggers immediately after app start because we render this component by default
-		h, v := styleDoc.GetFrameSize()
+		h, v := m.styles.componentMargins.GetFrameSize()
 		m.SetSize(msg.Width-h, msg.Height-v)
 		m.logger.Debug("[UI] Set host list size: %d %d", m.Width(), m.Height())
 		return m, nil
@@ -234,7 +241,7 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 }
 
 func (m *ListModel) View() string {
-	return styleDoc.Render(m.Model.View())
+	return m.styles.componentMargins.Render(m.Model.View())
 }
 
 func (m *ListModel) updateChildModel(msg tea.Msg) tea.Cmd {
@@ -566,20 +573,20 @@ func (m *ListModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 	}
 }
 
-var sshConfigPathRe = regexp.MustCompile(`-F "([^"]+)"`)
+var sshConfigPathRe = regexp.MustCompile(`\s-F "([^"]+)"`)
 
 func (m *ListModel) updateTitle() {
 	var newTitle string
 	item, isHost := m.SelectedItem().(ListItemHost)
+	m.resetTitleStyle()
 
 	switch {
 	case m.mode == modeSSHCopyID && isHost:
-		newTitle = m.Styles.Title.Render("copy ssh key to the remote host? (y/N)")
+		newTitle = "copy ssh key to the remote host? (y/N)"
 	case m.mode == modeRemoveItem && isHost:
 		newTitle = fmt.Sprintf("delete \"%s\"? (y/N)", item.Title())
-		newTitle = m.Styles.Title.Render(newTitle)
 	case m.mode == modeCloseApp:
-		newTitle = m.Styles.Title.Render("close app? (y/N)")
+		newTitle = "close app? (y/N)"
 	case isHost:
 		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
 		connectCmd := strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
@@ -600,11 +607,12 @@ func (m *ListModel) updateTitle() {
 func (m *ListModel) prefixWithGroupName(title string) string {
 	if !utils.StringEmpty(&m.appState.Group) {
 		shortGroupName := utils.StringAbbreviation(m.appState.Group)
-		shortGroupName = m.Styles.Group.Render(shortGroupName)
-		return fmt.Sprintf("%s%s", shortGroupName, m.Styles.Title.Render(title))
+		title = m.Styles.Title.Render(title)
+		m.Styles.Title = m.Styles.Title.Padding(0)
+		return fmt.Sprintf("%s%s", m.styles.groupAbbreviation.Render(shortGroupName), title)
 	}
 
-	return m.Styles.Title.Render(title)
+	return title
 }
 
 func (m *ListModel) updateKeyMap() {
@@ -721,7 +729,12 @@ func (m *ListModel) confirmAction() tea.Cmd {
 }
 
 func (m *ListModel) SetTitle(title string) {
-	m.Title = m.Styles.Title.Render(title)
+	m.resetTitleStyle()
+	m.Title = title
+}
+
+func (m *ListModel) resetTitleStyle() {
+	m.Styles.Title = m.styles.list.Title
 }
 
 func (m *ListModel) displayNotificationMsg(msg string) tea.Cmd {

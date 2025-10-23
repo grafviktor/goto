@@ -86,7 +86,7 @@ function check_expected() {
 }
 
 function cleanup() {
-    rm -f out.gif "${TMP_HOME}"/*
+    rm -rf out.gif "${TMP_HOME}"/*
 }
 
 for file in *.tape; do

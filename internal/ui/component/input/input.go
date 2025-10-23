@@ -11,18 +11,6 @@ import (
 	"github.com/samber/lo"
 )
 
-// New - component which consists from input and label.
-func New() *Input {
-	inputModel := textinput.New()
-	inputModel.Prompt = ""
-
-	return &Input{
-		Model:         inputModel,
-		FocusedPrompt: "│ ",
-		enabled:       true,
-	}
-}
-
 // Input - input UI component.
 type Input struct {
 	textinput.Model
@@ -33,6 +21,22 @@ type Input struct {
 	Err            error
 	enabled        bool
 	displayTooltip bool
+	styles         styles
+}
+
+// New - component which consists from input and label.
+func New() *Input {
+	inputModel := textinput.New()
+	inputModel.Prompt = ""
+	styles := defaultStyles()
+	inputModel.PlaceholderStyle = styles.textReadonly
+
+	return &Input{
+		Model:         inputModel,
+		FocusedPrompt: "│ ",
+		enabled:       true,
+		styles:        styles,
+	}
 }
 
 func (l *Input) Init() tea.Cmd { return nil }
@@ -58,14 +62,17 @@ func (l *Input) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (l *Input) View() string {
 	view := l.Model.View()
 
-	if l.Focused() {
-		view = focusedInputText.Render(view)
-	} else if !l.Enabled() {
-		view = greyedOutStyle.Render(view)
+	switch {
+	case l.Focused():
+		view = l.styles.textFocused.Render(view)
+	case !l.Enabled():
+		view = l.styles.textReadonly.Render(view)
+	default:
+		view = l.styles.textNormal.Render(view)
 	}
 
 	if l.displayTooltip && strings.TrimSpace(l.Tooltip) != "" {
-		tooltip := lo.Ternary(l.Focused(), focusedStyle.Render(l.Tooltip), l.Tooltip)
+		tooltip := lo.Ternary(l.Focused(), l.styles.textFocused.Render(l.Tooltip), l.Tooltip)
 		view = fmt.Sprintf("%s %s", tooltip, view)
 	}
 
@@ -83,7 +90,7 @@ func (l *Input) Focus() tea.Cmd {
 
 func (l *Input) prompt() string {
 	if l.Focused() {
-		return focusedStyle.Render(l.FocusedPrompt)
+		return l.styles.textFocused.Render(l.FocusedPrompt)
 	}
 
 	return strings.Repeat(" ", utf8.RuneCountInString(l.FocusedPrompt))
@@ -92,13 +99,13 @@ func (l *Input) prompt() string {
 func (l *Input) labelView() string {
 	switch {
 	case l.Err != nil:
-		return l.prompt() + errorStyle.Render(l.Label())
+		return l.prompt() + l.styles.inputError.Render(l.Label())
 	case l.Focused():
-		return l.prompt() + focusedStyle.Render(l.Label())
+		return l.prompt() + l.styles.inputFocused.Render(l.Label())
 	case !l.Enabled():
-		return l.prompt() + greyedOutStyle.Render(l.Label())
+		return l.prompt() + l.styles.textReadonly.Render(l.Label())
 	default:
-		return l.prompt() + noStyle.Render(l.Label())
+		return l.prompt() + l.styles.textNormal.Render(l.Label())
 	}
 }
 

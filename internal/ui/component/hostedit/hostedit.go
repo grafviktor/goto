@@ -128,6 +128,7 @@ type EditModel struct {
 	title        string
 	viewport     viewport.Model
 	debounceTag  int
+	styles       styles
 }
 
 // New - returns new edit host form.
@@ -157,12 +158,15 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		// every time we change values which depend on each other, for instance: "Title" and "Address".
 		// Use text search and see where 'isNewHost' is used.
 		isNewHost: hostNotFoundErr != nil,
+		styles:    defaultStyles(),
 	}
+
+	m.help.Styles = m.styles.help
 
 	var t input.Input
 	for i := range m.inputs {
 		t = *input.New()
-		t.Cursor.Style = cursorStyle
+		t.Cursor.Style = m.styles.cursor
 
 		switch i {
 		case inputTitle:
@@ -521,6 +525,7 @@ func (m *EditModel) updateInputFields() {
 func (m *EditModel) handleReadonlyHost() {
 	m.logger.Debug("[UI] Update input components. All parameters are disabled.")
 	lo.ForEach(m.inputs, func(_ input.Input, n int) {
+		m.inputs[n].PlaceholderStyle = m.styles.textReadonly
 		m.inputs[n].Placeholder = fmt.Sprintf("%s: %s", "readonly", m.host.getHostAttributeValueByIndex(n))
 		m.inputs[n].SetValue("")
 		m.inputs[n].SetEnabled(false)
@@ -575,15 +580,15 @@ func (m *EditModel) inputsView() string {
 		}
 	}
 
-	return docStyle.Render(b.String())
+	return m.styles.componentMargins.Render(b.String())
 }
 
 func (m *EditModel) headerView() string {
-	return titleStyle.Render(m.title)
+	return m.styles.title.Render(m.title)
 }
 
 func (m *EditModel) helpView() string {
-	return menuStyle.Render(m.help.View(m.keyMap))
+	return m.styles.textReadonly.Render(m.help.View(m.keyMap))
 }
 
 func (m *EditModel) SetTitle(title string) {

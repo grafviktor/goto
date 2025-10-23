@@ -1,19 +1,27 @@
 package input
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"github.com/charmbracelet/lipgloss"
 
-// Ansi to hex color cheat-sheet: https://www.ditig.com/publications/256-colors-cheat-sheet
-
-var (
-	focusedStyle = lipgloss.NewStyle().
-			BorderForeground(lipgloss.AdaptiveColor{Light: "#F793FF", Dark: "#AD58B4"}).
-			Foreground(lipgloss.AdaptiveColor{Light: "#EE6FF8", Dark: "#EE6FF8"})
-
-	errorStyle = lipgloss.NewStyle().
-			BorderForeground(lipgloss.AdaptiveColor{Light: "#F793FF", Dark: "#AD58B4"}).
-			Foreground(lipgloss.AdaptiveColor{Light: "#FF7783", Dark: "#FF7783"})
-
-	focusedInputText = lipgloss.NewStyle().Foreground(lipgloss.Color("#AD58B4"))
-	greyedOutStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#585858"))
-	noStyle          = lipgloss.NewStyle()
+	"github.com/grafviktor/goto/internal/ui/theme"
 )
+
+type styles struct {
+	inputError   lipgloss.Style
+	inputFocused lipgloss.Style
+	textNormal   lipgloss.Style
+	textFocused  lipgloss.Style
+	textReadonly lipgloss.Style
+}
+
+func defaultStyles() styles {
+	themeSettings := theme.GetTheme().Styles.Input
+
+	return styles{
+		inputError:   themeSettings.InputError,
+		inputFocused: themeSettings.InputFocused,
+		textFocused:  themeSettings.TextFocused,
+		textNormal:   themeSettings.TextNormal,
+		textReadonly: themeSettings.TextReadonly,
+	}
+}
