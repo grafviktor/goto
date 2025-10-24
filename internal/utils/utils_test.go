@@ -1,4 +1,5 @@
-package utils //nolint:revive // utils is a common name
+//nolint:revive // utils is a common name
+package utils
 
 import (
 	"os"

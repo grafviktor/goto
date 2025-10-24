@@ -2,6 +2,7 @@
 package utils
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/samber/lo"
@@ -148,8 +150,12 @@ func IsURLPath(path string) bool {
 	}
 
 	path = strings.TrimSpace(path)
-	return lo.Contains([]string{"http://", "https://", "ftp://"}, strings.ToLower(path))
+	return lo.ContainsBy([]string{"http://", "https://", "ftp://"}, func(prefix string) bool {
+		return strings.HasPrefix(strings.ToLower(path), prefix)
+	})
 }
+
+var httpTimeout = 5 * time.Second
 
 // FetchFromURL fetches content from a URL and returns it as a string.
 func FetchFromURL(urlPath string) (io.ReadCloser, error) {
@@ -162,7 +168,16 @@ func FetchFromURL(urlPath string) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("invalid URL format: %w", err)
 	}
 
-	resp, err := http.Get(parsedURL.String())
+	ctx, cancel := context.WithTimeout(context.Background(), httpTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, parsedURL.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch URL %s: %w", urlPath, err)
 	}
