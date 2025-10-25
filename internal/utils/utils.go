@@ -155,7 +155,7 @@ func IsURLPath(path string) bool {
 	})
 }
 
-var httpTimeout = 5 * time.Second
+const networkResponseTimeout = 5 * time.Second
 
 // FetchFromURL fetches content from a URL and returns it as a string.
 func FetchFromURL(urlPath string) (io.ReadCloser, error) {
@@ -168,7 +168,7 @@ func FetchFromURL(urlPath string) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("invalid URL format: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), httpTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), networkResponseTimeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, parsedURL.String(), nil)
@@ -182,7 +182,7 @@ func FetchFromURL(urlPath string) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("failed to fetch URL %s: %w", urlPath, err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		_ = resp.Body.Close()
 		return nil, fmt.Errorf("failed to fetch URL %s: HTTP %d", urlPath, resp.StatusCode)
 	}

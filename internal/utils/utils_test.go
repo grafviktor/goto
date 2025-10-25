@@ -2,11 +2,17 @@
 package utils
 
 import (
+	"context"
+	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
@@ -237,4 +243,75 @@ func Test_ProcessBufferWriter_Write(t *testing.T) {
 	require.Equal(t, len(data), n)
 	// However we can read the text from writer.Output variable when we need
 	require.Equal(t, data, writer.Output)
+}
+
+func Test_FetchFromURL(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/test_1" {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("hello world"))
+			return
+		}
+
+		if r.URL.Path == "/test_2" {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if r.URL.Path == "/test_3" {
+			// Sleep longer than FetchFromURL's context timeout
+			time.Sleep(networkResponseTimeout + time.Second)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("late response"))
+			return
+		}
+	}))
+	defer ts.Close()
+
+	tests := []struct {
+		name          string
+		url           string
+		expectedData  string
+		expectedError error
+	}{
+		{
+			name:          "won't reach server",
+			url:           "www.missing_protocol_url.com",
+			expectedData:  "",
+			expectedError: errors.New("not a valid URL: www.missing_protocol_url.com"),
+		},
+		{
+			name:          "test_1",
+			url:           ts.URL + "/test_1",
+			expectedData:  "hello world",
+			expectedError: nil,
+		},
+		{
+			name:          "test_2",
+			url:           ts.URL + "/test_2",
+			expectedData:  "",
+			expectedError: errors.New("failed to fetch URL" + ts.URL + "/test_2: HTTP 500 Internal Server Error"),
+		},
+		{
+			name:          "test_3",
+			url:           ts.URL + "/test_3",
+			expectedData:  "late response",
+			expectedError: context.DeadlineExceeded,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := FetchFromURL(tt.url)
+			if err != nil {
+				require.ErrorAs(t, err, tt.expectedError)
+			} else {
+				defer resp.Close()
+				require.NoError(t, err)
+				data, readErr := io.ReadAll(resp)
+				require.NoError(t, readErr)
+				require.Equal(t, tt.expectedData, string(data))
+			}
+		})
+	}
 }
