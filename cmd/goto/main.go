@@ -53,7 +53,10 @@ func main() {
 	}
 
 	// Run user interface
-	ui.Start(appState.Context, str, &appState)
+	if err := ui.Start(appState.Context, str, &appState); err != nil {
+		appState.Logger.Error("[MAIN] UI terminated with error: %v", err)
+		logCloseAndExit(appState.Logger, exitCodeError)
+	}
 
 	// Quit signal should be intercepted on the UI level, however it will require
 	// additional switch-case block with appropriate checks. Leaving this message here.

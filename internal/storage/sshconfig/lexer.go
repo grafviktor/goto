@@ -2,6 +2,7 @@ package sshconfig
 
 import (
 	"bufio"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -22,10 +23,10 @@ type Lexer struct {
 }
 
 // NewFileLexer creates a new instance of Lexer for the given SSH config file path.
-func NewFileLexer(filePath string, log iLogger) *Lexer {
+func NewFileLexer(location, sourceType string, log iLogger) *Lexer {
 	return &Lexer{
-		sourceType: "file",
-		source:     filePath,
+		sourceType: sourceType,
+		source:     location,
 		logger:     log,
 	}
 }
@@ -56,8 +57,8 @@ func (l *Lexer) loadFromDataSource(includeToken SSHToken, children []SSHToken, c
 
 	rdr, err := newReader(includeToken.value, l.sourceType)
 	if err != nil {
-		l.logger.Error("[STORAGE] Error opening file: %+v", err)
-		panic(err)
+		l.logger.Error("[SSHCONFIG] Error opening file: %+v", err)
+		log.Fatalf("[SSHCONFIG] Error opening file: %+v\n", err)
 	}
 
 	defer func() {
@@ -115,7 +116,7 @@ func (l *Lexer) loadFromDataSource(includeToken SSHToken, children []SSHToken, c
 	if err = scanner.Err(); err != nil {
 		// Ideally, should add a line number which is failing to the error message
 		l.logger.Error("[SSHCONFIG] Error reading file %+v", err)
-		panic(err)
+		log.Fatalf("[SSHCONFIG] Error reading file %+v\n", err)
 	}
 
 	return children

@@ -246,6 +246,8 @@ func Test_ProcessBufferWriter_Write(t *testing.T) {
 }
 
 func Test_FetchFromURL(t *testing.T) {
+	// using a reduced network timeout as we don't want to wait too long when running unit tests
+	networkResponseTimeout = time.Second
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/test_1" {
 			w.WriteHeader(http.StatusOK)
@@ -290,7 +292,7 @@ func Test_FetchFromURL(t *testing.T) {
 			name:          "test_2",
 			url:           ts.URL + "/test_2",
 			expectedData:  "",
-			expectedError: errors.New("failed to fetch URL" + ts.URL + "/test_2: HTTP 500 Internal Server Error"),
+			expectedError: errors.New("failed to fetch URL " + ts.URL + "/test_2: status code 500"),
 		},
 		{
 			name:          "test_3",
@@ -303,9 +305,14 @@ func Test_FetchFromURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			resp, err := FetchFromURL(tt.url)
-			if err != nil {
-				require.ErrorAs(t, err, tt.expectedError)
-			} else {
+			switch {
+			case tt.name == "test_3":
+				require.Error(t, err)
+				require.ErrorIs(t, err, context.DeadlineExceeded)
+			case tt.expectedError != nil:
+				require.Error(t, err)
+				require.Equal(t, err.Error(), tt.expectedError.Error())
+			default:
 				defer resp.Close()
 				require.NoError(t, err)
 				data, readErr := io.ReadAll(resp)

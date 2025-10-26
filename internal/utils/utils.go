@@ -155,7 +155,9 @@ func IsURLPath(path string) bool {
 	})
 }
 
-const networkResponseTimeout = 5 * time.Second
+// networkResponseTimeout - max-wait time for network requests.
+// Not 'const' as redefined in unit tests to reduce execution time.
+var networkResponseTimeout = 10 * time.Second
 
 // FetchFromURL fetches content from a URL and returns it as a string.
 func FetchFromURL(urlPath string) (io.ReadCloser, error) {
@@ -182,9 +184,11 @@ func FetchFromURL(urlPath string) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("failed to fetch URL %s: %w", urlPath, err)
 	}
 
+	// TODO: Add check that buffer does not contain html tags
+
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		_ = resp.Body.Close()
-		return nil, fmt.Errorf("failed to fetch URL %s: HTTP %d", urlPath, resp.StatusCode)
+		return nil, fmt.Errorf("failed to fetch URL %s: status code %d", urlPath, resp.StatusCode)
 	}
 
 	return resp.Body, nil

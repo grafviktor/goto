@@ -9,22 +9,19 @@ import (
 )
 
 func newReader(value, kind string) (*reader, error) {
-	if kind == "file" {
-		// Check if the value is a URL
-		if utils.IsURLPath(value) {
-			urlReader, err := utils.FetchFromURL(value)
-			if err != nil {
-				return nil, err
-			}
-
-			return &reader{
-				kind:   "url",
-				reader: urlReader,
-				closer: urlReader,
-			}, nil
+	switch kind {
+	case "url":
+		urlReader, err := utils.FetchFromURL(value)
+		if err != nil {
+			return nil, err
 		}
 
-		// Regular file handling
+		return &reader{
+			kind:   "url",
+			reader: urlReader,
+			closer: urlReader,
+		}, nil
+	case "file":
 		file, err := os.Open(value)
 		if err != nil {
 			return nil, err
@@ -35,13 +32,13 @@ func newReader(value, kind string) (*reader, error) {
 			reader: file,
 			closer: file,
 		}, nil
+	default:
+		return &reader{
+			kind:   kind,
+			reader: strings.NewReader(value),
+			closer: nil,
+		}, nil
 	}
-
-	return &reader{
-		kind:   kind,
-		reader: strings.NewReader(value),
-		closer: nil,
-	}, nil
 }
 
 type reader struct {
