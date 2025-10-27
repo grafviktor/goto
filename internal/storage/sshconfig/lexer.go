@@ -79,28 +79,7 @@ func (l *Lexer) loadFromDataSource(
 		}
 
 		line = stripInlineComments(line)
-
-		var token SSHToken
-		switch {
-		case matchToken(line, "User", true):
-			token = l.usernameToken(line)
-		case matchToken(line, "HostName", true):
-			token = l.hostnameToken(line)
-		case matchToken(line, "Host", false):
-			token = l.hostToken(line)
-		case matchToken(line, "Port", true):
-			token = l.networkPortToken(line)
-		case matchToken(line, "Include", false):
-			token = l.keyValuesToken(tokenKind.IncludeFile, line)
-		case matchToken(line, "IdentityFile", true):
-			token = l.identityFileToken(line)
-		case matchToken(line, "# GG:GROUP", true):
-			token = l.metaDataToken(tokenKind.Group, line)
-		case matchToken(line, "# GG:DESCRIPTION", true):
-			token = l.metaDataToken(tokenKind.Description, line)
-		default:
-			token = SSHToken{kind: tokenKind.Unsupported}
-		}
+		token := l.readToken(line)
 
 		if token.kind == tokenKind.IncludeFile {
 			includeTokens := l.handleIncludeToken(token)
@@ -125,6 +104,31 @@ func (l *Lexer) loadFromDataSource(
 	}
 
 	return children, err
+}
+
+func (l *Lexer) readToken(line string) SSHToken {
+	var token SSHToken
+	switch {
+	case matchToken(line, "User", true):
+		token = l.usernameToken(line)
+	case matchToken(line, "HostName", true):
+		token = l.hostnameToken(line)
+	case matchToken(line, "Host", false):
+		token = l.hostToken(line)
+	case matchToken(line, "Port", true):
+		token = l.networkPortToken(line)
+	case matchToken(line, "Include", false):
+		token = l.keyValuesToken(tokenKind.IncludeFile, line)
+	case matchToken(line, "IdentityFile", true):
+		token = l.identityFileToken(line)
+	case matchToken(line, "# GG:GROUP", true):
+		token = l.metaDataToken(tokenKind.Group, line)
+	case matchToken(line, "# GG:DESCRIPTION", true):
+		token = l.metaDataToken(tokenKind.Description, line)
+	default:
+		token = SSHToken{kind: tokenKind.Unsupported}
+	}
+	return token
 }
 
 func shouldSkipLine(line string) bool {

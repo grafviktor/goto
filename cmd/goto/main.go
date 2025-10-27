@@ -53,7 +53,7 @@ func main() {
 	}
 
 	// Run user interface
-	if err := ui.Start(appState.Context, str, &appState); err != nil {
+	if err = ui.Start(appState.Context, str, &appState); err != nil {
 		logMessage := fmt.Sprintf("[MAIN] Error: %v", err)
 		logCloseAndExit(appState.Logger, exitCodeError, logMessage)
 	}

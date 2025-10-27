@@ -1,5 +1,4 @@
-//nolint:revive // utils is a common name
-package utils
+package utils //nolint:revive // utils is a common name
 
 import (
 	"context"
@@ -97,11 +96,6 @@ func Test(t *testing.T) {
 	expected := path.Join(userConfigDir, ".ssh", "config")
 	got, _ := SSHConfigFilePath("")
 	require.Equal(t, expected, got, "Should return default ssh config file path")
-
-	// Test case: Path is a directory
-	customFolderPath := t.TempDir()
-	_, err := SSHConfigFilePath(customFolderPath)
-	require.Error(t, err, "SSH config file path is a directory")
 
 	// Test case: custom file path
 	tempFile, err := os.CreateTemp(t.TempDir(), "ssh_config_tmp.")

@@ -12,8 +12,8 @@ type mockLexer struct {
 	tokens []SSHToken
 }
 
-func (m *mockLexer) Tokenize() []SSHToken {
-	return m.tokens
+func (m *mockLexer) Tokenize() ([]SSHToken, error) {
+	return m.tokens, nil
 }
 
 func TestParser_Parse_SingleHost(t *testing.T) {

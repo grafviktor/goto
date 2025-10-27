@@ -76,9 +76,9 @@ func TestListModel_Init(t *testing.T) {
 	)
 	teaCmd = lm.Init()
 
-	// Check that msgErrorOccurred{} was found among returned messages, which indicate that
+	// Check that ExitWithError{} was found among returned messages, which indicate that
 	// something is wrong with the storage
-	require.Equal(t, "mock error", teaCmd().(message.ErrorOccurred).Err.Error())
+	require.Equal(t, "mock error", teaCmd().(message.ExitWithError).Err.Error())
 }
 
 func Test_listModel_Change_Selection(t *testing.T) {

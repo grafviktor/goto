@@ -184,8 +184,6 @@ func FetchFromURL(urlPath string) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("failed to fetch URL %s: %w", urlPath, err)
 	}
 
-	// TODO: Add check that buffer does not contain html tags
-
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		_ = resp.Body.Close()
 		return nil, fmt.Errorf("failed to fetch URL %s: status code %d", urlPath, resp.StatusCode)

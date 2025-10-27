@@ -42,6 +42,7 @@ func TestPrintConsole(t *testing.T) {
 	expectedOutput += fmt.Sprintf("Commit:     %s\n", CommitHash())
 	expectedOutput += fmt.Sprintf("Branch:     %s\n", BuildBranch())
 	expectedOutput += fmt.Sprintf("Build date: %s\n", BuildDate())
+	expectedOutput += "\n"
 
 	require.Equal(t, expectedOutput, output)
 }

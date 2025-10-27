@@ -30,7 +30,7 @@ type SSHConfigFile struct {
 }
 
 // newSSHConfigStorage - constructs new SSHStorage.
-func newSSHConfigStorage(_ context.Context, sshConfigPath string, logger iLogger) (*SSHConfigFile, error) {
+func newSSHConfigStorage(_ context.Context, sshConfigPath string, logger iLogger) *SSHConfigFile {
 	var sourceType string
 	if utils.IsURLPath(sshConfigPath) {
 		sourceType = "url"
@@ -40,7 +40,7 @@ func newSSHConfigStorage(_ context.Context, sshConfigPath string, logger iLogger
 
 	lexer := sshconfig.NewFileLexer(sshConfigPath, sourceType, logger)
 	parser := sshconfig.NewParser(lexer, logger)
-	return &SSHConfigFile{parser: parser}, nil
+	return &SSHConfigFile{parser: parser}
 }
 
 // GetAll - returns all hosts.

@@ -1,6 +1,7 @@
 package sshconfig
 
 import (
+	"errors"
 	"io"
 	"os"
 	"strings"
@@ -22,15 +23,15 @@ func newReader(value, kind string) (*reader, error) {
 			closer: urlReader,
 		}, nil
 	case "file":
-		// TODO: Add meaningful return errors
-		// stat, err := os.Stat(absolutePath)
-		// if err != nil {
-		// 	return "", err
-		// }
+		stat, err := os.Stat(value)
+		if err != nil {
+			return nil, err
+		}
 
-		// if stat.IsDir() {
-		// 	return "", errors.New("SSH config file path is a directory")
-		// }
+		if stat.IsDir() {
+			return nil, errors.New("SSH config file path is a directory")
+		}
+
 		file, err := os.Open(value)
 		if err != nil {
 			return nil, err

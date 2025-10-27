@@ -33,7 +33,7 @@ Host test
 		key:   "Include",
 		value: config,
 	}
-	tokens := lex.loadFromDataSource(parent, nil, 0)
+	tokens, _ := lex.loadFromDataSource(parent, nil, 0)
 
 	wantKinds := []tokenEnum{
 		tokenKind.Host,
@@ -85,7 +85,7 @@ Host test
 		key:   "Include",
 		value: config,
 	}
-	tokens := lex.loadFromDataSource(parent, nil, 0)
+	tokens, _ := lex.loadFromDataSource(parent, nil, 0)
 
 	if len(tokens) != 1 {
 		t.Fatalf("expected 1 token, got %d", len(tokens))
@@ -109,7 +109,7 @@ User invalid!user
 		key:   "Include",
 		value: config,
 	}
-	tokens := lex.loadFromDataSource(parent, nil, 0)
+	tokens, _ := lex.loadFromDataSource(parent, nil, 0)
 	if len(tokens) != 0 {
 		t.Errorf("expected 0 tokens for invalid user, got %d", len(tokens))
 	}
@@ -129,7 +129,7 @@ Port notaport
 		key:   "Include",
 		value: config,
 	}
-	tokens := lex.loadFromDataSource(parent, nil, 0)
+	tokens, _ := lex.loadFromDataSource(parent, nil, 0)
 	if len(tokens) != 0 {
 		t.Errorf("expected 0 tokens for invalid port, got %d", len(tokens))
 	}
@@ -153,7 +153,7 @@ func TestLexer_Tokenize_IncludeDepthLimit(t *testing.T) {
 			t.Errorf("should not panic on max include depth, got %v", r)
 		}
 	}()
-	_ = lex.loadFromDataSource(parent, nil, maxFileIncludeDepth)
+	_, _ = lex.loadFromDataSource(parent, nil, maxFileIncludeDepth)
 }
 
 func Test_matchToken(t *testing.T) {
