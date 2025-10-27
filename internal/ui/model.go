@@ -59,6 +59,7 @@ type MainModel struct {
 	logger             iLogger
 	viewport           viewport.Model
 	ready              bool
+	exitError          error
 }
 
 func (m *MainModel) Init() tea.Cmd {
@@ -115,6 +116,10 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case message.RunProcessErrorOccurred:
 		m.logger.Debug("[UI] Handle process error message. Process: %v", msg.ProcessType)
 		m.handleProcessError(msg)
+	case message.ExitWithError:
+		m.logger.Debug("[UI] Quit application with error")
+		m.exitError = msg.Err
+		return m, tea.Quit
 	}
 
 	m.modelHostList, cmd = m.modelHostList.Update(msg)

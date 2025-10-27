@@ -2,7 +2,6 @@ package sshconfig
 
 import (
 	"bufio"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -32,7 +31,7 @@ func NewFileLexer(location, sourceType string, log iLogger) *Lexer {
 }
 
 // Tokenize reads the SSH config file and returns a slice of tokens representing the contents.
-func (l *Lexer) Tokenize() []SSHToken {
+func (l *Lexer) Tokenize() ([]SSHToken, error) {
 	parent := SSHToken{
 		kind:  tokenKind.IncludeFile,
 		key:   "Include",
@@ -43,22 +42,26 @@ func (l *Lexer) Tokenize() []SSHToken {
 	return l.loadFromDataSource(parent, tokens, 0)
 }
 
-func (l *Lexer) loadFromDataSource(includeToken SSHToken, children []SSHToken, currentDepth int) []SSHToken {
+func (l *Lexer) loadFromDataSource(
+	includeToken SSHToken,
+	children []SSHToken,
+	currentDepth int,
+) ([]SSHToken, error) {
 	currentDepth++
 	if currentDepth > maxFileIncludeDepth {
 		l.logger.Error("[SSHCONFIG]: Max include depth reached")
 
-		return children
+		return children, nil
 	}
 
 	if includeToken.kind != tokenKind.IncludeFile {
-		return children
+		return children, nil
 	}
 
 	rdr, err := newReader(includeToken.value, l.sourceType)
 	if err != nil {
 		l.logger.Error("[SSHCONFIG] Error opening file: %+v", err)
-		log.Fatalf("[SSHCONFIG] Error opening file: %+v\n", err)
+		return nil, err
 	}
 
 	defer func() {
@@ -102,7 +105,10 @@ func (l *Lexer) loadFromDataSource(includeToken SSHToken, children []SSHToken, c
 		if token.kind == tokenKind.IncludeFile {
 			includeTokens := l.handleIncludeToken(token)
 			for _, includeToken := range includeTokens {
-				children = l.loadFromDataSource(includeToken, children, currentDepth)
+				children, err = l.loadFromDataSource(includeToken, children, currentDepth)
+				if err != nil {
+					return children, err
+				}
 			}
 
 			continue
@@ -116,10 +122,9 @@ func (l *Lexer) loadFromDataSource(includeToken SSHToken, children []SSHToken, c
 	if err = scanner.Err(); err != nil {
 		// Ideally, should add a line number which is failing to the error message
 		l.logger.Error("[SSHCONFIG] Error reading file %+v", err)
-		log.Fatalf("[SSHCONFIG] Error reading file %+v\n", err)
 	}
 
-	return children
+	return children, err
 }
 
 func shouldSkipLine(line string) bool {

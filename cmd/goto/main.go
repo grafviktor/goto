@@ -48,14 +48,14 @@ func main() {
 	// Init storage
 	str, err := storage.Get(appState.Context, appState.ApplicationConfig, appState.Logger)
 	if err != nil {
-		appState.Logger.Error("[MAIN] Cannot access application storage: %v", err)
-		logCloseAndExit(appState.Logger, exitCodeError)
+		logMessage := fmt.Sprintf("[MAIN] Cannot access application storage: %v", err)
+		logCloseAndExit(appState.Logger, exitCodeError, logMessage)
 	}
 
 	// Run user interface
 	if err := ui.Start(appState.Context, str, &appState); err != nil {
-		appState.Logger.Error("[MAIN] UI terminated with error: %v", err)
-		logCloseAndExit(appState.Logger, exitCodeError)
+		logMessage := fmt.Sprintf("[MAIN] Error: %v", err)
+		logCloseAndExit(appState.Logger, exitCodeError, logMessage)
 	}
 
 	// Quit signal should be intercepted on the UI level, however it will require
@@ -63,10 +63,11 @@ func main() {
 	appState.Logger.Debug("[MAIN] Receive quit signal")
 	appState.Logger.Debug("[MAIN] Save application state")
 	if err = appState.Persist(); err != nil {
-		appState.Logger.Error("[MAIN] Can't save application state before closing: %v", err)
+		logMessage := fmt.Sprintf("[MAIN] Can't save application state before closing: %v", err)
+		logCloseAndExit(appState.Logger, exitCodeError, logMessage)
 	}
 
-	logCloseAndExit(appState.Logger, exitCodeSuccess)
+	logCloseAndExit(appState.Logger, exitCodeSuccess, "")
 }
 
 func createApplicationOrExit() state.Application {
@@ -92,27 +93,30 @@ func createApplicationOrExit() state.Application {
 	if applicationConfiguration.DisplayVersionAndExit {
 		lg.Debug("[MAIN] Display application version and exit")
 		version.Print()
-		fmt.Println()
 		applicationState.PrintConfig()
-		logCloseAndExit(lg, exitCodeSuccess)
+		logCloseAndExit(lg, exitCodeSuccess, "")
 	}
 
 	// If "-e" parameter provided, display enabled features and exit
 	if applicationConfiguration.EnableFeature != "" {
 		err = handleFeatureToggle(lg, applicationState, string(applicationConfiguration.EnableFeature), true)
 		if err != nil {
-			lg.Debug("[MAIN] Cannot save application configuration: %v", err)
+			logMessage := fmt.Sprintf("[MAIN] Cannot save application configuration: %v", err)
+			logCloseAndExit(lg, exitCodeError, logMessage)
 		}
-		logCloseAndExit(lg, exitCodeSuccess)
+
+		logCloseAndExit(lg, exitCodeSuccess, "")
 	}
 
 	// If "-d" parameter provided, display disabled features and exit
 	if applicationConfiguration.DisableFeature != "" {
 		err = handleFeatureToggle(lg, applicationState, string(applicationConfiguration.DisableFeature), false)
 		if err != nil {
-			lg.Debug("[MAIN] Cannot save application configuration: %v", err)
+			logMessage := fmt.Sprintf("[MAIN] Cannot save application configuration: %v", err)
+			logCloseAndExit(lg, exitCodeError, logMessage)
 		}
-		logCloseAndExit(lg, exitCodeSuccess)
+
+		logCloseAndExit(lg, exitCodeSuccess, "")
 	}
 
 	// Log application version
@@ -125,9 +129,7 @@ func createApplicationOrExit() state.Application {
 	// Check errors at the very end. That allows to check application version and enable/disable
 	// features, even if something is not right with the app.
 	if !success {
-		lg.Warn(logMsgCloseAppError)
-		log.Printf("[MAIN] Exit due to a fatal error.")
-		os.Exit(exitCodeError)
+		logCloseAndExit(lg, exitCodeError, "[MAIN] Exit due to a fatal error. Inspect logs for more details.")
 	}
 
 	return *applicationState
@@ -150,12 +152,19 @@ func createConfigurationOrExit() (application.Configuration, bool) {
 
 type loggerInterface interface {
 	Info(format string, args ...any)
+	Error(format string, args ...any)
 	Close()
 }
 
 // logCloseAndExit logs the close message, closes the logger, and exits with the specified code.
-func logCloseAndExit(lg loggerInterface, exitCode int) {
-	lg.Info("[MAIN] %s", logMsgCloseApp)
+func logCloseAndExit(lg loggerInterface, exitCode int, errorExitReason string) {
+	if exitCode != exitCodeSuccess {
+		fmt.Printf("%s\n", errorExitReason)
+		lg.Error("[MAIN] %s", logMsgCloseAppError)
+	} else {
+		lg.Info("[MAIN] %s", logMsgCloseApp)
+	}
+
 	lg.Close()
 	os.Exit(exitCode)
 }

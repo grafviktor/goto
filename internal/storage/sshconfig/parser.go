@@ -9,7 +9,7 @@ import (
 )
 
 type lexer interface {
-	Tokenize() []SSHToken
+	Tokenize() ([]SSHToken, error)
 }
 
 // Parser is responsible for parsing SSH configuration tokens into Host models.
@@ -34,7 +34,10 @@ func (p *Parser) Parse() ([]model.Host, error) {
 		return nil, errors.New("lexer is not set")
 	}
 
-	hostTokens := p.lexer.Tokenize()
+	hostTokens, err := p.lexer.Tokenize()
+	if err != nil {
+		return nil, err
+	}
 	p.currentHost = nil
 	p.foundHosts = nil
 

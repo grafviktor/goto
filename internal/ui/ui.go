@@ -21,5 +21,14 @@ func Start(ctx context.Context, storage storage.HostStorage, appState *state.App
 		appState.Logger.Error("[UI] Error starting user interface: %v", err)
 		return err
 	}
+
+	// There is no way to return error from Bubble Tea application,
+	// so we need to read error right from the model object to check
+	// if application closed with error or not.
+	if uiComponent.exitError != nil {
+		appState.Logger.Error("[UI] Application closed with error: %v", uiComponent.exitError)
+		return uiComponent.exitError
+	}
+
 	return nil
 }

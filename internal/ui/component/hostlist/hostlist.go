@@ -106,7 +106,7 @@ func (m *ListModel) loadHosts() tea.Cmd {
 	hosts, err := m.repo.GetAll()
 	if err != nil {
 		m.logger.Error("[UI] Cannot read database. %v", err)
-		return message.TeaCmd(message.ErrorOccurred{Err: err})
+		return message.TeaCmd(message.ExitWithError{Err: err})
 	}
 
 	// If host group is selected only load hosts from this group.

@@ -206,15 +206,6 @@ func SSHConfigFilePath(userDefinedPath string) (string, error) {
 			return "", err
 		}
 
-		stat, err := os.Stat(absolutePath)
-		if err != nil {
-			return "", err
-		}
-
-		if stat.IsDir() {
-			return "", errors.New("SSH config file path is a directory")
-		}
-
 		return absolutePath, nil
 	}
 

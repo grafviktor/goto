@@ -49,8 +49,13 @@ type combinedStorage struct {
 
 // Get returns new data service.
 func Get(ctx context.Context, appConfig application.Configuration, logger iLogger) (HostStorage, error) {
+	storages, err := getStorages(ctx, appConfig, logger)
+	if err != nil {
+		return nil, err
+	}
+
 	cs := combinedStorage{
-		storages:       getStorages(ctx, appConfig, logger),
+		storages:       storages,
 		hostStorageMap: make(map[int]hostStorageMapping),
 		hosts:          make(map[int]model.Host),
 		logger:         logger,
@@ -63,7 +68,7 @@ func getStorages(
 	ctx context.Context,
 	appConfig application.Configuration,
 	logger iLogger,
-) map[constant.HostStorageEnum]HostStorage {
+) (map[constant.HostStorageEnum]HostStorage, error) {
 	storageMap := make(map[constant.HostStorageEnum]HostStorage)
 	yamlStorage := newYAMLStorage(ctx, appConfig.AppHome, logger)
 	storageMap[yamlStorage.Type()] = yamlStorage
@@ -75,12 +80,13 @@ func getStorages(
 		sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.SSHConfigFilePath, logger)
 		if err != nil {
 			logger.Error("[STORAGE] Cannot load ssh hosts from file: %q. Error: %v", appConfig.SSHConfigFilePath, err)
+			return nil, err
 		} else {
 			storageMap[sshConfigStorage.Type()] = sshConfigStorage
 		}
 	}
 
-	return storageMap
+	return storageMap, nil
 }
 
 // Delete implements HostStorage.
