@@ -32,7 +32,7 @@ type SSHConfigFile struct {
 // newSSHConfigStorage - constructs new SSHStorage.
 func newSSHConfigStorage(_ context.Context, sshConfigPath string, logger iLogger) *SSHConfigFile {
 	var sourceType string
-	if utils.IsURLPath(sshConfigPath) {
+	if utils.IsNetworkSchemeSupported(sshConfigPath) {
 		sourceType = "url"
 	} else {
 		sourceType = "file"

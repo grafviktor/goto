@@ -1,6 +1,7 @@
 package sshconfig
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -133,6 +134,47 @@ Port notaport
 	if len(tokens) != 0 {
 		t.Errorf("expected 0 tokens for invalid port, got %d", len(tokens))
 	}
+}
+
+func TestLexer_Tokenize_IncludeFile(t *testing.T) {
+	// Explanation of what's going on here:
+	// Create a starting point token, which includes a file (includedConfig1).
+	// That file includes another file (includedConfig2).
+	// The second file contains a Host definition.
+	// We expect the lexer to follow the includes and return the Host token.
+
+	// tmpDir will be automatically cleaned removed after the test
+	tmpDir := t.TempDir()
+	includedConfig1 := filepath.Join(tmpDir, "config_included1")
+	includedConfig2 := filepath.Join(tmpDir, "config_included2")
+
+	// Create a config file with a single line - Include pointing to another file.
+	content := fmt.Sprintf("Include %s\n", includedConfig2)
+	if err := os.WriteFile(includedConfig1, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	// Create a config file with a single line - Host.
+	content = "Host mock-included-host\n"
+	if err := os.WriteFile(includedConfig2, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	lex := &Lexer{
+		sourceType: "file",
+		source:     filepath.Join(tmpDir, "config"),
+		logger:     &mocklogger.Logger{},
+	}
+
+	// That's our starting token which includes the file we created above.
+	parent := SSHToken{
+		kind:  tokenKind.IncludeFile,
+		key:   "Include",
+		value: includedConfig1,
+	}
+
+	tokens, _ := lex.loadFromDataSource(parent, nil, 0)
+	require.Len(t, tokens, 1, "expected 1 token for included host")
 }
 
 func TestLexer_Tokenize_IncludeDepthLimit(t *testing.T) {

@@ -348,7 +348,7 @@ func (l *Lexer) includeLocalFileToken(filePath string) []SSHToken {
 }
 
 func (l *Lexer) includeRemoteFileToken(resourcePath string) []SSHToken {
-	if utils.IsURLPath(resourcePath) {
+	if utils.IsNetworkSchemeSupported(resourcePath) {
 		// If resourcePath is already a full URL, use it as is.
 		return []SSHToken{{
 			kind:  tokenKind.IncludeFile,
