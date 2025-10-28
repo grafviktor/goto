@@ -1,0 +1,33 @@
+{
+  "name": "bubbletea",
+  "colors": {
+    "textColor": {
+      "light": "#1a1a1a",
+      "dark": "#dddddd"
+    },
+    "textColorError": {
+      "light": "#FF7783",
+      "dark": "#FF7783"
+    },
+    "textColorReadonly": {
+      "light": "#585858",
+      "dark": "#585858"
+    },
+    "textColorSelected1": {
+      "light": "#EE6FF8",
+      "dark": "#EE6FF8"
+    },
+    "textColorSelected2": {
+      "light": "#F793FF",
+      "dark": "#AD58B4"
+    },
+    "textColorTitle": {
+      "light": "#1a1a1a",
+      "dark": "#dddddd"
+    },
+    "backgroundColorTitle": {
+      "light": "#5f5fd7",
+      "dark": "#5f5fd7"
+    }
+  }
+}

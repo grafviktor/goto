@@ -37,17 +37,18 @@ type Model struct {
 // New - creates a new UI component which is used to select a host group from a list,
 // with pre-defined initial parameters.
 func New(_ context.Context, repo storage.HostStorage, appState *state.Application, log iLogger) *Model {
+	styles := defaultStyles()
+
 	var listItems []list.Item
 	delegate := list.NewDefaultDelegate()
 	delegate.ShowDescription = false
+	delegate.Styles = styles.styleListDelegate
 	delegate.SetSpacing(0)
 
 	model := list.New(listItems, delegate, 0, 0)
 	model.SetFilteringEnabled(false)
 
-	// Setup styles.
-	styles := defaultStyles()
-	delegate.Styles = styles.styleListDelegate
+	// Setup model styles.
 	model.Styles = styles.styleList
 	model.FilterInput.PromptStyle = styles.stylePrompt
 	model.FilterInput.TextStyle = styles.styleFilterInput

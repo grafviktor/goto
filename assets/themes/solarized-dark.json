@@ -1,0 +1,34 @@
+{
+  "name": "solarized-dark",
+  "colors": {
+    "textColor": {
+      "light": "#002b36",
+      "dark": "#839496"
+    },
+    "textColorError": {
+      "light": "#dc322f",
+      "dark": "#dc322f"
+    },
+    "textColorReadonly": {
+      "light": "#586e75",
+      "dark": "#586e75"
+    },
+    "textColorSelected1": {
+      "light": "#268bd2",
+      "dark": "#268bd2"
+    },
+    "textColorSelected2": {
+      "light": "#2aa198",
+      "dark": "#2aa198"
+    },
+    "textColorTitle": {
+      "light": "#fdf6e3",
+      "dark": "#fdf6e3"
+    },
+    "backgroundColorTitle": {
+      "light": "#268bd2",
+      "dark": "#268bd2"
+    }
+  }
+}
+
