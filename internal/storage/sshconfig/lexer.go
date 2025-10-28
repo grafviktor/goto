@@ -3,6 +3,7 @@ package sshconfig
 import (
 	"bufio"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -60,7 +61,7 @@ func (l *Lexer) loadFromDataSource(
 
 	rdr, err := newReader(includeToken.value, l.sourceType)
 	if err != nil {
-		l.logger.Error("[SSHCONFIG] Error opening file: %+v", err)
+		l.logger.Error("[SSHCONFIG] Error opening file %s: %+v", includeToken.value, err)
 		return nil, err
 	}
 
@@ -299,12 +300,19 @@ func (l *Lexer) identityFileToken(line string) SSHToken {
 }
 
 func (l *Lexer) handleIncludeToken(token SSHToken) []SSHToken {
-	tokens := []SSHToken{}
 	if token.kind != tokenKind.IncludeFile {
-		return tokens
+		return []SSHToken{}
 	}
 
-	filePath := token.value
+	if l.sourceType == "url" {
+		return l.includeRemoteFileToken(token.value)
+	}
+
+	return l.includeLocalFileToken(token.value)
+}
+
+func (l *Lexer) includeLocalFileToken(filePath string) []SSHToken {
+	tokens := []SSHToken{}
 	if !filepath.IsAbs(filePath) {
 		filePath = filepath.Join(filepath.Dir(l.source), filePath)
 	}
@@ -337,6 +345,31 @@ func (l *Lexer) handleIncludeToken(token SSHToken) []SSHToken {
 	}
 
 	return tokens
+}
+
+func (l *Lexer) includeRemoteFileToken(resourcePath string) []SSHToken {
+	var baseURL string
+	if path.IsAbs(resourcePath) {
+		// If resourcePath is absolute, extract base URL from source and try to fetch the file
+		// from the server root. I.e. "http://127.0.0.1:8080" + "/path/to/resource"
+		var err error
+		baseURL, err = utils.ExtractBaseURL(l.source)
+		if err != nil {
+			l.logger.Error("[SSHCONFIG]: Cannot parse resource URL: %v", err)
+			return []SSHToken{}
+		}
+	} else {
+		// If resourcePath is relative, take the base URL as the directory part of the source
+		// and try to fetch the file relative to that path. I.e. "http://127.0.0.1:8080/path" + "/to/resource"
+		baseURL, _ = path.Split(l.source)
+	}
+
+	resourcePath = baseURL + resourcePath
+	return []SSHToken{{
+		kind:  tokenKind.IncludeFile,
+		key:   "Include",
+		value: resourcePath,
+	}}
 }
 
 func (l *Lexer) metaDataToken(kind tokenEnum, line string) SSHToken {

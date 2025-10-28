@@ -1,4 +1,4 @@
-package utils //nolint:revive // utils is a common name
+package utils //nolint:revive,nolintlint // utils is a common name
 
 import (
 	"context"
@@ -237,6 +237,48 @@ func Test_ProcessBufferWriter_Write(t *testing.T) {
 	require.Equal(t, len(data), n)
 	// However we can read the text from writer.Output variable when we need
 	require.Equal(t, data, writer.Output)
+}
+
+func Test_ExtractBaseURL(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expected    string
+		expectError bool
+	}{
+		{
+			name:        "HTTPS URL with path and query",
+			input:       "https://127.0.0.1:8080/path/to/resource?query=value",
+			expected:    "https://127.0.0.1:8080",
+			expectError: false,
+		},
+		{
+			name:        "HTTP URL with path",
+			input:       "http://127.0.0.1/api/v1/users",
+			expected:    "http://127.0.0.1",
+			expectError: false,
+		},
+		{
+			name:        "Invalid URL - no protocol",
+			input:       "127.0.0.1/path",
+			expected:    "",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ExtractBaseURL(tt.input)
+
+			if tt.expectError {
+				require.Error(t, err)
+				require.Equal(t, tt.expected, result)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result)
+			}
+		})
+	}
 }
 
 func Test_FetchFromURL(t *testing.T) {
