@@ -180,11 +180,12 @@ func Test_matchToken(t *testing.T) {
 	}
 }
 
-func TestLexer_handleIncludeToken(t *testing.T) {
+func TestLexer_handleIncludeToken_localFile(t *testing.T) {
 	// tmpDir will be automatically cleaned removed after the test
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "config_included")
-	content := "Host mock-host\n"
+	// Create a config file with a single line - Host. That's enough for the test.
+	content := "Host mock-local-host\n"
 	if err := os.WriteFile(tmpFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
@@ -195,14 +196,80 @@ func TestLexer_handleIncludeToken(t *testing.T) {
 		logger:     &mocklogger.Logger{},
 	}
 
+	// That's our starting token which includes the file we created above.
 	token := SSHToken{
 		kind:  tokenKind.IncludeFile,
 		key:   "Include",
-		value: filepath.Join(tmpDir, "*_included"),
+		value: filepath.Join(tmpDir, "config_included"),
 	}
 
 	tokens := lex.handleIncludeToken(token)
 	require.Len(t, tokens, 1, "expected 1 include token")
+}
+
+func TestLexer_handleIncludeToken_remoteFile(t *testing.T) {
+	// That's our starting token which includes the file we created above.
+	tests := []struct {
+		name             string
+		baseURL          string
+		sourceTokenURL   string
+		expectedTokenURL string
+	}{
+		{
+			name:             "full url",
+			baseURL:          "http://127.0.0.1/config",
+			sourceTokenURL:   "http://127.0.0.1/config",
+			expectedTokenURL: "http://127.0.0.1/config",
+		},
+		{
+			name:    "absolute path",
+			baseURL: "http://127.0.0.1/config",
+			// That's an absolute path, so it should be fetched from the server root.
+			sourceTokenURL:   "/path/to/config",
+			expectedTokenURL: "http://127.0.0.1/path/to/config",
+		},
+		{
+			name:    "relative path",
+			baseURL: "http://127.0.0.1/config",
+			// That's a relative path, so it should be fetched from baseURL + path.
+			sourceTokenURL:   "path/to/config",
+			expectedTokenURL: "http://127.0.0.1/config/path/to/config",
+		},
+		{
+			name:    "absolute path, base URL with trailing slash",
+			baseURL: "http://127.0.0.1/config/",
+			// That's an absolute path, so it should be fetched from the server root.
+			sourceTokenURL:   "/path/to/config",
+			expectedTokenURL: "http://127.0.0.1/path/to/config",
+		},
+		{
+			name:    "relative path, base URL with trailing slash",
+			baseURL: "http://127.0.0.1/config/",
+			// That's a relative path, so it should be fetched from baseURL + path.
+			sourceTokenURL:   "path/to/config",
+			expectedTokenURL: "http://127.0.0.1/config/path/to/config",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := &Lexer{
+				sourceType: "url",
+				source:     tt.baseURL,
+				logger:     &mocklogger.Logger{},
+			}
+
+			startingPointToken := SSHToken{
+				kind:  tokenKind.IncludeFile,
+				key:   "Include",
+				value: tt.sourceTokenURL,
+			}
+
+			tokens := lex.handleIncludeToken(startingPointToken)
+			require.Len(t, tokens, 1, "expected 1 include token")
+			require.Equal(t, tt.expectedTokenURL, tokens[0].value, "unexpected included file URL")
+		})
+	}
 }
 
 func TestLexer_MetaDataToken(t *testing.T) {
