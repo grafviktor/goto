@@ -85,6 +85,22 @@ function check_expected() {
     return 0
 }
 
+function check_log_no_errors() {
+    # Make sure there are no errors in the application log.
+    local test_name="$1"
+    local app_log="${TMP_HOME}"/app.log
+    if grep -qi "ERRO" "${app_log}"; then
+        # "ERRO" is not a typo! It's a valid log level name.
+        printf "${MSG_FAIL} %s\n" "${app_log}"
+        grep -i "ERRO" "${app_log}"
+        return 1
+    else
+        printf "${MSG_OK} %s: %s\n" "${test_name}" "${app_log}"
+    fi
+
+    return 0
+}
+
 function cleanup() {
     rm -f out.gif "${TMP_HOME}"/*
 }
@@ -100,6 +116,12 @@ for file in *.tape; do
     check_expected "$filename_without_extension"
     if [ "$?" -ne 0 ]; then
         printf "${MSG_FAIL} %s\n" "${file}"
+        exit 1
+    fi
+
+    check_log_no_errors "$filename_without_extension"
+    if [ "$?" -ne 0 ]; then
+        printf "${MSG_FAIL} %s\n" "Errors found in log file"
         exit 1
     fi
 
