@@ -29,8 +29,9 @@ type HostStorage interface {
 	GetAll() ([]model.Host, error)
 	Get(hostID int) (model.Host, error)
 	Save(model.Host) (model.Host, error)
-	Type() constant.HostStorageEnum
 	Delete(id int) error
+	Type() constant.HostStorageEnum
+	Close()
 }
 
 type hostStorageMapping struct {
@@ -192,4 +193,10 @@ func (c *combinedStorage) addHost(host model.Host, storageType constant.HostStor
 	c.hosts[c.nextID] = host
 
 	return c.nextID
+}
+
+func (c *combinedStorage) Close() {
+	for _, storage := range c.storages {
+		storage.Close()
+	}
 }

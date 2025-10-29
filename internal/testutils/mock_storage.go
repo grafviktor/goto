@@ -89,3 +89,7 @@ func (ms *MockStorage) Save(m host.Host) (host.Host, error) {
 func (ms *MockStorage) Type() constant.HostStorageEnum {
 	return "MOCK STORAGE"
 }
+
+func (ms *MockStorage) Close() {
+	// nop
+}

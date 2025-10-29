@@ -158,3 +158,7 @@ func (s *yamlFile) Get(hostID int) (model.Host, error) {
 func (s *yamlFile) Type() constant.HostStorageEnum {
 	return constant.HostStorageType.YAMLFile
 }
+
+func (s *yamlFile) Close() {
+	// nop
+}

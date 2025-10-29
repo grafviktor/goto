@@ -32,10 +32,11 @@ func (ff *FeatureFlag) Set(value string) error {
 
 // Configuration structs contains user-definable parameters.
 type Configuration struct {
-	AppHome               string `env:"GG_HOME"`
-	LogLevel              string `env:"GG_LOG_LEVEL"            envDefault:"info"`
-	SSHConfigFilePath     string `env:"GG_SSH_CONFIG_FILE_PATH"`
-	DisplayVersionAndExit bool
-	EnableFeature         FeatureFlag
-	DisableFeature        FeatureFlag
+	AppHome                 string `env:"GG_HOME"`
+	LogLevel                string `env:"GG_LOG_LEVEL"            envDefault:"info"`
+	SSHConfigFilePath       string `env:"GG_SSH_CONFIG_FILE_PATH"`
+	SSHConfigFilePathCustom bool
+	DisplayVersionAndExit   bool
+	EnableFeature           FeatureFlag
+	DisableFeature          FeatureFlag
 }

@@ -55,12 +55,15 @@ func main() {
 	// Run user interface
 	if err = ui.Start(appState.Context, str, &appState); err != nil {
 		logMessage := fmt.Sprintf("[MAIN] Error: %v", err)
+		str.Close()
 		logCloseAndExit(appState.Logger, exitCodeError, logMessage)
 	}
 
 	// Quit signal should be intercepted on the UI level, however it will require
 	// additional switch-case block with appropriate checks. Leaving this message here.
 	appState.Logger.Debug("[MAIN] Receive quit signal")
+	appState.Logger.Debug("[MAIN] Close storage")
+	str.Close()
 	appState.Logger.Debug("[MAIN] Save application state")
 	if err = appState.Persist(); err != nil {
 		logMessage := fmt.Sprintf("[MAIN] Can't save application state before closing: %v", err)
@@ -245,6 +248,7 @@ func setupApplicationConfiguration(config application.Configuration) (applicatio
 	}
 
 	// Set ssh config file path
+	config.SSHConfigFilePathCustom = !utils.StringEmpty(&config.SSHConfigFilePath)
 	config.SSHConfigFilePath, err = utils.SSHConfigFilePath(config.SSHConfigFilePath)
 	if err != nil {
 		log.Printf("[MAIN] Can't open SSH config file: %v", err)

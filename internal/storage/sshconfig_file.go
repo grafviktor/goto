@@ -10,6 +10,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
+	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage/sshconfig"
 	"github.com/grafviktor/goto/internal/utils"
 )
@@ -31,10 +32,10 @@ type sshParser interface {
 
 // SSHConfigFile - is a storage which contains hosts loaded from SSH config file.
 type SSHConfigFile struct {
-	fileLexer          sshLexer
-	fileParser         sshParser
-	innerStorage       map[int]model.Host
-	localSSHConfigCopy *os.File
+	fileLexer     sshLexer
+	fileParser    sshParser
+	innerStorage  map[int]model.Host
+	sshConfigCopy *os.File
 }
 
 // newSSHConfigStorage - constructs new SSHStorage.
@@ -46,14 +47,17 @@ func newSSHConfigStorage(_ context.Context, sshConfigPath string, logger iLogger
 		sourceType = "file"
 	}
 
-	tmpSSHConfigFile, _ := os.CreateTemp("", "goto_sshconfig_*")
+	tmpSSHConfigFile, err := os.CreateTemp("", "goto_sshconfig_*")
+	if err != nil {
+		return nil, err
+	}
 
 	lexer := sshconfig.NewFileLexer(sshConfigPath, sourceType, logger)
 	parser := sshconfig.NewParser(lexer, logger)
 	return &SSHConfigFile{
-		fileLexer:          lexer,
-		fileParser:         parser,
-		localSSHConfigCopy: tmpSSHConfigFile,
+		fileLexer:     lexer,
+		fileParser:    parser,
+		sshConfigCopy: tmpSSHConfigFile,
 	}, nil
 }
 
@@ -64,8 +68,12 @@ func (s *SSHConfigFile) GetAll() ([]model.Host, error) {
 		return nil, err
 	}
 
-	// TODO: store raw data on disk, that will be our localSSHConfigCopy
+	err = s.createSSHConfigCopy()
+	if err != nil {
+		return nil, err
+	}
 
+	s.updateApplicationState()
 	s.innerStorage = make(map[int]model.Host, len(hosts))
 	for i := range hosts {
 		// Make sure that not assigning '0' as host id, because '0' is empty host identifier.
@@ -103,4 +111,31 @@ func (s *SSHConfigFile) Delete(_ int) error {
 // Type - returns storage type.
 func (s *SSHConfigFile) Type() constant.HostStorageEnum {
 	return constant.HostStorageType.SSHConfig
+}
+
+func (s *SSHConfigFile) Close() {
+	s.deleteSSHConfigCopy()
+}
+
+func (s *SSHConfigFile) updateApplicationState() {
+	state.Get().ApplicationConfig.SSHConfigFilePath = s.sshConfigCopy.Name()
+}
+
+func (s *SSHConfigFile) createSSHConfigCopy() error {
+	rawData := s.fileLexer.GetRawData()
+	_, err := s.sshConfigCopy.Write(rawData)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *SSHConfigFile) deleteSSHConfigCopy() {
+	if s.sshConfigCopy == nil {
+		return
+	}
+
+	_ = s.sshConfigCopy.Close()
+	_ = os.Remove(s.sshConfigCopy.Name())
 }

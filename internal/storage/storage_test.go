@@ -61,6 +61,10 @@ func (f *fakeHostStorage) Delete(id int) error {
 	return nil
 }
 
+func (f *fakeHostStorage) Close() {
+	// nop
+}
+
 func TestCombinedStorage_GetAll(t *testing.T) {
 	logger := &mocklogger.Logger{}
 
