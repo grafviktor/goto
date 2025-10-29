@@ -222,7 +222,6 @@ func SSHConfigFilePath(userDefinedPath string) (string, error) {
 			return "", err
 		}
 
-		absolutePath = path.Clean(absolutePath)
 		return absolutePath, nil
 	}
 
