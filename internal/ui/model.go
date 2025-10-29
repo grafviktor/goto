@@ -281,7 +281,7 @@ func (m *MainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadCo
 func (m *MainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) tea.Cmd {
 	identityFile, hostname := msg.Host.SSHHostConfig.IdentityFile, msg.Host.SSHHostConfig.Hostname
 	m.logger.Debug("[EXEC] Copy ssh-key '%s.pub' to host '%s'", identityFile, hostname)
-	if sshconfig.IsAlternativeFilePathDefined() {
+	if sshconfig.IsUserDefinedPath() {
 		m.logger.Warn("[EXEC] copy ssh key when alternative ssh config file is used: %q. ssh config file is ignored.",
 			m.appState.ApplicationConfig.SSHConfigFilePath)
 	}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/samber/lo"
 
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/utils"
 )
 
@@ -39,8 +40,15 @@ func (l *Lexer) Tokenize() ([]SSHToken, error) {
 		value: l.source,
 	}
 
-	tokens := []SSHToken{}
-	return l.loadFromDataSource(parent, tokens, 0)
+	tokens, err := l.loadFromDataSource(parent, []SSHToken{}, 0)
+	if sshconfig.IsUserDefinedPath() && err != nil {
+		// That's a bit hacky. If user explicitly set ssh/config file path via env var or CLI flag
+		// we should not ignore errors occurred during file reading.
+		return nil, err
+	}
+
+	// In case of default ssh/config file path, we can ignore errors
+	return tokens, nil
 }
 
 func (l *Lexer) loadFromDataSource(
