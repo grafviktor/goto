@@ -19,6 +19,7 @@ const maxFileIncludeDepth = 16
 type Lexer struct {
 	sourceType string
 	source     string
+	rawData    []byte
 	logger     iLogger
 }
 
@@ -27,8 +28,13 @@ func NewFileLexer(location, sourceType string, log iLogger) *Lexer {
 	return &Lexer{
 		sourceType: sourceType,
 		source:     location,
+		rawData:    []byte{},
 		logger:     log,
 	}
+}
+
+func (l *Lexer) GetRawData() []byte {
+	return l.rawData
 }
 
 // Tokenize reads the SSH config file and returns a slice of tokens representing the contents.
@@ -39,8 +45,7 @@ func (l *Lexer) Tokenize() ([]SSHToken, error) {
 		value: l.source,
 	}
 
-	tokens := []SSHToken{}
-	return l.loadFromDataSource(parent, tokens, 0)
+	return l.loadFromDataSource(parent, []SSHToken{}, 0)
 }
 
 func (l *Lexer) loadFromDataSource(
@@ -94,6 +99,7 @@ func (l *Lexer) loadFromDataSource(
 			continue
 		}
 
+		l.rawData = append(l.rawData, []byte(line+"\n")...)
 		if token.kind != tokenKind.Unsupported {
 			children = append(children, token)
 		}

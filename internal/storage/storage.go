@@ -49,7 +49,7 @@ type combinedStorage struct {
 
 // Get returns new data service.
 func Get(ctx context.Context, appConfig application.Configuration, logger iLogger) (HostStorage, error) {
-	storages := getStorages(ctx, appConfig, logger)
+	storages, err := getStorages(ctx, appConfig, logger)
 
 	cs := combinedStorage{
 		storages:       storages,
@@ -58,14 +58,14 @@ func Get(ctx context.Context, appConfig application.Configuration, logger iLogge
 		logger:         logger,
 	}
 
-	return &cs, nil
+	return &cs, err
 }
 
 func getStorages(
 	ctx context.Context,
 	appConfig application.Configuration,
 	logger iLogger,
-) map[constant.HostStorageEnum]HostStorage {
+) (map[constant.HostStorageEnum]HostStorage, error) {
 	storageMap := make(map[constant.HostStorageEnum]HostStorage)
 	yamlStorage := newYAMLStorage(ctx, appConfig.AppHome, logger)
 	storageMap[yamlStorage.Type()] = yamlStorage
@@ -74,11 +74,14 @@ func getStorages(
 	logger.Debug("[STORAGE] SSH config storage enable: '%t'", sshConfigEnabled)
 	if sshConfigEnabled {
 		logger.Info("[STORAGE] Load ssh hosts from ssh config file: %q", appConfig.SSHConfigFilePath)
-		sshConfigStorage := newSSHConfigStorage(ctx, appConfig.SSHConfigFilePath, logger)
+		sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.SSHConfigFilePath, logger)
+		if err != nil {
+			return nil, err
+		}
 		storageMap[sshConfigStorage.Type()] = sshConfigStorage
 	}
 
-	return storageMap
+	return storageMap, nil
 }
 
 // Delete implements HostStorage.

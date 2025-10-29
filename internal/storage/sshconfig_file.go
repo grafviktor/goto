@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"os"
 	"slices"
 
 	"github.com/samber/lo"
@@ -19,18 +20,25 @@ var _ HostStorage = &SSHConfigFile{}
 // delete host in SSHConfigFile storage.
 var ErrNotSupported = errors.New("readonly storage, edit ssh config directly")
 
+type sshLexer interface {
+	Tokenize() ([]sshconfig.SSHToken, error)
+	GetRawData() []byte
+}
+
 type sshParser interface {
 	Parse() ([]model.Host, error)
 }
 
 // SSHConfigFile - is a storage which contains hosts loaded from SSH config file.
 type SSHConfigFile struct {
-	parser       sshParser
-	innerStorage map[int]model.Host
+	fileLexer          sshLexer
+	fileParser         sshParser
+	innerStorage       map[int]model.Host
+	localSSHConfigCopy *os.File
 }
 
 // newSSHConfigStorage - constructs new SSHStorage.
-func newSSHConfigStorage(_ context.Context, sshConfigPath string, logger iLogger) *SSHConfigFile {
+func newSSHConfigStorage(_ context.Context, sshConfigPath string, logger iLogger) (*SSHConfigFile, error) {
 	var sourceType string
 	if utils.IsURLPath(sshConfigPath) {
 		sourceType = "url"
@@ -38,17 +46,25 @@ func newSSHConfigStorage(_ context.Context, sshConfigPath string, logger iLogger
 		sourceType = "file"
 	}
 
+	tmpSSHConfigFile, _ := os.CreateTemp("", "goto_sshconfig_*")
+
 	lexer := sshconfig.NewFileLexer(sshConfigPath, sourceType, logger)
 	parser := sshconfig.NewParser(lexer, logger)
-	return &SSHConfigFile{parser: parser}
+	return &SSHConfigFile{
+		fileLexer:          lexer,
+		fileParser:         parser,
+		localSSHConfigCopy: tmpSSHConfigFile,
+	}, nil
 }
 
 // GetAll - returns all hosts.
 func (s *SSHConfigFile) GetAll() ([]model.Host, error) {
-	hosts, err := s.parser.Parse()
+	hosts, err := s.fileParser.Parse()
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO: store raw data on disk, that will be our localSSHConfigCopy
 
 	s.innerStorage = make(map[int]model.Host, len(hosts))
 	for i := range hosts {
