@@ -45,18 +45,18 @@ func TestParseConfig(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
-func TestIsAlternativeFilePathDefined(t *testing.T) {
+func TestIsUserDefinedPath(t *testing.T) {
 	// Create a mock logger for testing
 	mockLogger := mocklogger.Logger{}
 	state.Create(context.TODO(), application.Configuration{}, &mockLogger)
 
 	// No custom path is set
 	state.Get().ApplicationConfig.SSHConfigFilePath = ""
-	actual := IsAlternativeFilePathDefined()
+	actual := IsUserDefinedPath()
 	require.False(t, actual, "IsAlternativeFilePathDefined should return false when no custom path is set")
 
 	// Custom path is set
 	state.Get().ApplicationConfig.SSHConfigFilePath = "/custom/path/to/ssh_config"
-	actual = IsAlternativeFilePathDefined()
+	actual = IsUserDefinedPath()
 	require.True(t, actual, "IsAlternativeFilePathDefined should return true when custom path is set")
 }

@@ -3,7 +3,6 @@ package sshconfig
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path"
 	"testing"
 
@@ -31,9 +30,4 @@ func Test_newReader_file(t *testing.T) {
 	folderInsteadOfFile := t.TempDir()
 	_, err = newReader(folderInsteadOfFile, "file")
 	require.Error(t, err)
-
-	// Test case: Valid file
-	tempFile, err := os.CreateTemp(t.TempDir(), "ssh_config_tmp.")
-	require.NoError(t, err)
-	defer tempFile.Close()
 }

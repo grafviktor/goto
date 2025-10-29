@@ -239,6 +239,47 @@ func Test_ProcessBufferWriter_Write(t *testing.T) {
 	require.Equal(t, data, writer.Output)
 }
 
+func Test_IsURLPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{
+			name:     "Valid HTTPS URL",
+			input:    "https://example.com/path",
+			expected: true,
+		},
+		{
+			name:     "Valid HTTP URL",
+			input:    "http://example.com",
+			expected: true,
+		},
+		{
+			name:     "Invalid URL - no protocol",
+			input:    "www.example.com/path",
+			expected: false,
+		},
+		{
+			name:     "Invalid URL - random string",
+			input:    "not a url",
+			expected: false,
+		},
+		{
+			name:     "Invalid URL - empty string",
+			input:    "",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := IsNetworkSchemeSupported(tt.input)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 func Test_ExtractBaseURL(t *testing.T) {
 	tests := []struct {
 		name        string

@@ -70,8 +70,8 @@ func getRegexFirstMatchingGroup(groups []string) string {
 	return ""
 }
 
-// IsAlternativeFilePathDefined - checks if user re-defined SSH config file path.
-func IsAlternativeFilePathDefined() bool {
+// IsUserDefinedPath - checks if user re-defined SSH config file path.
+func IsUserDefinedPath() bool {
 	if !state.IsInitialized() {
 		// We should only be here during unit tests.
 		return false

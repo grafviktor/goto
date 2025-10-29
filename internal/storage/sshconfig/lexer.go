@@ -10,6 +10,7 @@ import (
 
 	"github.com/samber/lo"
 
+	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/utils"
 )
 
@@ -45,7 +46,15 @@ func (l *Lexer) Tokenize() ([]SSHToken, error) {
 		value: l.source,
 	}
 
-	return l.loadFromDataSource(parent, []SSHToken{}, 0)
+	tokens, err := l.loadFromDataSource(parent, []SSHToken{}, 0)
+	if sshconfig.IsUserDefinedPath() && err != nil {
+		// That's a bit hacky. If user explicitly set ssh/config file path via env var or CLI flag
+		// we should not ignore errors occurred during file reading.
+		return nil, err
+	}
+
+	// In case of default ssh/config file path, we can ignore errors
+	return tokens, nil
 }
 
 func (l *Lexer) loadFromDataSource(
@@ -354,23 +363,36 @@ func (l *Lexer) includeLocalFileToken(filePath string) []SSHToken {
 }
 
 func (l *Lexer) includeRemoteFileToken(resourcePath string) []SSHToken {
-	var baseURL string
-	if path.IsAbs(resourcePath) {
-		// If resourcePath is absolute, extract base URL from source and try to fetch the file
-		// from the server root. I.e. "http://127.0.0.1:8080" + "/path/to/resource"
-		var err error
-		baseURL, err = utils.ExtractBaseURL(l.source)
-		if err != nil {
-			l.logger.Error("[SSHCONFIG]: Cannot parse resource URL: %v", err)
-			return []SSHToken{}
-		}
-	} else {
-		// If resourcePath is relative, take the base URL as the directory part of the source
-		// and try to fetch the file relative to that path. I.e. "http://127.0.0.1:8080/path" + "/to/resource"
-		baseURL, _ = path.Split(l.source)
+	if utils.IsNetworkSchemeSupported(resourcePath) {
+		// If resourcePath is already a full URL, use it as is.
+		return []SSHToken{{
+			kind:  tokenKind.IncludeFile,
+			key:   "Include",
+			value: resourcePath,
+		}}
 	}
 
-	resourcePath = baseURL + resourcePath
+	// If resourcePath is not a full URL, we need to construct the full URL taking lexer.source as base.
+	var baseURL string
+	var err error
+
+	if path.IsAbs(resourcePath) {
+		// If resourcePath is absolute, extract base URL from lexer.source and try to fetch the file
+		// from the server root. I.e. "http://127.0.0.1:8080" + "/path/to/resource".
+		baseURL, err = utils.ExtractBaseURL(l.source)
+		resourcePath = baseURL + resourcePath
+	} else {
+		// If resourcePath is relative, take the base URL as the directory part of the lexer.source
+		// and try to fetch the file relative to that path. I.e. "http://127.0.0.1:8080/path/" + "to/resource".
+		baseURL = lo.Ternary(strings.HasSuffix(l.source, "/"), l.source, l.source+"/")
+		resourcePath = baseURL + resourcePath
+	}
+
+	if err != nil {
+		l.logger.Error("[SSHCONFIG]: Cannot parse resource URL: %v", err)
+		return []SSHToken{}
+	}
+
 	return []SSHToken{{
 		kind:  tokenKind.IncludeFile,
 		key:   "Include",
