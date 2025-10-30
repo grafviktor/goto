@@ -76,7 +76,7 @@ func IsUserDefinedPath() bool {
 		return false
 	}
 
-	return state.Get().ApplicationConfig.SSHConfigFilePathCustom
+	return state.Get().ApplicationConfig.IsSSHConfigFilePathDefinedByUser
 }
 
 // GetFilePath - returns SSH config file path which is defined in application configuration.

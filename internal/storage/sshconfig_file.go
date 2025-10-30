@@ -8,9 +8,9 @@ import (
 
 	"github.com/samber/lo"
 
+	"github.com/grafviktor/goto/internal/application"
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
-	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage/sshconfig"
 	"github.com/grafviktor/goto/internal/utils"
 )
@@ -35,13 +35,18 @@ type SSHConfigFile struct {
 	fileLexer     sshLexer
 	fileParser    sshParser
 	innerStorage  map[int]model.Host
+	appConfig     *application.Configuration
 	sshConfigCopy *os.File
 }
 
 // newSSHConfigStorage - constructs new SSHStorage.
-func newSSHConfigStorage(_ context.Context, sshConfigPath string, logger iLogger) (*SSHConfigFile, error) {
+func newSSHConfigStorage(
+	_ context.Context,
+	appConfig *application.Configuration,
+	logger iLogger,
+) (*SSHConfigFile, error) {
 	var sourceType string
-	if utils.IsNetworkSchemeSupported(sshConfigPath) {
+	if utils.IsNetworkSchemeSupported(appConfig.SSHConfigFilePath) {
 		sourceType = "url"
 	} else {
 		sourceType = "file"
@@ -52,11 +57,12 @@ func newSSHConfigStorage(_ context.Context, sshConfigPath string, logger iLogger
 		return nil, err
 	}
 
-	lexer := sshconfig.NewFileLexer(sshConfigPath, sourceType, logger)
+	lexer := sshconfig.NewFileLexer(appConfig.SSHConfigFilePath, sourceType, logger)
 	parser := sshconfig.NewParser(lexer, logger)
 	return &SSHConfigFile{
 		fileLexer:     lexer,
 		fileParser:    parser,
+		appConfig:     appConfig,
 		sshConfigCopy: tmpSSHConfigFile,
 	}, nil
 }
@@ -118,7 +124,7 @@ func (s *SSHConfigFile) Close() {
 }
 
 func (s *SSHConfigFile) updateApplicationState() {
-	state.Get().ApplicationConfig.SSHConfigFilePath = s.sshConfigCopy.Name()
+	s.appConfig.SSHConfigFilePath = s.sshConfigCopy.Name()
 }
 
 func (s *SSHConfigFile) createSSHConfigCopy() error {

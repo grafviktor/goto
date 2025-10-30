@@ -2,13 +2,26 @@ package storage
 
 import (
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/grafviktor/goto/internal/application"
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
+	"github.com/grafviktor/goto/internal/storage/sshconfig"
 )
+
+type mockSSHLexer struct{}
+
+func (m *mockSSHLexer) Tokenize() ([]sshconfig.SSHToken, error) {
+	return nil, nil
+}
+
+func (m *mockSSHLexer) GetRawData() []byte {
+	return []byte{}
+}
 
 type mockSSHParser struct {
 	hosts []model.Host
@@ -24,8 +37,14 @@ func TestSSHConfigFile_GetAll(t *testing.T) {
 		{Title: "host1", Address: "host1.com"},
 		{Title: "host2", Address: "host2.com"},
 	}
+
+	mockAppConfig := application.Configuration{}
+	sshConfigCopy, _ := os.CreateTemp(t.TempDir(), "unit_test_ssh_config*")
 	s := &SSHConfigFile{
-		fileParser: &mockSSHParser{hosts: mockHosts},
+		fileLexer:     &mockSSHLexer{},
+		fileParser:    &mockSSHParser{hosts: mockHosts},
+		appConfig:     &mockAppConfig,
+		sshConfigCopy: sshConfigCopy,
 	}
 	hosts, err := s.GetAll()
 	require.NoError(t, err)
@@ -49,8 +68,13 @@ func TestSSHConfigFile_Get(t *testing.T) {
 	mockHosts := []model.Host{
 		{Title: "host1", Address: "host1.com"},
 	}
+	mockAppConfig := application.Configuration{}
+	sshConfigCopy, _ := os.CreateTemp(t.TempDir(), "unit_test_ssh_config*")
 	s := &SSHConfigFile{
-		fileParser: &mockSSHParser{hosts: mockHosts},
+		fileLexer:     &mockSSHLexer{},
+		fileParser:    &mockSSHParser{hosts: mockHosts},
+		appConfig:     &mockAppConfig,
+		sshConfigCopy: sshConfigCopy,
 	}
 	_, _ = s.GetAll()
 	h, err := s.Get(1)

@@ -2,7 +2,6 @@
 package utils
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -188,15 +187,13 @@ func FetchFromURL(urlPath string) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("invalid URL format: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), networkResponseTimeout)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, parsedURL.String(), nil)
+	//nolint:noctx // want to use http.NewRequest instead of http.NewRequestWithContext
+	req, err := http.NewRequest(http.MethodGet, parsedURL.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: networkResponseTimeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch URL %s: %w", urlPath, err)

@@ -75,7 +75,7 @@ func getStorages(
 	logger.Debug("[STORAGE] SSH config storage enable: '%t'", sshConfigEnabled)
 	if sshConfigEnabled {
 		logger.Info("[STORAGE] Load ssh hosts from ssh config file: %q", appConfig.SSHConfigFilePath)
-		sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.SSHConfigFilePath, logger)
+		sshConfigStorage, err := newSSHConfigStorage(ctx, &appConfig, logger)
 		if err != nil {
 			return nil, err
 		}

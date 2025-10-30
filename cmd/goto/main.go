@@ -248,7 +248,7 @@ func setupApplicationConfiguration(config application.Configuration) (applicatio
 	}
 
 	// Set ssh config file path
-	config.SSHConfigFilePathCustom = !utils.StringEmpty(&config.SSHConfigFilePath)
+	config.IsSSHConfigFilePathDefinedByUser = !utils.StringEmpty(&config.SSHConfigFilePath)
 	config.SSHConfigFilePath, err = utils.SSHConfigFilePath(config.SSHConfigFilePath)
 	if err != nil {
 		log.Printf("[MAIN] Can't open SSH config file: %v", err)
