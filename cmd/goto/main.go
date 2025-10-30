@@ -46,14 +46,14 @@ func main() {
 	appState := createApplicationOrExit()
 
 	// Init storage
-	str, err := storage.Get(appState.Context, appState.ApplicationConfig, appState.Logger)
+	str, err := storage.Get(appState.Context, &appState.ApplicationConfig, appState.Logger)
 	if err != nil {
 		logMessage := fmt.Sprintf("[MAIN] Cannot access application storage: %v", err)
 		logCloseAndExit(appState.Logger, exitCodeError, logMessage)
 	}
 
 	// Run user interface
-	if err = ui.Start(appState.Context, str, &appState); err != nil {
+	if err = ui.Start(appState.Context, str, appState); err != nil {
 		logMessage := fmt.Sprintf("[MAIN] Error: %v", err)
 		str.Close()
 		logCloseAndExit(appState.Logger, exitCodeError, logMessage)
@@ -73,7 +73,7 @@ func main() {
 	logCloseAndExit(appState.Logger, exitCodeSuccess, "")
 }
 
-func createApplicationOrExit() state.Application {
+func createApplicationOrExit() *state.Application {
 	// Create application configuration
 	applicationConfiguration, success := createConfigurationOrExit()
 
@@ -135,7 +135,7 @@ func createApplicationOrExit() state.Application {
 		logCloseAndExit(lg, exitCodeError, "[MAIN] Exit due to a fatal error. Inspect logs for more details.")
 	}
 
-	return *applicationState
+	return applicationState
 }
 
 func createConfigurationOrExit() (application.Configuration, bool) {

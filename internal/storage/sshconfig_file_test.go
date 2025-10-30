@@ -39,7 +39,7 @@ func TestSSHConfigFile_GetAll(t *testing.T) {
 	}
 
 	mockAppConfig := application.Configuration{}
-	sshConfigCopy, _ := os.CreateTemp(t.TempDir(), "unit_test_ssh_config*")
+	sshConfigCopy, _ := os.CreateTemp(t.TempDir(), "unit_test_ssh_config_*")
 	s := &SSHConfigFile{
 		fileLexer:     &mockSSHLexer{},
 		fileParser:    &mockSSHParser{hosts: mockHosts},
@@ -53,6 +53,7 @@ func TestSSHConfigFile_GetAll(t *testing.T) {
 	require.Equal(t, "host2", hosts[1].Title)
 	require.Equal(t, 1, hosts[0].ID)
 	require.Equal(t, 2, hosts[1].ID)
+	s.Close() // It's required for Windows to release the temp file
 }
 
 func TestSSHConfigFile_GetAll_Error(t *testing.T) {
@@ -69,7 +70,7 @@ func TestSSHConfigFile_Get(t *testing.T) {
 		{Title: "host1", Address: "host1.com"},
 	}
 	mockAppConfig := application.Configuration{}
-	sshConfigCopy, _ := os.CreateTemp(t.TempDir(), "unit_test_ssh_config*")
+	sshConfigCopy, _ := os.CreateTemp(t.TempDir(), "unit_test_ssh_config_*")
 	s := &SSHConfigFile{
 		fileLexer:     &mockSSHLexer{},
 		fileParser:    &mockSSHParser{hosts: mockHosts},
@@ -80,6 +81,7 @@ func TestSSHConfigFile_Get(t *testing.T) {
 	h, err := s.Get(1)
 	require.NoError(t, err)
 	require.Equal(t, "host1", h.Title)
+	s.Close() // It's required for Windows to release the temp file
 }
 
 func TestSSHConfigFile_Save_Delete(t *testing.T) {

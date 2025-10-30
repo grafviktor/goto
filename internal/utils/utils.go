@@ -1,5 +1,5 @@
 // Package utils contains various utility methods
-package utils
+package utils //nolint:revive,nolintlint // utils is a common name
 
 import (
 	"errors"
