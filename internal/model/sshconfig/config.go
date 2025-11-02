@@ -83,10 +83,3 @@ func IsUserDefinedPath() bool {
 func GetFilePath() string {
 	return state.Get().ApplicationConfig.SSHConfigFilePath
 }
-
-// SetFilePath - when sshconfig storage is enabled, we do not work with default path,
-// because sshconfig may be loaded from URL and we need to cache it locally.
-// All subsequent calls should use this local path.
-func SetFilePath(path string) {
-	state.Get().ApplicationConfig.SSHConfigFilePath = path
-}

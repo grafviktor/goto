@@ -142,8 +142,8 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 	return path.Join(userConfigDir, appName), nil
 }
 
-// IsNetworkSchemeSupported checks if the given path is a URL starting with http, https, or ftp.
-func IsNetworkSchemeSupported(path string) bool {
+// IsURL checks if the given path is a URL starting with http, https, or ftp.
+func IsURL(path string) bool {
 	if StringEmpty(&path) {
 		return false
 	}
@@ -157,7 +157,7 @@ func IsNetworkSchemeSupported(path string) bool {
 // ExtractBaseURL extracts the base URL (scheme + host + port) from a URL by removing the path and query parameters.
 // Example: "http://127.0.0.1:8080/path/to/resource" -> "http://127.0.0.1:8080"
 func ExtractBaseURL(urlPath string) (string, error) {
-	if !IsNetworkSchemeSupported(urlPath) {
+	if !IsURL(urlPath) {
 		return "", fmt.Errorf("not supported URL format: %s", urlPath)
 	}
 
@@ -178,7 +178,7 @@ var networkResponseTimeout = 10 * time.Second
 
 // FetchFromURL fetches content from a URL and returns it as a string.
 func FetchFromURL(urlPath string) (io.ReadCloser, error) {
-	if !IsNetworkSchemeSupported(urlPath) {
+	if !IsURL(urlPath) {
 		return nil, fmt.Errorf("not a valid URL: %s", urlPath)
 	}
 
@@ -210,7 +210,7 @@ func FetchFromURL(urlPath string) (io.ReadCloser, error) {
 // SSHConfigFilePath - returns ssh_config path or error.
 func SSHConfigFilePath(userDefinedPath string) (string, error) {
 	if !StringEmpty(&userDefinedPath) {
-		if IsNetworkSchemeSupported(userDefinedPath) {
+		if IsURL(userDefinedPath) {
 			return userDefinedPath, nil
 		}
 

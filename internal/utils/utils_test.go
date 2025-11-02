@@ -239,7 +239,7 @@ func Test_ProcessBufferWriter_Write(t *testing.T) {
 	require.Equal(t, data, writer.Output)
 }
 
-func Test_IsURLPath(t *testing.T) {
+func Test_IsURL(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -274,7 +274,7 @@ func Test_IsURLPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := IsNetworkSchemeSupported(tt.input)
+			result := IsURL(tt.input)
 			require.Equal(t, tt.expected, result)
 		})
 	}

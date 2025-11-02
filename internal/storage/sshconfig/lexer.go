@@ -25,10 +25,17 @@ type Lexer struct {
 }
 
 // NewFileLexer creates a new instance of Lexer for the given SSH config file path.
-func NewFileLexer(location, sourceType string, log iLogger) *Lexer {
+func NewFileLexer(sshConfigFilePath string, log iLogger) *Lexer {
+	var sourceType string
+	if utils.IsURL(sshConfigFilePath) {
+		sourceType = "url"
+	} else {
+		sourceType = "file"
+	}
+
 	return &Lexer{
 		sourceType: sourceType,
-		source:     location,
+		source:     sshConfigFilePath,
 		rawData:    []byte{},
 		logger:     log,
 	}
@@ -363,7 +370,7 @@ func (l *Lexer) includeLocalFileToken(filePath string) []SSHToken {
 }
 
 func (l *Lexer) includeRemoteFileToken(resourcePath string) []SSHToken {
-	if utils.IsNetworkSchemeSupported(resourcePath) {
+	if utils.IsURL(resourcePath) {
 		// If resourcePath is already a full URL, use it as is.
 		return []SSHToken{{
 			kind:  tokenKind.IncludeFile,

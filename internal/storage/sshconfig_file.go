@@ -12,7 +12,6 @@ import (
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/storage/sshconfig"
-	"github.com/grafviktor/goto/internal/utils"
 )
 
 var _ HostStorage = &SSHConfigFile{}
@@ -45,25 +44,12 @@ func newSSHConfigStorage(
 	appConfig *application.Configuration,
 	logger iLogger,
 ) (*SSHConfigFile, error) {
-	var sourceType string
-	if utils.IsNetworkSchemeSupported(appConfig.SSHConfigFilePath) {
-		sourceType = "url"
-	} else {
-		sourceType = "file"
-	}
-
-	tmpSSHConfigFile, err := os.CreateTemp("", "goto_sshconfig_*")
-	if err != nil {
-		return nil, err
-	}
-
-	lexer := sshconfig.NewFileLexer(appConfig.SSHConfigFilePath, sourceType, logger)
+	lexer := sshconfig.NewFileLexer(appConfig.SSHConfigFilePath, logger)
 	parser := sshconfig.NewParser(lexer, logger)
 	return &SSHConfigFile{
-		fileLexer:     lexer,
-		fileParser:    parser,
-		appConfig:     appConfig,
-		sshConfigCopy: tmpSSHConfigFile,
+		fileLexer:  lexer,
+		fileParser: parser,
+		appConfig:  appConfig,
 	}, nil
 }
 
@@ -119,22 +105,28 @@ func (s *SSHConfigFile) Type() constant.HostStorageEnum {
 	return constant.HostStorageType.SSHConfig
 }
 
-func (s *SSHConfigFile) Close() {
-	s.deleteSSHConfigCopy()
-}
-
 func (s *SSHConfigFile) updateApplicationState() {
 	s.appConfig.SSHConfigFilePath = s.sshConfigCopy.Name()
 }
 
 func (s *SSHConfigFile) createSSHConfigCopy() error {
 	rawData := s.fileLexer.GetRawData()
-	_, err := s.sshConfigCopy.Write(rawData)
+	sshConfigCopy, err := os.CreateTemp("", "goto_sshconfig_*")
+	if err != nil {
+		return err
+	}
+	s.sshConfigCopy = sshConfigCopy
+
+	_, err = sshConfigCopy.Write(rawData)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (s *SSHConfigFile) Close() {
+	s.deleteSSHConfigCopy()
 }
 
 func (s *SSHConfigFile) deleteSSHConfigCopy() {

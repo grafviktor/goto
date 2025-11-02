@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"errors"
 	"os"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/storage/sshconfig"
+	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 )
 
 type mockSSHLexer struct{}
@@ -30,6 +32,16 @@ type mockSSHParser struct {
 
 func (m *mockSSHParser) Parse() ([]model.Host, error) {
 	return m.hosts, m.err
+}
+
+func TestNewSSHConfigStorageLocalFile(t *testing.T) {
+	mockAppConfig := application.Configuration{}
+	mockLogger := mocklogger.Logger{}
+	s, err := newSSHConfigStorage(context.TODO(), &mockAppConfig, &mockLogger)
+	require.NoError(t, err)
+	require.NotNil(t, s)
+
+	s.Close()
 }
 
 func TestSSHConfigFile_GetAll(t *testing.T) {
