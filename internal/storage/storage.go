@@ -48,8 +48,8 @@ type combinedStorage struct {
 	hostStorageMap map[int]hostStorageMapping
 }
 
-// Get returns new data service.
-func Get(ctx context.Context, appConfig *application.Configuration, logger iLogger) (HostStorage, error) {
+// Initialize - prepares inner storages and returns a common HostStorage interface to load and save hosts.
+func Initialize(ctx context.Context, appConfig *application.Configuration, logger iLogger) (HostStorage, error) {
 	storages := getStorages(ctx, appConfig, logger)
 
 	cs := combinedStorage{

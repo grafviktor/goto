@@ -46,7 +46,7 @@ func main() {
 	appState := createApplicationOrExit()
 
 	// Init storage
-	str, err := storage.Get(appState.Context, &appState.ApplicationConfig, appState.Logger)
+	str, err := storage.Initialize(appState.Context, &appState.ApplicationConfig, appState.Logger)
 	if err != nil {
 		logMessage := fmt.Sprintf("[MAIN] Cannot access application storage: %v", err)
 		logCloseAndExit(appState.Logger, exitCodeError, logMessage)

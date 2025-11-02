@@ -105,6 +105,10 @@ func Test(t *testing.T) {
 	got, err = SSHConfigFilePath(customPath)
 	require.NoError(t, err, "Should not return any errors because the path is valid")
 	require.Equal(t, customPath, got, "Should return custom ssh config file path")
+
+	// Test case: custom file path - unsupported URL
+	_, err = SSHConfigFilePath("http://127.0.0.1/ssh_config")
+	require.NoError(t, err, "Should not return any errors because that's a valid URL")
 }
 
 func Test_CheckAppInstalled(t *testing.T) {
@@ -274,7 +278,7 @@ func Test_IsURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := IsURL(tt.input)
+			result := IsSupportedURL(tt.input)
 			require.Equal(t, tt.expected, result)
 		})
 	}
