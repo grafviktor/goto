@@ -18,7 +18,7 @@ func newReader(value, kind string) (*reader, error) {
 		}
 
 		return &reader{
-			kind:   "url",
+			kind:   kind,
 			reader: urlReader,
 			closer: urlReader,
 		}, nil

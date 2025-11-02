@@ -43,14 +43,14 @@ func newSSHConfigStorage(
 	_ context.Context,
 	appConfig *application.Configuration,
 	logger iLogger,
-) (*SSHConfigFile, error) {
+) *SSHConfigFile {
 	lexer := sshconfig.NewFileLexer(appConfig.SSHConfigFilePath, logger)
 	parser := sshconfig.NewParser(lexer, logger)
 	return &SSHConfigFile{
 		fileLexer:  lexer,
 		fileParser: parser,
 		appConfig:  appConfig,
-	}, nil
+	}
 }
 
 // GetAll - returns all hosts.

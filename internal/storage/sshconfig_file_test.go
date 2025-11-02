@@ -37,8 +37,7 @@ func (m *mockSSHParser) Parse() ([]model.Host, error) {
 func TestNewSSHConfigStorageLocalFile(t *testing.T) {
 	mockAppConfig := application.Configuration{}
 	mockLogger := mocklogger.Logger{}
-	s, err := newSSHConfigStorage(context.TODO(), &mockAppConfig, &mockLogger)
-	require.NoError(t, err)
+	s := newSSHConfigStorage(context.TODO(), &mockAppConfig, &mockLogger)
 	require.NotNil(t, s)
 
 	s.Close()
@@ -65,7 +64,8 @@ func TestSSHConfigFile_GetAll(t *testing.T) {
 	require.Equal(t, "host2", hosts[1].Title)
 	require.Equal(t, 1, hosts[0].ID)
 	require.Equal(t, 2, hosts[1].ID)
-	s.Close() // It's required for Windows to release the temp file
+	// It's required for Windows to release the temp file, we're closing it in storage.Close().
+	s.Close()
 }
 
 func TestSSHConfigFile_GetAll_Error(t *testing.T) {

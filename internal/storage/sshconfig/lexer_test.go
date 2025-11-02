@@ -25,9 +25,9 @@ Host test
 	HostkeyAlgorithms +ssh-dss,ssh-rsa
 `
 	lex := &Lexer{
-		sourceType: "string",
-		source:     config,
-		logger:     &mocklogger.Logger{},
+		pathType:    "string",
+		currentPath: config,
+		logger:      &mocklogger.Logger{},
 	}
 	parent := SSHToken{
 		kind:  tokenKind.IncludeFile,
@@ -77,9 +77,9 @@ Host test
     UnknownKey value
 `
 	lex := &Lexer{
-		sourceType: "string",
-		source:     config,
-		logger:     &mocklogger.Logger{},
+		pathType:    "string",
+		currentPath: config,
+		logger:      &mocklogger.Logger{},
 	}
 	parent := SSHToken{
 		kind:  tokenKind.IncludeFile,
@@ -101,9 +101,9 @@ func TestLexer_Tokenize_InvalidUser(t *testing.T) {
 User invalid!user
 `
 	lex := &Lexer{
-		sourceType: "string",
-		source:     config,
-		logger:     &mocklogger.Logger{},
+		pathType:    "string",
+		currentPath: config,
+		logger:      &mocklogger.Logger{},
 	}
 	parent := SSHToken{
 		kind:  tokenKind.IncludeFile,
@@ -121,9 +121,9 @@ func TestLexer_Tokenize_InvalidPort(t *testing.T) {
 Port notaport
 `
 	lex := &Lexer{
-		sourceType: "string",
-		source:     config,
-		logger:     &mocklogger.Logger{},
+		pathType:    "string",
+		currentPath: config,
+		logger:      &mocklogger.Logger{},
 	}
 	parent := SSHToken{
 		kind:  tokenKind.IncludeFile,
@@ -161,9 +161,9 @@ func TestLexer_Tokenize_IncludeFile(t *testing.T) {
 	}
 
 	lex := &Lexer{
-		sourceType: "file",
-		source:     filepath.Join(tmpDir, "config"),
-		logger:     &mocklogger.Logger{},
+		pathType:    "file",
+		currentPath: filepath.Join(tmpDir, "config"),
+		logger:      &mocklogger.Logger{},
 	}
 
 	// That's our starting token which includes the file we created above.
@@ -180,9 +180,9 @@ func TestLexer_Tokenize_IncludeFile(t *testing.T) {
 func TestLexer_Tokenize_IncludeDepthLimit(t *testing.T) {
 	// Simulate include depth limit by recursive call
 	lex := &Lexer{
-		sourceType: "string",
-		source:     "irrelevant",
-		logger:     &mocklogger.Logger{},
+		pathType:    "string",
+		currentPath: "irrelevant",
+		logger:      &mocklogger.Logger{},
 	}
 	parent := SSHToken{
 		kind:  tokenKind.IncludeFile,
@@ -233,9 +233,9 @@ func TestLexer_handleIncludeToken_localFile(t *testing.T) {
 	}
 
 	lex := &Lexer{
-		sourceType: "file",
-		source:     filepath.Join(tmpDir, "config"),
-		logger:     &mocklogger.Logger{},
+		pathType:    "file",
+		currentPath: filepath.Join(tmpDir, "config"),
+		logger:      &mocklogger.Logger{},
 	}
 
 	// That's our starting token which includes the file we created above.
@@ -275,7 +275,7 @@ func TestLexer_handleIncludeToken_remoteFile(t *testing.T) {
 			baseURL: "http://127.0.0.1/config",
 			// That's a relative path, so it should be fetched from baseURL + path.
 			sourceTokenURL:   "path/to/config",
-			expectedTokenURL: "http://127.0.0.1/config/path/to/config",
+			expectedTokenURL: "http://127.0.0.1/path/to/config",
 		},
 		{
 			name:    "absolute path, base URL with trailing slash",
@@ -291,14 +291,20 @@ func TestLexer_handleIncludeToken_remoteFile(t *testing.T) {
 			sourceTokenURL:   "path/to/config",
 			expectedTokenURL: "http://127.0.0.1/config/path/to/config",
 		},
+		{
+			name:             "relative path starting with ./",
+			baseURL:          "http://127.0.0.1/config",
+			sourceTokenURL:   "./path/to/config",
+			expectedTokenURL: "http://127.0.0.1/path/to/config",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lex := &Lexer{
-				sourceType: "url",
-				source:     tt.baseURL,
-				logger:     &mocklogger.Logger{},
+				pathType:    pathTypeURL,
+				currentPath: tt.baseURL,
+				logger:      &mocklogger.Logger{},
 			}
 
 			startingPointToken := SSHToken{

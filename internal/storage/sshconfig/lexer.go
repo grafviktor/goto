@@ -2,6 +2,7 @@ package sshconfig
 
 import (
 	"bufio"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,26 +19,26 @@ const maxFileIncludeDepth = 16
 
 // Lexer is responsible for reading and tokenizing an SSH config file.
 type Lexer struct {
-	sourceType string
-	source     string
-	rawData    []byte
-	logger     iLogger
+	pathType    string
+	currentPath string
+	rawData     []byte
+	logger      iLogger
 }
 
 // NewFileLexer creates a new instance of Lexer for the given SSH config file path.
 func NewFileLexer(sshConfigFilePath string, log iLogger) *Lexer {
-	var sourceType string
+	var pathType string
 	if utils.IsURL(sshConfigFilePath) {
-		sourceType = "url"
+		pathType = pathTypeURL
 	} else {
-		sourceType = "file"
+		pathType = pathTypeFile
 	}
 
 	return &Lexer{
-		sourceType: sourceType,
-		source:     sshConfigFilePath,
-		rawData:    []byte{},
-		logger:     log,
+		pathType:    pathType,
+		currentPath: sshConfigFilePath,
+		rawData:     []byte{},
+		logger:      log,
 	}
 }
 
@@ -50,13 +51,13 @@ func (l *Lexer) Tokenize() ([]SSHToken, error) {
 	parent := SSHToken{
 		kind:  tokenKind.IncludeFile,
 		key:   "Include",
-		value: l.source,
+		value: l.currentPath,
 	}
 
 	tokens, err := l.loadFromDataSource(parent, []SSHToken{}, 0)
 	if sshconfig.IsUserDefinedPath() && err != nil {
 		// That's a bit hacky. If user explicitly set ssh/config file path via env var or CLI flag
-		// we should not ignore errors occurred during file reading.
+		// we should NOT ignore errors occurred during file reading.
 		return nil, err
 	}
 
@@ -71,7 +72,7 @@ func (l *Lexer) loadFromDataSource(
 ) ([]SSHToken, error) {
 	currentDepth++
 	if currentDepth > maxFileIncludeDepth {
-		l.logger.Error("[SSHCONFIG]: Max include depth reached")
+		l.logger.Error("[SSHCONFIG] Max include depth reached")
 
 		return children, nil
 	}
@@ -80,7 +81,8 @@ func (l *Lexer) loadFromDataSource(
 		return children, nil
 	}
 
-	rdr, err := newReader(includeToken.value, l.sourceType)
+	l.logger.Info("[SSHCONFIG] Loading included file: %s", includeToken.value)
+	rdr, err := newReader(includeToken.value, l.pathType)
 	if err != nil {
 		l.logger.Error("[SSHCONFIG] Error opening file %s: %+v", includeToken.value, err)
 		return nil, err
@@ -326,20 +328,20 @@ func (l *Lexer) handleIncludeToken(token SSHToken) []SSHToken {
 		return []SSHToken{}
 	}
 
-	if l.sourceType == "url" {
+	if l.pathType == pathTypeURL {
 		return l.includeRemoteFileToken(token.value)
 	}
 
 	return l.includeLocalFileToken(token.value)
 }
 
-func (l *Lexer) includeLocalFileToken(filePath string) []SSHToken {
+func (l *Lexer) includeLocalFileToken(localPath string) []SSHToken {
 	tokens := []SSHToken{}
-	if !filepath.IsAbs(filePath) {
-		filePath = filepath.Join(filepath.Dir(l.source), filePath)
+	if !filepath.IsAbs(localPath) {
+		localPath = filepath.Join(filepath.Dir(l.currentPath), localPath)
 	}
 
-	matches, err := filepath.Glob(filePath)
+	matches, err := filepath.Glob(localPath)
 	if err != nil {
 		return tokens
 	}
@@ -369,30 +371,35 @@ func (l *Lexer) includeLocalFileToken(filePath string) []SSHToken {
 	return tokens
 }
 
-func (l *Lexer) includeRemoteFileToken(resourcePath string) []SSHToken {
-	if utils.IsURL(resourcePath) {
-		// If resourcePath is already a full URL, use it as is.
+func (l *Lexer) includeRemoteFileToken(remotePath string) []SSHToken {
+	if utils.IsURL(remotePath) {
+		// If remotePath is already a full URL, use it as is.
 		return []SSHToken{{
 			kind:  tokenKind.IncludeFile,
 			key:   "Include",
-			value: resourcePath,
+			value: remotePath,
 		}}
 	}
 
-	// If resourcePath is not a full URL, we need to construct the full URL taking lexer.source as base.
-	var baseURL string
 	var err error
-
-	if path.IsAbs(resourcePath) {
-		// If resourcePath is absolute, extract base URL from lexer.source and try to fetch the file
+	// If remotePath is not a full URL, we need to construct the full URL taking lexer.currentPath as base.
+	if path.IsAbs(remotePath) {
+		// If remotePath is absolute, extract base URL from lexer.currentPath and try to fetch the file
 		// from the server root. I.e. "http://127.0.0.1:8080" + "/path/to/resource".
-		baseURL, err = utils.ExtractBaseURL(l.source)
-		resourcePath = baseURL + resourcePath
+		var baseURL string
+		baseURL, err = utils.ExtractBaseURL(l.currentPath)
+		remotePath = baseURL + remotePath
 	} else {
-		// If resourcePath is relative, take the base URL as the directory part of the lexer.source
-		// and try to fetch the file relative to that path. I.e. "http://127.0.0.1:8080/path/" + "to/resource".
-		baseURL = lo.Ternary(strings.HasSuffix(l.source, "/"), l.source, l.source+"/")
-		resourcePath = baseURL + resourcePath
+		// If remotePath is relative, take the base URL as the directory part of the lexer.currentPath.
+		// Example:
+		// l.currentPath = "http://127.0.0.1:8080/path/ssh_config"
+		// remotePath = "ssh_config_included"
+		// Result
+		// remotePath = "http://127.0.0.1:8080/path/ssh_config_included"
+		var u *url.URL
+		u, err = url.Parse(l.currentPath)
+		u.Path = path.Join(path.Dir(u.Path), remotePath)
+		remotePath = u.String()
 	}
 
 	if err != nil {
@@ -403,7 +410,7 @@ func (l *Lexer) includeRemoteFileToken(resourcePath string) []SSHToken {
 	return []SSHToken{{
 		kind:  tokenKind.IncludeFile,
 		key:   "Include",
-		value: resourcePath,
+		value: remotePath,
 	}}
 }
 
