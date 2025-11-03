@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -50,12 +49,10 @@ func TestSSHConfigFile_GetAll(t *testing.T) {
 	}
 
 	mockAppConfig := application.Configuration{}
-	sshConfigCopy, _ := os.CreateTemp(t.TempDir(), "unit_test_ssh_config_*")
 	s := &SSHConfigFile{
-		fileLexer:     &mockSSHLexer{},
-		fileParser:    &mockSSHParser{hosts: mockHosts},
-		appConfig:     &mockAppConfig,
-		sshConfigCopy: sshConfigCopy,
+		fileLexer:  &mockSSHLexer{},
+		fileParser: &mockSSHParser{hosts: mockHosts},
+		appConfig:  &mockAppConfig,
 	}
 	hosts, err := s.GetAll()
 	require.NoError(t, err)
@@ -82,12 +79,10 @@ func TestSSHConfigFile_Get(t *testing.T) {
 		{Title: "host1", Address: "host1.com"},
 	}
 	mockAppConfig := application.Configuration{}
-	sshConfigCopy, _ := os.CreateTemp(t.TempDir(), "unit_test_ssh_config_*")
 	s := &SSHConfigFile{
-		fileLexer:     &mockSSHLexer{},
-		fileParser:    &mockSSHParser{hosts: mockHosts},
-		appConfig:     &mockAppConfig,
-		sshConfigCopy: sshConfigCopy,
+		fileLexer:  &mockSSHLexer{},
+		fileParser: &mockSSHParser{hosts: mockHosts},
+		appConfig:  &mockAppConfig,
 	}
 	_, _ = s.GetAll()
 	h, err := s.Get(1)

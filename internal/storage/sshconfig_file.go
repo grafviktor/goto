@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"errors"
-	"log"
 	"os"
 	"slices"
 
@@ -135,14 +134,6 @@ func (s *SSHConfigFile) deleteSSHConfigCopy() {
 		return
 	}
 
-	log.Default().Printf("Close temporary SSH config file: %s\n", s.sshConfigCopy.Name())
-	err := s.sshConfigCopy.Close()
-	if err != nil {
-		log.Default().Printf("Cannot close temporary SSH config file: %v\n", err)
-	}
-	log.Default().Printf("Remove temporary SSH config file: %s\n", s.sshConfigCopy.Name())
-	err = os.Remove(s.sshConfigCopy.Name())
-	if err != nil {
-		log.Default().Printf("Cannot remove temporary SSH config file: %v\n", err)
-	}
+	_ = s.sshConfigCopy.Close()
+	_ = os.Remove(s.sshConfigCopy.Name())
 }

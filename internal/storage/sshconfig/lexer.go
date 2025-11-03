@@ -398,8 +398,10 @@ func (l *Lexer) includeRemoteFileToken(remotePath string) []SSHToken {
 		// remotePath = "http://127.0.0.1:8080/path/ssh_config_included"
 		var u *url.URL
 		u, err = url.Parse(l.currentPath)
-		u.Path = path.Join(path.Dir(u.Path), remotePath)
-		remotePath = u.String()
+		if err == nil {
+			u.Path = path.Join(path.Dir(u.Path), remotePath)
+			remotePath = u.String()
+		}
 	}
 
 	if err != nil {
