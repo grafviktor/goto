@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"errors"
 	"os"
 	"reflect"
 	"runtime"
@@ -267,6 +268,31 @@ func TestDispatchProcessSSHCopyID(t *testing.T) {
 	cmd := model.dispatchProcessSSHCopyID(msg)
 	// Check that cmd returns a tea.execMsg (unexported type, so check type name)
 	require.Equal(t, "execMsg", reflect.TypeOf(cmd()).Name())
+}
+
+func TestUpdate_RunProcessErrorOccurred(t *testing.T) {
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	msg := message.RunProcessErrorOccurred{
+		ProcessType: constant.ProcessTypeSSHCopyID,
+		StdOut:      "mock out message",
+		StdErr:      "mock error message",
+	}
+
+	m, _ := model.Update(msg)
+	require.Equal(t, "mock error message\nDetails: mock out message", m.(*MainModel).viewMessageContent)
+	require.Equal(t, state.ViewMessage, m.(*MainModel).appState.CurrentView)
+}
+
+func TestUpdate_ExitWithError(t *testing.T) {
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	msg := message.ExitWithError{
+		Err: errors.New("mock error message"),
+	}
+
+	m, cmd := model.Update(msg)
+
+	require.Equal(t, cmd(), tea.Quit())
+	require.Equal(t, "mock error message", m.(*MainModel).exitError.Error())
 }
 
 // ---------------------------------

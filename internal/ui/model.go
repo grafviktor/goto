@@ -325,8 +325,8 @@ func (m *MainModel) handleProcessError(msg message.RunProcessErrorOccurred) {
 		errMsg = msg.StdErr
 	}
 
-	// We use m.logger.Debug method to report about the error,
-	// because the error was already reported by run process module.
+	// Use Debug method to log the error, as the error was
+	// already reported by run process module. Just duplicate here.
 	m.logger.Debug("[EXEC] External process error. %v", errMsg)
 	m.viewMessageContent = errMsg
 	m.appState.CurrentView = state.ViewMessage
