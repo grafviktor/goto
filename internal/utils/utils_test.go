@@ -1,11 +1,17 @@
-package utils //nolint:revive // utils is a common name
+package utils //nolint:revive,nolintlint // utils is a common name
 
 import (
+	"context"
+	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
@@ -91,11 +97,6 @@ func Test(t *testing.T) {
 	got, _ := SSHConfigFilePath("")
 	require.Equal(t, expected, got, "Should return default ssh config file path")
 
-	// Test case: Path is a directory
-	customFolderPath := t.TempDir()
-	_, err := SSHConfigFilePath(customFolderPath)
-	require.Error(t, err, "SSH config file path is a directory")
-
 	// Test case: custom file path
 	tempFile, err := os.CreateTemp(t.TempDir(), "ssh_config_tmp.")
 	require.NoError(t, err, "Should create a temporary file for testing")
@@ -104,6 +105,10 @@ func Test(t *testing.T) {
 	got, err = SSHConfigFilePath(customPath)
 	require.NoError(t, err, "Should not return any errors because the path is valid")
 	require.Equal(t, customPath, got, "Should return custom ssh config file path")
+
+	// Test case: custom file path - unsupported URL
+	_, err = SSHConfigFilePath("http://127.0.0.1/ssh_config")
+	require.NoError(t, err, "Should not return any errors because that's a valid URL")
 }
 
 func Test_CheckAppInstalled(t *testing.T) {
@@ -236,4 +241,165 @@ func Test_ProcessBufferWriter_Write(t *testing.T) {
 	require.Equal(t, len(data), n)
 	// However we can read the text from writer.Output variable when we need
 	require.Equal(t, data, writer.Output)
+}
+
+func Test_IsURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{
+			name:     "Valid HTTPS URL",
+			input:    "https://example.com/path",
+			expected: true,
+		},
+		{
+			name:     "Valid HTTP URL",
+			input:    "http://example.com",
+			expected: true,
+		},
+		{
+			name:     "Invalid URL - no protocol",
+			input:    "www.example.com/path",
+			expected: false,
+		},
+		{
+			name:     "Invalid URL - random string",
+			input:    "not a url",
+			expected: false,
+		},
+		{
+			name:     "Invalid URL - empty string",
+			input:    "",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := IsSupportedURL(tt.input)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func Test_ExtractBaseURL(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expected    string
+		expectError bool
+	}{
+		{
+			name:        "HTTPS URL with path and query",
+			input:       "https://127.0.0.1:8080/path/to/resource?query=value",
+			expected:    "https://127.0.0.1:8080",
+			expectError: false,
+		},
+		{
+			name:        "HTTP URL with path",
+			input:       "http://127.0.0.1/api/v1/users",
+			expected:    "http://127.0.0.1",
+			expectError: false,
+		},
+		{
+			name:        "Invalid URL - no protocol",
+			input:       "127.0.0.1/path",
+			expected:    "",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ExtractBaseURL(tt.input)
+
+			if tt.expectError {
+				require.Error(t, err)
+				require.Equal(t, tt.expected, result)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+func Test_FetchFromURL(t *testing.T) {
+	// using a reduced network timeout as we don't want to wait too long when running unit tests
+	networkResponseTimeout = time.Second
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/test_1" {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("hello world"))
+			return
+		}
+
+		if r.URL.Path == "/test_2" {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if r.URL.Path == "/test_3" {
+			// Sleep longer than FetchFromURL's context timeout
+			time.Sleep(networkResponseTimeout + time.Second)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("late response"))
+			return
+		}
+	}))
+	defer ts.Close()
+
+	tests := []struct {
+		name          string
+		url           string
+		expectedData  string
+		expectedError error
+	}{
+		{
+			name:          "won't reach server",
+			url:           "www.missing_protocol_url.com",
+			expectedData:  "",
+			expectedError: errors.New("not a valid URL: www.missing_protocol_url.com"),
+		},
+		{
+			name:          "test_1",
+			url:           ts.URL + "/test_1",
+			expectedData:  "hello world",
+			expectedError: nil,
+		},
+		{
+			name:          "test_2",
+			url:           ts.URL + "/test_2",
+			expectedData:  "",
+			expectedError: errors.New("failed to fetch URL " + ts.URL + "/test_2: status code 500"),
+		},
+		{
+			name:          "test_3",
+			url:           ts.URL + "/test_3",
+			expectedData:  "late response",
+			expectedError: context.DeadlineExceeded,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := FetchFromURL(tt.url)
+			switch {
+			case tt.name == "test_3":
+				require.Error(t, err)
+				require.ErrorIs(t, err, context.DeadlineExceeded)
+			case tt.expectedError != nil:
+				require.Error(t, err)
+				require.Equal(t, err.Error(), tt.expectedError.Error())
+			default:
+				defer resp.Close()
+				require.NoError(t, err)
+				data, readErr := io.ReadAll(resp)
+				require.NoError(t, readErr)
+				require.Equal(t, tt.expectedData, string(data))
+			}
+		})
+	}
 }

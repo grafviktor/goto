@@ -10,8 +10,35 @@ import (
 	"github.com/grafviktor/goto/internal/application"
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
+	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 )
+
+func TestStorage_Initialize_SSHConfigEnabled(t *testing.T) {
+	state.Create(context.TODO(), application.Configuration{}, &mocklogger.Logger{})
+	state.Get().SSHConfigEnabled = true
+	logger := &mocklogger.Logger{}
+	appConfig := application.Configuration{}
+
+	storage, err := Initialize(context.TODO(), &appConfig, logger)
+	require.NoError(t, err, "expected no error on storage initialization")
+	require.Len(t, storage.(*combinedStorage).storages, 2, "expected two inner storages")
+	// Not required, but just to verify that not errors when closing storages
+	storage.Close()
+}
+
+func TestStorage_Initialize_SSHConfigDisabled(t *testing.T) {
+	state.Create(context.TODO(), application.Configuration{}, &mocklogger.Logger{})
+	state.Get().SSHConfigEnabled = false
+	logger := &mocklogger.Logger{}
+	appConfig := application.Configuration{}
+
+	storage, err := Initialize(context.TODO(), &appConfig, logger)
+	require.NoError(t, err, "expected no error on storage initialization")
+	require.Len(t, storage.(*combinedStorage).storages, 1, "expected one inner storage")
+	// Not required, but just to verify that not errors when closing storages
+	storage.Close()
+}
 
 type fakeHostStorage struct {
 	hosts   []model.Host
@@ -59,6 +86,10 @@ func (f *fakeHostStorage) Delete(id int) error {
 	}
 	delete(f.hostMap, id)
 	return nil
+}
+
+func (f *fakeHostStorage) Close() {
+	// nop
 }
 
 func TestCombinedStorage_GetAll(t *testing.T) {

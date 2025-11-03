@@ -59,6 +59,7 @@ type MainModel struct {
 	logger             iLogger
 	viewport           viewport.Model
 	ready              bool
+	exitError          error
 }
 
 func (m *MainModel) Init() tea.Cmd {
@@ -115,6 +116,10 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case message.RunProcessErrorOccurred:
 		m.logger.Debug("[UI] Handle process error message. Process: %v", msg.ProcessType)
 		m.handleProcessError(msg)
+	case message.ExitWithError:
+		m.logger.Debug("[UI] Quit application with error")
+		m.exitError = msg.Err
+		return m, tea.Quit
 	}
 
 	m.modelHostList, cmd = m.modelHostList.Update(msg)
@@ -276,7 +281,7 @@ func (m *MainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadCo
 func (m *MainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) tea.Cmd {
 	identityFile, hostname := msg.Host.SSHHostConfig.IdentityFile, msg.Host.SSHHostConfig.Hostname
 	m.logger.Debug("[EXEC] Copy ssh-key '%s.pub' to host '%s'", identityFile, hostname)
-	if sshconfig.IsAlternativeFilePathDefined() {
+	if sshconfig.IsUserDefinedPath() {
 		m.logger.Warn("[EXEC] copy ssh key when alternative ssh config file is used: %q. ssh config file is ignored.",
 			m.appState.ApplicationConfig.SSHConfigFilePath)
 	}
@@ -320,8 +325,8 @@ func (m *MainModel) handleProcessError(msg message.RunProcessErrorOccurred) {
 		errMsg = msg.StdErr
 	}
 
-	// We use m.logger.Debug method to report about the error,
-	// because the error was already reported by run process module.
+	// Use Debug method to log the error, as the error was
+	// already reported by run process module. Just duplicate here.
 	m.logger.Debug("[EXEC] External process error. %v", errMsg)
 	m.viewMessageContent = errMsg
 	m.appState.CurrentView = state.ViewMessage

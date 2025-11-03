@@ -17,6 +17,9 @@ type MockStorage struct {
 	Hosts      []host.Host
 }
 
+// NewMockStorage creates a new instance of MockStorage for unit tests.
+// If shouldFail is true, then all operations like Get, Delete, Save will
+// return an error.
 func NewMockStorage(shouldFail bool) *MockStorage {
 	hosts := []host.Host{
 		// Yaml storage specific: if host has id which is equal to "0"
@@ -88,4 +91,8 @@ func (ms *MockStorage) Save(m host.Host) (host.Host, error) {
 
 func (ms *MockStorage) Type() constant.HostStorageEnum {
 	return "MOCK STORAGE"
+}
+
+func (ms *MockStorage) Close() {
+	// nop
 }

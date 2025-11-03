@@ -42,6 +42,8 @@ type (
 	CloseViewHostEdit struct{}
 	// ErrorOccurred - is dispatched when an error occurs.
 	ErrorOccurred struct{ Err error }
+	// ExitWithError - indicates that something bad happened and we need to close the application.
+	ExitWithError struct{ Err error }
 	// RunProcessSSHConnect is dispatched when user wants to connect to a host.
 	RunProcessSSHConnect struct{ Host host.Host }
 	// RunProcessSSHLoadConfig is dispatched it's required to read .ssh/config file for a certain host.

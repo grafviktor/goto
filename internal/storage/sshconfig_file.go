@@ -8,6 +8,7 @@ import (
 
 	"github.com/samber/lo"
 
+	"github.com/grafviktor/goto/internal/application"
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/storage/sshconfig"
@@ -19,35 +20,52 @@ var _ HostStorage = &SSHConfigFile{}
 // delete host in SSHConfigFile storage.
 var ErrNotSupported = errors.New("readonly storage, edit ssh config directly")
 
+type sshLexer interface {
+	Tokenize() ([]sshconfig.SSHToken, error)
+	GetRawData() []byte
+}
+
 type sshParser interface {
 	Parse() ([]model.Host, error)
 }
 
 // SSHConfigFile - is a storage which contains hosts loaded from SSH config file.
 type SSHConfigFile struct {
-	parser       sshParser
-	innerStorage map[int]model.Host
+	fileLexer     sshLexer
+	fileParser    sshParser
+	innerStorage  map[int]model.Host
+	appConfig     *application.Configuration
+	sshConfigCopy *os.File
 }
 
 // newSSHConfigStorage - constructs new SSHStorage.
-func newSSHConfigStorage(_ context.Context, sshConfigPath string, logger iLogger) (*SSHConfigFile, error) {
-	_, err := os.Stat(sshConfigPath)
-	if err != nil {
-		return nil, err
-	}
-
-	lexer := sshconfig.NewFileLexer(sshConfigPath, logger)
+func newSSHConfigStorage(
+	_ context.Context,
+	appConfig *application.Configuration,
+	logger iLogger,
+) *SSHConfigFile {
+	lexer := sshconfig.NewFileLexer(appConfig.SSHConfigFilePath, logger)
 	parser := sshconfig.NewParser(lexer, logger)
-	return &SSHConfigFile{parser: parser}, nil
+	return &SSHConfigFile{
+		fileLexer:  lexer,
+		fileParser: parser,
+		appConfig:  appConfig,
+	}
 }
 
 // GetAll - returns all hosts.
 func (s *SSHConfigFile) GetAll() ([]model.Host, error) {
-	hosts, err := s.parser.Parse()
+	hosts, err := s.fileParser.Parse()
 	if err != nil {
 		return nil, err
 	}
 
+	err = s.createSSHConfigCopy()
+	if err != nil {
+		return nil, err
+	}
+
+	s.updateApplicationState()
 	s.innerStorage = make(map[int]model.Host, len(hosts))
 	for i := range hosts {
 		// Make sure that not assigning '0' as host id, because '0' is empty host identifier.
@@ -85,4 +103,37 @@ func (s *SSHConfigFile) Delete(_ int) error {
 // Type - returns storage type.
 func (s *SSHConfigFile) Type() constant.HostStorageEnum {
 	return constant.HostStorageType.SSHConfig
+}
+
+func (s *SSHConfigFile) createSSHConfigCopy() error {
+	rawData := s.fileLexer.GetRawData()
+	sshConfigCopy, err := os.CreateTemp("", "goto_sshconfig_*")
+	if err != nil {
+		return err
+	}
+	s.sshConfigCopy = sshConfigCopy
+
+	_, err = sshConfigCopy.Write(rawData)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *SSHConfigFile) updateApplicationState() {
+	s.appConfig.SSHConfigFilePath = s.sshConfigCopy.Name()
+}
+
+func (s *SSHConfigFile) Close() {
+	s.deleteSSHConfigCopy()
+}
+
+func (s *SSHConfigFile) deleteSSHConfigCopy() {
+	if s.sshConfigCopy == nil {
+		return
+	}
+
+	_ = s.sshConfigCopy.Close()
+	_ = os.Remove(s.sshConfigCopy.Name())
 }

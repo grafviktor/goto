@@ -29,8 +29,9 @@ type HostStorage interface {
 	GetAll() ([]model.Host, error)
 	Get(hostID int) (model.Host, error)
 	Save(model.Host) (model.Host, error)
-	Type() constant.HostStorageEnum
 	Delete(id int) error
+	Type() constant.HostStorageEnum
+	Close()
 }
 
 type hostStorageMapping struct {
@@ -47,10 +48,12 @@ type combinedStorage struct {
 	hostStorageMap map[int]hostStorageMapping
 }
 
-// Get returns new data service.
-func Get(ctx context.Context, appConfig application.Configuration, logger iLogger) (HostStorage, error) {
+// Initialize - prepares inner storages and returns a common HostStorage interface to load and save hosts.
+func Initialize(ctx context.Context, appConfig *application.Configuration, logger iLogger) (HostStorage, error) {
+	storages := getStorages(ctx, appConfig, logger)
+
 	cs := combinedStorage{
-		storages:       getStorages(ctx, appConfig, logger),
+		storages:       storages,
 		hostStorageMap: make(map[int]hostStorageMapping),
 		hosts:          make(map[int]model.Host),
 		logger:         logger,
@@ -61,7 +64,7 @@ func Get(ctx context.Context, appConfig application.Configuration, logger iLogge
 
 func getStorages(
 	ctx context.Context,
-	appConfig application.Configuration,
+	appConfig *application.Configuration,
 	logger iLogger,
 ) map[constant.HostStorageEnum]HostStorage {
 	storageMap := make(map[constant.HostStorageEnum]HostStorage)
@@ -72,12 +75,8 @@ func getStorages(
 	logger.Debug("[STORAGE] SSH config storage enable: '%t'", sshConfigEnabled)
 	if sshConfigEnabled {
 		logger.Info("[STORAGE] Load ssh hosts from ssh config file: %q", appConfig.SSHConfigFilePath)
-		sshConfigStorage, err := newSSHConfigStorage(ctx, appConfig.SSHConfigFilePath, logger)
-		if err != nil {
-			logger.Error("[STORAGE] Cannot load ssh hosts from file: %q. Error: %v", appConfig.SSHConfigFilePath, err)
-		} else {
-			storageMap[sshConfigStorage.Type()] = sshConfigStorage
-		}
+		sshConfigStorage := newSSHConfigStorage(ctx, appConfig, logger)
+		storageMap[sshConfigStorage.Type()] = sshConfigStorage
 	}
 
 	return storageMap
@@ -191,4 +190,10 @@ func (c *combinedStorage) addHost(host model.Host, storageType constant.HostStor
 	c.hosts[c.nextID] = host
 
 	return c.nextID
+}
+
+func (c *combinedStorage) Close() {
+	for _, storage := range c.storages {
+		storage.Close()
+	}
 }

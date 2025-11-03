@@ -70,4 +70,5 @@ func Print() {
 	fmt.Printf("Commit:     %s\n", CommitHash())
 	fmt.Printf("Branch:     %s\n", BuildBranch())
 	fmt.Printf("Build date: %s\n", BuildDate())
+	fmt.Println()
 }

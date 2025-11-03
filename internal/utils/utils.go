@@ -1,17 +1,22 @@
 // Package utils contains various utility methods
-package utils
+package utils //nolint:revive,nolintlint // utils is a common name
 
 import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 	"unicode"
+
+	"github.com/samber/lo"
 )
 
 // StringEmpty - checks if string is empty or contains only spaces.
@@ -137,21 +142,81 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 	return path.Join(userConfigDir, appName), nil
 }
 
+// IsSupportedURL checks if the given path is a URL starting with http, https, or ftp.
+func IsSupportedURL(path string) bool {
+	if StringEmpty(&path) {
+		return false
+	}
+
+	path = strings.TrimSpace(path)
+	return lo.ContainsBy([]string{"http://", "https://", "ftp://"}, func(prefix string) bool {
+		return strings.HasPrefix(strings.ToLower(path), prefix)
+	})
+}
+
+// ExtractBaseURL extracts the base URL (scheme + host + port) from a URL by removing the path and query parameters.
+// Example: "http://127.0.0.1:8080/path/to/resource" -> "http://127.0.0.1:8080"
+func ExtractBaseURL(urlPath string) (string, error) {
+	if !IsSupportedURL(urlPath) {
+		return "", fmt.Errorf("not supported URL format: %s", urlPath)
+	}
+
+	parsedURL, err := url.Parse(urlPath)
+	if err != nil {
+		return "", fmt.Errorf("invalid URL format: %w", err)
+	}
+
+	// Construct base URL with scheme, host, and port (if specified)
+	baseURL := fmt.Sprintf("%s://%s", parsedURL.Scheme, parsedURL.Host)
+
+	return baseURL, nil
+}
+
+// networkResponseTimeout - max-wait time for network requests.
+// Not 'const' as redefined in unit tests to reduce execution time.
+var networkResponseTimeout = 10 * time.Second
+
+// FetchFromURL fetches content from a URL and returns it as a string.
+func FetchFromURL(urlPath string) (io.ReadCloser, error) {
+	if !IsSupportedURL(urlPath) {
+		return nil, fmt.Errorf("not a valid URL: %s", urlPath)
+	}
+
+	parsedURL, err := url.Parse(urlPath)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL format: %w", err)
+	}
+
+	//nolint:noctx // want to use http.NewRequest instead of http.NewRequestWithContext
+	req, err := http.NewRequest(http.MethodGet, parsedURL.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	client := &http.Client{Timeout: networkResponseTimeout}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch URL %s: %w", urlPath, err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		_ = resp.Body.Close()
+		return nil, fmt.Errorf("failed to fetch URL %s: status code %d", urlPath, resp.StatusCode)
+	}
+
+	return resp.Body, nil
+}
+
 // SSHConfigFilePath - returns ssh_config path or error.
 func SSHConfigFilePath(userDefinedPath string) (string, error) {
 	if !StringEmpty(&userDefinedPath) {
+		if IsSupportedURL(userDefinedPath) {
+			return userDefinedPath, nil
+		}
+
 		absolutePath, err := filepath.Abs(userDefinedPath)
 		if err != nil {
 			return "", err
-		}
-
-		stat, err := os.Stat(absolutePath)
-		if err != nil {
-			return "", err
-		}
-
-		if stat.IsDir() {
-			return "", errors.New("SSH config file path is a directory")
 		}
 
 		return absolutePath, nil
