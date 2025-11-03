@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/grafviktor/goto/internal/logger"
+	"github.com/grafviktor/goto/internal/resources"
 )
 
 var currentTheme *Theme
@@ -30,12 +31,14 @@ func LoadTheme(configDir, themeName string) *Theme {
 
 	theme, err := LoadThemeFromFile(themeFile)
 	if err != nil {
+		// themeFiles, _ := resources.Themes.ReadDir("themes")
+		// for _, themeFile := range themeFiles {
+		// 	logger.Get().Debug("Available embedded theme: %s", themeFile.Name())
+		// }
 		// Fall back to default theme
 		theme = DefaultTheme()
 		// Save the default theme to file for future use
-		if saveErr := SaveThemeToFile(theme, themeFile); saveErr != nil {
-			logger.Get().Error("Failed to save default theme: %v", saveErr)
-		}
+		extractThemeFiles(filepath.Join(configDir, "themes"))
 	}
 
 	SetTheme(theme)
@@ -58,21 +61,69 @@ func LoadThemeFromFile(filePath string) (*Theme, error) {
 	return &theme, nil
 }
 
-// SaveThemeToFile saves a theme to a JSON file.
-func SaveThemeToFile(theme *Theme, filePath string) error {
-	dir := filepath.Dir(filePath)
-	if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // Folder permissions are sufficient
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	data, err := json.MarshalIndent(theme, "", "  ")
+func extractThemeFiles(filePath string) error {
+	entries, err := resources.Themes.ReadDir("themes")
 	if err != nil {
-		return fmt.Errorf("failed to marshal theme: %w", err)
+		return err
 	}
 
-	if err = os.WriteFile(filePath, data, 0o644); err != nil { //nolint:gosec // File permissions are sufficient
-		return fmt.Errorf("failed to write theme file: %w", err)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		if !strings.HasSuffix(entry.Name(), ".json") {
+			continue
+		}
+
+		data, err := resources.Themes.ReadFile(entry.Name())
+		if err != nil {
+			return err
+		}
+
+		// Write to disk
+		// outPath := filepath.Join(targetDir, entry.Name())
+		// if err := os.WriteFile(outPath, data, 0o644); err != nil {
+		// 	return err
+		// }
 	}
 
 	return nil
 }
+
+// func SaveThemeToFile(theme *Theme, filePath string) error {
+// 	dir := filepath.Dir(filePath)
+// 	if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // Folder permissions are sufficient
+// 		return fmt.Errorf("failed to create directory: %w", err)
+// 	}
+
+// 	data, err := json.MarshalIndent(theme, "", "  ")
+// 	if err != nil {
+// 		return fmt.Errorf("failed to marshal theme: %w", err)
+// 	}
+
+// 	if err = os.WriteFile(filePath, data, 0o644); err != nil { //nolint:gosec // File permissions are sufficient
+// 		return fmt.Errorf("failed to write theme file: %w", err)
+// 	}
+
+// 	return nil
+// }
+
+// // SaveThemeToFile saves a theme to a JSON file.
+// func SaveThemeToFile(theme *Theme, filePath string) error {
+// 	dir := filepath.Dir(filePath)
+// 	if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // Folder permissions are sufficient
+// 		return fmt.Errorf("failed to create directory: %w", err)
+// 	}
+
+// 	data, err := json.MarshalIndent(theme, "", "  ")
+// 	if err != nil {
+// 		return fmt.Errorf("failed to marshal theme: %w", err)
+// 	}
+
+// 	if err = os.WriteFile(filePath, data, 0o644); err != nil { //nolint:gosec // File permissions are sufficient
+// 		return fmt.Errorf("failed to write theme file: %w", err)
+// 	}
+
+// 	return nil
+// }

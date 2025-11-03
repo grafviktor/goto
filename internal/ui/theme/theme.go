@@ -1,6 +1,6 @@
 // Package theme provides centralized styling and theming functionality
 //
-//nolint:mnd // Ignore magic numbers in styling paddings and margins
+//nolint:mnd // Ignore magic numbers in styling: paddings and margins
 package theme
 
 import (
@@ -33,9 +33,10 @@ type ColorsList struct {
 
 // Theme defines the color scheme and styling for the application.
 type Theme struct {
-	Name   string     `json:"name"`
-	Colors ColorsList `json:"colors"`
-	Styles AppStyles  `json:"-"` // Not serialized, computed from colors
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Colors      ColorsList `json:"colors"`
+	Styles      AppStyles  `json:"-"` // Not serialized, computed from colors
 }
 
 // AppStyles contains all computed styles for the application.

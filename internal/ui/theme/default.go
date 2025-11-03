@@ -4,7 +4,8 @@ package theme
 // See cheat-sheet: https://www.ditig.com/publications/256-colors-cheat-sheet
 func DefaultTheme() *Theme {
 	theme := &Theme{
-		Name: "bubbletea",
+		Name:        "bubbletea",
+		Description: "Default color theme",
 		Colors: ColorsList{
 			TextColor:            AdaptiveColor{Light: "#1a1a1a", Dark: "#dddddd"},
 			TextColorSelected1:   AdaptiveColor{Light: "#EE6FF8", Dark: "#EE6FF8"},
