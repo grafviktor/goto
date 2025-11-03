@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"log"
 	"os"
 	"slices"
 
@@ -105,10 +106,6 @@ func (s *SSHConfigFile) Type() constant.HostStorageEnum {
 	return constant.HostStorageType.SSHConfig
 }
 
-func (s *SSHConfigFile) updateApplicationState() {
-	s.appConfig.SSHConfigFilePath = s.sshConfigCopy.Name()
-}
-
 func (s *SSHConfigFile) createSSHConfigCopy() error {
 	rawData := s.fileLexer.GetRawData()
 	sshConfigCopy, err := os.CreateTemp("", "goto_sshconfig_*")
@@ -125,6 +122,10 @@ func (s *SSHConfigFile) createSSHConfigCopy() error {
 	return nil
 }
 
+func (s *SSHConfigFile) updateApplicationState() {
+	s.appConfig.SSHConfigFilePath = s.sshConfigCopy.Name()
+}
+
 func (s *SSHConfigFile) Close() {
 	s.deleteSSHConfigCopy()
 }
@@ -134,6 +135,14 @@ func (s *SSHConfigFile) deleteSSHConfigCopy() {
 		return
 	}
 
-	_ = s.sshConfigCopy.Close()
-	_ = os.Remove(s.sshConfigCopy.Name())
+	log.Default().Printf("Close temporary SSH config file: %s\n", s.sshConfigCopy.Name())
+	err := s.sshConfigCopy.Close()
+	if err != nil {
+		log.Default().Printf("Cannot close temporary SSH config file: %v\n", err)
+	}
+	log.Default().Printf("Remove temporary SSH config file: %s\n", s.sshConfigCopy.Name())
+	err = os.Remove(s.sshConfigCopy.Name())
+	if err != nil {
+		log.Default().Printf("Cannot remove temporary SSH config file: %v\n", err)
+	}
 }
