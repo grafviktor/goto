@@ -28,25 +28,18 @@ func GetTheme() *Theme {
 // LoadTheme loads a theme from file or falls back to default.
 func LoadTheme(configDir, themeName string) *Theme {
 	themeFile := filepath.Join(configDir, "themes", themeName+".json")
-
-	theme, err := LoadThemeFromFile(themeFile)
+	theme, err := loadThemeFromFile(themeFile)
 	if err != nil {
-		// themeFiles, _ := resources.Themes.ReadDir("themes")
-		// for _, themeFile := range themeFiles {
-		// 	logger.Get().Debug("Available embedded theme: %s", themeFile.Name())
-		// }
-		// Fall back to default theme
 		theme = DefaultTheme()
-		// Save the default theme to file for future use
-		extractThemeFiles(filepath.Join(configDir, "themes"))
+		err = extractThemeFiles(filepath.Join(configDir, "themes"))
 	}
 
 	SetTheme(theme)
 	return theme
 }
 
-// LoadThemeFromFile loads a theme from a JSON file.
-func LoadThemeFromFile(filePath string) (*Theme, error) {
+// loadThemeFromFile loads a theme from a JSON file.
+func loadThemeFromFile(filePath string) (*Theme, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read theme file: %w", err)
@@ -61,69 +54,46 @@ func LoadThemeFromFile(filePath string) (*Theme, error) {
 	return &theme, nil
 }
 
-func extractThemeFiles(filePath string) error {
+func extractThemeFiles(themesPath string) error {
+	// 1. Write default theme to disk
+	data, err := json.MarshalIndent(DefaultTheme(), "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal theme: %w", err)
+	}
+	saveThemeToFile(data, filepath.Join(themesPath, "default.json"))
+
+	// 2. Extract embedded themes
 	entries, err := resources.Themes.ReadDir("themes")
 	if err != nil {
 		return err
 	}
 
 	for _, entry := range entries {
-		if entry.IsDir() {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
 			continue
 		}
 
-		if !strings.HasSuffix(entry.Name(), ".json") {
-			continue
-		}
-
-		data, err := resources.Themes.ReadFile(entry.Name())
+		embeddedFSPath := filepath.Join("themes", entry.Name())
+		data, err := resources.Themes.ReadFile(embeddedFSPath)
 		if err != nil {
-			return err
+			continue
 		}
 
-		// Write to disk
-		// outPath := filepath.Join(targetDir, entry.Name())
-		// if err := os.WriteFile(outPath, data, 0o644); err != nil {
-		// 	return err
-		// }
+		saveThemeToFile(data, filepath.Join(themesPath, entry.Name()))
 	}
 
 	return nil
 }
 
-// func SaveThemeToFile(theme *Theme, filePath string) error {
-// 	dir := filepath.Dir(filePath)
-// 	if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // Folder permissions are sufficient
-// 		return fmt.Errorf("failed to create directory: %w", err)
-// 	}
+func saveThemeToFile(theme []byte, filePath string) error {
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // Folder permissions are sufficient
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
 
-// 	data, err := json.MarshalIndent(theme, "", "  ")
-// 	if err != nil {
-// 		return fmt.Errorf("failed to marshal theme: %w", err)
-// 	}
+	if err := os.WriteFile(filePath, theme, 0o644); err != nil { //nolint:gosec // File permissions are sufficient
+		return fmt.Errorf("failed to write theme file: %w", err)
+	}
 
-// 	if err = os.WriteFile(filePath, data, 0o644); err != nil { //nolint:gosec // File permissions are sufficient
-// 		return fmt.Errorf("failed to write theme file: %w", err)
-// 	}
-
-// 	return nil
-// }
-
-// // SaveThemeToFile saves a theme to a JSON file.
-// func SaveThemeToFile(theme *Theme, filePath string) error {
-// 	dir := filepath.Dir(filePath)
-// 	if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // Folder permissions are sufficient
-// 		return fmt.Errorf("failed to create directory: %w", err)
-// 	}
-
-// 	data, err := json.MarshalIndent(theme, "", "  ")
-// 	if err != nil {
-// 		return fmt.Errorf("failed to marshal theme: %w", err)
-// 	}
-
-// 	if err = os.WriteFile(filePath, data, 0o644); err != nil { //nolint:gosec // File permissions are sufficient
-// 		return fmt.Errorf("failed to write theme file: %w", err)
-// 	}
-
-// 	return nil
-// }
+	return nil
+}
