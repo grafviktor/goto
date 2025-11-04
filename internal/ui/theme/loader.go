@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/grafviktor/goto/internal/logger"
 	"github.com/grafviktor/goto/internal/resources"
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 var currentTheme *Theme
@@ -27,11 +29,28 @@ func GetTheme() *Theme {
 
 // LoadTheme loads a theme from file or falls back to default.
 func LoadTheme(configDir, themeName string) *Theme {
-	themeFile := filepath.Join(configDir, "themes", themeName+".json")
+	log := logger.Get()
+	themeFolder := filepath.Join(configDir, "themes")
+	if !utils.IsFolderExists(themeFolder) {
+		log.Info("[MAIN] Themes not found. Extract themes to %q", themeFolder)
+		err := extractThemeFiles(themeFolder)
+		if err != nil {
+			// We cannot extract themes. There is nothing we can do in this case
+			// apart from applying the default theme and return.
+			log.Error("[MAIN] Cannot extract theme files: %v. Fallback to default theme.", err)
+			theme := DefaultTheme()
+			SetTheme(theme)
+			return theme
+		}
+	}
+
+	themeFile := filepath.Join(themeFolder, themeName+".json")
+	log.Info("[MAIN] Load theme from %q", themeFile)
+
 	theme, err := loadThemeFromFile(themeFile)
 	if err != nil {
+		log.Error("[MAIN] Cannot load theme: %v. Fallback to default theme.", err)
 		theme = DefaultTheme()
-		err = extractThemeFiles(filepath.Join(configDir, "themes"))
 	}
 
 	SetTheme(theme)
@@ -60,7 +79,10 @@ func extractThemeFiles(themesPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal theme: %w", err)
 	}
-	saveThemeToFile(data, filepath.Join(themesPath, "default.json"))
+	err = saveThemeToFile(data, filepath.Join(themesPath, "default.json"))
+	if err != nil {
+		return fmt.Errorf("failed to save default theme: %w", err)
+	}
 
 	// 2. Extract embedded themes
 	entries, err := resources.Themes.ReadDir("themes")
@@ -74,12 +96,15 @@ func extractThemeFiles(themesPath string) error {
 		}
 
 		embeddedFSPath := filepath.Join("themes", entry.Name())
-		data, err := resources.Themes.ReadFile(embeddedFSPath)
+		data, err = resources.Themes.ReadFile(embeddedFSPath)
 		if err != nil {
-			continue
+			return fmt.Errorf("failed to read embedded theme file: %w", err)
 		}
 
-		saveThemeToFile(data, filepath.Join(themesPath, entry.Name()))
+		err = saveThemeToFile(data, filepath.Join(themesPath, entry.Name()))
+		if err != nil {
+			return fmt.Errorf("failed to save embedded theme file: %w", err)
+		}
 	}
 
 	return nil
