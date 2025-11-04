@@ -55,7 +55,7 @@ func main() {
 		logCloseAndExit(appState.Logger, exitCodeError, logMessage)
 	}
 
-	// Initialize theme system
+	// Initialize themes
 	appState.Logger.Debug("[MAIN] Loading application theme")
 	themeName := lo.Ternary(utils.StringEmpty(&appState.Theme), defaultThemeName, appState.Theme)
 	appTheme := theme.LoadTheme(appState.ApplicationConfig.AppHome, themeName, appState.Logger)
@@ -255,21 +255,21 @@ func handleSetTheme(lg loggerInterface, appState *state.Application, themeName s
 	// List available themes
 	availableThemes, err := theme.ListAvailableThemes(appState.ApplicationConfig.AppHome, lg)
 	if err != nil {
-		lg.Error("[CONFIG] Cannot list available themes: %v.", err)
+		lg.Error("[MAIN] Cannot list available themes: %v.", err)
 		availableThemes = []string{defaultThemeName}
 	}
 
 	// Validate theme name
 	themeExists := lo.Contains(availableThemes, themeName)
 	if !themeExists {
-		logMessage := fmt.Sprintf("Theme %q not found. Available themes: %v", themeName, availableThemes)
-		lg.Error("[CONFIG] %s", logMessage)
-		logCloseAndExit(lg, exitCodeError, logMessage)
+		lg.Error("[MAIN] Theme %q not found", themeName)
+		// logCloseAndExit(lg, exitCodeError, logMessage)
+		return fmt.Errorf("theme %q not found. Available themes: %q", themeName, availableThemes)
 	}
 
 	// Set theme in application state
 	appState.Theme = themeName
-	lg.Debug("[CONFIG] Set theme to %q", themeName)
+	lg.Info("[CONFIG] Set theme to %q", themeName)
 	fmt.Printf("Theme set to: '%s'\n", themeName)
 
 	return appState.Persist()
