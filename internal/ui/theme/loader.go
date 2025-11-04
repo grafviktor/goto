@@ -15,6 +15,7 @@ import (
 type loggerInterface interface {
 	Info(format string, args ...any)
 	Error(format string, args ...any)
+	Debug(format string, args ...any)
 }
 
 var currentTheme *Theme
@@ -36,7 +37,7 @@ func GetTheme() *Theme {
 func LoadTheme(configDir, themeName string, logger loggerInterface) *Theme {
 	themeFolder := filepath.Join(configDir, "themes")
 	if !utils.IsFolderExists(themeFolder) {
-		logger.Info("[MAIN] Themes not found. Extract themes to %q", themeFolder)
+		logger.Debug("[MAIN] Themes folder not found. Extract themes to %q", themeFolder)
 		err := extractThemeFiles(themeFolder)
 		if err != nil {
 			// We cannot extract themes. There is nothing we can do in this case
@@ -127,4 +128,32 @@ func saveThemeToFile(theme []byte, filePath string) error {
 	}
 
 	return nil
+}
+
+// ListAvailableThemes returns a list of available theme names.
+func ListAvailableThemes(configDir string, logger loggerInterface) ([]string, error) {
+	themeFolder := filepath.Join(configDir, "themes")
+	if !utils.IsFolderExists(themeFolder) {
+		logger.Debug("[MAIN] Themes folder not found. Extract themes to %q", themeFolder)
+		err := extractThemeFiles(themeFolder)
+		if err != nil {
+			return nil, fmt.Errorf("failed to extract theme files: %w", err)
+		}
+	}
+
+	entries, err := os.ReadDir(themeFolder)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read themes directory: %w", err)
+	}
+
+	themes := []string{}
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+			continue
+		}
+		themeName := strings.TrimSuffix(entry.Name(), ".json")
+		themes = append(themes, themeName)
+	}
+
+	return themes, nil
 }

@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/caarlos0/env/v10"
+	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/application"
 	"github.com/grafviktor/goto/internal/logger"
@@ -32,6 +33,7 @@ var (
 
 const (
 	appName             = "goto"
+	defaultThemeName    = "default"
 	featureSSHConfig    = "ssh_config"
 	logMsgCloseApp      = "--------= Close application =-------"
 	logMsgCloseAppError = "--------= Close application with non-zero code =--------"
@@ -55,7 +57,8 @@ func main() {
 
 	// Initialize theme system
 	appState.Logger.Debug("[MAIN] Loading application theme")
-	appTheme := theme.LoadTheme(appState.ApplicationConfig.AppHome, "default", appState.Logger)
+	themeName := lo.Ternary(utils.StringEmpty(&appState.Theme), defaultThemeName, appState.Theme)
+	appTheme := theme.LoadTheme(appState.ApplicationConfig.AppHome, themeName, appState.Logger)
 	appState.Logger.Debug("[MAIN] Using theme: %s", appTheme.Name)
 
 	// Run user interface
@@ -128,6 +131,18 @@ func createApplicationOrExit() *state.Application {
 		logCloseAndExit(lg, exitCodeSuccess, "")
 	}
 
+	// If "-set-theme" parameter provided, set the theme and exit
+	if applicationConfiguration.SetTheme != "" {
+		lg.Debug("[MAIN] Set application theme and exit")
+		err = handleSetTheme(lg, applicationState, applicationConfiguration.SetTheme)
+		if err != nil {
+			logMessage := fmt.Sprintf("[MAIN] Cannot set theme: %v", err)
+			logCloseAndExit(lg, exitCodeError, logMessage)
+		}
+
+		logCloseAndExit(lg, exitCodeSuccess, "")
+	}
+
 	// Log application version
 	lg.Info("[MAIN] Start application")
 	lg.Info("[MAIN] Version:    %s", version.Number())
@@ -162,6 +177,7 @@ func createConfigurationOrExit() (application.Configuration, bool) {
 type loggerInterface interface {
 	Info(format string, args ...any)
 	Error(format string, args ...any)
+	Debug(format string, args ...any)
 	Close()
 }
 
@@ -228,9 +244,35 @@ func parseCommandLineFlags(envConfig application.Configuration) application.Conf
 		"d",
 		fmt.Sprintf("Disable feature. Supported values: %s", strings.Join(application.SupportedFeatures, "|")),
 	)
+	flag.StringVar(&cmdConfig.SetTheme, "set-theme", "", "Set application theme")
 	flag.Parse()
 
 	return cmdConfig
+}
+
+// handleSetTheme handles setting the application theme.
+func handleSetTheme(lg loggerInterface, appState *state.Application, themeName string) error {
+	// List available themes
+	availableThemes, err := theme.ListAvailableThemes(appState.ApplicationConfig.AppHome, lg)
+	if err != nil {
+		lg.Error("[CONFIG] Cannot list available themes: %v.", err)
+		availableThemes = []string{defaultThemeName}
+	}
+
+	// Validate theme name
+	themeExists := lo.Contains(availableThemes, themeName)
+	if !themeExists {
+		logMessage := fmt.Sprintf("Theme %q not found. Available themes: %v", themeName, availableThemes)
+		lg.Error("[CONFIG] %s", logMessage)
+		logCloseAndExit(lg, exitCodeError, logMessage)
+	}
+
+	// Set theme in application state
+	appState.Theme = themeName
+	lg.Debug("[CONFIG] Set theme to %q", themeName)
+	fmt.Printf("Theme set to: '%s'\n", themeName)
+
+	return appState.Persist()
 }
 
 // setupApplicationConfiguration sets up the application configuration and validates it.

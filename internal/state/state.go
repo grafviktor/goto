@@ -61,6 +61,7 @@ type Application struct {
 	// which is persisted across application restarts. In other words, once defined, it will be
 	// persisted in the state.yaml file and will be used in the next application run.
 	SSHConfigEnabled  bool                      `yaml:"enable_ssh_config"`
+	Theme             string                    `yaml:"theme,omitempty"`
 	ApplicationConfig application.Configuration `yaml:"-"`
 	Context           context.Context           `yaml:"-"`
 }
@@ -77,6 +78,7 @@ func Create(appContext context.Context,
 			Logger:            lg,
 			Group:             "",
 			SSHConfigEnabled:  true,
+			Theme:             "default",
 			ApplicationConfig: appConfig,
 			Context:           appContext,
 		}

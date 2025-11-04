@@ -39,4 +39,5 @@ type Configuration struct {
 	DisplayVersionAndExit            bool
 	EnableFeature                    FeatureFlag
 	DisableFeature                   FeatureFlag
+	SetTheme                         string
 }
