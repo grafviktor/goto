@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -98,7 +99,9 @@ func extractThemeFiles(themesPath string) error {
 			continue
 		}
 
-		embeddedFSPath := filepath.Join("themes", entry.Name())
+		// Cannot use filepath.Join in embedded filesystem, because there will be problems
+		// with folder separators on Windows: "/" vs "\". Using path.Join instead.
+		embeddedFSPath := path.Join("themes", entry.Name())
 		data, err = resources.Themes.ReadFile(embeddedFSPath)
 		if err != nil {
 			return fmt.Errorf("failed to read embedded theme file: %w", err)
