@@ -7,10 +7,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/grafviktor/goto/internal/logger"
 	"github.com/grafviktor/goto/internal/resources"
 	"github.com/grafviktor/goto/internal/utils"
 )
+
+type loggerInterface interface {
+	Info(format string, args ...any)
+	Error(format string, args ...any)
+}
 
 var currentTheme *Theme
 
@@ -28,16 +32,15 @@ func GetTheme() *Theme {
 }
 
 // LoadTheme loads a theme from file or falls back to default.
-func LoadTheme(configDir, themeName string) *Theme {
-	log := logger.Get()
+func LoadTheme(configDir, themeName string, logger loggerInterface) *Theme {
 	themeFolder := filepath.Join(configDir, "themes")
 	if !utils.IsFolderExists(themeFolder) {
-		log.Info("[MAIN] Themes not found. Extract themes to %q", themeFolder)
+		logger.Info("[MAIN] Themes not found. Extract themes to %q", themeFolder)
 		err := extractThemeFiles(themeFolder)
 		if err != nil {
 			// We cannot extract themes. There is nothing we can do in this case
 			// apart from applying the default theme and return.
-			log.Error("[MAIN] Cannot extract theme files: %v. Fallback to default theme.", err)
+			logger.Error("[MAIN] Cannot extract theme files: %v. Fallback to default theme.", err)
 			theme := DefaultTheme()
 			SetTheme(theme)
 			return theme
@@ -45,11 +48,11 @@ func LoadTheme(configDir, themeName string) *Theme {
 	}
 
 	themeFile := filepath.Join(themeFolder, themeName+".json")
-	log.Info("[MAIN] Load theme from %q", themeFile)
+	logger.Info("[MAIN] Load theme from %q", themeFile)
 
 	theme, err := loadThemeFromFile(themeFile)
 	if err != nil {
-		log.Error("[MAIN] Cannot load theme: %v. Fallback to default theme.", err)
+		logger.Error("[MAIN] Cannot load theme: %v. Fallback to default theme.", err)
 		theme = DefaultTheme()
 	}
 
