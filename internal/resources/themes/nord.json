@@ -1,0 +1,34 @@
+{
+  "name": "nord",
+  "colors": {
+    "textColor": {
+      "light": "#2E3440",
+      "dark": "#D8DEE9"
+    },
+    "textColorError": {
+      "light": "#BF616A",
+      "dark": "#BF616A"
+    },
+    "textColorReadonly": {
+      "light": "#4C566A",
+      "dark": "#81A1C1"
+    },
+    "textColorSelected1": {
+      "light": "#5E81AC",
+      "dark": "#88C0D0"
+    },
+    "textColorSelected2": {
+      "light": "#81A1C1",
+      "dark": "#81A1C1"
+    },
+    "textColorTitle": {
+      "light": "#2E3440",
+      "dark": "#ECEFF4"
+    },
+    "backgroundColorTitle": {
+      "light": "#81A1C1",
+      "dark": "#5E81AC"
+    }
+  }
+}
+

@@ -4,10 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 
-	"github.com/grafviktor/goto/internal/logger"
+	"github.com/grafviktor/goto/internal/resources"
+	"github.com/grafviktor/goto/internal/utils"
 )
+
+type loggerInterface interface {
+	Info(format string, args ...any)
+	Error(format string, args ...any)
+}
 
 var currentTheme *Theme
 
@@ -25,25 +33,36 @@ func GetTheme() *Theme {
 }
 
 // LoadTheme loads a theme from file or falls back to default.
-func LoadTheme(configDir, themeName string) *Theme {
-	themeFile := filepath.Join(configDir, "themes", themeName+".json")
-
-	theme, err := LoadThemeFromFile(themeFile)
-	if err != nil {
-		// Fall back to default theme
-		theme = DefaultTheme()
-		// Save the default theme to file for future use
-		if saveErr := SaveThemeToFile(theme, themeFile); saveErr != nil {
-			logger.Get().Error("Failed to save default theme: %v", saveErr)
+func LoadTheme(configDir, themeName string, logger loggerInterface) *Theme {
+	themeFolder := filepath.Join(configDir, "themes")
+	if !utils.IsFolderExists(themeFolder) {
+		logger.Info("[MAIN] Themes not found. Extract themes to %q", themeFolder)
+		err := extractThemeFiles(themeFolder)
+		if err != nil {
+			// We cannot extract themes. There is nothing we can do in this case
+			// apart from applying the default theme and return.
+			logger.Error("[MAIN] Cannot extract theme files: %v. Fallback to default theme.", err)
+			theme := DefaultTheme()
+			SetTheme(theme)
+			return theme
 		}
+	}
+
+	themeFile := filepath.Join(themeFolder, themeName+".json")
+	logger.Info("[MAIN] Load theme from %q", themeFile)
+
+	theme, err := loadThemeFromFile(themeFile)
+	if err != nil {
+		logger.Error("[MAIN] Cannot load theme: %v. Fallback to default theme.", err)
+		theme = DefaultTheme()
 	}
 
 	SetTheme(theme)
 	return theme
 }
 
-// LoadThemeFromFile loads a theme from a JSON file.
-func LoadThemeFromFile(filePath string) (*Theme, error) {
+// loadThemeFromFile loads a theme from a JSON file.
+func loadThemeFromFile(filePath string) (*Theme, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read theme file: %w", err)
@@ -58,19 +77,52 @@ func LoadThemeFromFile(filePath string) (*Theme, error) {
 	return &theme, nil
 }
 
-// SaveThemeToFile saves a theme to a JSON file.
-func SaveThemeToFile(theme *Theme, filePath string) error {
+func extractThemeFiles(themesPath string) error {
+	// 1. Write default theme to disk
+	data, err := json.MarshalIndent(DefaultTheme(), "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal theme: %w", err)
+	}
+	err = saveThemeToFile(data, filepath.Join(themesPath, "default.json"))
+	if err != nil {
+		return fmt.Errorf("failed to save default theme: %w", err)
+	}
+
+	// 2. Extract embedded themes
+	entries, err := resources.Themes.ReadDir("themes")
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+			continue
+		}
+
+		// Cannot use filepath.Join in embedded filesystem, because there will be problems
+		// with folder separators on Windows: "/" vs "\". Using path.Join instead.
+		embeddedFSPath := path.Join("themes", entry.Name())
+		data, err = resources.Themes.ReadFile(embeddedFSPath)
+		if err != nil {
+			return fmt.Errorf("failed to read embedded theme file: %w", err)
+		}
+
+		err = saveThemeToFile(data, filepath.Join(themesPath, entry.Name()))
+		if err != nil {
+			return fmt.Errorf("failed to save embedded theme file: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func saveThemeToFile(theme []byte, filePath string) error {
 	dir := filepath.Dir(filePath)
 	if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // Folder permissions are sufficient
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	data, err := json.MarshalIndent(theme, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal theme: %w", err)
-	}
-
-	if err = os.WriteFile(filePath, data, 0o644); err != nil { //nolint:gosec // File permissions are sufficient
+	if err := os.WriteFile(filePath, theme, 0o644); err != nil { //nolint:gosec // File permissions are sufficient
 		return fmt.Errorf("failed to write theme file: %w", err)
 	}
 

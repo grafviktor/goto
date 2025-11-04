@@ -330,3 +330,12 @@ func BuildProcessInterceptStdAll(command string) *exec.Cmd {
 
 	return process
 }
+
+func IsFolderExists(folderPath string) bool {
+	if _, err := os.Stat(folderPath); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+	return true
+}

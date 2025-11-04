@@ -1,6 +1,6 @@
 // Package theme provides centralized styling and theming functionality
 //
-//nolint:mnd // Ignore magic numbers in styling paddings and margins
+//nolint:mnd // Ignore magic numbers in styling: paddings and margins
 package theme
 
 import (
@@ -27,14 +27,16 @@ type ColorsList struct {
 	TextColorReadonly    AdaptiveColor `json:"textColorReadonly"`
 	TextColorSelected1   AdaptiveColor `json:"textColorSelected1"`
 	TextColorSelected2   AdaptiveColor `json:"textColorSelected2"`
-	TitleBackgroundColor AdaptiveColor `json:"titleBackgroundColor"`
+	TextColorTitle       AdaptiveColor `json:"textColorTitle"`
+	BackgroundColorTitle AdaptiveColor `json:"backgroundColorTitle"`
 }
 
 // Theme defines the color scheme and styling for the application.
 type Theme struct {
-	Name   string     `json:"name"`
-	Colors ColorsList `json:"colors"`
-	Styles AppStyles  `json:"-"` // Not serialized, computed from colors
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Colors      ColorsList `json:"colors"`
+	Styles      AppStyles  `json:"-"` // Not serialized, computed from colors
 }
 
 // AppStyles contains all computed styles for the application.
@@ -62,8 +64,8 @@ func (t *Theme) listStyles() list.Styles {
 	s := list.DefaultStyles()
 	s.TitleBar = lipgloss.NewStyle().Padding(0, 0, 1, 2)
 	s.Title = lipgloss.NewStyle().
-		Background(t.Colors.TitleBackgroundColor.toLipgloss()).
-		Foreground(t.Colors.TextColor.toLipgloss()).
+		Background(t.Colors.BackgroundColorTitle.toLipgloss()).
+		Foreground(t.Colors.TextColorTitle.toLipgloss()).
 		Padding(0, 1)
 
 	s.StatusBar = lipgloss.NewStyle().
@@ -151,8 +153,9 @@ func (t *Theme) listExtraStyles() ListExtraStyles {
 		Foreground(t.Colors.TextColorSelected2.toLipgloss())
 
 	s.GroupAbbreviation = lipgloss.NewStyle().
-		Background(t.Colors.TextColor.toLipgloss()).
-		Foreground(t.Colors.TitleBackgroundColor.toLipgloss()).
+		// Swap colors between each other to separate group abbreviation from title.
+		Background(t.Colors.TextColorTitle.toLipgloss()).
+		Foreground(t.Colors.BackgroundColorTitle.toLipgloss()).
 		Padding(0, 1)
 
 	s.GroupHint = lipgloss.NewStyle().
@@ -215,8 +218,8 @@ func (t *Theme) editFormStyles() EditForm {
 		BorderForeground(t.Colors.TextColorSelected2.toLipgloss()).
 		Foreground(t.Colors.TextColorSelected1.toLipgloss())
 	s.Title = lipgloss.NewStyle().
-		Background(t.Colors.TitleBackgroundColor.toLipgloss()).
-		Foreground(t.Colors.TextColor.toLipgloss()).
+		Background(t.Colors.BackgroundColorTitle.toLipgloss()).
+		Foreground(t.Colors.TextColorTitle.toLipgloss()).
 		Padding(0, 1).
 		Margin(1, 2, 0)
 	s.TextReadonly = lipgloss.NewStyle().

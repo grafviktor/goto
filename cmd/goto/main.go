@@ -55,7 +55,7 @@ func main() {
 
 	// Initialize theme system
 	appState.Logger.Debug("[MAIN] Loading application theme")
-	appTheme := theme.LoadTheme(appState.ApplicationConfig.AppHome, "default")
+	appTheme := theme.LoadTheme(appState.ApplicationConfig.AppHome, "default", appState.Logger)
 	appState.Logger.Debug("[MAIN] Using theme: %s", appTheme.Name)
 
 	// Run user interface
