@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/caarlos0/env/v10"
-	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/ui/theme"
 	"github.com/grafviktor/goto/internal/utils"
 	"github.com/samber/lo"
@@ -18,21 +17,82 @@ const (
 	featureSSHConfig = "ssh_config"
 )
 
-func Parse() (*Configuration, error) {
-	envConfig, err := parseEnvironmentConfig()
-	if err != nil {
-		// fmt.Printf("Error parsing environment configuration: %+v\n", err)
-		return nil, fmt.Errorf("error parsing environment configuration: %w", err)
+type loggerInterface interface {
+	Info(format string, args ...any)
+	Error(format string, args ...any)
+	Debug(format string, args ...any)
+	Close()
+}
+
+// HandleFeatureToggle handles enabling or disabling features.
+func HandleFeatureToggle(lg loggerInterface, config *Configuration, featureName string, enable bool) {
+	if enable {
+		config.SetSSHConfigEnabled = featureName == featureSSHConfig
+	} else {
+		config.SetSSHConfigEnabled = featureName != featureSSHConfig
 	}
 
-	// Check if "ssh" utility is in application path
-	if err = utils.CheckAppInstalled("ssh"); err != nil {
-		// log.Fatalf("[MAIN] ssh utility is not installed or cannot be found in the executable path: %v", err)
-		return nil, fmt.Errorf("ssh utility is not installed or cannot be found in the executable path: %w", err)
+	action := "Disable"
+	if enable {
+		action = "Enable"
+	}
+
+	lg.Info("[MAIN] %s feature %q and exit", action, featureName)
+	fmt.Printf("%sd: '%s'\n", action, featureName)
+}
+
+// HandleSetTheme handles setting the application theme.
+func HandleSetTheme(lg loggerInterface, config *Configuration, themeName string) error {
+	// List available themes
+	availableThemes, err := theme.ListAvailableThemes(config.AppHome, lg)
+	if err != nil {
+		lg.Error("[MAIN] Cannot list available themes: %v.", err)
+		availableThemes = []string{defaultThemeName}
+	}
+
+	// Validate theme name
+	themeExists := lo.Contains(availableThemes, themeName)
+	if !themeExists {
+		lg.Error("[MAIN] Theme %q not found", themeName)
+		// logCloseAndExit(lg, exitCodeError, logMessage)
+		return fmt.Errorf("theme %q not found. Available themes: %q", themeName, availableThemes)
+	}
+
+	// Set theme in application state
+	config.SetTheme = themeName
+	lg.Info("[CONFIG] Set theme to %q", themeName)
+	fmt.Printf("Theme set to: '%s'\n", themeName)
+
+	return nil
+}
+
+func Create() (*Configuration, error) {
+	envConfig, err := parseEnvironmentVariables()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse environment variables: %w", err)
 	}
 
 	cmdConfig := parseCommandLineFlags(envConfig)
-	return setupApplicationConfiguration(cmdConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse command line parameters: %w", err)
+	}
+
+	appConfig, err := setConfigDefaults(cmdConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set configuration defaults: %w", err)
+	}
+
+	return &appConfig, nil
+}
+
+func parseEnvironmentVariables() (Configuration, error) {
+	envConfig, err := parseEnvironmentConfig()
+	if err != nil {
+		// fmt.Printf("Error parsing environment configuration: %+v\n", err)
+		return envConfig, fmt.Errorf("error parsing environment configuration: %w", err)
+	}
+
+	return envConfig, nil
 }
 
 // parseEnvironmentConfig parses environment configuration.
@@ -72,73 +132,9 @@ func parseCommandLineFlags(envConfig Configuration) Configuration {
 	return cmdConfig
 }
 
-type loggerInterface interface {
-	Info(format string, args ...any)
-	Error(format string, args ...any)
-	Debug(format string, args ...any)
-	Close()
-}
-
-// HandleFeatureToggle handles enabling or disabling features.
-func HandleFeatureToggle(lg loggerInterface, appState *state.Application, featureName string, enable bool) error {
-	action := "Disable"
-	if enable {
-		action = "Enable"
-	}
-
-	lg.Info("[MAIN] %s feature %q and exit", action, featureName)
-	fmt.Printf("%sd: '%s'\n", action, featureName)
-
-	if enable {
-		appState.SSHConfigEnabled = featureName == featureSSHConfig
-	} else {
-		appState.SSHConfigEnabled = featureName != featureSSHConfig
-	}
-
-	return appState.Persist()
-}
-
-// HandleSetTheme handles setting the application theme.
-func HandleSetTheme(lg loggerInterface, appState *state.Application, themeName string) error {
-	// List available themes
-	availableThemes, err := theme.ListAvailableThemes(appState.ApplicationConfig.AppHome, lg)
-	if err != nil {
-		lg.Error("[MAIN] Cannot list available themes: %v.", err)
-		availableThemes = []string{defaultThemeName}
-	}
-
-	// Validate theme name
-	themeExists := lo.Contains(availableThemes, themeName)
-	if !themeExists {
-		lg.Error("[MAIN] Theme %q not found", themeName)
-		// logCloseAndExit(lg, exitCodeError, logMessage)
-		return fmt.Errorf("theme %q not found. Available themes: %q", themeName, availableThemes)
-	}
-
-	// Set theme in application state
-	appState.Theme = themeName
-	lg.Info("[CONFIG] Set theme to %q", themeName)
-	fmt.Printf("Theme set to: '%s'\n", themeName)
-
-	return appState.Persist()
-}
-
-// setupApplicationConfiguration sets up the application configuration and validates it.
-func setupApplicationConfiguration(config Configuration) (*Configuration, error) {
+func setConfigDefaults(config Configuration) (Configuration, error) {
 	// success := true
 	var err error
-
-	// Set application home folder path
-	config.AppHome, err = utils.AppDir(appName, config.AppHome)
-	if err != nil {
-		// log.Printf("[MAIN] Application home folder error: %v", err)
-		// success = false
-		// return nil, fmt.Errorf("application home folder error: %w", err)
-		err = utils.CreateAppDirIfNotExists(config.AppHome)
-		if err != nil {
-			return nil, fmt.Errorf("cannot create or access application home folder error: %w", err)
-		}
-	}
 
 	// Create application folder
 	// if err = utils.CreateAppDirIfNotExists(config.AppHome); err != nil {
@@ -154,8 +150,8 @@ func setupApplicationConfiguration(config Configuration) (*Configuration, error)
 	if err != nil {
 		// log.Printf("[MAIN] Can't open SSH config file: %v", err)
 		// success = false
-		return nil, fmt.Errorf("cannot open SSH config file: %w", err)
+		return config, fmt.Errorf("cannot open SSH config file: %w", err)
 	}
 
-	return &config, nil
+	return config, nil
 }

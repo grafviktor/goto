@@ -2,6 +2,7 @@
 package state
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"os"
@@ -60,24 +61,26 @@ type Application struct {
 	// SSHConfigEnabled is a part of ApplicationState, not user config, because it is a feature flag
 	// which is persisted across application restarts. In other words, once defined, it will be
 	// persisted in the state.yaml file and will be used in the next application run.
-	SSHConfigEnabled  bool                      `yaml:"enable_ssh_config"`
-	Theme             string                    `yaml:"theme,omitempty"`
-	ApplicationConfig application.Configuration `yaml:"-"`
-	Context           context.Context           `yaml:"-"`
+	SSHConfigEnabled  bool                       `yaml:"enable_ssh_config"`
+	Theme             string                     `yaml:"theme,omitempty"`
+	ApplicationConfig *application.Configuration `yaml:"-"`
+	Context           context.Context            `yaml:"-"`
 }
 
 // Create - creates application state.
 func Create(appContext context.Context,
-	appConfig application.Configuration,
+	appConfig *application.Configuration,
 	fileLogger loggerInterface,
-) *Application {
+) (*Application, error) {
+	var err error
+
 	once.Do(func() {
 		fileLogger.Debug("[APPSTATE] Create application state")
 		appState = &Application{
 			appStateFilePath:  path.Join(appConfig.AppHome, stateFile),
 			Logger:            fileLogger,
 			Group:             "",
-			SSHConfigEnabled:  appConfig.IsFeatureEnabled(featureSSHConfig),
+			SSHConfigEnabled:  true,
 			Theme:             appConfig.Theme(),
 			ApplicationConfig: appConfig,
 			Context:           appContext,
@@ -86,10 +89,10 @@ func Create(appContext context.Context,
 		// If we cannot read previously created application state, that's fine - we can continue execution.
 		// TODO: Probably we should receive all parts from application configuration instead of reading from file.
 		fileLogger.Debug("[APPSTATE] Application state is not ready, restore from file")
-		_ = appState.readFromFile()
+		err = appState.readFromFile()
 	})
 
-	return appState
+	return appState, err
 }
 
 // Get - returns application state.
@@ -151,4 +154,11 @@ func (as *Application) printConfig(w io.Writer) {
 // PrintConfig outputs user-definable parameters in the console.
 func (as *Application) PrintConfig() {
 	as.printConfig(os.Stdout)
+}
+
+// LogDetails logs user-definable parameters in the console.
+func (as *Application) LogDetails(logger loggerInterface) {
+	var buf bytes.Buffer
+	as.printConfig(&buf)
+	logger.Debug("[APPSTATE] %s", buf.String())
 }

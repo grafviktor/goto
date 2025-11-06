@@ -4,7 +4,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/samber/lo"
@@ -50,37 +52,42 @@ func main() {
 
 	// Create application configuration
 	// applicationConfiguration, applicationConfigErr := createConfigurationOrExit()
-	applicationConfiguration, applicationConfigErr := application.Parse()
+	applicationConfiguration, applicationConfigErr := application.Create()
+
+	err := checkRequirements(applicationConfiguration)
+	if err != nil {
+		log.Fatalf("[MAIN] %v", err)
+	}
 
 	// Create application logger
 	fileLogger, err := logger.Create(applicationConfiguration.AppHome, applicationConfiguration.LogLevel)
-	// config.Print()
+	if err != nil {
+		log.Fatalf("[MAIN] %v", err)
+	}
+	// Log application version
+	version.LogDetails(fileLogger)
+	// fileLogger.Info("[MAIN] Start application")
+	// fileLogger.Info("[MAIN] Version:    %s", version.Number())
+	// fileLogger.Info("[MAIN] Commit:     %s", version.CommitHash())
+	// fileLogger.Info("[MAIN] Branch:     %s", version.BuildBranch())
+	// fileLogger.Info("[MAIN] Build date: %s", version.BuildDate())
 
-	fileLogger.Debug("[CONFIG] Set application home folder to %q\n", applicationConfiguration.AppHome)
-	fileLogger.Debug("[CONFIG] Set application log level to %q\n", applicationConfiguration.LogLevel)
-	fileLogger.Debug("[CONFIG] Enabled features: %q\n", applicationConfiguration.EnableFeature)
-	fileLogger.Debug("[CONFIG] Disabled features: %q\n", applicationConfiguration.DisableFeature)
-	fileLogger.Debug("[CONFIG] Set SSH config path to %q\n", applicationConfiguration.SSHConfigFilePath)
+	// fileLogger.Debug("[CONFIG] Set application home folder to %q\n", applicationConfiguration.AppHome)
+	// fileLogger.Debug("[CONFIG] Set application log level to %q\n", applicationConfiguration.LogLevel)
+	// fileLogger.Debug("[CONFIG] Enabled features: %q\n", applicationConfiguration.EnableFeature)
+	// fileLogger.Debug("[CONFIG] Disabled features: %q\n", applicationConfiguration.DisableFeature)
+	// fileLogger.Debug("[CONFIG] Set SSH config path to %q\n", applicationConfiguration.SSHConfigFilePath)
+	// configurationChanged, err := applicationConfiguration.handleCommandLineParameters(fileLogger)
+
+	applicationConfiguration.LogDetails(fileLogger)
 
 	// Create state
-	appState, err := state.Initialize(applicationConfiguration, fileLogger)
+	appState, err := state.Create(context.Background(), applicationConfiguration, fileLogger)
 	if err != nil {
 		logMessage := fmt.Sprintf("[MAIN] Cannot initialize application state: %v", err)
 		logCloseAndExit(fileLogger, exitCodeError, logMessage)
 	}
-
-	// Log application version
-	fileLogger.Info("[MAIN] Start application")
-	fileLogger.Info("[MAIN] Version:    %s", version.Number())
-	fileLogger.Info("[MAIN] Commit:     %s", version.CommitHash())
-	fileLogger.Info("[MAIN] Branch:     %s", version.BuildBranch())
-	fileLogger.Info("[MAIN] Build date: %s", version.BuildDate())
-
-	configurationChaged, err := handleCommandLineParameters(fileLogger, applicationConfiguration, appState)
-	if err != nil {
-		logMessage := fmt.Sprintf("[MAIN] %v", err)
-		logCloseAndExit(fileLogger, exitCodeError, logMessage)
-	}
+	appState.LogDetails(fileLogger)
 
 	// Check config errors at the very end. That allows to check application version and enable/disable
 	// features, even if something is not right with the app.
@@ -90,9 +97,9 @@ func main() {
 	}
 
 	// If configuration was changed due to command-line parameters, exit the application.
-	if configurationChaged {
-		logCloseAndExit(fileLogger, exitCodeSuccess, "")
-	}
+	// if configurationChanged {
+	// 	logCloseAndExit(fileLogger, exitCodeSuccess, "")
+	// }
 
 	// ---- Main application flow ---- //
 
@@ -130,62 +137,25 @@ func main() {
 	logCloseAndExit(fileLogger, exitCodeSuccess, "")
 }
 
-func handleCommandLineParameters(
-	lg loggerInterface,
-	applicationConfiguration *application.Configuration,
-	applicationState *state.Application,
-) (bool, error) {
-	// If "-v" parameter provided, display application version configuration and exit
-	if applicationConfiguration.DisplayVersionAndExit {
-		lg.Debug("[MAIN] Display application version and exit")
-		version.Print()
-		applicationState.PrintConfig()
-		// logCloseAndExit(lg, exitCodeSuccess, "")
-		return true, nil
+func checkRequirements(config *application.Configuration) error {
+	var err error
+
+	// Check if "ssh" utility is in application path
+	if err = utils.CheckAppInstalled("ssh"); err != nil {
+		return fmt.Errorf("ssh utility is not installed or cannot be found in the executable path: %w", err)
 	}
 
-	// If "-e" parameter provided, display enabled features and exit
-	if applicationConfiguration.EnableFeature != "" {
-		lg.Debug("[MAIN] Enable feature %q and exit", applicationConfiguration.EnableFeature)
-		err := application.HandleFeatureToggle(lg, applicationState, string(applicationConfiguration.EnableFeature), true)
+	// Set application home folder path
+	if config.AppHome, err = utils.AppDir(appName, config.AppHome); err != nil {
+		log.Printf("[MAIN] Cannot access application home folder: %v", err)
+
+		err = utils.CreateAppDirIfNotExists(config.AppHome)
 		if err != nil {
-			// logMessage := fmt.Sprintf("[MAIN] Cannot save application configuration: %v", err)
-			return true, fmt.Errorf("cannot save application configuration: %w", err)
-			// logCloseAndExit(lg, exitCodeError, logMessage)
+			return fmt.Errorf("cannot create application home folder: %w", err)
 		}
-
-		// logCloseAndExit(lg, exitCodeSuccess, "")
-		return true, nil
 	}
 
-	// If "-d" parameter provided, display disabled features and exit
-	if applicationConfiguration.DisableFeature != "" {
-		lg.Debug("[MAIN] Disable feature %q and exit", applicationConfiguration.EnableFeature)
-		err := application.HandleFeatureToggle(lg, applicationState, string(applicationConfiguration.DisableFeature), false)
-		if err != nil {
-			// logMessage := fmt.Sprintf("[MAIN] Cannot save application configuration: %v", err)
-			// logCloseAndExit(lg, exitCodeError, logMessage)
-			return true, fmt.Errorf("cannot save application configuration: %w", err)
-		}
-
-		// logCloseAndExit(lg, exitCodeSuccess, "")
-		return true, nil
-	}
-
-	// If "-set-theme" parameter provided, set the theme and exit
-	if applicationConfiguration.SetTheme != "" {
-		lg.Debug("[MAIN] Set application theme and exit")
-		err := application.HandleSetTheme(lg, applicationState, applicationConfiguration.SetTheme)
-		if err != nil {
-			// logMessage := fmt.Sprintf("[MAIN] Cannot set theme: %v", err)
-			// logCloseAndExit(lg, exitCodeError, logMessage)
-			return true, fmt.Errorf("cannot set theme: %w", err)
-		}
-
-		return true, nil
-	}
-
-	return false, nil
+	return nil
 }
 
 // logCloseAndExit logs the close message, closes the logger, and exits with the specified code.
@@ -200,3 +170,61 @@ func logCloseAndExit(lg loggerInterface, exitCode int, errorExitReason string) {
 	lg.Close()
 	os.Exit(exitCode)
 }
+
+// func handleCommandLineParameters(
+// 	lg loggerInterface,
+// 	applicationConfiguration *application.Configuration,
+// 	applicationState *state.Application,
+// ) (bool, error) {
+// 	// If "-v" parameter provided, display application version configuration and exit
+// 	if applicationConfiguration.DisplayVersionAndExit {
+// 		lg.Debug("[MAIN] Display application version and exit")
+// 		version.Print()
+// 		applicationState.PrintConfig()
+// 		// logCloseAndExit(lg, exitCodeSuccess, "")
+// 		return true, nil
+// 	}
+
+// 	// If "-e" parameter provided, display enabled features and exit
+// 	if applicationConfiguration.EnableFeature != "" {
+// 		lg.Debug("[MAIN] Enable feature %q and exit", applicationConfiguration.EnableFeature)
+// 		err := application.HandleFeatureToggle(lg, applicationState, string(applicationConfiguration.EnableFeature), true)
+// 		if err != nil {
+// 			// logMessage := fmt.Sprintf("[MAIN] Cannot save application configuration: %v", err)
+// 			return true, fmt.Errorf("cannot save application configuration: %w", err)
+// 			// logCloseAndExit(lg, exitCodeError, logMessage)
+// 		}
+
+// 		// logCloseAndExit(lg, exitCodeSuccess, "")
+// 		return true, nil
+// 	}
+
+// 	// If "-d" parameter provided, display disabled features and exit
+// 	if applicationConfiguration.DisableFeature != "" {
+// 		lg.Debug("[MAIN] Disable feature %q and exit", applicationConfiguration.EnableFeature)
+// 		err := application.HandleFeatureToggle(lg, applicationState, string(applicationConfiguration.DisableFeature), false)
+// 		if err != nil {
+// 			// logMessage := fmt.Sprintf("[MAIN] Cannot save application configuration: %v", err)
+// 			// logCloseAndExit(lg, exitCodeError, logMessage)
+// 			return true, fmt.Errorf("cannot save application configuration: %w", err)
+// 		}
+
+// 		// logCloseAndExit(lg, exitCodeSuccess, "")
+// 		return true, nil
+// 	}
+
+// 	// If "-set-theme" parameter provided, set the theme and exit
+// 	if applicationConfiguration.SetTheme != "" {
+// 		lg.Debug("[MAIN] Set application theme and exit")
+// 		err := application.HandleSetTheme(lg, applicationState, applicationConfiguration.SetTheme)
+// 		if err != nil {
+// 			// logMessage := fmt.Sprintf("[MAIN] Cannot set theme: %v", err)
+// 			// logCloseAndExit(lg, exitCodeError, logMessage)
+// 			return true, fmt.Errorf("cannot set theme: %w", err)
+// 		}
+
+// 		return true, nil
+// 	}
+
+// 	return false, nil
+// }

@@ -40,6 +40,7 @@ type Configuration struct {
 	EnableFeature                    FeatureFlag
 	DisableFeature                   FeatureFlag
 	SetTheme                         string
+	SetSSHConfigEnabled              bool
 }
 
 func (config *Configuration) IsFeatureEnabled(feature string) bool {
@@ -53,4 +54,12 @@ func (config *Configuration) IsFeatureEnabled(feature string) bool {
 
 func (config *Configuration) Theme() string {
 	return config.SetTheme
+}
+
+func (config *Configuration) LogDetails(logger loggerInterface) {
+	logger.Debug("[CONFIG] Set application home folder to %q\n", config.AppHome)
+	logger.Debug("[CONFIG] Set application log level to %q\n", config.LogLevel)
+	logger.Debug("[CONFIG] Enabled features: %q\n", config.EnableFeature)
+	logger.Debug("[CONFIG] Disabled features: %q\n", config.DisableFeature)
+	logger.Debug("[CONFIG] Set SSH config path to %q\n", config.SSHConfigFilePath)
 }

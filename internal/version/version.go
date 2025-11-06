@@ -72,3 +72,15 @@ func Print() {
 	fmt.Printf("Build date: %s\n", BuildDate())
 	fmt.Println()
 }
+
+type loggerInterface interface {
+	Info(format string, args ...any)
+}
+
+// Print - outputs build information right into the terminal.
+func LogDetails(logger loggerInterface) {
+	logger.Info("[MAIN] Version:    %s", Number())
+	logger.Info("[MAIN] Commit:     %s", CommitHash())
+	logger.Info("[MAIN] Branch:     %s", BuildBranch())
+	logger.Info("[MAIN] Build date: %s", BuildDate())
+}
