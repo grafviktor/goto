@@ -39,7 +39,7 @@ var (
 	stateFile      = "state.yaml"
 )
 
-type iLogger interface {
+type loggerInterface interface {
 	Debug(format string, args ...any)
 	Warn(format string, args ...any)
 	Info(format string, args ...any)
@@ -51,7 +51,7 @@ type iLogger interface {
 type Application struct {
 	Selected         int `yaml:"selected"`
 	appStateFilePath string
-	Logger           iLogger               `yaml:"-"`
+	Logger           loggerInterface       `yaml:"-"`
 	CurrentView      view                  `yaml:"-"`
 	Width            int                   `yaml:"-"`
 	Height           int                   `yaml:"-"`
@@ -69,22 +69,23 @@ type Application struct {
 // Create - creates application state.
 func Create(appContext context.Context,
 	appConfig application.Configuration,
-	lg iLogger,
+	fileLogger loggerInterface,
 ) *Application {
 	once.Do(func() {
-		lg.Debug("[APPSTATE] Create application state")
+		fileLogger.Debug("[APPSTATE] Create application state")
 		appState = &Application{
 			appStateFilePath:  path.Join(appConfig.AppHome, stateFile),
-			Logger:            lg,
+			Logger:            fileLogger,
 			Group:             "",
-			SSHConfigEnabled:  true,
-			Theme:             "default",
+			SSHConfigEnabled:  appConfig.IsFeatureEnabled(featureSSHConfig),
+			Theme:             appConfig.Theme(),
 			ApplicationConfig: appConfig,
 			Context:           appContext,
 		}
 
 		// If we cannot read previously created application state, that's fine - we can continue execution.
-		lg.Debug("[APPSTATE] Application state is not ready, restore from file")
+		// TODO: Probably we should receive all parts from application configuration instead of reading from file.
+		fileLogger.Debug("[APPSTATE] Application state is not ready, restore from file")
 		_ = appState.readFromFile()
 	})
 

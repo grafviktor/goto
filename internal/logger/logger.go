@@ -45,7 +45,6 @@ func Create(appPath, userSetLogLevel string) (*AppLogger, error) {
 		logFilePath := path.Join(appPath, logFileName)
 		logFile, openLogFileError := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 		if openLogFileError != nil {
-			log.Printf("[MAIN] Can't create application logger: %v\n", openLogFileError)
 			err = openLogFileError
 			return
 		}

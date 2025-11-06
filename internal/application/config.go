@@ -41,3 +41,16 @@ type Configuration struct {
 	DisableFeature                   FeatureFlag
 	SetTheme                         string
 }
+
+func (config *Configuration) IsFeatureEnabled(feature string) bool {
+	switch feature {
+	case featureSSHConfig:
+		return config.SSHConfigFilePath != ""
+	default:
+		return false
+	}
+}
+
+func (config *Configuration) Theme() string {
+	return config.SetTheme
+}
