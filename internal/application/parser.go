@@ -24,48 +24,6 @@ type loggerInterface interface {
 	Close()
 }
 
-// HandleFeatureToggle handles enabling or disabling features.
-func HandleFeatureToggle(lg loggerInterface, config *Configuration, featureName string, enable bool) {
-	if enable {
-		config.SetSSHConfigEnabled = featureName == featureSSHConfig
-	} else {
-		config.SetSSHConfigEnabled = featureName != featureSSHConfig
-	}
-
-	action := "Disable"
-	if enable {
-		action = "Enable"
-	}
-
-	lg.Info("[MAIN] %s feature %q and exit", action, featureName)
-	fmt.Printf("%sd: '%s'\n", action, featureName)
-}
-
-// HandleSetTheme handles setting the application theme.
-func HandleSetTheme(lg loggerInterface, config *Configuration, themeName string) error {
-	// List available themes
-	availableThemes, err := theme.ListAvailableThemes(config.AppHome, lg)
-	if err != nil {
-		lg.Error("[MAIN] Cannot list available themes: %v.", err)
-		availableThemes = []string{defaultThemeName}
-	}
-
-	// Validate theme name
-	themeExists := lo.Contains(availableThemes, themeName)
-	if !themeExists {
-		lg.Error("[MAIN] Theme %q not found", themeName)
-		// logCloseAndExit(lg, exitCodeError, logMessage)
-		return fmt.Errorf("theme %q not found. Available themes: %q", themeName, availableThemes)
-	}
-
-	// Set theme in application state
-	config.SetTheme = themeName
-	lg.Info("[CONFIG] Set theme to %q", themeName)
-	fmt.Printf("Theme set to: '%s'\n", themeName)
-
-	return nil
-}
-
 func Create() (*Configuration, error) {
 	envConfig, err := parseEnvironmentVariables()
 	if err != nil {
@@ -73,9 +31,6 @@ func Create() (*Configuration, error) {
 	}
 
 	cmdConfig := parseCommandLineFlags(envConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse command line parameters: %w", err)
-	}
 
 	appConfig, err := setConfigDefaults(cmdConfig)
 	if err != nil {
@@ -129,6 +84,17 @@ func parseCommandLineFlags(envConfig Configuration) Configuration {
 	flag.StringVar(&cmdConfig.SetTheme, "set-theme", "", "Set application theme")
 	flag.Parse()
 
+	switch {
+	case cmdConfig.EnableFeature != "":
+		cmdConfig.ShouldExitAfterConfig = true
+	case cmdConfig.DisableFeature != "":
+		cmdConfig.ShouldExitAfterConfig = true
+	case cmdConfig.SetTheme != "":
+		cmdConfig.ShouldExitAfterConfig = true
+	default:
+		cmdConfig.ShouldExitAfterConfig = false
+	}
+
 	return cmdConfig
 }
 
@@ -154,4 +120,46 @@ func setConfigDefaults(config Configuration) (Configuration, error) {
 	}
 
 	return config, nil
+}
+
+// HandleFeatureToggle handles enabling or disabling features.
+func HandleFeatureToggle(lg loggerInterface, config *Configuration, featureName string, enable bool) {
+	if enable {
+		config.SetSSHConfigEnabled = featureName == featureSSHConfig
+	} else {
+		config.SetSSHConfigEnabled = featureName != featureSSHConfig
+	}
+
+	action := "Disable"
+	if enable {
+		action = "Enable"
+	}
+
+	lg.Info("[MAIN] %s feature %q and exit", action, featureName)
+	fmt.Printf("%sd: '%s'\n", action, featureName)
+}
+
+// HandleSetTheme handles setting the application theme.
+func HandleSetTheme(lg loggerInterface, config *Configuration, themeName string) error {
+	// List available themes
+	availableThemes, err := theme.ListAvailableThemes(config.AppHome, lg)
+	if err != nil {
+		lg.Error("[MAIN] Cannot list available themes: %v.", err)
+		availableThemes = []string{defaultThemeName}
+	}
+
+	// Validate theme name
+	themeExists := lo.Contains(availableThemes, themeName)
+	if !themeExists {
+		lg.Error("[MAIN] Theme %q not found", themeName)
+		// logCloseAndExit(lg, exitCodeError, logMessage)
+		return fmt.Errorf("theme %q not found. Available themes: %q", themeName, availableThemes)
+	}
+
+	// Set theme in application state
+	config.SetTheme = themeName
+	lg.Info("[CONFIG] Set theme to %q", themeName)
+	fmt.Printf("Theme set to: '%s'\n", themeName)
+
+	return nil
 }

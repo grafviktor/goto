@@ -11,6 +11,7 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/utils"
+	"github.com/grafviktor/goto/internal/version"
 )
 
 // LogLevel is a subject for revising. Probably it's better to have a boolean flag to switch on/off debug logging.
@@ -53,6 +54,7 @@ func Create(appPath, userSetLogLevel string) (*AppLogger, error) {
 		appLogger.logFile = logFile
 	})
 
+	version.LogDetails(appLogger)
 	return appLogger, err
 }
 

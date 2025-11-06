@@ -2,7 +2,6 @@
 package state
 
 import (
-	"bytes"
 	"context"
 	"io"
 	"os"
@@ -88,9 +87,14 @@ func Create(appContext context.Context,
 
 		// If we cannot read previously created application state, that's fine - we can continue execution.
 		// TODO: Probably we should receive all parts from application configuration instead of reading from file.
-		fileLogger.Debug("[APPSTATE] Application state is not ready, restore from file")
 		err = appState.readFromFile()
 	})
+
+	fileLogger.Debug("[CONFIG] Set application home folder to %q\n", appConfig.AppHome)
+	fileLogger.Debug("[CONFIG] Set application log level to %q\n", appConfig.LogLevel)
+	fileLogger.Debug("[CONFIG] Enabled features: %q\n", appConfig.EnableFeature)
+	fileLogger.Debug("[CONFIG] Disabled features: %q\n", appConfig.DisableFeature)
+	fileLogger.Debug("[CONFIG] Set SSH config path to %q\n", appConfig.SSHConfigFilePath)
 
 	return appState, err
 }
@@ -156,9 +160,9 @@ func (as *Application) PrintConfig() {
 	as.printConfig(os.Stdout)
 }
 
-// LogDetails logs user-definable parameters in the console.
-func (as *Application) LogDetails(logger loggerInterface) {
-	var buf bytes.Buffer
-	as.printConfig(&buf)
-	logger.Debug("[APPSTATE] %s", buf.String())
-}
+// // LogDetails logs user-definable parameters in the console.
+// func (as *Application) LogDetails(logger loggerInterface) {
+// 	var buf bytes.Buffer
+// 	as.printConfig(&buf)
+// 	logger.Debug("[APPSTATE] %s", buf.String())
+// }

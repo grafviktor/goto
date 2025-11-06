@@ -65,7 +65,6 @@ func main() {
 		log.Fatalf("[MAIN] %v", err)
 	}
 	// Log application version
-	version.LogDetails(fileLogger)
 	// fileLogger.Info("[MAIN] Start application")
 	// fileLogger.Info("[MAIN] Version:    %s", version.Number())
 	// fileLogger.Info("[MAIN] Commit:     %s", version.CommitHash())
@@ -79,7 +78,7 @@ func main() {
 	// fileLogger.Debug("[CONFIG] Set SSH config path to %q\n", applicationConfiguration.SSHConfigFilePath)
 	// configurationChanged, err := applicationConfiguration.handleCommandLineParameters(fileLogger)
 
-	applicationConfiguration.LogDetails(fileLogger)
+	// applicationConfiguration.LogDetails(fileLogger)
 
 	// Create state
 	appState, err := state.Create(context.Background(), applicationConfiguration, fileLogger)
@@ -87,13 +86,16 @@ func main() {
 		logMessage := fmt.Sprintf("[MAIN] Cannot initialize application state: %v", err)
 		logCloseAndExit(fileLogger, exitCodeError, logMessage)
 	}
-	appState.LogDetails(fileLogger)
 
 	// Check config errors at the very end. That allows to check application version and enable/disable
 	// features, even if something is not right with the app.
 	if applicationConfigErr != nil {
 		logMessage := fmt.Sprintf("[MAIN] Exit due to a fatal error: %v. Inspect logs for more details.", applicationConfigErr)
 		logCloseAndExit(fileLogger, exitCodeError, logMessage)
+	}
+
+	if applicationConfiguration.ShouldExitAfterConfig {
+		logCloseAndExit(fileLogger, exitCodeSuccess, "")
 	}
 
 	// If configuration was changed due to command-line parameters, exit the application.

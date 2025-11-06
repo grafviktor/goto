@@ -41,6 +41,7 @@ type Configuration struct {
 	DisableFeature                   FeatureFlag
 	SetTheme                         string
 	SetSSHConfigEnabled              bool
+	ShouldExitAfterConfig            bool
 }
 
 func (config *Configuration) IsFeatureEnabled(feature string) bool {
