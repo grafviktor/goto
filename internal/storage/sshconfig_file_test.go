@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/grafviktor/goto/internal/application"
+	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/storage/sshconfig"
@@ -34,7 +34,7 @@ func (m *mockSSHParser) Parse() ([]model.Host, error) {
 }
 
 func TestNewSSHConfigStorageLocalFile(t *testing.T) {
-	mockAppConfig := application.Configuration{}
+	mockAppConfig := config.Configuration{}
 	mockLogger := mocklogger.Logger{}
 	s := newSSHConfigStorage(context.TODO(), &mockAppConfig, &mockLogger)
 	require.NotNil(t, s)
@@ -48,7 +48,7 @@ func TestSSHConfigFile_GetAll(t *testing.T) {
 		{Title: "host2", Address: "host2.com"},
 	}
 
-	mockAppConfig := application.Configuration{}
+	mockAppConfig := config.Configuration{}
 	s := &SSHConfigFile{
 		fileLexer:  &mockSSHLexer{},
 		fileParser: &mockSSHParser{hosts: mockHosts},
@@ -78,7 +78,7 @@ func TestSSHConfigFile_Get(t *testing.T) {
 	mockHosts := []model.Host{
 		{Title: "host1", Address: "host1.com"},
 	}
-	mockAppConfig := application.Configuration{}
+	mockAppConfig := config.Configuration{}
 	s := &SSHConfigFile{
 		fileLexer:  &mockSSHLexer{},
 		fileParser: &mockSSHParser{hosts: mockHosts},

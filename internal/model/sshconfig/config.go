@@ -5,7 +5,7 @@ import (
 	"os/user"
 	"regexp"
 
-	"github.com/grafviktor/goto/internal/state"
+	"github.com/grafviktor/goto/internal/application"
 )
 
 // Config struct contains values loaded from ~/.ssh_config file.
@@ -71,15 +71,15 @@ func getRegexFirstMatchingGroup(groups []string) string {
 
 // IsUserDefinedPath - checks if user re-defined SSH config file path.
 func IsUserDefinedPath() bool {
-	if !state.IsInitialized() {
+	if !application.IsInitialized() {
 		// We may only be here during unit tests.
 		return false
 	}
 
-	return state.Get().ApplicationConfig.IsSSHConfigFilePathDefinedByUser
+	return application.Get().ApplicationConfig.IsSSHConfigFilePathDefinedByUser
 }
 
 // GetFilePath - returns SSH config file path which is defined in application configuration.
 func GetFilePath() string {
-	return state.Get().ApplicationConfig.SSHConfigFilePath
+	return application.Get().ApplicationConfig.SSHConfigFilePath
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/grafviktor/goto/internal/application"
-	"github.com/grafviktor/goto/internal/state"
+	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 )
 
@@ -125,8 +125,8 @@ func Test_ConnectCommand(t *testing.T) {
 	}
 
 	// Check that the command uses custom SSH config file path if defined
-	state.Create(context.TODO(),
-		application.Configuration{
+	application.New(context.TODO(),
+		&config.Configuration{
 			IsSSHConfigFilePathDefinedByUser: true,
 			SSHConfigFilePath:                "~/.ssh/custom_config",
 		},
@@ -164,7 +164,7 @@ func Test_LoadConfigCommand(t *testing.T) {
 
 	// Repeat the first test with a custom SSH config file path
 	mockLogger := mocklogger.Logger{}
-	state.Create(context.TODO(), application.Configuration{SSHConfigFilePath: "~/.ssh/custom_config"}, &mockLogger)
+	application.New(context.TODO(), &config.Configuration{SSHConfigFilePath: "~/.ssh/custom_config"}, &mockLogger)
 	actual := LoadConfigCommand(tests[0].option)
 	// Should use contains because on Windows version the command starts from 'cmd /c ...'
 	require.Contains(t, actual, `ssh -G example.com -F "~/.ssh/custom_config"`)

@@ -11,8 +11,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/samber/lo"
 
+	"github.com/grafviktor/goto/internal/application"
 	"github.com/grafviktor/goto/internal/model/host"
-	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/message"
 )
@@ -29,14 +29,14 @@ type Model struct {
 	list.Model
 
 	repo     storage.HostStorage
-	appState *state.Application
+	appState *application.State
 	logger   iLogger
 	styles   styles
 }
 
 // New - creates a new UI component which is used to select a host group from a list,
 // with pre-defined initial parameters.
-func New(_ context.Context, repo storage.HostStorage, appState *state.Application, log iLogger) *Model {
+func New(_ context.Context, repo storage.HostStorage, appState *application.State, log iLogger) *Model {
 	styles := defaultStyles()
 
 	var listItems []list.Item

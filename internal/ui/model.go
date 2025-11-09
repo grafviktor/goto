@@ -10,9 +10,9 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/grafviktor/goto/internal/application"
 	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/sshconfig"
-	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/grouplist"
 	"github.com/grafviktor/goto/internal/ui/component/hostedit"
@@ -33,7 +33,7 @@ type iLogger interface {
 func New(
 	ctx context.Context,
 	storage storage.HostStorage,
-	appState *state.Application,
+	appState *application.State,
 	log iLogger,
 ) MainModel {
 	m := MainModel{
@@ -54,7 +54,7 @@ type MainModel struct {
 	modelHostList      tea.Model
 	modelGroupList     tea.Model
 	modelHostEdit      tea.Model
-	appState           *state.Application
+	appState           *application.State
 	viewMessageContent string
 	logger             iLogger
 	viewport           viewport.Model
@@ -63,7 +63,7 @@ type MainModel struct {
 }
 
 func (m *MainModel) Init() tea.Cmd {
-	m.logger.Debug("[UI] Run init function")
+	m.logger.Debug("[UI] Init main model")
 
 	// Loads hosts from DB
 	return m.modelHostList.Init()
@@ -85,18 +85,18 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateViewPort(msg.Width, msg.Height)
 	case message.OpenViewHostEdit:
 		m.logger.Debug("[UI] Open host edit form")
-		m.appState.CurrentView = state.ViewEditItem
+		m.appState.CurrentView = application.ViewEditItem
 		ctx := context.WithValue(m.appContext, hostedit.ItemID, msg.HostID)
 		m.modelHostEdit = hostedit.New(ctx, m.hostStorage, m.appState, m.logger)
 	case message.CloseViewHostEdit:
 		m.logger.Debug("[UI] Close host edit form")
-		m.appState.CurrentView = state.ViewHostList
+		m.appState.CurrentView = application.ViewHostList
 	case message.OpenViewSelectGroup:
 		m.logger.Debug("[UI] Open select group form")
-		m.appState.CurrentView = state.ViewGroupList
+		m.appState.CurrentView = application.ViewGroupList
 	case message.CloseViewSelectGroup:
 		m.logger.Debug("[UI] Close select group form")
-		m.appState.CurrentView = state.ViewHostList
+		m.appState.CurrentView = application.ViewHostList
 	case message.HostSelected:
 		m.logger.Debug("[UI] Update app state. Active host id: %d", msg.HostID)
 		m.appState.Selected = msg.HostID
@@ -127,7 +127,7 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.modelGroupList, cmd = m.modelGroupList.Update(msg)
 	cmds = append(cmds, cmd)
 
-	if m.appState.CurrentView == state.ViewEditItem {
+	if m.appState.CurrentView == application.ViewEditItem {
 		// Edit host receives messages only if it's active. We re-create this component every time we go to edit mode
 		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
 		cmds = append(cmds, cmd)
@@ -140,13 +140,13 @@ func (m *MainModel) View() string {
 	// Build UI
 	var content string
 	switch m.appState.CurrentView {
-	case state.ViewHostList:
+	case application.ViewHostList:
 		content = m.modelHostList.View()
-	case state.ViewGroupList:
+	case application.ViewGroupList:
 		content = m.modelGroupList.View()
-	case state.ViewMessage:
+	case application.ViewMessage:
 		content = m.viewMessageContent
-	case state.ViewEditItem:
+	case application.ViewEditItem:
 		content = m.modelHostEdit.View()
 	}
 
@@ -167,17 +167,17 @@ func (m *MainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Only current view receives key messages
 	switch m.appState.CurrentView {
-	case state.ViewMessage:
+	case application.ViewMessage:
 		// When display external process's output and receive any keyboard event, we:
 		// 1. Reset the error message
 		// 2. Switch to HostList view
 		m.viewMessageContent = ""
-		m.appState.CurrentView = state.ViewHostList
-	case state.ViewHostList:
+		m.appState.CurrentView = application.ViewHostList
+	case application.ViewHostList:
 		m.modelHostList, cmd = m.modelHostList.Update(msg)
-	case state.ViewGroupList:
+	case application.ViewGroupList:
 		m.modelGroupList, cmd = m.modelGroupList.Update(msg)
-	case state.ViewEditItem:
+	case application.ViewEditItem:
 		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
 	}
 
@@ -311,7 +311,7 @@ func (m *MainModel) handleProcessSuccess(msg message.RunProcessSuccess) tea.Cmd 
 			m.viewMessageContent = msg.StdOut
 		}
 
-		m.appState.CurrentView = state.ViewMessage
+		m.appState.CurrentView = application.ViewMessage
 	}
 
 	return nil
@@ -329,5 +329,5 @@ func (m *MainModel) handleProcessError(msg message.RunProcessErrorOccurred) {
 	// already reported by run process module. Just duplicate here.
 	m.logger.Debug("[EXEC] External process error. %v", errMsg)
 	m.viewMessageContent = errMsg
-	m.appState.CurrentView = state.ViewMessage
+	m.appState.CurrentView = application.ViewMessage
 }

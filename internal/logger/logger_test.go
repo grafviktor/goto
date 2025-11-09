@@ -38,7 +38,7 @@ func TestLoggerConstructor(t *testing.T) {
 	// Run tests
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			logger, err := Create(tc.appPath, tc.userSetLogLevel)
+			logger, err := New(tc.appPath, tc.userSetLogLevel)
 
 			if tc.expectError { //nolint:nestif // don't care about nested "if"s in unit tests
 				if err == nil {
@@ -75,7 +75,7 @@ func TestLoggerMethods(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create an appLogger instance for testing
-	logger, err := Create(tmpDir, "debug")
+	logger, err := New(tmpDir, "debug")
 	if err != nil {
 		t.Fatalf("Failed to create appLogger: %v", err)
 	}

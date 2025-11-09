@@ -14,9 +14,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/samber/lo"
 
+	"github.com/grafviktor/goto/internal/application"
 	"github.com/grafviktor/goto/internal/constant"
 	hostModel "github.com/grafviktor/goto/internal/model/host"
-	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
@@ -44,7 +44,7 @@ type ListModel struct {
 
 	repo     storage.HostStorage
 	keyMap   *keyMap
-	appState *state.Application
+	appState *application.State
 	logger   iLogger
 	mode     string
 	styles   styles
@@ -56,7 +56,7 @@ type ListModel struct {
 // appState - is the application state, usually we want to restore previous state when application restarts,
 // for instance focus previously selected host.
 // log - application logger.
-func New(_ context.Context, storage storage.HostStorage, appState *state.Application, log iLogger) *ListModel {
+func New(_ context.Context, storage storage.HostStorage, appState *application.State, log iLogger) *ListModel {
 	delegate := NewHostDelegate(&appState.ScreenLayout, &appState.Group, log)
 	delegateKeys := newDelegateKeyMap()
 

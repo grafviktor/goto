@@ -11,7 +11,6 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/utils"
-	"github.com/grafviktor/goto/internal/version"
 )
 
 // LogLevel is a subject for revising. Probably it's better to have a boolean flag to switch on/off debug logging.
@@ -35,10 +34,10 @@ var (
 	logFileName      = "app.log"
 )
 
-// Create - creates a new logger with a specific log level.
+// New - creates a new logger with a specific log level.
 // appPath - where log file will be stored.
 // userSetLogLevel - user-defined log level (debug or info).
-func Create(appPath, userSetLogLevel string) (*AppLogger, error) {
+func New(appPath, userSetLogLevel string) (*AppLogger, error) {
 	var err error
 	once.Do(func() {
 		logLevel := lo.Ternary(userSetLogLevel == "debug", LevelDebug, LevelInfo)
@@ -54,7 +53,6 @@ func Create(appPath, userSetLogLevel string) (*AppLogger, error) {
 		appLogger.logFile = logFile
 	})
 
-	version.LogDetails(appLogger)
 	return appLogger, err
 }
 

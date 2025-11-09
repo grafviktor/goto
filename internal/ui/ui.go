@@ -5,14 +5,14 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/grafviktor/goto/internal/state"
+	"github.com/grafviktor/goto/internal/application"
 	"github.com/grafviktor/goto/internal/storage"
 )
 
 // Start - starts UI subsystem of the application. *state.ApplicationState should be substituted
 // with interface type which would have getters and setters for appropriate fields, without doing it
 // it's hard to use mock objects in unit tests of the child components. Search for 'MockAppState'.
-func Start(ctx context.Context, storage storage.HostStorage, appState *state.Application) error {
+func Start(ctx context.Context, storage storage.HostStorage, appState *application.State) error {
 	uiComponent := New(ctx, storage, appState, appState.Logger)
 	p := tea.NewProgram(&uiComponent, tea.WithAltScreen())
 

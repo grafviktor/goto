@@ -8,17 +8,17 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/grafviktor/goto/internal/application"
+	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
-	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 )
 
 func TestStorage_Initialize_SSHConfigEnabled(t *testing.T) {
-	state.Create(context.TODO(), application.Configuration{}, &mocklogger.Logger{})
-	state.Get().SSHConfigEnabled = true
+	application.New(context.TODO(), &config.Configuration{}, &mocklogger.Logger{})
+	application.Get().SSHConfigEnabled = true
 	logger := &mocklogger.Logger{}
-	appConfig := application.Configuration{}
+	appConfig := config.Configuration{}
 
 	storage, err := Initialize(context.TODO(), &appConfig, logger)
 	require.NoError(t, err, "expected no error on storage initialization")
@@ -28,10 +28,10 @@ func TestStorage_Initialize_SSHConfigEnabled(t *testing.T) {
 }
 
 func TestStorage_Initialize_SSHConfigDisabled(t *testing.T) {
-	state.Create(context.TODO(), application.Configuration{}, &mocklogger.Logger{})
-	state.Get().SSHConfigEnabled = false
+	application.New(context.TODO(), &config.Configuration{}, &mocklogger.Logger{})
+	application.Get().SSHConfigEnabled = false
 	logger := &mocklogger.Logger{}
-	appConfig := application.Configuration{}
+	appConfig := config.Configuration{}
 
 	storage, err := Initialize(context.TODO(), &appConfig, logger)
 	require.NoError(t, err, "expected no error on storage initialization")
@@ -96,7 +96,7 @@ func TestCombinedStorage_GetAll(t *testing.T) {
 	logger := &mocklogger.Logger{}
 
 	cs := combinedStorage{
-		storages:       getMockStorages(context.TODO(), application.Configuration{}, logger),
+		storages:       getMockStorages(context.TODO(), config.Configuration{}, logger),
 		hostStorageMap: make(map[int]hostStorageMapping),
 		hosts:          make(map[int]model.Host),
 		nextID:         0,
@@ -110,7 +110,7 @@ func TestCombinedStorage_GetAll(t *testing.T) {
 
 func getMockStorages(
 	_ context.Context,
-	_ application.Configuration,
+	_ config.Configuration,
 	_ iLogger,
 ) map[constant.HostStorageEnum]HostStorage {
 	// Setup fake storages

@@ -16,9 +16,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
 
+	"github.com/grafviktor/goto/internal/application"
 	hostModel "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/model/sshconfig"
-	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui/component/input"
 	"github.com/grafviktor/goto/internal/ui/message"
@@ -115,7 +115,7 @@ func getKeyMap(host hostModel.Host, focusedInput int) keyMap {
 }
 
 type EditModel struct {
-	appState     *state.Application
+	appState     *application.State
 	focusedInput int
 	help         help.Model
 	host         hostModelWrapper
@@ -132,7 +132,7 @@ type EditModel struct {
 }
 
 // New - returns new edit host form.
-func New(ctx context.Context, storage storage.HostStorage, state *state.Application, log iLogger) *EditModel {
+func New(ctx context.Context, storage storage.HostStorage, state *application.State, log iLogger) *EditModel {
 	initialFocusedInput := inputTitle
 
 	// If we can't cast host id to int, that means we're adding a new host. Ignore the error

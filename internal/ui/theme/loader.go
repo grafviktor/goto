@@ -131,13 +131,13 @@ func saveThemeToFile(theme []byte, filePath string) error {
 }
 
 // ListAvailableThemes returns a list of available theme names.
-func ListAvailableThemes(configDir string, logger loggerInterface) ([]string, error) {
+func ListAvailableThemes(configDir string) ([]string, error) {
 	themeFolder := filepath.Join(configDir, "themes")
 	if !utils.IsFolderExists(themeFolder) {
-		logger.Debug("[MAIN] Themes folder not found. Extract themes to %q", themeFolder)
+		// logger.Debug("[MAIN] Themes folder not found. Extract themes to %q", themeFolder)
 		err := extractThemeFiles(themeFolder)
 		if err != nil {
-			return nil, fmt.Errorf("failed to extract theme files: %w", err)
+			return nil, err
 		}
 	}
 

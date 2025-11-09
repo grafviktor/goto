@@ -1,5 +1,5 @@
-// Package state is in charge of storing and reading application state.
-package state
+// Package application is in charge of storing and reading application state.
+package application
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/grafviktor/goto/internal/application"
+	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/utils"
 )
@@ -34,7 +34,7 @@ type Once interface {
 }
 
 var (
-	appState  *Application
+	appState  *State
 	once      Once = &sync.Once{}
 	stateFile      = "state.yaml"
 )
@@ -47,8 +47,8 @@ type loggerInterface interface {
 	Close()
 }
 
-// Application stores application state.
-type Application struct {
+// State stores application state.
+type State struct {
 	Selected         int `yaml:"selected"`
 	appStateFilePath string
 	Logger           loggerInterface       `yaml:"-"`
@@ -60,27 +60,27 @@ type Application struct {
 	// SSHConfigEnabled is a part of ApplicationState, not user config, because it is a feature flag
 	// which is persisted across application restarts. In other words, once defined, it will be
 	// persisted in the state.yaml file and will be used in the next application run.
-	SSHConfigEnabled  bool                       `yaml:"enable_ssh_config"`
-	Theme             string                     `yaml:"theme,omitempty"`
-	ApplicationConfig *application.Configuration `yaml:"-"`
-	Context           context.Context            `yaml:"-"`
+	SSHConfigEnabled  bool                  `yaml:"enable_ssh_config"`
+	Theme             string                `yaml:"theme,omitempty"`
+	ApplicationConfig *config.Configuration `yaml:"-"`
+	Context           context.Context       `yaml:"-"`
 }
 
-// Create - creates application state.
-func Create(appContext context.Context,
-	appConfig *application.Configuration,
+// New - creates application state.
+func New(appContext context.Context,
+	appConfig *config.Configuration,
 	fileLogger loggerInterface,
-) (*Application, error) {
+) (*State, error) {
 	var err error
 
 	once.Do(func() {
 		fileLogger.Debug("[APPSTATE] Create application state")
-		appState = &Application{
+		appState = &State{
 			appStateFilePath:  path.Join(appConfig.AppHome, stateFile),
 			Logger:            fileLogger,
 			Group:             "",
 			SSHConfigEnabled:  true,
-			Theme:             appConfig.Theme(),
+			Theme:             appConfig.SetTheme,
 			ApplicationConfig: appConfig,
 			Context:           appContext,
 		}
@@ -90,17 +90,11 @@ func Create(appContext context.Context,
 		err = appState.readFromFile()
 	})
 
-	fileLogger.Debug("[CONFIG] Set application home folder to %q\n", appConfig.AppHome)
-	fileLogger.Debug("[CONFIG] Set application log level to %q\n", appConfig.LogLevel)
-	fileLogger.Debug("[CONFIG] Enabled features: %q\n", appConfig.EnableFeature)
-	fileLogger.Debug("[CONFIG] Disabled features: %q\n", appConfig.DisableFeature)
-	fileLogger.Debug("[CONFIG] Set SSH config path to %q\n", appConfig.SSHConfigFilePath)
-
 	return appState, err
 }
 
 // Get - returns application state.
-func Get() *Application {
+func Get() *State {
 	return appState
 }
 
@@ -109,7 +103,7 @@ func IsInitialized() bool {
 	return appState != nil
 }
 
-func (as *Application) readFromFile() error {
+func (as *State) readFromFile() error {
 	as.Logger.Debug("[APPSTATE] Read application state from: %q", as.appStateFilePath)
 	fileData, err := os.ReadFile(as.appStateFilePath)
 	if err != nil {
@@ -129,7 +123,7 @@ func (as *Application) readFromFile() error {
 }
 
 // Persist saves app state to disk.
-func (as *Application) Persist() error {
+func (as *State) Persist() error {
 	as.Logger.Debug("[APPSTATE] Persist application state to file: %q", as.appStateFilePath)
 	result, err := yaml.Marshal(as)
 	if err != nil {
@@ -146,7 +140,7 @@ func (as *Application) Persist() error {
 	return nil
 }
 
-func (as *Application) printConfig(w io.Writer) {
+func (as *State) printConfig(w io.Writer) {
 	utils.FprintfIgnoreError(w, "App home:           %s\n", as.ApplicationConfig.AppHome)
 	utils.FprintfIgnoreError(w, "Log level:          %s\n", as.ApplicationConfig.LogLevel)
 	if as.SSHConfigEnabled {
@@ -156,13 +150,6 @@ func (as *Application) printConfig(w io.Writer) {
 }
 
 // PrintConfig outputs user-definable parameters in the console.
-func (as *Application) PrintConfig() {
+func (as *State) PrintConfig() {
 	as.printConfig(os.Stdout)
 }
-
-// // LogDetails logs user-definable parameters in the console.
-// func (as *Application) LogDetails(logger loggerInterface) {
-// 	var buf bytes.Buffer
-// 	as.printConfig(&buf)
-// 	logger.Debug("[APPSTATE] %s", buf.String())
-// }

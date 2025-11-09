@@ -8,9 +8,9 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/application"
+	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
-	"github.com/grafviktor/goto/internal/state"
 )
 
 var (
@@ -49,7 +49,7 @@ type combinedStorage struct {
 }
 
 // Initialize - prepares inner storages and returns a common HostStorage interface to load and save hosts.
-func Initialize(ctx context.Context, appConfig *application.Configuration, logger iLogger) (HostStorage, error) {
+func Initialize(ctx context.Context, appConfig *config.Configuration, logger iLogger) (HostStorage, error) {
 	storages := getStorages(ctx, appConfig, logger)
 
 	cs := combinedStorage{
@@ -64,14 +64,14 @@ func Initialize(ctx context.Context, appConfig *application.Configuration, logge
 
 func getStorages(
 	ctx context.Context,
-	appConfig *application.Configuration,
+	appConfig *config.Configuration,
 	logger iLogger,
 ) map[constant.HostStorageEnum]HostStorage {
 	storageMap := make(map[constant.HostStorageEnum]HostStorage)
 	yamlStorage := newYAMLStorage(ctx, appConfig.AppHome, logger)
 	storageMap[yamlStorage.Type()] = yamlStorage
 
-	sshConfigEnabled := state.Get().SSHConfigEnabled
+	sshConfigEnabled := application.Get().SSHConfigEnabled
 	logger.Debug("[STORAGE] SSH config storage enable: '%t'", sshConfigEnabled)
 	if sshConfigEnabled {
 		logger.Info("[STORAGE] Load ssh hosts from ssh config file: %q", appConfig.SSHConfigFilePath)

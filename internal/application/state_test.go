@@ -1,5 +1,5 @@
 // Package state is in charge of storing and reading application state.
-package state
+package application
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 
-	"github.com/grafviktor/goto/internal/application"
+	"github.com/grafviktor/goto/internal/config"
 )
 
 type MockLogger struct {
@@ -61,7 +61,7 @@ func Test_CreateApplicationState(t *testing.T) {
 	// Create a mock logger for testing
 	mockLogger := MockLogger{}
 
-	underTest := Create(context.TODO(), application.Configuration{}, &mockLogger)
+	underTest, _ := New(context.TODO(), &config.Configuration{}, &mockLogger)
 
 	// Ensure that the application state is not nil
 	assert.NotNil(t, underTest)
@@ -78,7 +78,7 @@ func Test_GetApplicationState(t *testing.T) {
 	// Create a mock logger for testing
 	mockLogger := MockLogger{}
 
-	Create(context.TODO(), application.Configuration{}, &mockLogger)
+	New(context.TODO(), &config.Configuration{}, &mockLogger)
 	underTest := Get()
 
 	// Ensure that the application state is not nil
@@ -94,7 +94,7 @@ func Test_PersistApplicationState(t *testing.T) {
 	mockLogger := MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
-	underTest := Create(context.TODO(), application.Configuration{}, &mockLogger)
+	underTest, _ := New(context.TODO(), &config.Configuration{}, &mockLogger)
 	underTest.appStateFilePath = path.Join(tempDir, "state.yaml")
 
 	// Modify the application state
@@ -105,7 +105,7 @@ func Test_PersistApplicationState(t *testing.T) {
 	require.NoError(t, err)
 
 	// Read the persisted state from disk
-	persistedState := &Application{}
+	persistedState := &State{}
 	fileData, err := os.ReadFile(path.Join(tempDir, stateFile))
 	require.NoError(t, err)
 
@@ -123,7 +123,7 @@ func Test_PersistApplicationStateError(t *testing.T) {
 	mockLogger := MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
-	underTest := Create(context.TODO(), application.Configuration{}, &mockLogger)
+	underTest, _ := New(context.TODO(), &config.Configuration{}, &mockLogger)
 	underTest.appStateFilePath = "non_exitent.yaml"
 
 	// Modify the application state
@@ -135,13 +135,13 @@ func Test_PersistApplicationStateError(t *testing.T) {
 }
 
 func Test_PrintConfigTo(t *testing.T) {
-	appConfig := application.Configuration{
+	appConfig := config.Configuration{
 		AppHome:           "/tmp/goto",
 		LogLevel:          "debug",
 		SSHConfigFilePath: "/tmp/ssh_config",
 	}
-	app := &Application{
-		ApplicationConfig: appConfig,
+	app := &State{
+		ApplicationConfig: &appConfig,
 		SSHConfigEnabled:  true,
 	}
 

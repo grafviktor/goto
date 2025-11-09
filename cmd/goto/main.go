@@ -12,8 +12,8 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/application"
+	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/logger"
-	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui"
 	"github.com/grafviktor/goto/internal/ui/theme"
@@ -31,7 +31,6 @@ var (
 const (
 	appName             = "goto"
 	defaultThemeName    = "default"
-	featureSSHConfig    = "ssh_config"
 	logMsgCloseApp      = "--------= Close application =-------"
 	logMsgCloseAppError = "--------= Close application with non-zero code =--------"
 	exitCodeError       = 1
@@ -51,72 +50,53 @@ func main() {
 	version.Set(buildVersion, buildCommit, buildBranch, buildDate)
 
 	// Create application configuration
-	// applicationConfiguration, applicationConfigErr := createConfigurationOrExit()
-	applicationConfiguration, applicationConfigErr := application.Create()
-
-	err := checkRequirements(applicationConfiguration)
+	config, configUpdateStatus, err := config.New()
 	if err != nil {
-		log.Fatalf("[MAIN] %v", err)
+		log.Fatalf("[MAIN] Error: %v", err)
+	}
+
+	// Create prerequisites
+	err = checkRequirements(config)
+	if err != nil {
+		log.Fatalf("[MAIN] Error: %v", err)
 	}
 
 	// Create application logger
-	fileLogger, err := logger.Create(applicationConfiguration.AppHome, applicationConfiguration.LogLevel)
+	fileLogger, err := logger.New(config.AppHome, config.LogLevel)
 	if err != nil {
-		log.Fatalf("[MAIN] %v", err)
+		log.Fatalf("[MAIN] Error: %v", err)
 	}
-	// Log application version
-	// fileLogger.Info("[MAIN] Start application")
-	// fileLogger.Info("[MAIN] Version:    %s", version.Number())
-	// fileLogger.Info("[MAIN] Commit:     %s", version.CommitHash())
-	// fileLogger.Info("[MAIN] Branch:     %s", version.BuildBranch())
-	// fileLogger.Info("[MAIN] Build date: %s", version.BuildDate())
 
-	// fileLogger.Debug("[CONFIG] Set application home folder to %q\n", applicationConfiguration.AppHome)
-	// fileLogger.Debug("[CONFIG] Set application log level to %q\n", applicationConfiguration.LogLevel)
-	// fileLogger.Debug("[CONFIG] Enabled features: %q\n", applicationConfiguration.EnableFeature)
-	// fileLogger.Debug("[CONFIG] Disabled features: %q\n", applicationConfiguration.DisableFeature)
-	// fileLogger.Debug("[CONFIG] Set SSH config path to %q\n", applicationConfiguration.SSHConfigFilePath)
-	// configurationChanged, err := applicationConfiguration.handleCommandLineParameters(fileLogger)
+	fileLogger.Info("[MAIN] Start application")
+	fileLogger.Debug("[MAIN] Parameters: %+v", os.Args[1:])
+	version.LogDetails(fileLogger)
+	config.LogDetails(fileLogger)
 
-	// applicationConfiguration.LogDetails(fileLogger)
+	if config.ShouldExitAfterConfigChange {
+		logCloseAndExit(fileLogger, exitCodeSuccess, fmt.Sprintf("[MAIN] %s", configUpdateStatus))
+	}
 
 	// Create state
-	appState, err := state.Create(context.Background(), applicationConfiguration, fileLogger)
+	appState, err := application.New(context.Background(), config, fileLogger)
 	if err != nil {
 		logMessage := fmt.Sprintf("[MAIN] Cannot initialize application state: %v", err)
 		logCloseAndExit(fileLogger, exitCodeError, logMessage)
 	}
 
-	// Check config errors at the very end. That allows to check application version and enable/disable
-	// features, even if something is not right with the app.
-	if applicationConfigErr != nil {
-		logMessage := fmt.Sprintf("[MAIN] Exit due to a fatal error: %v. Inspect logs for more details.", applicationConfigErr)
-		logCloseAndExit(fileLogger, exitCodeError, logMessage)
-	}
-
-	if applicationConfiguration.ShouldExitAfterConfig {
-		logCloseAndExit(fileLogger, exitCodeSuccess, "")
-	}
-
-	// If configuration was changed due to command-line parameters, exit the application.
-	// if configurationChanged {
-	// 	logCloseAndExit(fileLogger, exitCodeSuccess, "")
-	// }
-
 	// ---- Main application flow ---- //
 
 	// Init storage
-	str, err := storage.Initialize(appState.Context, applicationConfiguration, appState.Logger)
+	str, err := storage.Initialize(appState.Context, config, appState.Logger)
 	if err != nil {
 		logMessage := fmt.Sprintf("[MAIN] Cannot access application storage: %v", err)
 		logCloseAndExit(fileLogger, exitCodeError, logMessage)
 	}
 
 	// Initialize themes
-	fileLogger.Debug("[MAIN] Loading application theme")
+	fileLogger.Debug("[MAIN] Load application theme")
 	themeName := lo.Ternary(utils.StringEmpty(&appState.Theme), defaultThemeName, appState.Theme)
 	appTheme := theme.LoadTheme(appState.ApplicationConfig.AppHome, themeName, fileLogger)
-	fileLogger.Debug("[MAIN] Using theme: %s", appTheme.Name)
+	fileLogger.Debug("[MAIN] Use theme: %s", appTheme.Name)
 
 	// Run user interface
 	if err = ui.Start(appState.Context, str, appState); err != nil {
@@ -139,7 +119,7 @@ func main() {
 	logCloseAndExit(fileLogger, exitCodeSuccess, "")
 }
 
-func checkRequirements(config *application.Configuration) error {
+func checkRequirements(config *config.Configuration) error {
 	var err error
 
 	// Check if "ssh" utility is in application path
@@ -161,72 +141,16 @@ func checkRequirements(config *application.Configuration) error {
 }
 
 // logCloseAndExit logs the close message, closes the logger, and exits with the specified code.
-func logCloseAndExit(lg loggerInterface, exitCode int, errorExitReason string) {
-	if exitCode != exitCodeSuccess {
-		fmt.Printf("%s\n", errorExitReason)
-		lg.Error("[MAIN] %s", logMsgCloseAppError)
-	} else {
-		lg.Info("[MAIN] %s", logMsgCloseApp)
+func logCloseAndExit(lg loggerInterface, exitCode int, exitReason string) {
+	loggingFunc := lo.Ternary(exitCode == exitCodeSuccess, lg.Info, lg.Error)
+	closeMsg := lo.Ternary(exitCode == exitCodeSuccess, logMsgCloseApp, logMsgCloseAppError)
+
+	if !utils.StringEmpty(&exitReason) {
+		loggingFunc(exitReason)
 	}
+
+	loggingFunc("[MAIN] %s", closeMsg)
 
 	lg.Close()
 	os.Exit(exitCode)
 }
-
-// func handleCommandLineParameters(
-// 	lg loggerInterface,
-// 	applicationConfiguration *application.Configuration,
-// 	applicationState *state.Application,
-// ) (bool, error) {
-// 	// If "-v" parameter provided, display application version configuration and exit
-// 	if applicationConfiguration.DisplayVersionAndExit {
-// 		lg.Debug("[MAIN] Display application version and exit")
-// 		version.Print()
-// 		applicationState.PrintConfig()
-// 		// logCloseAndExit(lg, exitCodeSuccess, "")
-// 		return true, nil
-// 	}
-
-// 	// If "-e" parameter provided, display enabled features and exit
-// 	if applicationConfiguration.EnableFeature != "" {
-// 		lg.Debug("[MAIN] Enable feature %q and exit", applicationConfiguration.EnableFeature)
-// 		err := application.HandleFeatureToggle(lg, applicationState, string(applicationConfiguration.EnableFeature), true)
-// 		if err != nil {
-// 			// logMessage := fmt.Sprintf("[MAIN] Cannot save application configuration: %v", err)
-// 			return true, fmt.Errorf("cannot save application configuration: %w", err)
-// 			// logCloseAndExit(lg, exitCodeError, logMessage)
-// 		}
-
-// 		// logCloseAndExit(lg, exitCodeSuccess, "")
-// 		return true, nil
-// 	}
-
-// 	// If "-d" parameter provided, display disabled features and exit
-// 	if applicationConfiguration.DisableFeature != "" {
-// 		lg.Debug("[MAIN] Disable feature %q and exit", applicationConfiguration.EnableFeature)
-// 		err := application.HandleFeatureToggle(lg, applicationState, string(applicationConfiguration.DisableFeature), false)
-// 		if err != nil {
-// 			// logMessage := fmt.Sprintf("[MAIN] Cannot save application configuration: %v", err)
-// 			// logCloseAndExit(lg, exitCodeError, logMessage)
-// 			return true, fmt.Errorf("cannot save application configuration: %w", err)
-// 		}
-
-// 		// logCloseAndExit(lg, exitCodeSuccess, "")
-// 		return true, nil
-// 	}
-
-// 	// If "-set-theme" parameter provided, set the theme and exit
-// 	if applicationConfiguration.SetTheme != "" {
-// 		lg.Debug("[MAIN] Set application theme and exit")
-// 		err := application.HandleSetTheme(lg, applicationState, applicationConfiguration.SetTheme)
-// 		if err != nil {
-// 			// logMessage := fmt.Sprintf("[MAIN] Cannot set theme: %v", err)
-// 			// logCloseAndExit(lg, exitCodeError, logMessage)
-// 			return true, fmt.Errorf("cannot set theme: %w", err)
-// 		}
-
-// 		return true, nil
-// 	}
-
-// 	return false, nil
-// }

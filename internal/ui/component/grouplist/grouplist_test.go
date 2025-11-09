@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/require"
 
-	"github.com/grafviktor/goto/internal/state"
+	"github.com/grafviktor/goto/internal/application"
 	testutils "github.com/grafviktor/goto/internal/testutils"
 	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 	"github.com/grafviktor/goto/internal/ui/message"
@@ -113,7 +113,7 @@ func TestLoadItems(t *testing.T) {
 // ==============================================
 
 func NewMockGroupModel(storageShouldFail bool) *Model {
-	mockState := state.Application{Selected: 1}
+	mockState := application.State{Selected: 1}
 	storage := testutils.NewMockStorage(storageShouldFail)
 	return New(context.TODO(), storage, &mockState, &mocklogger.Logger{})
 }
