@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/caarlos0/env/v10"
@@ -99,7 +100,7 @@ func parseCommandLineFlags(envConfig *Configuration) (*Configuration, string, er
 	var status string
 	switch {
 	case cmdConfig.DisplayVersionAndExit:
-		status = handleDisplayVersion(cmdConfig)
+		handleDisplayVersion(cmdConfig)
 	case cmdConfig.EnableFeature != "":
 		status = handleFeatureToggle(cmdConfig, cmdConfig.EnableFeature.String(), true)
 	case cmdConfig.DisableFeature != "":
@@ -124,10 +125,10 @@ func setConfigDefaults(config *Configuration) (*Configuration, error) {
 	return config, nil
 }
 
-func handleDisplayVersion(config *Configuration) string {
+func handleDisplayVersion(config *Configuration) {
 	config.ShouldExitAfterConfigChange = true
 	version.Print()
-	return "Display version and exit"
+	os.Exit(0)
 }
 
 // handleFeatureToggle handles enabling or disabling features.

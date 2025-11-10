@@ -55,7 +55,7 @@ func main() {
 		log.Fatalf("[MAIN] Error: %v", err)
 	}
 
-	// Create prerequisites
+	// Check prerequisites
 	err = checkRequirements(config)
 	if err != nil {
 		log.Fatalf("[MAIN] Error: %v", err)
@@ -72,10 +72,6 @@ func main() {
 	version.LogDetails(fileLogger)
 	config.LogDetails(fileLogger)
 
-	if config.ShouldExitAfterConfigChange {
-		logCloseAndExit(fileLogger, exitCodeSuccess, fmt.Sprintf("[MAIN] %s", configUpdateStatus))
-	}
-
 	// Create state
 	appState, err := application.New(context.Background(), config, fileLogger)
 	if err != nil {
@@ -83,40 +79,23 @@ func main() {
 		logCloseAndExit(fileLogger, exitCodeError, logMessage)
 	}
 
-	// ---- Main application flow ---- //
-
-	// Init storage
-	str, err := storage.Initialize(appState.Context, config, appState.Logger)
-	if err != nil {
-		logMessage := fmt.Sprintf("[MAIN] Cannot access application storage: %v", err)
-		logCloseAndExit(fileLogger, exitCodeError, logMessage)
+	// Run user interface unless only configuration update is required
+	if !config.ShouldExitAfterConfigChange {
+		fileLogger.Debug("[MAIN] Run user interface")
+		err = startUI(appState)
+		if err != nil {
+			fileLogger.Error("[MAIN] Application error: %v", err)
+			fmt.Println("Application error:", err)
+		}
 	}
 
-	// Initialize themes
-	fileLogger.Debug("[MAIN] Load application theme")
-	themeName := lo.Ternary(utils.StringEmpty(&appState.Theme), defaultThemeName, appState.Theme)
-	appTheme := theme.LoadTheme(appState.ApplicationConfig.AppHome, themeName, fileLogger)
-	fileLogger.Debug("[MAIN] Use theme: %s", appTheme.Name)
-
-	// Run user interface
-	if err = ui.Start(appState.Context, str, appState); err != nil {
-		logMessage := fmt.Sprintf("[MAIN] Error: %v", err)
-		str.Close()
-		logCloseAndExit(fileLogger, exitCodeError, logMessage)
-	}
-
-	// Quit signal should be intercepted on the UI level, however it will require
-	// additional switch-case block with appropriate checks. Leaving this message here.
-	fileLogger.Debug("[MAIN] Receive quit signal")
-	fileLogger.Debug("[MAIN] Close storage")
-	str.Close()
 	fileLogger.Debug("[MAIN] Save application state")
 	if err = appState.Persist(); err != nil {
 		logMessage := fmt.Sprintf("[MAIN] Can't save application state before closing: %v", err)
 		logCloseAndExit(fileLogger, exitCodeError, logMessage)
 	}
 
-	logCloseAndExit(fileLogger, exitCodeSuccess, "")
+	logCloseAndExit(fileLogger, exitCodeSuccess, configUpdateStatus)
 }
 
 func checkRequirements(config *config.Configuration) error {
@@ -136,6 +115,34 @@ func checkRequirements(config *config.Configuration) error {
 			return fmt.Errorf("cannot create application home folder: %w", err)
 		}
 	}
+
+	return nil
+}
+
+func startUI(appState *application.State) error {
+	// Init storage
+	str, err := storage.Initialize(appState.Context, appState.ApplicationConfig, appState.Logger)
+	if err != nil {
+		return fmt.Errorf("cannot initialize application storage: %w", err)
+	}
+
+	// Initialize themes
+	appState.Logger.Debug("[MAIN] Load application theme")
+	themeName := lo.Ternary(utils.StringEmpty(&appState.Theme), defaultThemeName, appState.Theme)
+	appTheme := theme.LoadTheme(appState.ApplicationConfig.AppHome, themeName, appState.Logger)
+	appState.Logger.Debug("[MAIN] Use theme: %s", appTheme.Name)
+
+	// Run user interface
+	err = ui.Start(appState.Context, str, appState)
+	if err != nil {
+		return fmt.Errorf("cannot start user interface: %w", err)
+	}
+
+	// Quit signal should be intercepted on the UI level, however it will require
+	// additional switch-case block with appropriate checks. Leaving this message here.
+	appState.Logger.Debug("[MAIN] Receive quit signal")
+	appState.Logger.Debug("[MAIN] Close storage")
+	str.Close()
 
 	return nil
 }
