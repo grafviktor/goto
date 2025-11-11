@@ -7,16 +7,16 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/grafviktor/goto/internal/application"
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
+	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 )
 
 func TestStorage_Initialize_SSHConfigEnabled(t *testing.T) {
-	application.New(context.TODO(), &config.Configuration{}, &mocklogger.Logger{})
-	application.Get().SSHConfigEnabled = true
+	state.Initialize(context.TODO(), &config.Configuration{}, &mocklogger.Logger{})
+	state.Get().SSHConfigEnabled = true
 	logger := &mocklogger.Logger{}
 	appConfig := config.Configuration{}
 
@@ -28,8 +28,8 @@ func TestStorage_Initialize_SSHConfigEnabled(t *testing.T) {
 }
 
 func TestStorage_Initialize_SSHConfigDisabled(t *testing.T) {
-	application.New(context.TODO(), &config.Configuration{}, &mocklogger.Logger{})
-	application.Get().SSHConfigEnabled = false
+	state.Initialize(context.TODO(), &config.Configuration{}, &mocklogger.Logger{})
+	state.Get().SSHConfigEnabled = false
 	logger := &mocklogger.Logger{}
 	appConfig := config.Configuration{}
 

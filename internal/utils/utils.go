@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/grafviktor/goto/internal/constant"
 	"github.com/samber/lo"
 )
 
@@ -80,27 +82,6 @@ var ansiRegex = regexp.MustCompile("\x1b\\[[0-9;]*m")
 func StripStyles(input string) string {
 	input = strings.TrimSpace(input)
 	return ansiRegex.ReplaceAllString(input, "")
-}
-
-// CreateAppDirIfNotExists - creates application home folder if it doesn't exist.
-// appConfigDir is application home folder path.
-func CreateAppDirIfNotExists(appConfigDir string) error {
-	if StringEmpty(&appConfigDir) {
-		return errors.New("bad folder name")
-	}
-
-	stat, err := os.Stat(appConfigDir)
-	if os.IsNotExist(err) {
-		return os.MkdirAll(appConfigDir, 0o700)
-	} else if err != nil {
-		return err
-	}
-
-	if !stat.IsDir() {
-		return errors.New("app home path exists and it is not a directory")
-	}
-
-	return nil
 }
 
 // AppDir - returns application home folder where all files are stored.
@@ -230,14 +211,6 @@ func SSHConfigFilePath(userDefinedPath string) (string, error) {
 	return fmt.Sprintf("%s/.ssh/config", userHomeDir), nil
 }
 
-// CheckAppInstalled - checks if application is installed and can be found in executable path
-// appName - name of the application to be looked for in $PATH.
-func CheckAppInstalled(appName string) error {
-	_, err := exec.LookPath(appName)
-
-	return err
-}
-
 // splitArguments - converts a command with arguments into an array of strings.
 // Note, that it does not preserves inner quote characters:
 //
@@ -338,4 +311,80 @@ func IsFolderExists(folderPath string) bool {
 		}
 	}
 	return true
+}
+
+func CheckAppRequirements(appName, appHome string) error {
+	var err error
+
+	// Check if "ssh" utility is in application path
+	if err = checkAppInstalled("ssh"); err != nil {
+		return fmt.Errorf("ssh utility is not installed or cannot be found in the executable path: %w", err)
+	}
+
+	// Set application home folder path
+	if appHome, err = AppDir(appName, appHome); err != nil {
+		log.Printf("[MAIN] Cannot access application home folder: %v", err)
+
+		err = createAppDirIfNotExists(appHome)
+		if err != nil {
+			return fmt.Errorf("cannot create application home folder: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// checkAppInstalled - checks if application is installed and can be found in executable path
+// appName - name of the application to be looked for in $PATH.
+func checkAppInstalled(appName string) error {
+	_, err := exec.LookPath(appName)
+
+	return err
+}
+
+// createAppDirIfNotExists - creates application home folder if it doesn't exist.
+// appConfigDir is application home folder path.
+func createAppDirIfNotExists(appConfigDir string) error {
+	if StringEmpty(&appConfigDir) {
+		return errors.New("bad folder name")
+	}
+
+	stat, err := os.Stat(appConfigDir)
+	if os.IsNotExist(err) {
+		return os.MkdirAll(appConfigDir, 0o700)
+	} else if err != nil {
+		return err
+	}
+
+	if !stat.IsDir() {
+		return errors.New("app home path exists and it is not a directory")
+	}
+
+	return nil
+}
+
+const (
+	logMsgCloseApp      = "--------= Close application =-------"
+	logMsgCloseAppError = "--------= Close application with non-zero code =--------"
+)
+
+type loggerInterface interface {
+	Info(format string, args ...any)
+	Error(format string, args ...any)
+	Close()
+}
+
+// LogCloseAndExit logs the close message, closes the logger, and exits with the specified code.
+func LogCloseAndExit(lg loggerInterface, exitCode int, exitReason string) {
+	loggingFunc := lo.Ternary(exitCode == constant.APP_EXIT_CODE_SUCCESS, lg.Info, lg.Error)
+	closeMsg := lo.Ternary(exitCode == constant.APP_EXIT_CODE_SUCCESS, logMsgCloseApp, logMsgCloseAppError)
+
+	if !StringEmpty(&exitReason) {
+		loggingFunc(exitReason)
+	}
+
+	loggingFunc("[MAIN] %s", closeMsg)
+
+	lg.Close()
+	os.Exit(exitCode)
 }

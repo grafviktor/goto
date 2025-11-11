@@ -7,10 +7,10 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/grafviktor/goto/internal/application"
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
+	"github.com/grafviktor/goto/internal/state"
 )
 
 var (
@@ -71,7 +71,7 @@ func getStorages(
 	yamlStorage := newYAMLStorage(ctx, appConfig.AppHome, logger)
 	storageMap[yamlStorage.Type()] = yamlStorage
 
-	sshConfigEnabled := application.Get().SSHConfigEnabled
+	sshConfigEnabled := state.Get().SSHConfigEnabled
 	logger.Debug("[STORAGE] SSH config storage enable: '%t'", sshConfigEnabled)
 	if sshConfigEnabled {
 		logger.Info("[STORAGE] Load ssh hosts from ssh config file: %q", appConfig.SSHConfigFilePath)

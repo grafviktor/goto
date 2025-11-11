@@ -1,9 +1,9 @@
-// Package application is in charge of storing and reading application state.
-package application
+// Package state is in charge of storing and reading application state.
+package state
 
 import (
 	"context"
-	"io"
+	"fmt"
 	"os"
 	"path"
 	"sync"
@@ -12,7 +12,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
-	"github.com/grafviktor/goto/internal/utils"
+	"github.com/grafviktor/goto/internal/version"
 )
 
 type view int
@@ -66,8 +66,8 @@ type State struct {
 	Context           context.Context       `yaml:"-"`
 }
 
-// New - creates application state.
-func New(appContext context.Context,
+// Initialize - creates application state.
+func Initialize(appContext context.Context,
 	appConfig *config.Configuration,
 	fileLogger loggerInterface,
 ) (*State, error) {
@@ -140,16 +140,18 @@ func (as *State) Persist() error {
 	return nil
 }
 
-func (as *State) printConfig(w io.Writer) {
-	utils.FprintfIgnoreError(w, "App home:           %s\n", as.ApplicationConfig.AppHome)
-	utils.FprintfIgnoreError(w, "Log level:          %s\n", as.ApplicationConfig.LogLevel)
+func (as *State) printConfig() {
+	fmt.Printf("App home:           %s\n", as.ApplicationConfig.AppHome)
+	fmt.Printf("Log level:          %s\n", as.ApplicationConfig.LogLevel)
 	if as.SSHConfigEnabled {
-		utils.FprintfIgnoreError(w, "SSH config enabled: %t\n", as.SSHConfigEnabled)
-		utils.FprintfIgnoreError(w, "SSH config path:    %s\n", as.ApplicationConfig.SSHConfigFilePath)
+		fmt.Printf("SSH config enabled: %t\n", as.SSHConfigEnabled)
+		fmt.Printf("SSH config path:    %s\n", as.ApplicationConfig.SSHConfigFilePath)
 	}
 }
 
 // PrintConfig outputs user-definable parameters in the console.
 func (as *State) PrintConfig() {
-	as.printConfig(os.Stdout)
+	version.Print()
+	fmt.Println()
+	as.printConfig()
 }

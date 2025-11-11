@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/grafviktor/goto/internal/application"
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/model/sshconfig"
+	"github.com/grafviktor/goto/internal/state"
 	testutils "github.com/grafviktor/goto/internal/testutils"
 	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 	"github.com/grafviktor/goto/internal/ui/message"
@@ -445,6 +445,6 @@ func TestDisplayNotificationMsg(t *testing.T) {
 	require.Nil(t, cmd)
 }
 
-func MockAppState() *application.State {
-	return &application.State{}
+func MockAppState() *state.State {
+	return &state.State{}
 }
