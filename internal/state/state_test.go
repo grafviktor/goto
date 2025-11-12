@@ -1,5 +1,5 @@
 // Package state is in charge of storing and reading application state.
-package application
+package state
 
 import (
 	"bytes"
@@ -61,7 +61,7 @@ func Test_CreateApplicationState(t *testing.T) {
 	// Create a mock logger for testing
 	mockLogger := MockLogger{}
 
-	underTest, _ := New(context.TODO(), &config.Configuration{}, &mockLogger)
+	underTest, _ := Initialize(context.TODO(), &config.Configuration{}, &mockLogger)
 
 	// Ensure that the application state is not nil
 	assert.NotNil(t, underTest)
@@ -78,7 +78,7 @@ func Test_GetApplicationState(t *testing.T) {
 	// Create a mock logger for testing
 	mockLogger := MockLogger{}
 
-	New(context.TODO(), &config.Configuration{}, &mockLogger)
+	Initialize(context.TODO(), &config.Configuration{}, &mockLogger)
 	underTest := Get()
 
 	// Ensure that the application state is not nil
@@ -94,7 +94,7 @@ func Test_PersistApplicationState(t *testing.T) {
 	mockLogger := MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
-	underTest, _ := New(context.TODO(), &config.Configuration{}, &mockLogger)
+	underTest, _ := Initialize(context.TODO(), &config.Configuration{}, &mockLogger)
 	underTest.appStateFilePath = path.Join(tempDir, "state.yaml")
 
 	// Modify the application state
@@ -123,7 +123,7 @@ func Test_PersistApplicationStateError(t *testing.T) {
 	mockLogger := MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
-	underTest, _ := New(context.TODO(), &config.Configuration{}, &mockLogger)
+	underTest, _ := Initialize(context.TODO(), &config.Configuration{}, &mockLogger)
 	underTest.appStateFilePath = "non_exitent.yaml"
 
 	// Modify the application state

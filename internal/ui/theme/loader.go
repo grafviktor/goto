@@ -19,6 +19,17 @@ type loggerInterface interface {
 }
 
 var currentTheme *Theme
+var defaultThemeName = "default"
+
+func Initialize(themeName string, appHome string, lgr loggerInterface) {
+	lgr.Debug("[MAIN] Load application theme")
+	if utils.StringEmpty(&themeName) {
+		themeName = defaultThemeName
+	}
+
+	appTheme := LoadTheme(appHome, themeName, lgr)
+	lgr.Debug("[MAIN] Use theme: %s", appTheme.Name)
+}
 
 // SetTheme sets the current application theme.
 func SetTheme(theme *Theme) {

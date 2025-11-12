@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 
 	"github.com/caarlos0/env/v10"
@@ -13,10 +12,12 @@ import (
 
 	"github.com/grafviktor/goto/internal/ui/theme"
 	"github.com/grafviktor/goto/internal/utils"
-	"github.com/grafviktor/goto/internal/version"
 )
 
-const featureSSHConfig = "ssh_config"
+const (
+	appName          = "goto"
+	featureSSHConfig = "ssh_config"
+)
 
 type loggerInterface interface {
 	Info(format string, args ...any)
@@ -27,6 +28,7 @@ type loggerInterface interface {
 
 // Configuration structs contains user-definable parameters.
 type Configuration struct {
+	AppName                          string
 	AppHome                          string `env:"GG_HOME"`
 	LogLevel                         string `env:"GG_LOG_LEVEL"            envDefault:"info"`
 	SSHConfigFilePath                string `env:"GG_SSH_CONFIG_FILE_PATH"`
@@ -36,10 +38,10 @@ type Configuration struct {
 	DisableFeature                   FeatureFlag
 	SetTheme                         string
 	SetSSHConfigEnabled              bool
-	ShouldExitAfterConfigChange      bool
+	AppMode                          AppMode
 }
 
-func New() (*Configuration, string, error) {
+func Initialize() (*Configuration, string, error) {
 	envConfig, err := parseEnvironmentVariables()
 	if err != nil {
 		return envConfig, "", fmt.Errorf("failed to parse environment variables: %w", err)
@@ -116,6 +118,7 @@ func setConfigDefaults(config *Configuration) (*Configuration, error) {
 	var err error
 
 	// Set ssh config file path
+	config.AppName = appName
 	config.IsSSHConfigFilePathDefinedByUser = !utils.StringEmpty(&config.SSHConfigFilePath)
 	config.SSHConfigFilePath, err = utils.SSHConfigFilePath(config.SSHConfigFilePath)
 	if err != nil {
@@ -125,15 +128,14 @@ func setConfigDefaults(config *Configuration) (*Configuration, error) {
 	return config, nil
 }
 
-func handleDisplayVersion(config *Configuration) {
-	config.ShouldExitAfterConfigChange = true
-	version.Print()
-	os.Exit(0)
+func handleDisplayVersion(config *Configuration) string {
+	config.AppMode = AppModeType.DisplayInfo
+	return "Display version and exit"
 }
 
 // handleFeatureToggle handles enabling or disabling features.
 func handleFeatureToggle(config *Configuration, featureName string, enable bool) string {
-	config.ShouldExitAfterConfigChange = true
+	config.AppMode = AppModeType.HandleParam
 	if enable {
 		config.SetSSHConfigEnabled = featureName == featureSSHConfig
 	} else {
@@ -153,7 +155,7 @@ func handleFeatureToggle(config *Configuration, featureName string, enable bool)
 
 // handleSetTheme handles setting the application theme.
 func handleSetTheme(config *Configuration, themeName string) (string, error) {
-	config.ShouldExitAfterConfigChange = true
+	config.AppMode = AppModeType.HandleParam
 	// List available themes
 	availableThemes, err := theme.ListAvailableThemes(config.AppHome)
 	if err != nil {

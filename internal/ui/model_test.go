@@ -13,10 +13,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/grafviktor/goto/internal/application"
 	"github.com/grafviktor/goto/internal/constant"
 	hostModel "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/model/sshconfig"
+	"github.com/grafviktor/goto/internal/state"
 	testutils "github.com/grafviktor/goto/internal/testutils"
 	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 	"github.com/grafviktor/goto/internal/ui/message"
@@ -156,7 +156,7 @@ func TestHandleProcessSuccess_SSH_copy_ID(t *testing.T) {
 			},
 			expected: expected{
 				modelMessage: "foo ERROR bar",
-				viewState:    (int)(application.ViewMessage),
+				viewState:    (int)(state.ViewMessage),
 			},
 		},
 		{
@@ -168,7 +168,7 @@ func TestHandleProcessSuccess_SSH_copy_ID(t *testing.T) {
 			},
 			expected: expected{
 				modelMessage: "foo WARNING bar",
-				viewState:    (int)(application.ViewMessage),
+				viewState:    (int)(state.ViewMessage),
 			},
 		},
 		{
@@ -180,7 +180,7 @@ func TestHandleProcessSuccess_SSH_copy_ID(t *testing.T) {
 			},
 			expected: expected{
 				modelMessage: "normal output",
-				viewState:    (int)(application.ViewMessage),
+				viewState:    (int)(state.ViewMessage),
 			},
 		},
 		{
@@ -192,7 +192,7 @@ func TestHandleProcessSuccess_SSH_copy_ID(t *testing.T) {
 			},
 			expected: expected{
 				modelMessage: "",
-				viewState:    (int)(application.ViewHostList),
+				viewState:    (int)(state.ViewHostList),
 			},
 		},
 	}
@@ -226,7 +226,7 @@ func TestHandleProcessError(t *testing.T) {
 			},
 			expected: expected{
 				modelMessage: "error output\nDetails: normal output",
-				viewState:    (int)(application.ViewMessage),
+				viewState:    (int)(state.ViewMessage),
 			},
 		},
 		{
@@ -236,7 +236,7 @@ func TestHandleProcessError(t *testing.T) {
 			},
 			expected: expected{
 				modelMessage: "error output",
-				viewState:    (int)(application.ViewMessage),
+				viewState:    (int)(state.ViewMessage),
 			},
 		},
 	}
@@ -280,7 +280,7 @@ func TestUpdate_RunProcessErrorOccurred(t *testing.T) {
 
 	m, _ := model.Update(msg)
 	require.Equal(t, "mock error message\nDetails: mock out message", m.(*MainModel).viewMessageContent)
-	require.Equal(t, application.ViewMessage, m.(*MainModel).appState.CurrentView)
+	require.Equal(t, state.ViewMessage, m.(*MainModel).appState.CurrentView)
 }
 
 func TestUpdate_ExitWithError(t *testing.T) {
@@ -297,6 +297,6 @@ func TestUpdate_ExitWithError(t *testing.T) {
 
 // ---------------------------------
 
-func MockAppState() *application.State {
-	return &application.State{}
+func MockAppState() *state.State {
+	return &state.State{}
 }

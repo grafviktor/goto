@@ -34,10 +34,10 @@ var (
 	logFileName      = "app.log"
 )
 
-// New - creates a new logger with a specific log level.
+// Initialize - creates a new logger with a specific log level.
 // appPath - where log file will be stored.
 // userSetLogLevel - user-defined log level (debug or info).
-func New(appPath, userSetLogLevel string) (*AppLogger, error) {
+func Initialize(appPath, userSetLogLevel string) (*AppLogger, error) {
 	var err error
 	once.Do(func() {
 		logLevel := lo.Ternary(userSetLogLevel == "debug", LevelDebug, LevelInfo)

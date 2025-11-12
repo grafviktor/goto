@@ -48,22 +48,22 @@ func Test_StringAbbreviation(t *testing.T) {
 func Test_CreateAppDirIfNotExists(t *testing.T) {
 	tmpFile, _ := os.CreateTemp(t.TempDir(), "unit_test_tmp.")
 	defer tmpFile.Close()
-	err := CreateAppDirIfNotExists(tmpFile.Name())
+	err := createAppDirIfNotExists(tmpFile.Name())
 	require.Error(
 		t,
 		err,
 		"CreateAppDirIfNotExists should return an error when home path exists and it's not a directory",
 	)
 
-	err = CreateAppDirIfNotExists(" ")
+	err = createAppDirIfNotExists(" ")
 	require.Error(t, err, "CreateAppDirIfNotExists should return an error when argument is empty")
 
 	tmpDir := t.TempDir()
-	err = CreateAppDirIfNotExists(tmpDir)
+	err = createAppDirIfNotExists(tmpDir)
 	require.NoError(t, err, "CreateAppDirIfNotExists should not return an error when app home exists")
 
 	tmpDir = path.Join(t.TempDir(), "test")
-	err = CreateAppDirIfNotExists(tmpDir)
+	err = createAppDirIfNotExists(tmpDir)
 	require.NoError(t, err, "CreateAppDirIfNotExists should create app home folder if not exists")
 }
 
@@ -131,7 +131,7 @@ func Test_CheckAppInstalled(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := CheckAppInstalled(tt.appName)
+			err := checkAppInstalled(tt.appName)
 
 			if tt.expectedError && err == nil {
 				t.Errorf("Expected an error, but got nil")
