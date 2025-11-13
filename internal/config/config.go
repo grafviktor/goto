@@ -8,9 +8,7 @@ import (
 	"strings"
 
 	"github.com/caarlos0/env/v10"
-	"github.com/samber/lo"
 
-	"github.com/grafviktor/goto/internal/ui/theme"
 	"github.com/grafviktor/goto/internal/utils"
 )
 
@@ -107,7 +105,7 @@ func parseCommandLineFlags(envConfig *Configuration) (*Configuration, string, er
 	case cmdConfig.DisableFeature != "":
 		status = handleFeatureToggle(cmdConfig, cmdConfig.DisableFeature.String(), false)
 	case cmdConfig.SetTheme != "":
-		status, err = handleSetTheme(cmdConfig, cmdConfig.SetTheme)
+		cmdConfig.AppMode = AppModeType.HandleParam
 	}
 
 	return cmdConfig, status, err
@@ -150,34 +148,3 @@ func handleFeatureToggle(config *Configuration, featureName string, enable bool)
 
 	return status
 }
-
-// handleSetTheme handles setting the application theme.
-func handleSetTheme(config *Configuration, themeName string) (string, error) {
-	config.AppMode = AppModeType.HandleParam
-	// List available themes
-	availableThemes, err := theme.ListAvailableThemes(config.AppHome)
-	if err != nil {
-		return "", err
-	}
-
-	// Validate theme name
-	themeExists := lo.Contains(availableThemes, themeName)
-	if !themeExists {
-		err = fmt.Errorf("theme %q not found, available themes: %q", themeName, availableThemes)
-	}
-
-	config.SetTheme = themeName
-	status := fmt.Sprintf("Set theme %q and exit", themeName)
-	log.Println(status)
-
-	return status, err
-}
-
-// func (config *Configuration) IsFeatureEnabled(feature string) bool {
-// 	switch feature {
-// 	case featureSSHConfig:
-// 		return config.SSHConfigFilePath != ""
-// 	default:
-// 		return false
-// 	}
-// }

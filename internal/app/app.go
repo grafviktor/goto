@@ -7,7 +7,6 @@ import (
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui"
-	"github.com/grafviktor/goto/internal/ui/theme"
 	"github.com/grafviktor/goto/internal/version"
 )
 
@@ -44,7 +43,7 @@ func startUI(st *state.State) error {
 	}()
 
 	// Initialize themes
-	theme.Initialize(st.Theme, st.AppHome, st.Logger)
+	// theme.Initialize(st.Theme, st.AppHome, st.Logger)
 
 	// Run user interface and block
 	err = ui.Start(st.Context, str, st)

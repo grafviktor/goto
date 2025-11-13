@@ -12,6 +12,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
+	"github.com/grafviktor/goto/internal/ui/theme"
 	"github.com/grafviktor/goto/internal/utils"
 	"github.com/grafviktor/goto/internal/version"
 )
@@ -92,13 +93,15 @@ func Initialize(ctx context.Context,
 		}
 
 		err = st.readFromFile()
-		applyConfig(st, cfg)
+		if err == nil {
+			err = applyConfig(st, cfg)
+		}
 	})
 
 	return st, err
 }
 
-func applyConfig(st *State, cfg *config.Configuration) {
+func applyConfig(st *State, cfg *config.Configuration) error {
 	if cfg.DisableFeature != "" {
 		// if disabled feature not equal to ssh config, then ssh config remains enabled
 		st.SSHConfigEnabled = cfg.DisableFeature != config.FeatureSSHConfig
@@ -120,6 +123,16 @@ func applyConfig(st *State, cfg *config.Configuration) {
 	if !utils.StringEmpty(&cfg.SSHConfigFilePath) {
 		st.SSHConfigFilePath = cfg.SSHConfigFilePath
 	}
+
+	if !utils.StringEmpty(&cfg.SetTheme) {
+		theme, err := theme.LoadTheme(st.AppHome, cfg.SetTheme, st.Logger)
+		if err != nil {
+			return err
+		}
+		st.Theme = theme.Name
+	}
+
+	return nil
 }
 
 // Get - returns application state.

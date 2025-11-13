@@ -21,15 +21,15 @@ type loggerInterface interface {
 var currentTheme *Theme
 var defaultThemeName = "default"
 
-func Initialize(themeName string, appHome string, lgr loggerInterface) {
-	lgr.Debug("[MAIN] Load application theme")
-	if utils.StringEmpty(&themeName) {
-		themeName = defaultThemeName
-	}
+// func Initialize(themeName string, appHome string, lgr loggerInterface) {
+// 	lgr.Debug("[MAIN] Load application theme")
+// 	if utils.StringEmpty(&themeName) {
+// 		themeName = defaultThemeName
+// 	}
 
-	appTheme := LoadTheme(appHome, themeName, lgr)
-	lgr.Debug("[MAIN] Use theme: %s", appTheme.Name)
-}
+// 	appTheme := LoadTheme(appHome, themeName, lgr)
+// 	lgr.Debug("[MAIN] Use theme: %s", appTheme.Name)
+// }
 
 // SetTheme sets the current application theme.
 func SetTheme(theme *Theme) {
@@ -45,7 +45,7 @@ func GetTheme() *Theme {
 }
 
 // LoadTheme loads a theme from file or falls back to default.
-func LoadTheme(configDir, themeName string, logger loggerInterface) *Theme {
+func LoadTheme(configDir, themeName string, logger loggerInterface) (*Theme, error) {
 	themeFolder := filepath.Join(configDir, "themes")
 	if !utils.IsFolderExists(themeFolder) {
 		logger.Debug("[MAIN] Themes folder not found. Extract themes to %q", themeFolder)
@@ -53,10 +53,11 @@ func LoadTheme(configDir, themeName string, logger loggerInterface) *Theme {
 		if err != nil {
 			// We cannot extract themes. There is nothing we can do in this case
 			// apart from applying the default theme and return.
-			logger.Error("[MAIN] Cannot extract theme files: %v. Fallback to default theme.", err)
+			// logger.Error("[MAIN] Cannot extract theme files: %v. Fallback to default theme.", err)
+			err = fmt.Errorf("Cannot extract theme files, fallback to default theme, error: %w", err)
 			theme := DefaultTheme()
 			SetTheme(theme)
-			return theme
+			return theme, err
 		}
 	}
 
@@ -65,12 +66,12 @@ func LoadTheme(configDir, themeName string, logger loggerInterface) *Theme {
 
 	theme, err := loadThemeFromFile(themeFile)
 	if err != nil {
-		logger.Error("[MAIN] Cannot load theme: %v. Fallback to default theme.", err)
+		err = fmt.Errorf("cannot load theme: %q, fallback to default theme, error: %w", themeName, err)
 		theme = DefaultTheme()
 	}
 
 	SetTheme(theme)
-	return theme
+	return theme, err
 }
 
 // loadThemeFromFile loads a theme from a JSON file.
