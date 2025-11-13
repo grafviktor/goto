@@ -52,7 +52,7 @@ func TestSSHConfigFile_GetAll(t *testing.T) {
 	s := &SSHConfigFile{
 		fileLexer:  &mockSSHLexer{},
 		fileParser: &mockSSHParser{hosts: mockHosts},
-		appConfig:  &mockAppConfig,
+		appState:   &mockAppConfig,
 	}
 	hosts, err := s.GetAll()
 	require.NoError(t, err)
@@ -82,7 +82,7 @@ func TestSSHConfigFile_Get(t *testing.T) {
 	s := &SSHConfigFile{
 		fileLexer:  &mockSSHLexer{},
 		fileParser: &mockSSHParser{hosts: mockHosts},
-		appConfig:  &mockAppConfig,
+		appState:   &mockAppConfig,
 	}
 	_, _ = s.GetAll()
 	h, err := s.Get(1)

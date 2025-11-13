@@ -283,7 +283,7 @@ func (m *MainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) te
 	m.logger.Debug("[EXEC] Copy ssh-key '%s.pub' to host '%s'", identityFile, hostname)
 	if sshconfig.IsUserDefinedPath() {
 		m.logger.Warn("[EXEC] copy ssh key when alternative ssh config file is used: %q. ssh config file is ignored.",
-			m.appState.ApplicationConfig.SSHConfigFilePath)
+			m.appState.SSHConfigFilePath)
 	}
 	process := utils.BuildProcessInterceptStdAll(msg.Host.CmdSSHCopyID())
 	m.logger.Info("[EXEC] Run process: '%s'", process.String())

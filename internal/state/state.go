@@ -12,6 +12,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
+	"github.com/grafviktor/goto/internal/utils"
 	"github.com/grafviktor/goto/internal/version"
 )
 
@@ -34,7 +35,7 @@ type Once interface {
 }
 
 var (
-	appState  *State
+	st        *State
 	once      Once = &sync.Once{}
 	stateFile      = "state.yaml"
 )
@@ -60,47 +61,75 @@ type State struct {
 	// SSHConfigEnabled is a part of ApplicationState, not user config, because it is a feature flag
 	// which is persisted across application restarts. In other words, once defined, it will be
 	// persisted in the state.yaml file and will be used in the next application run.
-	SSHConfigEnabled  bool                  `yaml:"enable_ssh_config"`
-	Theme             string                `yaml:"theme,omitempty"`
-	ApplicationConfig *config.Configuration `yaml:"-"`
-	Context           context.Context       `yaml:"-"`
+	SSHConfigEnabled bool   `yaml:"enable_ssh_config"`
+	Theme            string `yaml:"theme,omitempty"`
+	// ApplicationConfig *config.Configuration `yaml:"-"`
+	Context                    context.Context `yaml:"-"`
+	AppHome                    string
+	LogLevel                   string
+	SSHConfigFilePath          string
+	AppMode                    config.AppMode
+	IsUserDefinedSSHConfigPath bool
 }
 
 // Initialize - creates application state.
-func Initialize(appContext context.Context,
-	appConfig *config.Configuration,
-	fileLogger loggerInterface,
+func Initialize(ctx context.Context,
+	cfg *config.Configuration,
+	lg loggerInterface,
 ) (*State, error) {
 	var err error
 
 	once.Do(func() {
-		fileLogger.Debug("[APPSTATE] Create application state")
-		appState = &State{
-			appStateFilePath:  path.Join(appConfig.AppHome, stateFile),
-			Logger:            fileLogger,
-			Group:             "",
-			SSHConfigEnabled:  true,
-			Theme:             appConfig.SetTheme,
-			ApplicationConfig: appConfig,
-			Context:           appContext,
+		lg.Debug("[APPSTATE] Create application state")
+		st = &State{
+			AppMode:          cfg.AppMode,
+			AppHome:          cfg.AppHome,
+			appStateFilePath: path.Join(cfg.AppHome, stateFile),
+			Context:          ctx,
+			Logger:           lg,
+			LogLevel:         cfg.LogLevel,
+			SSHConfigEnabled: true,
 		}
 
-		// If we cannot read previously created application state, that's fine - we can continue execution.
-		// TODO: Probably we should receive all parts from application configuration instead of reading from file.
-		err = appState.readFromFile()
+		err = st.readFromFile()
+		applyConfig(st, cfg)
 	})
 
-	return appState, err
+	return st, err
+}
+
+func applyConfig(st *State, cfg *config.Configuration) {
+	if cfg.DisableFeature != "" {
+		// if disabled feature not equal to ssh config, then ssh config remains enabled
+		st.SSHConfigEnabled = cfg.DisableFeature != config.FeatureSSHConfig
+	}
+
+	if cfg.EnableFeature != "" {
+		// if enabled feature equal to ssh config, then ssh config becomes enabled
+		st.SSHConfigEnabled = cfg.EnableFeature == config.FeatureSSHConfig
+	}
+
+	if !utils.StringEmpty(&cfg.SSHConfigFilePath) {
+		st.IsUserDefinedSSHConfigPath = true
+	}
+
+	if !utils.StringEmpty(&cfg.SetTheme) {
+		st.Theme = cfg.SetTheme
+	}
+
+	if !utils.StringEmpty(&cfg.SSHConfigFilePath) {
+		st.SSHConfigFilePath = cfg.SSHConfigFilePath
+	}
 }
 
 // Get - returns application state.
 func Get() *State {
-	return appState
+	return st
 }
 
 // IsInitialized - checks if the application state is initialized.
 func IsInitialized() bool {
-	return appState != nil
+	return st != nil
 }
 
 func (as *State) readFromFile() error {
@@ -141,11 +170,11 @@ func (as *State) Persist() error {
 }
 
 func (as *State) printConfig() {
-	fmt.Printf("App home:           %s\n", as.ApplicationConfig.AppHome)
-	fmt.Printf("Log level:          %s\n", as.ApplicationConfig.LogLevel)
+	fmt.Printf("App home:           %s\n", as.AppHome)
+	fmt.Printf("Log level:          %s\n", as.LogLevel)
 	if as.SSHConfigEnabled {
 		fmt.Printf("SSH config enabled: %t\n", as.SSHConfigEnabled)
-		fmt.Printf("SSH config path:    %s\n", as.ApplicationConfig.SSHConfigFilePath)
+		fmt.Printf("SSH config path:    %s\n", as.SSHConfigFilePath)
 	}
 }
 
@@ -154,4 +183,11 @@ func (as *State) PrintConfig() {
 	version.Print()
 	fmt.Println()
 	as.printConfig()
+}
+
+func (as *State) LogDetails(logger loggerInterface) {
+	logger.Info("[CONFIG] Set application home folder to %q\n", as.AppHome)
+	logger.Info("[CONFIG] Set application log level to %q\n", as.LogLevel)
+	logger.Info("[CONFIG] SSH config enabled: %t\n", as.SSHConfigEnabled)
+	logger.Info("[CONFIG] Set SSH config path to %q\n", as.SSHConfigFilePath)
 }

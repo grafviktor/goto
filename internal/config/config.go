@@ -16,7 +16,7 @@ import (
 
 const (
 	appName          = "goto"
-	featureSSHConfig = "ssh_config"
+	FeatureSSHConfig = "ssh_config"
 )
 
 type loggerInterface interface {
@@ -28,17 +28,16 @@ type loggerInterface interface {
 
 // Configuration structs contains user-definable parameters.
 type Configuration struct {
-	AppName                          string
-	AppHome                          string `env:"GG_HOME"`
-	LogLevel                         string `env:"GG_LOG_LEVEL"            envDefault:"info"`
-	SSHConfigFilePath                string `env:"GG_SSH_CONFIG_FILE_PATH"`
-	IsSSHConfigFilePathDefinedByUser bool
-	DisplayVersionAndExit            bool
-	EnableFeature                    FeatureFlag
-	DisableFeature                   FeatureFlag
-	SetTheme                         string
-	SetSSHConfigEnabled              bool
-	AppMode                          AppMode
+	AppMode               AppMode
+	AppName               string
+	DisableFeature        FeatureFlag
+	DisplayVersionAndExit bool
+	EnableFeature         FeatureFlag
+	SetSSHConfigEnabled   bool
+	SetTheme              string
+	AppHome               string `env:"GG_HOME"`
+	LogLevel              string `env:"GG_LOG_LEVEL"            envDefault:"info"`
+	SSHConfigFilePath     string `env:"GG_SSH_CONFIG_FILE_PATH"`
 }
 
 func Initialize() (*Configuration, string, error) {
@@ -73,7 +72,7 @@ func parseEnvironmentVariables() (*Configuration, error) {
 
 // parseCommandLineFlags parses command line flags and returns the configuration.
 func parseCommandLineFlags(envConfig *Configuration) (*Configuration, string, error) {
-	cmdConfig := &Configuration{}
+	cmdConfig := &Configuration{AppMode: AppModeType.StartUI}
 
 	// Command line parameters have the highest precedence
 	flag.BoolVar(&cmdConfig.DisplayVersionAndExit, "v", false, "Display application details")
@@ -119,7 +118,6 @@ func setConfigDefaults(config *Configuration) (*Configuration, error) {
 
 	// Set ssh config file path
 	config.AppName = appName
-	config.IsSSHConfigFilePathDefinedByUser = !utils.StringEmpty(&config.SSHConfigFilePath)
 	config.SSHConfigFilePath, err = utils.SSHConfigFilePath(config.SSHConfigFilePath)
 	if err != nil {
 		return config, err
@@ -137,9 +135,9 @@ func handleDisplayVersion(config *Configuration) string {
 func handleFeatureToggle(config *Configuration, featureName string, enable bool) string {
 	config.AppMode = AppModeType.HandleParam
 	if enable {
-		config.SetSSHConfigEnabled = featureName == featureSSHConfig
+		config.SetSSHConfigEnabled = featureName == FeatureSSHConfig
 	} else {
-		config.SetSSHConfigEnabled = featureName != featureSSHConfig
+		config.SetSSHConfigEnabled = featureName != FeatureSSHConfig
 	}
 
 	action := "Disable"
@@ -183,11 +181,3 @@ func handleSetTheme(config *Configuration, themeName string) (string, error) {
 // 		return false
 // 	}
 // }
-
-func (config *Configuration) LogDetails(logger loggerInterface) {
-	logger.Info("[CONFIG] Set application home folder to %q\n", config.AppHome)
-	logger.Info("[CONFIG] Set application log level to %q\n", config.LogLevel)
-	logger.Info("[CONFIG] Enabled features: %q\n", config.EnableFeature)
-	logger.Info("[CONFIG] Disabled features: %q\n", config.DisableFeature)
-	logger.Info("[CONFIG] Set SSH config path to %q\n", config.SSHConfigFilePath)
-}

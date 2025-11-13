@@ -8,9 +8,9 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
+	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage/sshconfig"
 )
 
@@ -34,22 +34,22 @@ type SSHConfigFile struct {
 	fileLexer     sshLexer
 	fileParser    sshParser
 	innerStorage  map[int]model.Host
-	appConfig     *config.Configuration
+	appState      *state.State
 	sshConfigCopy *os.File
 }
 
 // newSSHConfigStorage - constructs new SSHStorage.
 func newSSHConfigStorage(
 	_ context.Context,
-	appConfig *config.Configuration,
+	st *state.State,
 	logger iLogger,
 ) *SSHConfigFile {
-	lexer := sshconfig.NewFileLexer(appConfig.SSHConfigFilePath, logger)
+	lexer := sshconfig.NewFileLexer(st.SSHConfigFilePath, logger)
 	parser := sshconfig.NewParser(lexer, logger)
 	return &SSHConfigFile{
 		fileLexer:  lexer,
 		fileParser: parser,
-		appConfig:  appConfig,
+		appState:   st,
 	}
 }
 
@@ -122,7 +122,7 @@ func (s *SSHConfigFile) createSSHConfigCopy() error {
 }
 
 func (s *SSHConfigFile) updateApplicationState() {
-	s.appConfig.SSHConfigFilePath = s.sshConfigCopy.Name()
+	s.appState.SSHConfigFilePath = s.sshConfigCopy.Name()
 }
 
 func (s *SSHConfigFile) Close() {

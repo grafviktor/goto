@@ -16,10 +16,10 @@ func Start(st *state.State) error {
 	st.Logger.Debug("[APP] Parameters: %+v", os.Args[1:])
 
 	version.LogDetails(st.Logger)
-	st.ApplicationConfig.LogDetails(st.Logger)
+	st.LogDetails(st.Logger)
 
 	var err error
-	switch st.ApplicationConfig.AppMode {
+	switch st.AppMode {
 	case config.AppModeType.StartUI:
 		err = startUI(st)
 	case config.AppModeType.DisplayInfo:
@@ -33,7 +33,7 @@ func Start(st *state.State) error {
 
 func startUI(st *state.State) error {
 	// Init storage
-	str, err := storage.Initialize(st.Context, st.ApplicationConfig, st.Logger)
+	str, err := storage.Initialize(st.Context, st, st.Logger)
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func startUI(st *state.State) error {
 	}()
 
 	// Initialize themes
-	theme.Initialize(st.Theme, st.ApplicationConfig.AppHome, st.Logger)
+	theme.Initialize(st.Theme, st.AppHome, st.Logger)
 
 	// Run user interface and block
 	err = ui.Start(st.Context, str, st)
