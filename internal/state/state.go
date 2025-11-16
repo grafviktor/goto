@@ -15,6 +15,7 @@ import (
 	"github.com/grafviktor/goto/internal/ui/theme"
 	"github.com/grafviktor/goto/internal/utils"
 	"github.com/grafviktor/goto/internal/version"
+	"github.com/samber/lo"
 )
 
 type view int
@@ -51,88 +52,21 @@ type loggerInterface interface {
 
 // State stores application state.
 type State struct {
-	Selected         int `yaml:"selected"`
-	appStateFilePath string
-	Logger           loggerInterface       `yaml:"-"`
-	CurrentView      view                  `yaml:"-"`
-	Width            int                   `yaml:"-"`
-	Height           int                   `yaml:"-"`
-	ScreenLayout     constant.ScreenLayout `yaml:"screenLayout,omitempty"`
-	Group            string                `yaml:"group,omitempty"`
-	// SSHConfigEnabled is a part of ApplicationState, not user config, because it is a feature flag
-	// which is persisted across application restarts. In other words, once defined, it will be
-	// persisted in the state.yaml file and will be used in the next application run.
-	SSHConfigEnabled bool   `yaml:"enable_ssh_config"`
-	Theme            string `yaml:"theme,omitempty"`
-	// ApplicationConfig *config.Configuration `yaml:"-"`
-	Context                    context.Context `yaml:"-"`
-	AppHome                    string
-	LogLevel                   string
-	SSHConfigFilePath          string
-	AppMode                    config.AppMode
-	IsUserDefinedSSHConfigPath bool
-}
-
-// Initialize - creates application state.
-func Initialize(ctx context.Context,
-	cfg *config.Configuration,
-	lg loggerInterface,
-) (*State, error) {
-	var err error
-
-	once.Do(func() {
-		lg.Debug("[APPSTATE] Create application state")
-		st = &State{
-			AppMode:          cfg.AppMode,
-			AppHome:          cfg.AppHome,
-			appStateFilePath: path.Join(cfg.AppHome, stateFile),
-			Context:          ctx,
-			Logger:           lg,
-			LogLevel:         cfg.LogLevel,
-			SSHConfigEnabled: true,
-		}
-
-		err = st.readFromFile()
-		if err == nil {
-			err = applyConfig(st, cfg)
-		}
-	})
-
-	return st, err
-}
-
-func applyConfig(st *State, cfg *config.Configuration) error {
-	if cfg.DisableFeature != "" {
-		// if disabled feature not equal to ssh config, then ssh config remains enabled
-		st.SSHConfigEnabled = cfg.DisableFeature != config.FeatureSSHConfig
-	}
-
-	if cfg.EnableFeature != "" {
-		// if enabled feature equal to ssh config, then ssh config becomes enabled
-		st.SSHConfigEnabled = cfg.EnableFeature == config.FeatureSSHConfig
-	}
-
-	if !utils.StringEmpty(&cfg.SSHConfigFilePath) {
-		st.IsUserDefinedSSHConfigPath = true
-	}
-
-	if !utils.StringEmpty(&cfg.SetTheme) {
-		st.Theme = cfg.SetTheme
-	}
-
-	if !utils.StringEmpty(&cfg.SSHConfigFilePath) {
-		st.SSHConfigFilePath = cfg.SSHConfigFilePath
-	}
-
-	if !utils.StringEmpty(&cfg.SetTheme) {
-		theme, err := theme.LoadTheme(st.AppHome, cfg.SetTheme, st.Logger)
-		if err != nil {
-			return err
-		}
-		st.Theme = theme.Name
-	}
-
-	return nil
+	AppHome                    string                `yaml:"-"`
+	AppMode                    config.AppMode        `yaml:"-"`
+	Context                    context.Context       `yaml:"-"`
+	CurrentView                view                  `yaml:"-"`
+	Group                      string                `yaml:"group,omitempty"`
+	Height                     int                   `yaml:"-"`
+	IsUserDefinedSSHConfigPath bool                  `yaml:"-"`
+	Logger                     loggerInterface       `yaml:"-"`
+	LogLevel                   string                `yaml:"-"`
+	ScreenLayout               constant.ScreenLayout `yaml:"screen_layout,omitempty"`
+	Selected                   int                   `yaml:"selected"`
+	SSHConfigEnabled           bool                  `yaml:"enable_ssh_config"`
+	SSHConfigFilePath          string                `yaml:"-"`
+	Theme                      string                `yaml:"theme,omitempty"`
+	Width                      int                   `yaml:"-"`
 }
 
 // Get - returns application state.
@@ -145,35 +79,139 @@ func IsInitialized() bool {
 	return st != nil
 }
 
-func (as *State) readFromFile() error {
-	as.Logger.Debug("[APPSTATE] Read application state from: %q", as.appStateFilePath)
-	fileData, err := os.ReadFile(as.appStateFilePath)
-	if err != nil {
-		as.Logger.Info("[APPSTATE] Can't read application state from file '%v'", err)
-		return err
+// Initialize - creates application state.
+func Initialize(ctx context.Context,
+	cfg *config.Configuration,
+	lg loggerInterface,
+) (*State, error) {
+	var err error
+
+	once.Do(func() {
+		lg.Debug("[APPSTATE] Create application state")
+
+		// Cannot take this value from config because:
+		// 1. We must distinguish between user-defined and default paths
+		// 2. If default path is not exist, we must ingore this error(replicate what ssh does)
+		// 3. If custom path is provided, but not exist, we must close the app with error
+		// Probably we should not be too smart here and always ignore the error.
+		var defaultSSHConfigPath string
+		defaultSSHConfigPath, err = utils.SSHConfigDefaultFilePath()
+		if err != nil {
+			lg.Warn("[APPSTATE] Cannot determine default SSH config file path: %v.", err)
+		}
+
+		// Set default values
+		st = &State{
+			AppMode:           cfg.AppMode,
+			AppHome:           cfg.AppHome,
+			LogLevel:          cfg.LogLevel,
+			Context:           ctx,
+			Logger:            lg,
+			SSHConfigFilePath: defaultSSHConfigPath,
+		}
+
+		// Read state from file
+		st.readFromFile()
+		// Apply configuration
+		err = st.applyConfig(cfg)
+	})
+
+	return st, err
+}
+
+func (as *State) readFromFile() {
+	var loadedState struct {
+		State
+		// Little hack - i want null values to be distinguishable from zero values
+		ScreenLayout     *string `yaml:"screen_layout,omitempty"`
+		SSHConfigEnabled *bool   `yaml:"enable_ssh_config"`
 	}
 
-	err = yaml.Unmarshal(fileData, as)
+	appStateFilePath := path.Join(as.AppHome, stateFile)
+	as.Logger.Debug("[APPSTATE] Read application state from: %q", appStateFilePath)
+	fileData, err := os.ReadFile(appStateFilePath)
+	if err != nil {
+		as.Logger.Error("[APPSTATE] Can't read application state from file '%v'", err)
+	}
+
+	err = yaml.Unmarshal(fileData, &loadedState)
 	if err != nil {
 		as.Logger.Error("[APPSTATE] Can't parse application state loaded from file '%v'", err)
-		return err
+	}
+
+	as.Selected = loadedState.Selected
+	as.Theme = loadedState.Theme
+	as.Group = loadedState.Group
+
+	if loadedState.ScreenLayout == nil {
+		as.ScreenLayout = constant.ScreenLayoutDescription
+	} else {
+		as.ScreenLayout = constant.ScreenLayout(*loadedState.ScreenLayout)
+	}
+
+	if loadedState.SSHConfigEnabled == nil {
+		// If there is no value for ssh config option, then we enable it by default
+		as.SSHConfigEnabled = true
+	} else {
+		as.SSHConfigEnabled = *loadedState.SSHConfigEnabled
 	}
 
 	as.Logger.Debug("[APPSTATE] Screen layout: '%v'. Focused host id: '%v'", as.ScreenLayout, as.Selected)
+}
+
+func (st *State) applyConfig(cfg *config.Configuration) error {
+	if !utils.StringEmpty(&cfg.LogLevel) {
+		st.LogLevel = cfg.LogLevel
+	}
+
+	if cfg.DisableFeature != "" {
+		// if disabled feature not equal to ssh config, then ssh config remains enabled
+		st.SSHConfigEnabled = cfg.DisableFeature != config.FeatureSSHConfig
+	}
+
+	if cfg.EnableFeature != "" {
+		// if enabled feature equal to ssh config, then ssh config becomes enabled
+		st.SSHConfigEnabled = cfg.EnableFeature == config.FeatureSSHConfig
+	}
+
+	if !utils.StringEmpty(&cfg.SSHConfigFilePath) {
+		userDefinedPath, err := utils.SSHConfigFilePath(cfg.SSHConfigFilePath)
+		if err != nil {
+			return fmt.Errorf("cannot set ssh config file path: %w", err)
+		}
+		st.SSHConfigFilePath = userDefinedPath
+		st.IsUserDefinedSSHConfigPath = true
+	}
+
+	if !utils.StringEmpty(&cfg.SetTheme) {
+		st.Theme = cfg.SetTheme
+	}
+
+	if !utils.StringEmpty(&cfg.SSHConfigFilePath) {
+		st.SSHConfigFilePath = cfg.SSHConfigFilePath
+	}
+
+	if !utils.StringEmpty(&cfg.SetTheme) {
+		installedThemes := theme.ListInstalled(cfg.AppHome, st.Logger)
+		if !lo.Contains(installedThemes, cfg.SetTheme) {
+			return fmt.Errorf("theme %q is not available, installed themes: %v", cfg.SetTheme, installedThemes)
+		}
+	}
 
 	return nil
 }
 
 // Persist saves app state to disk.
 func (as *State) Persist() error {
-	as.Logger.Debug("[APPSTATE] Persist application state to file: %q", as.appStateFilePath)
+	appStateFilePath := path.Join(as.AppHome, stateFile)
+	as.Logger.Debug("[APPSTATE] Persist application state to file: %q", appStateFilePath)
 	result, err := yaml.Marshal(as)
 	if err != nil {
 		as.Logger.Error("[APPSTATE] Cannot marshall application state. %v", err)
 		return err
 	}
 
-	err = os.WriteFile(as.appStateFilePath, result, 0o600)
+	err = os.WriteFile(appStateFilePath, result, 0o600)
 	if err != nil {
 		as.Logger.Error("[APPSTATE] Cannot save application state. %v", err)
 		return err
@@ -182,20 +220,16 @@ func (as *State) Persist() error {
 	return nil
 }
 
-func (as *State) printConfig() {
-	fmt.Printf("App home:           %s\n", as.AppHome)
-	fmt.Printf("Log level:          %s\n", as.LogLevel)
-	if as.SSHConfigEnabled {
-		fmt.Printf("SSH config enabled: %t\n", as.SSHConfigEnabled)
-		fmt.Printf("SSH config path:    %s\n", as.SSHConfigFilePath)
-	}
-}
-
 // PrintConfig outputs user-definable parameters in the console.
 func (as *State) PrintConfig() {
 	version.Print()
 	fmt.Println()
-	as.printConfig()
+	fmt.Printf("App home:           %s\n", as.AppHome)
+	fmt.Printf("Log level:          %s\n", as.LogLevel)
+	fmt.Printf("SSH config enabled: %t\n", as.SSHConfigEnabled)
+	if as.SSHConfigEnabled {
+		fmt.Printf("SSH config path:    %s\n", as.SSHConfigFilePath)
+	}
 }
 
 func (as *State) LogDetails(logger loggerInterface) {

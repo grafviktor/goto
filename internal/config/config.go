@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/caarlos0/env/v10"
-
 	"github.com/grafviktor/goto/internal/utils"
 )
 
@@ -16,13 +15,6 @@ const (
 	appName          = "goto"
 	FeatureSSHConfig = "ssh_config"
 )
-
-type loggerInterface interface {
-	Info(format string, args ...any)
-	Error(format string, args ...any)
-	Debug(format string, args ...any)
-	Close()
-}
 
 // Configuration structs contains user-definable parameters.
 type Configuration struct {
@@ -38,23 +30,23 @@ type Configuration struct {
 	SSHConfigFilePath     string `env:"GG_SSH_CONFIG_FILE_PATH"`
 }
 
-func Initialize() (*Configuration, string, error) {
+func Initialize() (*Configuration, error) {
 	envConfig, err := parseEnvironmentVariables()
 	if err != nil {
-		return envConfig, "", fmt.Errorf("failed to parse environment variables: %w", err)
+		return envConfig, fmt.Errorf("failed to parse environment variables: %w", err)
 	}
 
-	cmdConfig, status, err := parseCommandLineFlags(envConfig)
+	cmdConfig, err := parseCommandLineFlags(envConfig)
 	if err != nil {
-		return envConfig, "", err
+		return envConfig, err
 	}
 
 	appConfig, err := setConfigDefaults(cmdConfig)
 	if err != nil {
-		return envConfig, "", fmt.Errorf("failed to set configuration defaults: %w", err)
+		return envConfig, fmt.Errorf("failed to set configuration defaults: %w", err)
 	}
 
-	return appConfig, status, nil
+	return appConfig, nil
 }
 
 // parseEnvironmentConfig parses environment configuration.
@@ -69,7 +61,7 @@ func parseEnvironmentVariables() (*Configuration, error) {
 }
 
 // parseCommandLineFlags parses command line flags and returns the configuration.
-func parseCommandLineFlags(envConfig *Configuration) (*Configuration, string, error) {
+func parseCommandLineFlags(envConfig *Configuration) (*Configuration, error) {
 	cmdConfig := &Configuration{AppMode: AppModeType.StartUI}
 
 	// Command line parameters have the highest precedence
@@ -96,29 +88,29 @@ func parseCommandLineFlags(envConfig *Configuration) (*Configuration, string, er
 	flag.Parse()
 
 	var err error
-	var status string
 	switch {
 	case cmdConfig.DisplayVersionAndExit:
 		handleDisplayVersion(cmdConfig)
 	case cmdConfig.EnableFeature != "":
-		status = handleFeatureToggle(cmdConfig, cmdConfig.EnableFeature.String(), true)
+		fmt.Printf("[MAIN] Enable feature: %q\n", cmdConfig.EnableFeature.String())
+		handleFeatureToggle(cmdConfig, cmdConfig.EnableFeature.String(), true)
 	case cmdConfig.DisableFeature != "":
-		status = handleFeatureToggle(cmdConfig, cmdConfig.DisableFeature.String(), false)
+		fmt.Printf("[MAIN] Disable feature: %q\n", cmdConfig.DisableFeature.String())
+		handleFeatureToggle(cmdConfig, cmdConfig.DisableFeature.String(), false)
 	case cmdConfig.SetTheme != "":
+		fmt.Printf("[MAIN] Set theme to: %q\n", cmdConfig.SetTheme)
 		cmdConfig.AppMode = AppModeType.HandleParam
 	}
 
-	return cmdConfig, status, err
+	return cmdConfig, err
 }
 
 func setConfigDefaults(config *Configuration) (*Configuration, error) {
 	var err error
-
-	// Set ssh config file path
 	config.AppName = appName
-	config.SSHConfigFilePath, err = utils.SSHConfigFilePath(config.SSHConfigFilePath)
+	config.AppHome, err = utils.AppDir(appName, config.AppHome)
 	if err != nil {
-		return config, err
+		log.Printf("[MAIN] Application home folder error: %v", err)
 	}
 
 	return config, nil
@@ -138,13 +130,13 @@ func handleFeatureToggle(config *Configuration, featureName string, enable bool)
 		config.SetSSHConfigEnabled = featureName != FeatureSSHConfig
 	}
 
-	action := "Disable"
-	if enable {
-		action = "Enable"
-	}
+	// action := "Disable"
+	// if enable {
+	// 	action = "Enable"
+	// }
 
-	status := fmt.Sprintf("%s feature %q and exit", action, featureName)
-	log.Println(status)
+	// status := fmt.Sprintf("%s feature %q and exit", action, featureName)
+	// log.Println(status)
 
-	return status
+	return ""
 }

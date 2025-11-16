@@ -12,14 +12,14 @@ import (
 
 func TestSetTheme(t *testing.T) {
 	require.Nil(t, currentTheme)
-	SetTheme(DefaultTheme())
+	Set(DefaultTheme())
 	require.Equal(t, "default", currentTheme.Name)
 	cleanup()
 }
 
 func TestGetTheme(t *testing.T) {
 	require.Nil(t, currentTheme)
-	theme := GetTheme()
+	theme := Get()
 	require.Equal(t, "default", theme.Name)
 	cleanup()
 }
@@ -27,7 +27,7 @@ func TestGetTheme(t *testing.T) {
 func TestLoadTheme_ThemesFolderNotExists(t *testing.T) {
 	require.Nil(t, currentTheme)
 	tempDir := t.TempDir()
-	theme := LoadTheme(tempDir, "nord", &mocklogger.Logger{})
+	theme := Load(tempDir, "nord", &mocklogger.Logger{})
 	require.FileExists(t, path.Join(tempDir, "themes", "nord.json"))
 	require.FileExists(t, path.Join(tempDir, "themes", "default.json"))
 	require.FileExists(t, path.Join(tempDir, "themes", "solarized-dark.json"))
@@ -43,7 +43,7 @@ func TestLoadTheme_ThemesFolderNotExistsAndCannotCreate(t *testing.T) {
 	require.NoError(t, err)
 	defer f.Close() // Required for Windows, otherwise, it won't be able to delete the test temp folder
 
-	theme := LoadTheme(tempDir, "nord", &mocklogger.Logger{})
+	theme := Load(tempDir, "nord", &mocklogger.Logger{})
 	require.NoFileExists(t, path.Join(tempDir, "themes", "nord.json"))
 	require.NoFileExists(t, path.Join(tempDir, "themes", "default.json"))
 	require.NoFileExists(t, path.Join(tempDir, "themes", "solarized-dark.json"))
@@ -54,7 +54,7 @@ func TestLoadTheme_ThemesFolderNotExistsAndCannotCreate(t *testing.T) {
 func TestLoadTheme_UnknownTheme(t *testing.T) {
 	require.Nil(t, currentTheme)
 	tempDir := t.TempDir()
-	theme := LoadTheme(tempDir, "no-such-theme", &mocklogger.Logger{})
+	theme := Load(tempDir, "no-such-theme", &mocklogger.Logger{})
 	require.FileExists(t, path.Join(tempDir, "themes", "nord.json"))
 	require.FileExists(t, path.Join(tempDir, "themes", "default.json"))
 	require.FileExists(t, path.Join(tempDir, "themes", "solarized-dark.json"))

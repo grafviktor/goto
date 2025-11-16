@@ -19,66 +19,45 @@ type loggerInterface interface {
 }
 
 var currentTheme *Theme
-var defaultThemeName = "default"
 
-// func Initialize(themeName string, appHome string, lgr loggerInterface) {
-// 	lgr.Debug("[MAIN] Load application theme")
-// 	if utils.StringEmpty(&themeName) {
-// 		themeName = defaultThemeName
-// 	}
-
-// 	appTheme := LoadTheme(appHome, themeName, lgr)
-// 	lgr.Debug("[MAIN] Use theme: %s", appTheme.Name)
-// }
-
-// SetTheme sets the current application theme.
-func SetTheme(theme *Theme) {
+// Set sets the current application theme.
+func Set(theme *Theme) {
 	currentTheme = theme
 }
 
-// GetTheme returns the current application theme.
-func GetTheme() *Theme {
+// Get returns the current application theme.
+func Get() *Theme {
 	if currentTheme == nil {
 		currentTheme = DefaultTheme()
 	}
 	return currentTheme
 }
 
-// LoadTheme loads a theme from file or falls back to default.
-func LoadTheme(configDir, themeName string, logger loggerInterface) (*Theme, error) {
+// Load loads a theme from file or falls back to default.
+func Load(configDir, themeName string, logger loggerInterface) error {
 	themeFolder := filepath.Join(configDir, "themes")
 	if !utils.IsFolderExists(themeFolder) {
-		logger.Debug("[MAIN] Themes folder not found. Extract themes to %q", themeFolder)
-		err := extractThemeFiles(themeFolder)
-		if err != nil {
-			// We cannot extract themes. There is nothing we can do in this case
-			// apart from applying the default theme and return.
-			// logger.Error("[MAIN] Cannot extract theme files: %v. Fallback to default theme.", err)
-			err = fmt.Errorf("Cannot extract theme files, fallback to default theme, error: %w", err)
-			theme := DefaultTheme()
-			SetTheme(theme)
-			return theme, err
-		}
+		logger.Debug("[THEME] Themes folder not found. Extract themes to %q", themeFolder)
+		extractThemeFiles(themeFolder, logger)
 	}
 
 	themeFile := filepath.Join(themeFolder, themeName+".json")
-	logger.Info("[MAIN] Load theme from %q", themeFile)
-
+	logger.Info("[THEME] Load theme from %q", themeFile)
 	theme, err := loadThemeFromFile(themeFile)
 	if err != nil {
-		err = fmt.Errorf("cannot load theme: %q, fallback to default theme, error: %w", themeName, err)
+		logger.Error("[THEME] Cannot load theme %q: %v. Fallback to default theme.", themeName, err)
 		theme = DefaultTheme()
 	}
 
-	SetTheme(theme)
-	return theme, err
+	Set(theme)
+	return err
 }
 
 // loadThemeFromFile loads a theme from a JSON file.
 func loadThemeFromFile(filePath string) (*Theme, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read theme file: %w", err)
+		return nil, err
 	}
 
 	var theme Theme
@@ -90,25 +69,28 @@ func loadThemeFromFile(filePath string) (*Theme, error) {
 	return &theme, nil
 }
 
-func extractThemeFiles(themesPath string) error {
+func extractThemeFiles(themesPath string, logger loggerInterface) {
 	// 1. Write default theme to disk
 	data, err := json.MarshalIndent(DefaultTheme(), "", "  ")
 	if err != nil {
-		return fmt.Errorf("failed to marshal theme: %w", err)
+		logger.Error("[THEME] Failed to marshal default theme: %v", err)
 	}
+
 	err = saveThemeToFile(data, filepath.Join(themesPath, "default.json"))
 	if err != nil {
-		return fmt.Errorf("failed to save default theme: %w", err)
+		logger.Error("[THEME] Failed to save default theme to %q: %v", filepath.Join(themesPath, "default.json"), err)
 	}
 
 	// 2. Extract embedded themes
 	entries, err := resources.Themes.ReadDir("themes")
 	if err != nil {
-		return err
+		logger.Error("[THEME] Failed to read themes directory: %v", err)
+
 	}
 
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+			logger.Debug("[THEME] Skip non-theme file in embedded filesystem: %q", entry.Name())
 			continue
 		}
 
@@ -117,16 +99,14 @@ func extractThemeFiles(themesPath string) error {
 		embeddedFSPath := path.Join("themes", entry.Name())
 		data, err = resources.Themes.ReadFile(embeddedFSPath)
 		if err != nil {
-			return fmt.Errorf("failed to read embedded theme file: %w", err)
+			logger.Error("[THEME] Failed to read embedded theme file: %v", err)
 		}
 
 		err = saveThemeToFile(data, filepath.Join(themesPath, entry.Name()))
 		if err != nil {
-			return fmt.Errorf("failed to save embedded theme file: %w", err)
+			logger.Error("[THEME] Failed to save embedded theme file to %q: %v", filepath.Join(themesPath, entry.Name()), err)
 		}
 	}
-
-	return nil
 }
 
 func saveThemeToFile(theme []byte, filePath string) error {
@@ -142,30 +122,28 @@ func saveThemeToFile(theme []byte, filePath string) error {
 	return nil
 }
 
-// ListAvailableThemes returns a list of available theme names.
-func ListAvailableThemes(configDir string) ([]string, error) {
+// ListInstalled returns a list of available theme names.
+func ListInstalled(configDir string, logger loggerInterface) []string {
 	themeFolder := filepath.Join(configDir, "themes")
 	if !utils.IsFolderExists(themeFolder) {
-		// logger.Debug("[MAIN] Themes folder not found. Extract themes to %q", themeFolder)
-		err := extractThemeFiles(themeFolder)
-		if err != nil {
-			return nil, err
-		}
+		logger.Debug("[THEME] Themes folder not found. Extract themes to %q", themeFolder)
+		extractThemeFiles(themeFolder, logger)
 	}
 
 	entries, err := os.ReadDir(themeFolder)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read themes directory: %w", err)
+		logger.Error("[THEME] Failed to read themes directory: %v", err)
+		return []string{DefaultTheme().Name}
 	}
 
-	themes := []string{}
-	for _, entry := range entries {
+	themes := make([]string, len(entries))
+	for n, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
 			continue
 		}
 		themeName := strings.TrimSuffix(entry.Name(), ".json")
-		themes = append(themes, themeName)
+		themes[n] = themeName
 	}
 
-	return themes, nil
+	return themes
 }

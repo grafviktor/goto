@@ -31,12 +31,12 @@ func init() {
 
 func main() {
 	// Create application configuration
-	cfg, configUpdateStatus, err := config.Initialize()
+	cfg, err := config.Initialize()
 	if err != nil {
 		log.Fatalf("[MAIN] Error: %v", err)
 	}
 
-	// Create prerequisites
+	// Check prerequisites
 	err = utils.CheckAppRequirements(cfg.AppName, cfg.AppHome)
 	if err != nil {
 		log.Fatalf("[MAIN] Error: %v", err)
@@ -51,22 +51,24 @@ func main() {
 	// Create state
 	st, err := state.Initialize(context.Background(), cfg, lgr)
 	if err != nil {
-		logMessage := fmt.Sprintf("[MAIN] Cannot initialize application state: %v", err)
-		utils.LogCloseAndExit(lgr, constant.APP_EXIT_CODE_ERROR, logMessage)
+		logMessage := fmt.Sprintf("[MAIN] Error: %v", err)
+		fmt.Println(logMessage)
+		utils.LogAndCloseApp(lgr, constant.APP_EXIT_CODE_ERROR, logMessage)
 	}
 
 	// Start application
 	err = app.Start(st)
 	if err != nil {
 		logMessage := fmt.Sprintf("[MAIN] Error: %v", err)
-		utils.LogCloseAndExit(lgr, constant.APP_EXIT_CODE_ERROR, logMessage)
+		fmt.Println(logMessage)
+		utils.LogAndCloseApp(lgr, constant.APP_EXIT_CODE_ERROR, logMessage)
 	}
 
 	lgr.Debug("[MAIN] Save application state")
 	if err = st.Persist(); err != nil {
 		logMessage := fmt.Sprintf("[MAIN] Can't save application state before closing: %v", err)
-		utils.LogCloseAndExit(lgr, constant.APP_EXIT_CODE_ERROR, logMessage)
+		utils.LogAndCloseApp(lgr, constant.APP_EXIT_CODE_ERROR, logMessage)
 	}
 
-	utils.LogCloseAndExit(lgr, constant.APP_EXIT_CODE_SUCCESS, configUpdateStatus)
+	utils.LogAndCloseApp(lgr, constant.APP_EXIT_CODE_SUCCESS, "")
 }

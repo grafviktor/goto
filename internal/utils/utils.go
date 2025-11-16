@@ -102,8 +102,7 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 		}
 
 		if !stat.IsDir() {
-			msg := fmt.Sprintf("%q is not a directory", absolutePath)
-			return "", errors.New(msg)
+			return "", fmt.Errorf("%q is not a directory", absolutePath)
 		}
 
 		return absolutePath, nil
@@ -177,12 +176,12 @@ func FetchFromURL(urlPath string) (io.ReadCloser, error) {
 	client := &http.Client{Timeout: networkResponseTimeout}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch URL %s: %w", urlPath, err)
+		return nil, err
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		_ = resp.Body.Close()
-		return nil, fmt.Errorf("failed to fetch URL %s: status code %d", urlPath, resp.StatusCode)
+		return nil, fmt.Errorf("failed to fetch %s: status code %d", urlPath, resp.StatusCode)
 	}
 
 	return resp.Body, nil
@@ -203,6 +202,11 @@ func SSHConfigFilePath(userDefinedPath string) (string, error) {
 		return absolutePath, nil
 	}
 
+	return SSHConfigDefaultFilePath()
+}
+
+// SSHConfigDefaultFilePath - returns default ssh_config path or error.
+func SSHConfigDefaultFilePath() (string, error) {
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
@@ -374,8 +378,8 @@ type loggerInterface interface {
 	Close()
 }
 
-// LogCloseAndExit logs the close message, closes the logger, and exits with the specified code.
-func LogCloseAndExit(lg loggerInterface, exitCode int, exitReason string) {
+// LogAndCloseApp logs the close message, closes the logger, and exits with the specified code.
+func LogAndCloseApp(lg loggerInterface, exitCode int, exitReason string) {
 	loggingFunc := lo.Ternary(exitCode == constant.APP_EXIT_CODE_SUCCESS, lg.Info, lg.Error)
 	closeMsg := lo.Ternary(exitCode == constant.APP_EXIT_CODE_SUCCESS, logMsgCloseApp, logMsgCloseAppError)
 

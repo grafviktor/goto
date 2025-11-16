@@ -95,7 +95,6 @@ func Test_PersistApplicationState(t *testing.T) {
 
 	// Call the Get function with the temporary directory and mock logger
 	underTest, _ := Initialize(context.TODO(), &config.Configuration{}, &mockLogger)
-	underTest.appStateFilePath = path.Join(tempDir, "state.yaml")
 
 	// Modify the application state
 	underTest.Selected = 42
@@ -124,7 +123,6 @@ func Test_PersistApplicationStateError(t *testing.T) {
 
 	// Call the Get function with the temporary directory and mock logger
 	underTest, _ := Initialize(context.TODO(), &config.Configuration{}, &mockLogger)
-	underTest.appStateFilePath = "non_exitent.yaml"
 
 	// Modify the application state
 	underTest.Selected = 42
@@ -135,18 +133,12 @@ func Test_PersistApplicationStateError(t *testing.T) {
 }
 
 func Test_PrintConfigTo(t *testing.T) {
-	appConfig := config.Configuration{
-		AppHome:           "/tmp/goto",
-		LogLevel:          "debug",
-		SSHConfigFilePath: "/tmp/ssh_config",
-	}
 	app := &State{
-		ApplicationConfig: &appConfig,
-		SSHConfigEnabled:  true,
+		SSHConfigEnabled: true,
 	}
 
 	var buf bytes.Buffer
-	app.printConfig(&buf)
+	app.printConfig()
 	output := buf.String()
 	assert.Contains(t, output, "App home:           /tmp/goto")
 	assert.Contains(t, output, "Log level:          debug")

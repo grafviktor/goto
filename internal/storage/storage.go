@@ -70,7 +70,7 @@ func getStorages(
 	yamlStorage := newYAMLStorage(ctx, st.AppHome, logger)
 	storageMap[yamlStorage.Type()] = yamlStorage
 
-	sshConfigEnabled := state.Get().SSHConfigEnabled
+	sshConfigEnabled := st.SSHConfigEnabled
 	logger.Debug("[STORAGE] SSH config storage enable: '%t'", sshConfigEnabled)
 	if sshConfigEnabled {
 		logger.Info("[STORAGE] Load ssh hosts from ssh config file: %q", st.SSHConfigFilePath)

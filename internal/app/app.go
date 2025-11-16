@@ -7,6 +7,7 @@ import (
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui"
+	"github.com/grafviktor/goto/internal/ui/theme"
 	"github.com/grafviktor/goto/internal/version"
 )
 
@@ -42,8 +43,10 @@ func startUI(st *state.State) error {
 		str.Close()
 	}()
 
-	// Initialize themes
-	// theme.Initialize(st.Theme, st.AppHome, st.Logger)
+	err = theme.Load(st.AppHome, st.Theme, st.Logger)
+	if err != nil {
+		st.Logger.Error("[CONFIG] Cannot load theme %q: %v. Fall back to default theme", st.Theme, err)
+	}
 
 	// Run user interface and block
 	err = ui.Start(st.Context, str, st)
