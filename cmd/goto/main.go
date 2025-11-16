@@ -37,7 +37,7 @@ func main() {
 	}
 
 	// Check prerequisites
-	err = utils.CheckAppRequirements(cfg.AppName, cfg.AppHome)
+	err = utils.CheckAppRequirements(cfg.AppHome)
 	if err != nil {
 		log.Fatalf("[MAIN] Error: %v", err)
 	}

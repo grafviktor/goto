@@ -184,18 +184,11 @@ func (st *State) applyConfig(cfg *config.Configuration) error {
 	}
 
 	if !utils.StringEmpty(&cfg.SetTheme) {
-		st.Theme = cfg.SetTheme
-	}
-
-	if !utils.StringEmpty(&cfg.SSHConfigFilePath) {
-		st.SSHConfigFilePath = cfg.SSHConfigFilePath
-	}
-
-	if !utils.StringEmpty(&cfg.SetTheme) {
 		installedThemes := theme.ListInstalled(cfg.AppHome, st.Logger)
 		if !lo.Contains(installedThemes, cfg.SetTheme) {
 			return fmt.Errorf("theme %q is not available, installed themes: %v", cfg.SetTheme, installedThemes)
 		}
+		st.Theme = cfg.SetTheme
 	}
 
 	return nil

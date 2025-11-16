@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -317,7 +316,7 @@ func IsFolderExists(folderPath string) bool {
 	return true
 }
 
-func CheckAppRequirements(appName, appHome string) error {
+func CheckAppRequirements(appHome string) error {
 	var err error
 
 	// Check if "ssh" utility is in application path
@@ -325,14 +324,10 @@ func CheckAppRequirements(appName, appHome string) error {
 		return fmt.Errorf("ssh utility is not installed or cannot be found in the executable path: %w", err)
 	}
 
-	// Set application home folder path
-	if appHome, err = AppDir(appName, appHome); err != nil {
-		log.Printf("[MAIN] Cannot access application home folder: %v", err)
-
-		err = createAppDirIfNotExists(appHome)
-		if err != nil {
-			return fmt.Errorf("cannot create application home folder: %w", err)
-		}
+	// Create application home folder path
+	err = createAppDirIfNotExists(appHome)
+	if err != nil {
+		return fmt.Errorf("cannot create application home folder: %w", err)
 	}
 
 	return nil
