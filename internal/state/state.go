@@ -122,8 +122,10 @@ func Initialize(ctx context.Context,
 func (as *State) readFromFile() {
 	var loadedState struct {
 		State
-		// Little hack - i want null values to be distinguishable from zero values
-		ScreenLayout     *string `yaml:"screen_layout,omitempty"`
+		// Little hack - we want null values to be distinguishable from
+		// zero values especially for boolean parameters.
+		Theme            *string `yaml:"theme"`
+		ScreenLayout     *string `yaml:"screen_layout"`
 		SSHConfigEnabled *bool   `yaml:"enable_ssh_config"`
 	}
 
@@ -131,17 +133,22 @@ func (as *State) readFromFile() {
 	as.Logger.Debug("[APPSTATE] Read application state from: %q", appStateFilePath)
 	fileData, err := os.ReadFile(appStateFilePath)
 	if err != nil {
-		as.Logger.Error("[APPSTATE] Can't read application state from file '%v'", err)
+		as.Logger.Warn("[APPSTATE] Can't read application state from file. Reason: %v", err)
 	}
 
 	err = yaml.Unmarshal(fileData, &loadedState)
 	if err != nil {
-		as.Logger.Error("[APPSTATE] Can't parse application state loaded from file '%v'", err)
+		as.Logger.Error("[APPSTATE] Can't parse application state loaded from file. Reason: %v", err)
 	}
 
-	as.Selected = loadedState.Selected
-	as.Theme = loadedState.Theme
 	as.Group = loadedState.Group
+	as.Selected = loadedState.Selected
+
+	if loadedState.Theme == nil {
+		as.Theme = theme.DefaultTheme().Name
+	} else {
+		as.Theme = *loadedState.Theme
+	}
 
 	if loadedState.ScreenLayout == nil {
 		as.ScreenLayout = constant.ScreenLayoutDescription

@@ -45,7 +45,7 @@ func startUI(st *state.State) error {
 
 	err = theme.Load(st.AppHome, st.Theme, st.Logger)
 	if err != nil {
-		st.Logger.Error("[CONFIG] Cannot load theme %q: %v. Fall back to default theme", st.Theme, err)
+		st.Logger.Error("[APP] Cannot load theme %q: %v. Fall back to default theme", st.Theme, err)
 	}
 
 	// Run user interface and block

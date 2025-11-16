@@ -14,6 +14,7 @@ import (
 
 type loggerInterface interface {
 	Info(format string, args ...any)
+	Warn(format string, args ...any)
 	Error(format string, args ...any)
 	Debug(format string, args ...any)
 }
@@ -41,11 +42,15 @@ func Load(configDir, themeName string, logger loggerInterface) error {
 		extractThemeFiles(themeFolder, logger)
 	}
 
+	if utils.StringEmpty(&themeName) {
+		logger.Warn("[THEME] Themes not set. Fallback to default theme: %q", DefaultTheme().Name)
+		themeName = DefaultTheme().Name
+	}
+
 	themeFile := filepath.Join(themeFolder, themeName+".json")
 	logger.Info("[THEME] Load theme from %q", themeFile)
 	theme, err := loadThemeFromFile(themeFile)
 	if err != nil {
-		logger.Error("[THEME] Cannot load theme %q: %v. Fallback to default theme.", themeName, err)
 		theme = DefaultTheme()
 	}
 

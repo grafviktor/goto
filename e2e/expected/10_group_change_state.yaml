@@ -1,3 +1,5 @@
-selected: 6
 group: yaml_config
+screen_layout: description
+selected: 6
 enable_ssh_config: true
+theme: default

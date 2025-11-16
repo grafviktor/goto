@@ -1,3 +1,5 @@
-selected: 9
 group: ssh_config
+screen_layout: description
+selected: 9
 enable_ssh_config: true
+theme: default

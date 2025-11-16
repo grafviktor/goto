@@ -14,6 +14,4 @@ Type "network host description"
 Ctrl+S
 Sleep 100ms
 Type "v"
-Type "v"
-Type "v"
 Type "q"

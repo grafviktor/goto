@@ -1,3 +1,4 @@
+screen_layout: group
 selected: 4
-screenLayout: group
 enable_ssh_config: true
+theme: default
