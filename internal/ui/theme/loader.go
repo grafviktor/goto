@@ -141,13 +141,13 @@ func ListInstalled(configDir string, logger loggerInterface) []string {
 		return []string{DefaultTheme().Name}
 	}
 
-	themes := make([]string, len(entries))
-	for n, entry := range entries {
+	themes := make([]string, 0, len(entries))
+	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
 			continue
 		}
 		themeName := strings.TrimSuffix(entry.Name(), ".json")
-		themes[n] = themeName
+		themes = append(themes, themeName)
 	}
 
 	return themes

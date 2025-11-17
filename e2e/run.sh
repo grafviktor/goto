@@ -85,7 +85,15 @@ function check_expected() {
     return 0
 }
 
+TEST_LIST_ALLOWED_LOG_CONTAIN_ERRORS="13_set_theme_not_valid"
+
 function check_log_no_errors() {
+    for test_name in $TEST_LIST_ALLOWED_LOG_CONTAIN_ERRORS; do
+        if [ "$1" == "$test_name" ]; then
+            return 0
+        fi
+    done
+
     # Make sure there are no errors in the application log.
     local test_name="$1"
     local app_log="${TMP_HOME}"/app.log
