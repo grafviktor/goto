@@ -15,12 +15,12 @@ import (
 )
 
 func TestStorage_Initialize_SSHConfigEnabled(t *testing.T) {
-	state.Initialize(context.TODO(), &config.Configuration{}, &mocklogger.Logger{})
-	state.Get().SSHConfigEnabled = true
-	logger := &mocklogger.Logger{}
-	appConfig := config.Configuration{}
+	st, err := state.Initialize(context.TODO(), &config.Configuration{
+		SetSSHConfigEnabled: true,
+	}, &mocklogger.Logger{})
+	require.NoError(t, err, "expected no error on state initialization")
 
-	storage, err := Initialize(context.TODO(), &appConfig, logger)
+	storage, err := Initialize(context.TODO(), st, st.Logger)
 	require.NoError(t, err, "expected no error on storage initialization")
 	require.Len(t, storage.(*combinedStorage).storages, 2, "expected two inner storages")
 	// Not required, but just to verify that not errors when closing storages
@@ -28,12 +28,12 @@ func TestStorage_Initialize_SSHConfigEnabled(t *testing.T) {
 }
 
 func TestStorage_Initialize_SSHConfigDisabled(t *testing.T) {
-	state.Initialize(context.TODO(), &config.Configuration{}, &mocklogger.Logger{})
-	state.Get().SSHConfigEnabled = false
-	logger := &mocklogger.Logger{}
-	appConfig := config.Configuration{}
+	st, err := state.Initialize(context.TODO(), &config.Configuration{
+		SetSSHConfigEnabled: false,
+	}, &mocklogger.Logger{})
+	require.NoError(t, err, "expected no error on state initialization")
 
-	storage, err := Initialize(context.TODO(), &appConfig, logger)
+	storage, err := Initialize(context.TODO(), st, st.Logger)
 	require.NoError(t, err, "expected no error on storage initialization")
 	require.Len(t, storage.(*combinedStorage).storages, 1, "expected one inner storage")
 	// Not required, but just to verify that not errors when closing storages

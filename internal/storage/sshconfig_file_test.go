@@ -10,6 +10,7 @@ import (
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
+	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage/sshconfig"
 	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 )
@@ -34,9 +35,10 @@ func (m *mockSSHParser) Parse() ([]model.Host, error) {
 }
 
 func TestNewSSHConfigStorageLocalFile(t *testing.T) {
-	mockAppConfig := config.Configuration{}
-	mockLogger := mocklogger.Logger{}
-	s := newSSHConfigStorage(context.TODO(), &mockAppConfig, &mockLogger)
+	st, err := state.Initialize(context.TODO(), &config.Configuration{}, &mocklogger.Logger{})
+	require.NoError(t, err)
+
+	s := newSSHConfigStorage(context.TODO(), st, st.Logger)
 	require.NotNil(t, s)
 
 	s.Close()
@@ -48,11 +50,10 @@ func TestSSHConfigFile_GetAll(t *testing.T) {
 		{Title: "host2", Address: "host2.com"},
 	}
 
-	mockAppConfig := config.Configuration{}
+	// mockAppConfig := config.Configuration{}
 	s := &SSHConfigFile{
 		fileLexer:  &mockSSHLexer{},
 		fileParser: &mockSSHParser{hosts: mockHosts},
-		appState:   &mockAppConfig,
 	}
 	hosts, err := s.GetAll()
 	require.NoError(t, err)
@@ -78,12 +79,16 @@ func TestSSHConfigFile_Get(t *testing.T) {
 	mockHosts := []model.Host{
 		{Title: "host1", Address: "host1.com"},
 	}
-	mockAppConfig := config.Configuration{}
+
+	st, err := state.Initialize(context.TODO(), &config.Configuration{}, &mocklogger.Logger{})
+	require.NoError(t, err)
+
 	s := &SSHConfigFile{
 		fileLexer:  &mockSSHLexer{},
 		fileParser: &mockSSHParser{hosts: mockHosts},
-		appState:   &mockAppConfig,
+		appState:   st,
 	}
+
 	_, _ = s.GetAll()
 	h, err := s.Get(1)
 	require.NoError(t, err)

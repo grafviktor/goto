@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"testing"
@@ -132,16 +133,34 @@ func Test_PersistApplicationStateError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func Test_PrintConfigTo(t *testing.T) {
-	app := &State{
-		SSHConfigEnabled: true,
+func Test_PrintConfig(t *testing.T) {
+	state := &State{
+		AppHome:           "/tmp/goto",
+		LogLevel:          "debug",
+		SSHConfigEnabled:  true,
+		SSHConfigFilePath: "/tmp/ssh_config",
 	}
 
+	actualOutput := captureOutput(state.print)
+	assert.Contains(t, actualOutput, "App home:           /tmp/goto")
+	assert.Contains(t, actualOutput, "Log level:          debug")
+	assert.Contains(t, actualOutput, "SSH config enabled: true")
+	assert.Contains(t, actualOutput, "SSH config path:    /tmp/ssh_config")
+}
+
+// captureOutput captures the output of a function and returns it as a string.s
+func captureOutput(f func()) string {
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w //nolint:reassign // For testing purposes
+
+	f()
+
+	w.Close()
+	os.Stdout = oldStdout //nolint:reassign // For testing purposes
+
 	var buf bytes.Buffer
-	app.printConfig()
-	output := buf.String()
-	assert.Contains(t, output, "App home:           /tmp/goto")
-	assert.Contains(t, output, "Log level:          debug")
-	assert.Contains(t, output, "SSH config enabled: true")
-	assert.Contains(t, output, "SSH config path:    /tmp/ssh_config")
+	_, _ = io.Copy(&buf, r)
+
+	return buf.String()
 }

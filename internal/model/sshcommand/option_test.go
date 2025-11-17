@@ -127,8 +127,7 @@ func Test_ConnectCommand(t *testing.T) {
 	// Check that the command uses custom SSH config file path if defined
 	state.Initialize(context.TODO(),
 		&config.Configuration{
-			IsSSHConfigFilePathDefinedByUser: true,
-			SSHConfigFilePath:                "~/.ssh/custom_config",
+			SSHConfigFilePath: "~/.ssh/custom_config",
 		},
 		&mocklogger.Logger{})
 	actual := ConnectCommand(OptionAddress{Value: "example.com"})

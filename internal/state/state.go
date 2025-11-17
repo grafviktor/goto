@@ -222,16 +222,20 @@ func (as *State) Persist() error {
 	return nil
 }
 
-// PrintConfig outputs user-definable parameters in the console.
-func (as *State) PrintConfig() {
-	version.Print()
-	fmt.Println()
+func (as *State) print() {
 	fmt.Printf("App home:           %s\n", as.AppHome)
 	fmt.Printf("Log level:          %s\n", as.LogLevel)
 	fmt.Printf("SSH config enabled: %t\n", as.SSHConfigEnabled)
 	if as.SSHConfigEnabled {
 		fmt.Printf("SSH config path:    %s\n", as.SSHConfigFilePath)
 	}
+}
+
+// PrintConfig outputs user-definable parameters in the console.
+func (as *State) PrintConfig() {
+	version.Print()
+	fmt.Println()
+	as.print()
 }
 
 func (as *State) LogDetails(logger loggerInterface) {
