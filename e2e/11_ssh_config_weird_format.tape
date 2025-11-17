@@ -1,5 +1,4 @@
 Set Shell bash
-Enter
 Type "gg -f temp -s 11_ssh_config_weird_format.config"
 Enter
 Sleep 100ms

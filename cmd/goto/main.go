@@ -51,7 +51,7 @@ func main() {
 	// Create state
 	st, err := state.Initialize(context.Background(), cfg, lgr)
 	if err != nil {
-		logMessage := fmt.Sprintf("[MAIN] Error: %v", err)
+		logMessage := fmt.Sprintf("[CONFIG] Error: %v", err)
 		fmt.Println(logMessage)
 		utils.LogAndCloseApp(lgr, constant.APP_EXIT_CODE_ERROR, logMessage)
 	}

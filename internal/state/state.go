@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"sync"
 
 	"gopkg.in/yaml.v2"
@@ -193,7 +194,8 @@ func (st *State) applyConfig(cfg *config.Configuration) error {
 	if !utils.StringEmpty(&cfg.SetTheme) {
 		installedThemes := theme.ListInstalled(cfg.AppHome, st.Logger)
 		if !lo.Contains(installedThemes, cfg.SetTheme) {
-			return fmt.Errorf("theme %q is not available, installed themes: %v", cfg.SetTheme, installedThemes)
+			installedThemesStr := strings.Join(installedThemes, ", ")
+			return fmt.Errorf("cannot find theme %q, installed themes: %v", cfg.SetTheme, installedThemesStr)
 		}
 		st.Theme = cfg.SetTheme
 	}

@@ -92,13 +92,13 @@ func parseCommandLineFlags(envConfig *Configuration) (*Configuration, error) {
 	case cmdConfig.DisplayVersionAndExit:
 		handleDisplayVersion(cmdConfig)
 	case cmdConfig.EnableFeature != "":
-		fmt.Printf("[MAIN] Enable feature: %q\n", cmdConfig.EnableFeature.String())
+		fmt.Printf("[CONFIG] Enable feature %q\n", cmdConfig.EnableFeature.String())
 		handleFeatureToggle(cmdConfig, cmdConfig.EnableFeature.String(), true)
 	case cmdConfig.DisableFeature != "":
-		fmt.Printf("[MAIN] Disable feature: %q\n", cmdConfig.DisableFeature.String())
+		fmt.Printf("[CONFIG] Disable feature %q\n", cmdConfig.DisableFeature.String())
 		handleFeatureToggle(cmdConfig, cmdConfig.DisableFeature.String(), false)
 	case cmdConfig.SetTheme != "":
-		fmt.Printf("[MAIN] Set theme to: %q\n", cmdConfig.SetTheme)
+		fmt.Printf("[CONFIG] Set theme to %q\n", cmdConfig.SetTheme)
 		cmdConfig.AppMode = AppModeType.HandleParam
 	}
 
@@ -110,33 +110,22 @@ func setConfigDefaults(config *Configuration) (*Configuration, error) {
 	config.AppName = appName
 	config.AppHome, err = utils.AppDir(appName, config.AppHome)
 	if err != nil {
-		log.Printf("[MAIN] Application home folder error: %v", err)
+		log.Printf("[CONFIG] Application home folder error: %v", err)
 	}
 
 	return config, nil
 }
 
-func handleDisplayVersion(config *Configuration) string {
+func handleDisplayVersion(config *Configuration) {
 	config.AppMode = AppModeType.DisplayInfo
-	return "Display version and exit"
 }
 
 // handleFeatureToggle handles enabling or disabling features.
-func handleFeatureToggle(config *Configuration, featureName string, enable bool) string {
+func handleFeatureToggle(config *Configuration, featureName string, enable bool) {
 	config.AppMode = AppModeType.HandleParam
 	if enable {
 		config.SetSSHConfigEnabled = featureName == FeatureSSHConfig
 	} else {
 		config.SetSSHConfigEnabled = featureName != FeatureSSHConfig
 	}
-
-	// action := "Disable"
-	// if enable {
-	// 	action = "Enable"
-	// }
-
-	// status := fmt.Sprintf("%s feature %q and exit", action, featureName)
-	// log.Println(status)
-
-	return ""
 }
