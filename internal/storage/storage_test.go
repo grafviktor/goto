@@ -3,8 +3,6 @@ package storage
 import (
 	"context"
 	"errors"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -32,17 +30,12 @@ func TestStorage_Initialize_SSHConfigEnabled(t *testing.T) {
 }
 
 func TestStorage_Initialize_SSHConfigDisabled(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Write invalid YAML to the file
-	err := os.WriteFile(filepath.Join(tmpDir, "state.yaml"), []byte("enable_ssh_config: false"), 0o600)
-	require.NoError(t, err)
-
 	st, err := state.Initialize(
 		context.TODO(),
-		&config.Configuration{AppHome: tmpDir},
+		&config.Configuration{},
 		&mocklogger.Logger{},
 	)
+	st.SSHConfigEnabled = false
 	require.NoError(t, err, "expected no error on state initialization")
 
 	storage, err := Initialize(context.TODO(), st, st.Logger)

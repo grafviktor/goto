@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/samber/lo"
 	"gopkg.in/yaml.v2"
 
 	"github.com/grafviktor/goto/internal/config"
@@ -16,7 +17,6 @@ import (
 	"github.com/grafviktor/goto/internal/ui/theme"
 	"github.com/grafviktor/goto/internal/utils"
 	"github.com/grafviktor/goto/internal/version"
-	"github.com/samber/lo"
 )
 
 type view int
@@ -70,7 +70,6 @@ type State struct {
 	Width                      int                   `yaml:"-"`
 }
 
-// FIXME: Has to be removed!
 // Get - returns application state.
 func Get() *State {
 	return st

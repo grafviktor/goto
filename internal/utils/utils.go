@@ -16,8 +16,9 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/grafviktor/goto/internal/constant"
 	"github.com/samber/lo"
+
+	"github.com/grafviktor/goto/internal/constant"
 )
 
 // StringEmpty - checks if string is empty or contains only spaces.

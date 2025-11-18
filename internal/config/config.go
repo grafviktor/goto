@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/caarlos0/env/v10"
+
 	"github.com/grafviktor/goto/internal/utils"
 )
 
@@ -117,9 +118,4 @@ func setConfigDefaults(config *Configuration) (*Configuration, error) {
 
 func handleDisplayVersion(config *Configuration) {
 	config.AppMode = AppModeType.DisplayInfo
-}
-
-// handleFeatureToggle handles enabling or disabling features.
-func handleFeatureToggle(config *Configuration, featureName string, enable bool) {
-	config.AppMode = AppModeType.HandleParam
 }

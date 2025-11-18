@@ -90,7 +90,6 @@ func extractThemeFiles(themesPath string, logger loggerInterface) {
 	entries, err := resources.Themes.ReadDir("themes")
 	if err != nil {
 		logger.Error("[THEME] Failed to read themes directory: %v", err)
-
 	}
 
 	for _, entry := range entries {
