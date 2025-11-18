@@ -15,6 +15,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/grafviktor/goto/internal/config"
+	"github.com/grafviktor/goto/internal/constant"
 )
 
 type MockLogger struct {
@@ -55,7 +56,7 @@ func (m *mockOnce) Do(f func()) {
 }
 
 // Test reading app state.
-func Test_CreateApplicationState(t *testing.T) {
+func Test_Initialize(t *testing.T) {
 	// Use a mock to avoid sync.Once restrictions in tests
 	once = &mockOnce{}
 
@@ -72,7 +73,7 @@ func Test_CreateApplicationState(t *testing.T) {
 	assert.Contains(t, mockLogger.Logs[0], "Create application state")
 }
 
-func Test_GetApplicationState(t *testing.T) {
+func Test_Get(t *testing.T) {
 	// Use a mock to avoid sync.Once restrictions in tests
 	once = &mockOnce{}
 
@@ -84,6 +85,132 @@ func Test_GetApplicationState(t *testing.T) {
 
 	// Ensure that the application state is not nil
 	assert.NotNil(t, underTest)
+}
+
+func Test_readFromFile(t *testing.T) {
+	// Use a mock to avoid sync.Once restrictions in tests
+	once = &mockOnce{}
+
+	// Use struct with pointer values to avoid falling back to zero values during saving to YAML.
+	type mockState struct {
+		Selected         *int    `yaml:"selected"`
+		Group            *string `yaml:"group"`
+		Theme            *string `yaml:"theme"`
+		ScreenLayout     *string `yaml:"screen_layout"`
+		SSHConfigEnabled *bool   `yaml:"enable_ssh_config"`
+	}
+
+	// Set up a temporary directory for testing
+	tempDir := t.TempDir()
+
+	tests := []struct {
+		name             string
+		stateFileContent string
+		expectedState    State
+	}{
+		{
+			name: "State file with all fields set",
+			stateFileContent: `
+selected: 999
+enable_ssh_config: true
+group: default
+theme: dark
+screen_layout: compact
+`,
+			expectedState: State{
+				Selected:         999,
+				SSHConfigEnabled: true,
+				ScreenLayout:     constant.ScreenLayoutCompact,
+				Theme:            "dark",
+				Group:            "default",
+			},
+		},
+		{
+			name: "State file without screen layout",
+			stateFileContent: `
+selected: 999
+enable_ssh_config: true
+group: default
+theme: dark
+`,
+			expectedState: State{
+				Selected:         999,
+				SSHConfigEnabled: true,
+				ScreenLayout:     constant.ScreenLayoutDescription,
+				Theme:            "dark",
+				Group:            "default",
+			},
+		},
+		{
+			name: "State file without theme",
+			stateFileContent: `
+selected: 999
+enable_ssh_config: true
+group: default
+screen_layout: compact
+`,
+			expectedState: State{
+				Selected:         999,
+				SSHConfigEnabled: true,
+				ScreenLayout:     constant.ScreenLayoutCompact,
+				Theme:            "default",
+				Group:            "default",
+			},
+		},
+		{
+			name: "State file SSH config option disabled",
+			stateFileContent: `
+selected: 999
+enable_ssh_config: false
+group: default
+theme: dark
+screen_layout: compact
+`,
+			expectedState: State{
+				Selected:         999,
+				SSHConfigEnabled: false,
+				ScreenLayout:     constant.ScreenLayoutCompact,
+				Theme:            "dark",
+				Group:            "default",
+			},
+		},
+		{
+			name: "State file SSH config option not set, should default to enabled",
+			stateFileContent: `
+selected: 999
+group: default
+theme: dark
+screen_layout: compact
+`,
+			expectedState: State{
+				Selected:         999,
+				SSHConfigEnabled: true,
+				ScreenLayout:     constant.ScreenLayoutCompact,
+				Theme:            "dark",
+				Group:            "default",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := os.WriteFile(path.Join(tempDir, stateFile), []byte(tt.stateFileContent), 0644)
+			require.NoError(t, err)
+
+			underTest := &State{
+				AppHome: tempDir,
+				Logger:  &MockLogger{},
+			}
+
+			underTest.readFromFile()
+
+			assert.Equal(t, tt.expectedState.Selected, underTest.Selected, "state.Selected value mismatch")
+			assert.Equal(t, tt.expectedState.SSHConfigEnabled, underTest.SSHConfigEnabled, "state.SSHConfigEnabled value mismatch")
+			assert.Equal(t, tt.expectedState.ScreenLayout, underTest.ScreenLayout, "state.ScreenLayout value mismatch")
+			assert.Equal(t, tt.expectedState.Theme, underTest.Theme, "state.Theme value mismatch")
+			assert.Equal(t, tt.expectedState.Group, underTest.Group, "state.Group value mismatch")
+		})
+	}
 }
 
 // Test persisting app state.

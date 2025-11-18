@@ -124,8 +124,8 @@ func Initialize(ctx context.Context,
 
 func (s *State) readFromFile() {
 	var loadedState struct {
-		State
-
+		Selected int    `yaml:"selected"`
+		Group    string `yaml:"group"`
 		// Little hack - we want to distinguish null values from
 		// zero values especially for boolean parameters. Using pointers for that.
 		Theme            *string `yaml:"theme"`
