@@ -4,8 +4,8 @@ package constant
 import "errors"
 
 const (
-	APP_EXIT_CODE_SUCCESS = 0
-	APP_EXIT_CODE_ERROR   = 1
+	AppExitCodeSuccess = 0
+	AppExitCodeError   = 1
 )
 
 // ErrNotFound is used by data layer.

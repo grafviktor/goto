@@ -1,4 +1,6 @@
 // Package config contains application configuration struct
+//
+//nolint:forbidigo // Use fmt.Printf to display application messages.
 package config
 
 import (
@@ -36,15 +38,8 @@ func Initialize() (*Configuration, error) {
 		return envConfig, fmt.Errorf("failed to parse environment variables: %w", err)
 	}
 
-	cmdConfig, err := parseCommandLineFlags(envConfig)
-	if err != nil {
-		return envConfig, err
-	}
-
-	appConfig, err := setConfigDefaults(cmdConfig)
-	if err != nil {
-		return envConfig, fmt.Errorf("failed to set configuration defaults: %w", err)
-	}
+	cmdConfig := parseCommandLineFlags(envConfig)
+	appConfig := setConfigDefaults(cmdConfig)
 
 	return appConfig, nil
 }
@@ -61,7 +56,7 @@ func parseEnvironmentVariables() (*Configuration, error) {
 }
 
 // parseCommandLineFlags parses command line flags and returns the configuration.
-func parseCommandLineFlags(envConfig *Configuration) (*Configuration, error) {
+func parseCommandLineFlags(envConfig *Configuration) *Configuration {
 	cmdConfig := &Configuration{AppMode: AppModeType.StartUI}
 
 	// Command line parameters have the highest precedence
@@ -87,7 +82,6 @@ func parseCommandLineFlags(envConfig *Configuration) (*Configuration, error) {
 	flag.StringVar(&cmdConfig.SetTheme, "set-theme", "", "Set application theme")
 	flag.Parse()
 
-	var err error
 	switch {
 	case cmdConfig.DisplayVersionAndExit:
 		handleDisplayVersion(cmdConfig)
@@ -102,10 +96,10 @@ func parseCommandLineFlags(envConfig *Configuration) (*Configuration, error) {
 		cmdConfig.AppMode = AppModeType.HandleParam
 	}
 
-	return cmdConfig, err
+	return cmdConfig
 }
 
-func setConfigDefaults(config *Configuration) (*Configuration, error) {
+func setConfigDefaults(config *Configuration) *Configuration {
 	var err error
 	config.AppName = appName
 	config.AppHome, err = utils.AppDir(appName, config.AppHome)
@@ -113,7 +107,7 @@ func setConfigDefaults(config *Configuration) (*Configuration, error) {
 		log.Printf("[CONFIG] Application home folder error: %v", err)
 	}
 
-	return config, nil
+	return config
 }
 
 func handleDisplayVersion(config *Configuration) {

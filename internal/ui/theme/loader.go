@@ -108,7 +108,8 @@ func extractThemeFiles(themesPath string, logger loggerInterface) {
 
 		err = saveThemeToFile(data, filepath.Join(themesPath, entry.Name()))
 		if err != nil {
-			logger.Error("[THEME] Failed to save embedded theme file to %q: %v", filepath.Join(themesPath, entry.Name()), err)
+			savePath := filepath.Join(themesPath, entry.Name())
+			logger.Error("[THEME] Failed to save embedded theme file to %q: %v", savePath, err)
 		}
 	}
 }

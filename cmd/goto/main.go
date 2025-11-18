@@ -24,12 +24,10 @@ var (
 	buildBranch  string
 )
 
-func init() {
+func main() {
 	// Set application version and build details
 	version.Set(buildVersion, buildCommit, buildBranch, buildDate)
-}
 
-func main() {
 	// Create application configuration
 	cfg, err := config.Initialize()
 	if err != nil {
@@ -53,7 +51,7 @@ func main() {
 	if err != nil {
 		logMessage := fmt.Sprintf("[CONFIG] Error: %v", err)
 		fmt.Println(logMessage)
-		utils.LogAndCloseApp(lgr, constant.APP_EXIT_CODE_ERROR, logMessage)
+		utils.LogAndCloseApp(lgr, constant.AppExitCodeError, logMessage)
 	}
 
 	// Start application
@@ -61,14 +59,14 @@ func main() {
 	if err != nil {
 		logMessage := fmt.Sprintf("[MAIN] Error: %v", err)
 		fmt.Println(logMessage)
-		utils.LogAndCloseApp(lgr, constant.APP_EXIT_CODE_ERROR, logMessage)
+		utils.LogAndCloseApp(lgr, constant.AppExitCodeError, logMessage)
 	}
 
 	lgr.Debug("[MAIN] Save application state")
 	if err = st.Persist(); err != nil {
 		logMessage := fmt.Sprintf("[MAIN] Can't save application state before closing: %v", err)
-		utils.LogAndCloseApp(lgr, constant.APP_EXIT_CODE_ERROR, logMessage)
+		utils.LogAndCloseApp(lgr, constant.AppExitCodeError, logMessage)
 	}
 
-	utils.LogAndCloseApp(lgr, constant.APP_EXIT_CODE_SUCCESS, "")
+	utils.LogAndCloseApp(lgr, constant.AppExitCodeSuccess, "")
 }

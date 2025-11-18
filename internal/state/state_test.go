@@ -143,13 +143,13 @@ func Test_PrintConfig(t *testing.T) {
 	}
 
 	actualOutput := captureOutput(state.print)
-	assert.Contains(t, actualOutput, "App home:           /tmp/goto")
-	assert.Contains(t, actualOutput, "Log level:          debug")
-	assert.Contains(t, actualOutput, "SSH config enabled: true")
-	assert.Contains(t, actualOutput, "SSH config path:    /tmp/ssh_config")
+	assert.Contains(t, actualOutput, "App home:          /tmp/goto")
+	assert.Contains(t, actualOutput, "Log level:         debug")
+	assert.Contains(t, actualOutput, "SSH config status: enabled")
+	assert.Contains(t, actualOutput, "SSH config path:   /tmp/ssh_config")
 }
 
-// captureOutput captures the output of a function and returns it as a string.s
+// captureOutput captures the output of a function and returns it as a string.
 func captureOutput(f func()) string {
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
