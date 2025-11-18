@@ -70,6 +70,7 @@ type State struct {
 	Width                      int                   `yaml:"-"`
 }
 
+// FIXME: Has to be removed!
 // Get - returns application state.
 func Get() *State {
 	return st
@@ -92,9 +93,9 @@ func Initialize(ctx context.Context,
 
 		// Cannot take this value from config because:
 		// 1. We must distinguish between user-defined and default paths
-		// 2. If default path is not exist, we must ingore this error(replicate what ssh does)
-		// 3. If custom path is provided, but not exist, we must close the app with error
-		// Probably we should not be too smart here and always ignore the error.
+		// 2. If default path does not exist, we must ignore this error(replicate what ssh does)
+		// 3. If custom path is provided, but does not exist, we must close the app with error
+		// Probably we should not be too smart here and always ignore the error or vice versa - always fail.
 		var defaultSSHConfigPath string
 		defaultSSHConfigPath, err = utils.SSHConfigDefaultFilePath()
 		if err != nil {
@@ -123,8 +124,8 @@ func Initialize(ctx context.Context,
 func (as *State) readFromFile() {
 	var loadedState struct {
 		State
-		// Little hack - we want null values to be distinguishable from
-		// zero values especially for boolean parameters.
+		// Little hack - we want to distinguish null values from
+		// zero values especially for boolean parameters. Using pointers for that.
 		Theme            *string `yaml:"theme"`
 		ScreenLayout     *string `yaml:"screen_layout"`
 		SSHConfigEnabled *bool   `yaml:"enable_ssh_config"`
@@ -173,13 +174,19 @@ func (st *State) applyConfig(cfg *config.Configuration) error {
 	}
 
 	if cfg.DisableFeature != "" {
-		// if disabled feature not equal to ssh config, then ssh config remains enabled
-		st.SSHConfigEnabled = cfg.DisableFeature != config.FeatureSSHConfig
+		if cfg.DisableFeature == config.FeatureSSHConfig {
+			st.SSHConfigEnabled = false
+		} else {
+			return fmt.Errorf("feature %q is not supported", cfg.DisableFeature)
+		}
 	}
 
 	if cfg.EnableFeature != "" {
-		// if enabled feature equal to ssh config, then ssh config becomes enabled
-		st.SSHConfigEnabled = cfg.EnableFeature == config.FeatureSSHConfig
+		if cfg.EnableFeature == config.FeatureSSHConfig {
+			st.SSHConfigEnabled = true
+		} else {
+			return fmt.Errorf("feature %q is not supported", cfg.EnableFeature)
+		}
 	}
 
 	if !utils.StringEmpty(&cfg.SSHConfigFilePath) {

@@ -373,7 +373,7 @@ func Test_FetchFromURL(t *testing.T) {
 			name:          "test_2",
 			url:           ts.URL + "/test_2",
 			expectedData:  "",
-			expectedError: errors.New("failed to fetch URL " + ts.URL + "/test_2: status code 500"),
+			expectedError: errors.New("failed to fetch " + ts.URL + "/test_2: status code 500"),
 		},
 		{
 			name:          "test_3",

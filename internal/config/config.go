@@ -23,7 +23,6 @@ type Configuration struct {
 	DisableFeature        FeatureFlag
 	DisplayVersionAndExit bool
 	EnableFeature         FeatureFlag
-	SetSSHConfigEnabled   bool
 	SetTheme              string
 	AppHome               string `env:"GG_HOME"`
 	LogLevel              string `env:"GG_LOG_LEVEL"            envDefault:"info"`
@@ -93,10 +92,10 @@ func parseCommandLineFlags(envConfig *Configuration) (*Configuration, error) {
 		handleDisplayVersion(cmdConfig)
 	case cmdConfig.EnableFeature != "":
 		fmt.Printf("[CONFIG] Enable feature %q\n", cmdConfig.EnableFeature.String())
-		handleFeatureToggle(cmdConfig, cmdConfig.EnableFeature.String(), true)
+		cmdConfig.AppMode = AppModeType.HandleParam
 	case cmdConfig.DisableFeature != "":
 		fmt.Printf("[CONFIG] Disable feature %q\n", cmdConfig.DisableFeature.String())
-		handleFeatureToggle(cmdConfig, cmdConfig.DisableFeature.String(), false)
+		cmdConfig.AppMode = AppModeType.HandleParam
 	case cmdConfig.SetTheme != "":
 		fmt.Printf("[CONFIG] Set theme to %q\n", cmdConfig.SetTheme)
 		cmdConfig.AppMode = AppModeType.HandleParam
@@ -123,9 +122,4 @@ func handleDisplayVersion(config *Configuration) {
 // handleFeatureToggle handles enabling or disabling features.
 func handleFeatureToggle(config *Configuration, featureName string, enable bool) {
 	config.AppMode = AppModeType.HandleParam
-	if enable {
-		config.SetSSHConfigEnabled = featureName == FeatureSSHConfig
-	} else {
-		config.SetSSHConfigEnabled = featureName != FeatureSSHConfig
-	}
 }

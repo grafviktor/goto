@@ -50,8 +50,15 @@ func TestSSHConfigFile_GetAll(t *testing.T) {
 		{Title: "host2", Address: "host2.com"},
 	}
 
-	// mockAppConfig := config.Configuration{}
+	st, err := state.Initialize(
+		context.TODO(),
+		&config.Configuration{},
+		&mocklogger.Logger{},
+	)
+	require.NoError(t, err)
+
 	s := &SSHConfigFile{
+		appState:   st,
 		fileLexer:  &mockSSHLexer{},
 		fileParser: &mockSSHParser{hosts: mockHosts},
 	}

@@ -193,6 +193,11 @@ func SSHConfigFilePath(userDefinedPath string) (string, error) {
 			return userDefinedPath, nil
 		}
 
+		// Do not expand "~".
+		if strings.HasPrefix(userDefinedPath, "~") {
+			return userDefinedPath, nil
+		}
+
 		absolutePath, err := filepath.Abs(userDefinedPath)
 		if err != nil {
 			return "", err

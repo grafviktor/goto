@@ -91,11 +91,12 @@ func Test_PersistApplicationState(t *testing.T) {
 	// Set up a temporary directory for testing
 	tempDir := t.TempDir()
 
-	// Create a mock logger for testing
-	mockLogger := MockLogger{}
-
-	// Call the Get function with the temporary directory and mock logger
-	underTest, _ := Initialize(context.TODO(), &config.Configuration{}, &mockLogger)
+	// Call the Initialize function with the temporary directory and mock logger
+	underTest, _ := Initialize(
+		context.TODO(),
+		&config.Configuration{AppHome: tempDir},
+		&MockLogger{},
+	)
 
 	// Modify the application state
 	underTest.Selected = 42
