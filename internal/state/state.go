@@ -56,14 +56,14 @@ type loggerInterface interface {
 // State stores application state.
 type State struct {
 	AppHome                    string                `yaml:"-"`
-	AppMode                    config.AppMode        `yaml:"-"`
+	AppMode                    constant.AppMode      `yaml:"-"`
 	Context                    context.Context       `yaml:"-"`
 	CurrentView                view                  `yaml:"-"`
 	Group                      string                `yaml:"group,omitempty"`
 	Height                     int                   `yaml:"-"`
 	IsUserDefinedSSHConfigPath bool                  `yaml:"-"`
 	Logger                     loggerInterface       `yaml:"-"`
-	LogLevel                   string                `yaml:"-"`
+	LogLevel                   constant.LogLevel     `yaml:"-"`
 	ScreenLayout               constant.ScreenLayout `yaml:"screen_layout,omitempty"`
 	Selected                   int                   `yaml:"selected"`
 	SSHConfigEnabled           bool                  `yaml:"enable_ssh_config"`
@@ -107,7 +107,6 @@ func Initialize(ctx context.Context,
 		st = &State{
 			AppMode:           cfg.AppMode,
 			AppHome:           cfg.AppHome,
-			LogLevel:          cfg.LogLevel,
 			Context:           ctx,
 			Logger:            lg,
 			SSHConfigFilePath: defaultSSHConfigPath,
@@ -123,11 +122,12 @@ func Initialize(ctx context.Context,
 }
 
 func (s *State) readFromFile() {
+	// Why not unmarshal directly to State? Because we want to distinguish between null values
+	// and zero values especially for boolean parameters. Using pointers for that.
 	var loadedState struct {
 		Selected int    `yaml:"selected"`
 		Group    string `yaml:"group"`
-		// Little hack - we want to distinguish null values from
-		// zero values especially for boolean parameters. Using pointers for that.
+		// Using pointers to distinguish between null and zero values.
 		Theme            *string `yaml:"theme"`
 		ScreenLayout     *string `yaml:"screen_layout"`
 		SSHConfigEnabled *bool   `yaml:"enable_ssh_config"`
@@ -171,7 +171,15 @@ func (s *State) readFromFile() {
 }
 
 func (s *State) applyConfig(cfg *config.Configuration) error {
-	if !utils.StringEmpty(&cfg.LogLevel) {
+	if utils.StringEmpty(&cfg.AppMode) {
+		s.AppMode = constant.AppModeType.StartUI
+	} else {
+		s.AppMode = cfg.AppMode
+	}
+
+	if utils.StringEmpty(&cfg.LogLevel) {
+		s.LogLevel = constant.LogLevelType.INFO
+	} else {
 		s.LogLevel = cfg.LogLevel
 	}
 

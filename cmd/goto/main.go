@@ -6,7 +6,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"os"
 
 	"github.com/grafviktor/goto/internal/app"
 	"github.com/grafviktor/goto/internal/config"
@@ -31,26 +31,28 @@ func main() {
 	// Create application configuration
 	cfg, err := config.Initialize()
 	if err != nil {
-		log.Fatalf("[MAIN] Error: %v", err)
+		fmt.Printf("[MAIN] Error: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Check prerequisites
 	err = utils.CheckAppRequirements(cfg.AppHome)
 	if err != nil {
-		log.Fatalf("[MAIN] Error: %v", err)
+		fmt.Printf("[MAIN] Error: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Create application logger
 	lgr, err := logger.Initialize(cfg.AppHome, cfg.LogLevel)
 	if err != nil {
-		log.Fatalf("[MAIN] Error: %v", err)
+		fmt.Printf("[MAIN] Error: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Create state
 	st, err := state.Initialize(context.Background(), cfg, lgr)
 	if err != nil {
 		logMessage := fmt.Sprintf("[CONFIG] Error: %v", err)
-		fmt.Println(logMessage)
 		utils.LogAndCloseApp(lgr, constant.AppExitCodeError, logMessage)
 	}
 
@@ -58,7 +60,6 @@ func main() {
 	err = app.Start(st)
 	if err != nil {
 		logMessage := fmt.Sprintf("[MAIN] Error: %v", err)
-		fmt.Println(logMessage)
 		utils.LogAndCloseApp(lgr, constant.AppExitCodeError, logMessage)
 	}
 

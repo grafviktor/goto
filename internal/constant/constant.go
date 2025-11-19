@@ -48,3 +48,25 @@ var HostStorageType = struct {
 	SSHConfig: "SSH_CONFIG",
 	YAMLFile:  "YAML_FILE",
 }
+
+type LogLevel = string
+
+var LogLevelType = struct {
+	INFO  LogLevel
+	DEBUG LogLevel
+}{
+	INFO:  "info",
+	DEBUG: "debug",
+}
+
+type AppMode = string
+
+var AppModeType = struct {
+	StartUI     AppMode
+	DisplayInfo AppMode
+	HandleParam AppMode
+}{
+	StartUI:     "START_UI",
+	DisplayInfo: "DISPLAY_INFO",
+	HandleParam: "HANDLE_PARAM",
+}

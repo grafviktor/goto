@@ -385,6 +385,7 @@ func LogAndCloseApp(lg loggerInterface, exitCode int, exitReason string) {
 	closeMsg := lo.Ternary(exitCode == constant.AppExitCodeSuccess, logMsgCloseApp, logMsgCloseAppError)
 
 	if !StringEmpty(&exitReason) {
+		fmt.Println(exitReason) //nolint:forbidigo // Allow printing exit reason to console
 		loggingFunc(exitReason)
 	}
 

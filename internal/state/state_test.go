@@ -204,6 +204,54 @@ screen_layout: compact
 	}
 }
 
+/*
+func (s *State) applyConfig(cfg *config.Configuration) error {
+	if !utils.StringEmpty(&cfg.LogLevel) {
+		s.LogLevel = cfg.LogLevel
+	}
+
+	if cfg.DisableFeature != "" {
+		if cfg.DisableFeature == config.FeatureSSHConfig {
+			s.SSHConfigEnabled = false
+		} else {
+			return fmt.Errorf("feature %q is not supported", cfg.DisableFeature)
+		}
+	}
+
+	if cfg.EnableFeature != "" {
+		if cfg.EnableFeature == config.FeatureSSHConfig {
+			s.SSHConfigEnabled = true
+		} else {
+			return fmt.Errorf("feature %q is not supported", cfg.EnableFeature)
+		}
+	}
+
+	if !utils.StringEmpty(&cfg.SSHConfigFilePath) {
+		userDefinedPath, err := utils.SSHConfigFilePath(cfg.SSHConfigFilePath)
+		if err != nil {
+			return fmt.Errorf("cannot set ssh config file path: %w", err)
+		}
+		s.SSHConfigFilePath = userDefinedPath
+		s.IsUserDefinedSSHConfigPath = true
+	}
+
+	if !utils.StringEmpty(&cfg.SetTheme) {
+		installedThemes := theme.ListInstalled(cfg.AppHome, s.Logger)
+		if !lo.Contains(installedThemes, cfg.SetTheme) {
+			installedThemesStr := strings.Join(installedThemes, ", ")
+			return fmt.Errorf("cannot find theme %q, installed themes: %v", cfg.SetTheme, installedThemesStr)
+		}
+		s.Theme = cfg.SetTheme
+	}
+
+	return nil
+}
+*/
+
+func Test_applyConfig(t *testing.T) {
+	t.Fail()
+}
+
 // Test persisting app state.
 func Test_PersistApplicationState(t *testing.T) {
 	// Set up a temporary directory for testing

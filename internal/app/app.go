@@ -3,7 +3,7 @@ package app
 import (
 	"os"
 
-	"github.com/grafviktor/goto/internal/config"
+	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage"
 	"github.com/grafviktor/goto/internal/ui"
@@ -20,9 +20,9 @@ func Start(st *state.State) error {
 
 	var err error
 	switch st.AppMode {
-	case config.AppModeType.StartUI:
+	case constant.AppModeType.StartUI:
 		err = startUI(st)
-	case config.AppModeType.DisplayInfo:
+	case constant.AppModeType.DisplayInfo:
 		st.PrintConfig()
 	default:
 		// nop - proceed to exit

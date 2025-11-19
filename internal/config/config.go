@@ -6,11 +6,12 @@ package config
 import (
 	"flag"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/caarlos0/env/v10"
+	"github.com/samber/lo"
 
+	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/utils"
 )
 
@@ -21,15 +22,15 @@ const (
 
 // Configuration structs contains user-definable parameters.
 type Configuration struct {
-	AppMode               AppMode
+	AppMode               constant.AppMode
 	AppName               string
 	DisableFeature        FeatureFlag
 	DisplayVersionAndExit bool
 	EnableFeature         FeatureFlag
 	SetTheme              string
-	AppHome               string `env:"GG_HOME"`
-	LogLevel              string `env:"GG_LOG_LEVEL"            envDefault:"info"`
-	SSHConfigFilePath     string `env:"GG_SSH_CONFIG_FILE_PATH"`
+	AppHome               string            `env:"GG_HOME"`
+	LogLevel              constant.LogLevel `env:"GG_LOG_LEVEL"            envDefault:"info"`
+	SSHConfigFilePath     string            `env:"GG_SSH_CONFIG_FILE_PATH"`
 }
 
 func Initialize() (*Configuration, error) {
@@ -39,9 +40,9 @@ func Initialize() (*Configuration, error) {
 	}
 
 	cmdConfig := parseCommandLineFlags(envConfig)
-	appConfig := setConfigDefaults(cmdConfig)
+	appConfig, err := setConfigDefaults(cmdConfig)
 
-	return appConfig, nil
+	return appConfig, err
 }
 
 // parseEnvironmentConfig parses environment configuration.
@@ -57,7 +58,7 @@ func parseEnvironmentVariables() (*Configuration, error) {
 
 // parseCommandLineFlags parses command line flags and returns the configuration.
 func parseCommandLineFlags(envConfig *Configuration) *Configuration {
-	cmdConfig := &Configuration{AppMode: AppModeType.StartUI}
+	cmdConfig := &Configuration{AppMode: constant.AppModeType.StartUI}
 
 	// Command line parameters have the highest precedence
 	flag.BoolVar(&cmdConfig.DisplayVersionAndExit, "v", false, "Display application details")
@@ -84,32 +85,33 @@ func parseCommandLineFlags(envConfig *Configuration) *Configuration {
 
 	switch {
 	case cmdConfig.DisplayVersionAndExit:
-		handleDisplayVersion(cmdConfig)
+		cmdConfig.AppMode = constant.AppModeType.DisplayInfo
 	case cmdConfig.EnableFeature != "":
 		fmt.Printf("[CONFIG] Enable feature %q\n", cmdConfig.EnableFeature.String())
-		cmdConfig.AppMode = AppModeType.HandleParam
+		cmdConfig.AppMode = constant.AppModeType.HandleParam
 	case cmdConfig.DisableFeature != "":
 		fmt.Printf("[CONFIG] Disable feature %q\n", cmdConfig.DisableFeature.String())
-		cmdConfig.AppMode = AppModeType.HandleParam
+		cmdConfig.AppMode = constant.AppModeType.HandleParam
 	case cmdConfig.SetTheme != "":
 		fmt.Printf("[CONFIG] Set theme to %q\n", cmdConfig.SetTheme)
-		cmdConfig.AppMode = AppModeType.HandleParam
+		cmdConfig.AppMode = constant.AppModeType.HandleParam
 	}
 
 	return cmdConfig
 }
 
-func setConfigDefaults(config *Configuration) *Configuration {
+func setConfigDefaults(config *Configuration) (*Configuration, error) {
 	var err error
 	config.AppName = appName
 	config.AppHome, err = utils.AppDir(appName, config.AppHome)
 	if err != nil {
-		log.Printf("[CONFIG] Application home folder error: %v", err)
+		return nil, fmt.Errorf("application home folder error: %w", err)
 	}
 
-	return config
-}
+	supportedLogLevels := []constant.LogLevel{constant.LogLevelType.DEBUG, constant.LogLevelType.INFO}
+	if !lo.Contains(supportedLogLevels, config.LogLevel) {
+		return nil, fmt.Errorf("unsupported log level: %q", config.LogLevel)
+	}
 
-func handleDisplayVersion(config *Configuration) {
-	config.AppMode = AppModeType.DisplayInfo
+	return config, nil
 }
