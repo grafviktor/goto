@@ -1,4 +1,6 @@
 // Package state is in charge of storing and reading application state.
+//
+//nolint:goprintffuncname // Use standard names for logging functions.
 package state
 
 import (
@@ -91,22 +93,13 @@ func Test_readFromFile(t *testing.T) {
 	// Use a mock to avoid sync.Once restrictions in tests
 	once = &mockOnce{}
 
-	// Use struct with pointer values to avoid falling back to zero values during saving to YAML.
-	type mockState struct {
-		Selected         *int    `yaml:"selected"`
-		Group            *string `yaml:"group"`
-		Theme            *string `yaml:"theme"`
-		ScreenLayout     *string `yaml:"screen_layout"`
-		SSHConfigEnabled *bool   `yaml:"enable_ssh_config"`
-	}
-
 	// Set up a temporary directory for testing
 	tempDir := t.TempDir()
 
 	tests := []struct {
 		name             string
 		stateFileContent string
-		expectedState    State
+		control          State
 	}{
 		{
 			name: "State file with all fields set",
@@ -117,7 +110,7 @@ group: default
 theme: dark
 screen_layout: compact
 `,
-			expectedState: State{
+			control: State{
 				Selected:         999,
 				SSHConfigEnabled: true,
 				ScreenLayout:     constant.ScreenLayoutCompact,
@@ -133,7 +126,7 @@ enable_ssh_config: true
 group: default
 theme: dark
 `,
-			expectedState: State{
+			control: State{
 				Selected:         999,
 				SSHConfigEnabled: true,
 				ScreenLayout:     constant.ScreenLayoutDescription,
@@ -149,7 +142,7 @@ enable_ssh_config: true
 group: default
 screen_layout: compact
 `,
-			expectedState: State{
+			control: State{
 				Selected:         999,
 				SSHConfigEnabled: true,
 				ScreenLayout:     constant.ScreenLayoutCompact,
@@ -166,7 +159,7 @@ group: default
 theme: dark
 screen_layout: compact
 `,
-			expectedState: State{
+			control: State{
 				Selected:         999,
 				SSHConfigEnabled: false,
 				ScreenLayout:     constant.ScreenLayoutCompact,
@@ -182,7 +175,7 @@ group: default
 theme: dark
 screen_layout: compact
 `,
-			expectedState: State{
+			control: State{
 				Selected:         999,
 				SSHConfigEnabled: true,
 				ScreenLayout:     constant.ScreenLayoutCompact,
@@ -194,21 +187,21 @@ screen_layout: compact
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := os.WriteFile(path.Join(tempDir, stateFile), []byte(tt.stateFileContent), 0644)
+			err := os.WriteFile(path.Join(tempDir, stateFile), []byte(tt.stateFileContent), 0o644)
 			require.NoError(t, err)
 
-			underTest := &State{
+			test := &State{
 				AppHome: tempDir,
 				Logger:  &MockLogger{},
 			}
 
-			underTest.readFromFile()
+			test.readFromFile()
 
-			assert.Equal(t, tt.expectedState.Selected, underTest.Selected, "state.Selected value mismatch")
-			assert.Equal(t, tt.expectedState.SSHConfigEnabled, underTest.SSHConfigEnabled, "state.SSHConfigEnabled value mismatch")
-			assert.Equal(t, tt.expectedState.ScreenLayout, underTest.ScreenLayout, "state.ScreenLayout value mismatch")
-			assert.Equal(t, tt.expectedState.Theme, underTest.Theme, "state.Theme value mismatch")
-			assert.Equal(t, tt.expectedState.Group, underTest.Group, "state.Group value mismatch")
+			assert.Equal(t, tt.control.Selected, test.Selected, "state.Selected value mismatch")
+			assert.Equal(t, tt.control.SSHConfigEnabled, test.SSHConfigEnabled, "state.SSHConfigEnabled value mismatch")
+			assert.Equal(t, tt.control.ScreenLayout, test.ScreenLayout, "state.ScreenLayout value mismatch")
+			assert.Equal(t, tt.control.Theme, test.Theme, "state.Theme value mismatch")
+			assert.Equal(t, tt.control.Group, test.Group, "state.Group value mismatch")
 		})
 	}
 }

@@ -27,8 +27,8 @@ func StringEmpty(s *string) bool {
 	return s == nil || len(strings.TrimSpace(*s)) == 0
 }
 
-// FprintfIgnoreError - writes formatted string to the writer, ignoring any errors.
-func FprintfIgnoreError(w io.Writer, format string, args ...any) {
+// FprintfIgnoreErrorf - writes formatted string to the writer, ignoring any errors.
+func FprintfIgnoreErrorf(w io.Writer, format string, args ...any) {
 	_, _ = fmt.Fprintf(w, format, args...)
 }
 
@@ -265,7 +265,7 @@ func BuildProcess(cmd string) *exec.Cmd {
 	command := commandWithArguments[0]
 	arguments := commandWithArguments[1:]
 
-	return exec.Command(command, arguments...)
+	return exec.Command(command, arguments...) //nolint:noctx // context is not needed here
 }
 
 // ProcessBufferWriter - is an object which pretends to be a writer, however it saves all data into a temporary buffer

@@ -1,4 +1,6 @@
 // Package logger incapsulates logger functions
+//
+//nolint:goprintffuncname // Use standard names for logging functions.
 package logger
 
 import (
