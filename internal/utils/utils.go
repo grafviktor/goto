@@ -265,7 +265,7 @@ func BuildProcess(cmd string) *exec.Cmd {
 	command := commandWithArguments[0]
 	arguments := commandWithArguments[1:]
 
-	return exec.Command(command, arguments...) //nolint:noctx // context is not needed here
+	return exec.Command(command, arguments...)
 }
 
 // ProcessBufferWriter - is an object which pretends to be a writer, however it saves all data into a temporary buffer

@@ -1,6 +1,4 @@
 // Package state is in charge of storing and reading application state.
-//
-//nolint:goprintffuncname // Use standard names for logging functions.
 package state
 
 import (

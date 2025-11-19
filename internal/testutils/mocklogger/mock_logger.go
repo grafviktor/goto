@@ -1,4 +1,3 @@
-//nolint:goprintffuncname // Use standard names for logging functions.
 package mocklogger
 
 import "fmt"
