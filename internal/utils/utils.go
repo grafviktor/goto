@@ -322,12 +322,15 @@ func IsFolderExists(folderPath string) bool {
 	return true
 }
 
+var requiredBinaryInPath = "ssh"
+
 func CheckAppRequirements(appHome string) error {
 	var err error
 
 	// Check if "ssh" utility is in application path
-	if err = checkAppInstalled("ssh"); err != nil {
-		return fmt.Errorf("ssh utility is not installed or cannot be found in the executable path: %w", err)
+	if err = checkAppInstalled(requiredBinaryInPath); err != nil {
+		return fmt.Errorf("%s utility is not installed or cannot be found in the executable path: %w",
+			requiredBinaryInPath, err)
 	}
 
 	// Create application home folder path

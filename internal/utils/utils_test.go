@@ -90,7 +90,7 @@ func Test_GetAppDir(t *testing.T) {
 	require.Error(t, err, "App home folder should not be empty 2")
 }
 
-func Test(t *testing.T) {
+func Test_SSHConfigFilePath(t *testing.T) {
 	// Test case: SSH config file path
 	userConfigDir, _ := os.UserHomeDir()
 	expected := path.Join(userConfigDir, ".ssh", "config")
@@ -399,6 +399,55 @@ func Test_FetchFromURL(t *testing.T) {
 				data, readErr := io.ReadAll(resp)
 				require.NoError(t, readErr)
 				require.Equal(t, tt.expectedData, string(data))
+			}
+		})
+	}
+}
+
+func Test_CheckAppRequirements(t *testing.T) {
+	tmpDir := t.TempDir()
+	appHomeOk := path.Join(tmpDir, "app_home")
+	appHomeBad := path.Join(tmpDir, "app_home_bad")
+
+	// Create a file instead of a directory to simulate a bad app home path
+	err := os.WriteFile(appHomeBad, []byte{}, 0o644)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name               string
+		requiredBinaryName string
+		appHome            string
+		wantErr            bool
+	}{
+		{
+			name:               "All good test",
+			requiredBinaryName: "echo",
+			appHome:            appHomeOk,
+			wantErr:            false,
+		},
+		{
+			name:               "Bad app home path",
+			requiredBinaryName: "echo",
+			appHome:            appHomeBad,
+			wantErr:            true,
+		},
+		{
+			name:               "Bad binary name",
+			requiredBinaryName: "norton_commander.exe",
+			appHome:            appHomeOk,
+			wantErr:            true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requiredBinaryInPath = tt.requiredBinaryName
+
+			err = CheckAppRequirements(tt.appHome)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
