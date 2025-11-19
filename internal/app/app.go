@@ -16,7 +16,7 @@ func Start(st *state.State) error {
 	st.Logger.Debug("[APP] Parameters: %+v", os.Args[1:])
 
 	version.LogDetails(st.Logger)
-	st.LogDetails(st.Logger)
+	st.LogDetails()
 
 	var err error
 	switch st.AppMode {
@@ -24,7 +24,7 @@ func Start(st *state.State) error {
 		err = startUI(st)
 	case constant.AppModeType.DisplayInfo:
 		st.PrintConfig()
-	default:
+	case constant.AppModeType.HandleParam:
 		// nop - proceed to exit
 	}
 

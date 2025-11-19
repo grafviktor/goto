@@ -1,4 +1,6 @@
 // Package state is in charge of storing and reading application state.
+//
+//nolint:golines // Don't care about line length in unit tests.
 package state
 
 import (
@@ -97,7 +99,7 @@ func Test_readFromFile(t *testing.T) {
 	tests := []struct {
 		name             string
 		stateFileContent string
-		control          State
+		expected         State
 	}{
 		{
 			name: "State file with all fields set",
@@ -108,15 +110,14 @@ group: default
 theme: dark
 screen_layout: compact
 `,
-			control: State{
+			expected: State{
 				Selected:         999,
 				SSHConfigEnabled: true,
 				ScreenLayout:     constant.ScreenLayoutCompact,
 				Theme:            "dark",
 				Group:            "default",
 			},
-		},
-		{
+		}, {
 			name: "State file without screen layout",
 			stateFileContent: `
 selected: 999
@@ -124,15 +125,14 @@ enable_ssh_config: true
 group: default
 theme: dark
 `,
-			control: State{
+			expected: State{
 				Selected:         999,
 				SSHConfigEnabled: true,
 				ScreenLayout:     constant.ScreenLayoutDescription,
 				Theme:            "dark",
 				Group:            "default",
 			},
-		},
-		{
+		}, {
 			name: "State file without theme",
 			stateFileContent: `
 selected: 999
@@ -140,15 +140,14 @@ enable_ssh_config: true
 group: default
 screen_layout: compact
 `,
-			control: State{
+			expected: State{
 				Selected:         999,
 				SSHConfigEnabled: true,
 				ScreenLayout:     constant.ScreenLayoutCompact,
 				Theme:            "default",
 				Group:            "default",
 			},
-		},
-		{
+		}, {
 			name: "State file SSH config option disabled",
 			stateFileContent: `
 selected: 999
@@ -157,15 +156,14 @@ group: default
 theme: dark
 screen_layout: compact
 `,
-			control: State{
+			expected: State{
 				Selected:         999,
 				SSHConfigEnabled: false,
 				ScreenLayout:     constant.ScreenLayoutCompact,
 				Theme:            "dark",
 				Group:            "default",
 			},
-		},
-		{
+		}, {
 			name: "State file SSH config option not set, should default to enabled",
 			stateFileContent: `
 selected: 999
@@ -173,7 +171,7 @@ group: default
 theme: dark
 screen_layout: compact
 `,
-			control: State{
+			expected: State{
 				Selected:         999,
 				SSHConfigEnabled: true,
 				ScreenLayout:     constant.ScreenLayoutCompact,
@@ -195,61 +193,92 @@ screen_layout: compact
 
 			test.readFromFile()
 
-			assert.Equal(t, tt.control.Selected, test.Selected, "state.Selected value mismatch")
-			assert.Equal(t, tt.control.SSHConfigEnabled, test.SSHConfigEnabled, "state.SSHConfigEnabled value mismatch")
-			assert.Equal(t, tt.control.ScreenLayout, test.ScreenLayout, "state.ScreenLayout value mismatch")
-			assert.Equal(t, tt.control.Theme, test.Theme, "state.Theme value mismatch")
-			assert.Equal(t, tt.control.Group, test.Group, "state.Group value mismatch")
+			assert.Equal(t, tt.expected.Selected, test.Selected, "state.Selected value mismatch")
+			assert.Equal(t, tt.expected.SSHConfigEnabled, test.SSHConfigEnabled, "state.SSHConfigEnabled value mismatch")
+			assert.Equal(t, tt.expected.ScreenLayout, test.ScreenLayout, "state.ScreenLayout value mismatch")
+			assert.Equal(t, tt.expected.Theme, test.Theme, "state.Theme value mismatch")
+			assert.Equal(t, tt.expected.Group, test.Group, "state.Group value mismatch")
 		})
 	}
 }
 
-/*
-func (s *State) applyConfig(cfg *config.Configuration) error {
-	if !utils.StringEmpty(&cfg.LogLevel) {
-		s.LogLevel = cfg.LogLevel
-	}
-
-	if cfg.DisableFeature != "" {
-		if cfg.DisableFeature == config.FeatureSSHConfig {
-			s.SSHConfigEnabled = false
-		} else {
-			return fmt.Errorf("feature %q is not supported", cfg.DisableFeature)
-		}
-	}
-
-	if cfg.EnableFeature != "" {
-		if cfg.EnableFeature == config.FeatureSSHConfig {
-			s.SSHConfigEnabled = true
-		} else {
-			return fmt.Errorf("feature %q is not supported", cfg.EnableFeature)
-		}
-	}
-
-	if !utils.StringEmpty(&cfg.SSHConfigFilePath) {
-		userDefinedPath, err := utils.SSHConfigFilePath(cfg.SSHConfigFilePath)
-		if err != nil {
-			return fmt.Errorf("cannot set ssh config file path: %w", err)
-		}
-		s.SSHConfigFilePath = userDefinedPath
-		s.IsUserDefinedSSHConfigPath = true
-	}
-
-	if !utils.StringEmpty(&cfg.SetTheme) {
-		installedThemes := theme.ListInstalled(cfg.AppHome, s.Logger)
-		if !lo.Contains(installedThemes, cfg.SetTheme) {
-			installedThemesStr := strings.Join(installedThemes, ", ")
-			return fmt.Errorf("cannot find theme %q, installed themes: %v", cfg.SetTheme, installedThemesStr)
-		}
-		s.Theme = cfg.SetTheme
-	}
-
-	return nil
-}
-*/
-
 func Test_applyConfig(t *testing.T) {
-	t.Fail()
+	// Use a mock to avoid sync.Once restrictions in tests
+	once = &mockOnce{}
+
+	tests := []struct {
+		name     string
+		testCfg  config.Configuration
+		expected State
+		wantErr  bool
+	}{
+		{
+			name:    "Empty configuration",
+			testCfg: config.Configuration{},
+			expected: State{
+				AppMode:  constant.AppModeType.StartUI,
+				LogLevel: constant.LogLevelType.INFO,
+			},
+			wantErr: false,
+		}, {
+			name:    "Supported feature enabled",
+			testCfg: config.Configuration{EnableFeature: "ssh_config"},
+			expected: State{
+				AppMode:          constant.AppModeType.StartUI,
+				LogLevel:         constant.LogLevelType.INFO,
+				SSHConfigEnabled: true,
+			},
+			wantErr: false,
+		}, {
+			name:    "Supported feature disabled",
+			testCfg: config.Configuration{DisableFeature: "ssh_config"},
+			expected: State{
+				AppMode:          constant.AppModeType.StartUI,
+				LogLevel:         constant.LogLevelType.INFO,
+				SSHConfigEnabled: false,
+			},
+			wantErr: false,
+		}, {
+			name:     "Unsupported feature disabled",
+			testCfg:  config.Configuration{DisableFeature: "super_feature"},
+			expected: State{},
+			wantErr:  true,
+		}, {
+			name:     "Unsupported feature enabled",
+			testCfg:  config.Configuration{EnableFeature: "super_feature"},
+			expected: State{},
+			wantErr:  true,
+		}, {
+			name:    "SSH config path set",
+			testCfg: config.Configuration{SSHConfigFilePath: "~/.ssh/custom_config"},
+			expected: State{
+				AppMode:                    constant.AppModeType.StartUI,
+				LogLevel:                   constant.LogLevelType.INFO,
+				SSHConfigFilePath:          "~/.ssh/custom_config",
+				IsUserDefinedSSHConfigPath: true,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := &State{}
+			err := actual.applyConfig(&tt.testCfg)
+
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expected.AppMode, actual.AppMode, "AppMode mismatch")
+				assert.Equal(t, tt.expected.LogLevel, actual.LogLevel, "LogLevel mismatch")
+				assert.Equal(t, tt.expected.Theme, actual.Theme, "Theme mismatch")
+				assert.Equal(t, tt.expected.SSHConfigFilePath, actual.SSHConfigFilePath, "SSHConfigFilePath mismatch")
+				assert.Equal(t, tt.expected.SSHConfigEnabled, actual.SSHConfigEnabled, "SSHConfigEnabled mismatch")
+				assert.Equal(t, tt.expected.IsUserDefinedSSHConfigPath, actual.IsUserDefinedSSHConfigPath, "IsSSHConfigFilePathDefinedByUser mismatch")
+			}
+		})
+	}
 }
 
 // Test persisting app state.
@@ -308,7 +337,7 @@ func Test_PrintConfig(t *testing.T) {
 		SSHConfigFilePath: "/tmp/ssh_config",
 	}
 
-	actualOutput := captureOutput(state.print)
+	actualOutput := captureOutput(state.PrintConfig)
 	assert.Contains(t, actualOutput, "App home:          /tmp/goto")
 	assert.Contains(t, actualOutput, "Log level:         debug")
 	assert.Contains(t, actualOutput, "SSH config status: enabled")
@@ -330,4 +359,22 @@ func captureOutput(f func()) string {
 	_, _ = io.Copy(&buf, r)
 
 	return buf.String()
+}
+
+func Test_LogDetails(t *testing.T) {
+	logger := MockLogger{}
+	state := &State{
+		AppHome:           "/tmp/goto",
+		LogLevel:          "debug",
+		SSHConfigEnabled:  true,
+		SSHConfigFilePath: "/tmp/ssh_config",
+		Logger:            &logger,
+	}
+
+	state.LogDetails()
+
+	assert.Contains(t, logger.Logs[0], `Application home folder: "/tmp/goto"`)
+	assert.Contains(t, logger.Logs[1], `Application log level:   "debug"`)
+	assert.Contains(t, logger.Logs[2], `SSH config status:       "enabled"`)
+	assert.Contains(t, logger.Logs[3], `SSH config path:         "/tmp/ssh_config"`)
 }

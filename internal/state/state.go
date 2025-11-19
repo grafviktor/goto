@@ -255,11 +255,11 @@ func (s *State) PrintConfig() {
 	s.print()
 }
 
-func (s *State) LogDetails(logger loggerInterface) {
-	logger.Info("[CONFIG] Application home folder: %q\n", s.AppHome)
-	logger.Info("[CONFIG] Application log level:   %q\n", s.LogLevel)
-	logger.Info("[CONFIG] SSH config status:       %q\n", lo.Ternary(s.SSHConfigEnabled, "enabled", "disabled"))
+func (s *State) LogDetails() {
+	s.Logger.Info("[CONFIG] Application home folder: %q\n", s.AppHome)
+	s.Logger.Info("[CONFIG] Application log level:   %q\n", s.LogLevel)
+	s.Logger.Info("[CONFIG] SSH config status:       %q\n", lo.Ternary(s.SSHConfigEnabled, "enabled", "disabled"))
 	if s.SSHConfigEnabled {
-		logger.Info("[CONFIG] SSH config path:         %q\n", s.SSHConfigFilePath)
+		s.Logger.Info("[CONFIG] SSH config path:         %q\n", s.SSHConfigFilePath)
 	}
 }

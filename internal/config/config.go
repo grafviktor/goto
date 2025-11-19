@@ -22,15 +22,15 @@ const (
 
 // Configuration structs contains user-definable parameters.
 type Configuration struct {
-	AppMode               constant.AppMode
-	AppName               string
-	DisableFeature        FeatureFlag
-	DisplayVersionAndExit bool
-	EnableFeature         FeatureFlag
-	SetTheme              string
-	AppHome               string            `env:"GG_HOME"`
-	LogLevel              constant.LogLevel `env:"GG_LOG_LEVEL"            envDefault:"info"`
-	SSHConfigFilePath     string            `env:"GG_SSH_CONFIG_FILE_PATH"`
+	AppMode        constant.AppMode
+	AppName        string
+	DisableFeature FeatureFlag
+	// DisplayVersionAndExit bool
+	EnableFeature     FeatureFlag
+	SetTheme          string
+	AppHome           string            `env:"GG_HOME"`
+	LogLevel          constant.LogLevel `env:"GG_LOG_LEVEL"            envDefault:"info"`
+	SSHConfigFilePath string            `env:"GG_SSH_CONFIG_FILE_PATH"`
 }
 
 func Initialize() (*Configuration, error) {
@@ -59,9 +59,10 @@ func parseEnvironmentVariables() (*Configuration, error) {
 // parseCommandLineFlags parses command line flags and returns the configuration.
 func parseCommandLineFlags(envConfig *Configuration) *Configuration {
 	cmdConfig := &Configuration{AppMode: constant.AppModeType.StartUI}
+	var shouldDisplayVersionAndExit bool
 
 	// Command line parameters have the highest precedence
-	flag.BoolVar(&cmdConfig.DisplayVersionAndExit, "v", false, "Display application details")
+	flag.BoolVar(&shouldDisplayVersionAndExit, "v", false, "Display application details")
 	flag.StringVar(&cmdConfig.AppHome, "f", envConfig.AppHome, "Application home folder")
 	flag.StringVar(&cmdConfig.LogLevel, "l", envConfig.LogLevel, "Log verbosity level: debug, info")
 	flag.StringVar(
@@ -84,7 +85,7 @@ func parseCommandLineFlags(envConfig *Configuration) *Configuration {
 	flag.Parse()
 
 	switch {
-	case cmdConfig.DisplayVersionAndExit:
+	case shouldDisplayVersionAndExit:
 		cmdConfig.AppMode = constant.AppModeType.DisplayInfo
 	case cmdConfig.EnableFeature != "":
 		fmt.Printf("[CONFIG] Enable feature %q\n", cmdConfig.EnableFeature.String())
