@@ -15,6 +15,9 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
+
+	"github.com/grafviktor/goto/internal/constant"
+	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 )
 
 func Test_stringEmpty(t *testing.T) {
@@ -451,4 +454,18 @@ func Test_CheckAppRequirements(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_LogAndCloseApp(t *testing.T) {
+	osExitCalled := false
+	exitFunc = func(code int) {
+		osExitCalled = true
+		require.Equal(t, constant.AppExitCodeSuccess, code)
+	}
+
+	lg := &mocklogger.Logger{}
+	LogAndCloseApp(lg, constant.AppExitCodeSuccess, "test reason")
+
+	require.Len(t, lg.Logs, 2, "must be two log entries")
+	require.True(t, osExitCalled, "exitFunc should be called")
 }

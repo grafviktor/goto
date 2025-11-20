@@ -382,6 +382,8 @@ type loggerInterface interface {
 	Close()
 }
 
+var exitFunc = os.Exit
+
 // LogAndCloseApp logs the close message, closes the logger, and exits with the specified code.
 func LogAndCloseApp(lg loggerInterface, exitCode int, exitReason string) {
 	loggingFunc := lo.Ternary(exitCode == constant.AppExitCodeSuccess, lg.Info, lg.Error)
@@ -395,5 +397,5 @@ func LogAndCloseApp(lg loggerInterface, exitCode int, exitReason string) {
 	loggingFunc("[MAIN] %s", closeMsg)
 
 	lg.Close()
-	os.Exit(exitCode)
+	exitFunc(exitCode)
 }
