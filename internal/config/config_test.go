@@ -71,7 +71,7 @@ func Test_parseCommandLineFlags(t *testing.T) {
 		"-e", "ssh_config",
 	}
 
-	cfg, err := parseCommandLineFlags(envConfig, args)
+	cfg, err := parseCommandLineFlags(envConfig, args, false)
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
 }

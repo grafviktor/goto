@@ -39,7 +39,7 @@ func Initialize() (*Configuration, error) {
 		return envConfig, fmt.Errorf("failed to parse environment variables: %w", err)
 	}
 
-	cmdConfig, err := parseCommandLineFlags(envConfig, os.Args)
+	cmdConfig, err := parseCommandLineFlags(envConfig, os.Args, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse command line flags: %w", err)
 	}
@@ -61,11 +61,21 @@ func parseEnvironmentVariables() (*Configuration, error) {
 }
 
 // parseCommandLineFlags parses command line flags and returns the configuration.
-func parseCommandLineFlags(envConfig *Configuration, args []string) (*Configuration, error) {
+func parseCommandLineFlags(envConfig *Configuration, args []string, exitOnError bool) (*Configuration, error) {
 	var cmdConfig Configuration
 	var shouldDisplayVersionAndExit bool
 
-	fs := flag.NewFlagSet(appName, flag.ContinueOnError)
+	// flag.ExitOnError - means exit the program if an error occurs while parsing flags
+	// flag.ContinueOnError - means return error and let developer to decide how to handle this error,
+	// this is unit test friendly, otherwise it's calling os.Exit internally.
+	// The thing is, when we run the app with "-h" (display help), the library returns
+	// error which is called: "flag.ErrHelp". It's not actually an error, it's an indication that
+	// we must close the app. I don't want to micromanage this behavior, that's why it's
+	// easier to use flag.ExitOnError, which is the default behavior of the flag package, when not
+	// using flag.NewFlagSet directly. Reminder - flag.NewFlagSet with flag.ContinueOnError is a good
+	// friend of unit tests, but requires more error handling. That's the reason I'm implementing
+	// the switch for unit tests.
+	fs := flag.NewFlagSet(appName, lo.Ternary(exitOnError, flag.ExitOnError, flag.ContinueOnError))
 	// Command line parameters have the highest precedence, use envConfig as fallback values
 	fs.BoolVar(&shouldDisplayVersionAndExit, "v", false, "Display application details")
 	fs.StringVar(&cmdConfig.AppHome, "f", envConfig.AppHome, "Application home folder")
@@ -88,7 +98,7 @@ func parseCommandLineFlags(envConfig *Configuration, args []string) (*Configurat
 	)
 	fs.StringVar(&cmdConfig.SetTheme, "set-theme", "", "Set application theme")
 
-	err := fs.Parse(args)
+	err := fs.Parse(args[1:]) // args should not include program name, see docs
 	if err != nil {
 		return nil, err
 	}
