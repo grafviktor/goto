@@ -132,6 +132,8 @@ func setConfigDefaults(config *Configuration) (*Configuration, error) {
 		config.AppMode = constant.AppModeType.StartUI
 	}
 
+	// This is validation!
+	// It should be moved to parseCommandLineFlags, like it's done for EnableFeature.
 	supportedLogLevels := []constant.LogLevel{constant.LogLevelType.DEBUG, constant.LogLevelType.INFO}
 	if !lo.Contains(supportedLogLevels, config.LogLevel) {
 		return nil, fmt.Errorf("unsupported log level: %q", config.LogLevel)
