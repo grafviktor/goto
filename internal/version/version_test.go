@@ -8,9 +8,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 )
 
-func TestSetAndGet(t *testing.T) {
+func Test_SetAndGet(t *testing.T) {
 	// Test Set function to update build information
 	Set("1.0", "abcdef", "develop", "2023-09-01")
 
@@ -32,7 +34,7 @@ func TestSetAndGet(t *testing.T) {
 	}
 }
 
-func TestPrintConsole(t *testing.T) {
+func Test_PrintConsole(t *testing.T) {
 	// Capture the output of PrintConsole
 	output := captureOutput(func() {
 		Print()
@@ -61,4 +63,18 @@ func captureOutput(f func()) string {
 	_, _ = io.Copy(&buf, r)
 
 	return buf.String()
+}
+
+func Test_LogDetails(t *testing.T) {
+	mockLogger := &mocklogger.Logger{}
+	LogDetails(mockLogger)
+
+	expectedMessages := []string{
+		fmt.Sprintf("[MAIN] Version:    %s", Number()),
+		fmt.Sprintf("[MAIN] Commit:     %s", CommitHash()),
+		fmt.Sprintf("[MAIN] Branch:     %s", BuildBranch()),
+		fmt.Sprintf("[MAIN] Build date: %s", BuildDate()),
+	}
+
+	require.Equal(t, expectedMessages, mockLogger.Logs)
 }
