@@ -1,6 +1,4 @@
 // Package main contains the application entry point for the GOTO SSH Manager.
-//
-//nolint:lll,gochecknoglobals // Disable line length check, Ignore burn in these variables.
 package main
 
 import (
