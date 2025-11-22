@@ -382,6 +382,7 @@ type loggerInterface interface {
 	Close()
 }
 
+// For unit tests, allows to override os.Exit.
 var exitFunc = os.Exit
 
 // LogAndCloseApp logs the close message, closes the logger, and exits with the specified code.
