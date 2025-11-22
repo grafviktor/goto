@@ -26,7 +26,8 @@ func Set(theme *Theme) {
 	currentTheme = theme
 }
 
-// Get returns the current application theme.
+// Get returns the current application theme. This method is
+// used only by styles module. Consider refactoring.
 func Get() *Theme {
 	if currentTheme == nil {
 		currentTheme = DefaultTheme()
