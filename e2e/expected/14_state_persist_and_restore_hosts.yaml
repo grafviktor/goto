@@ -1,0 +1,10 @@
+- host:
+    address: 127.0.0.1
+    description: network host description
+    group: manual hosts
+    title: network host
+- host:
+    address: 127.0.0.2
+    description: network host description 2
+    group: manual hosts
+    title: network host 2
