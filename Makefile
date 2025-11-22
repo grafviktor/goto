@@ -1,6 +1,6 @@
 BUILD_BRANCH  = $(shell git rev-parse --abbrev-ref HEAD)
 BUILD_COMMIT  = $(shell git rev-parse --short=8 HEAD)
-BUILD_VERSION = v1.4.1
+BUILD_VERSION = v1.5.0
 BUILD_DATE    = $(shell date +%Y-%m-%d)
 NO_DEBUG_FLAGS = -s -w
 # Check if there is no associated tag with this commit, that means that it is a dev build.
