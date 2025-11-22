@@ -17,7 +17,7 @@ type styles struct {
 }
 
 func defaultStyles() styles {
-	themeSettings := theme.GetTheme().Styles
+	themeSettings := theme.Get().Styles
 
 	return styles{
 		componentMargins: lipgloss.NewStyle().Margin(1, 0),

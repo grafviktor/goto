@@ -1,5 +1,4 @@
 Set Shell bash
-Enter
 Type "gg -f temp -s mock_ssh_config"
 Enter
 Sleep 100ms

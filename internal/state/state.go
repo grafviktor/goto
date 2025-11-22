@@ -1,18 +1,24 @@
 // Package state is in charge of storing and reading application state.
+//
+//nolint:forbidigo // Use fmt.Printf for display user messages to stdout.
 package state
 
 import (
 	"context"
-	"io"
+	"fmt"
 	"os"
 	"path"
+	"strings"
 	"sync"
 
+	"github.com/samber/lo"
 	"gopkg.in/yaml.v2"
 
-	"github.com/grafviktor/goto/internal/application"
+	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
+	"github.com/grafviktor/goto/internal/ui/theme"
 	"github.com/grafviktor/goto/internal/utils"
+	"github.com/grafviktor/goto/internal/version"
 )
 
 type view int
@@ -34,12 +40,12 @@ type Once interface {
 }
 
 var (
-	appState  *Application
+	st        *State
 	once      Once = &sync.Once{}
 	stateFile      = "state.yaml"
 )
 
-type iLogger interface {
+type loggerInterface interface {
 	Debug(format string, args ...any)
 	Warn(format string, args ...any)
 	Info(format string, args ...any)
@@ -47,107 +53,213 @@ type iLogger interface {
 	Close()
 }
 
-// Application stores application state.
-type Application struct {
-	Selected         int `yaml:"selected"`
-	appStateFilePath string
-	Logger           iLogger               `yaml:"-"`
-	CurrentView      view                  `yaml:"-"`
-	Width            int                   `yaml:"-"`
-	Height           int                   `yaml:"-"`
-	ScreenLayout     constant.ScreenLayout `yaml:"screenLayout,omitempty"`
-	Group            string                `yaml:"group,omitempty"`
-	// SSHConfigEnabled is a part of ApplicationState, not user config, because it is a feature flag
-	// which is persisted across application restarts. In other words, once defined, it will be
-	// persisted in the state.yaml file and will be used in the next application run.
-	SSHConfigEnabled  bool                      `yaml:"enable_ssh_config"`
-	Theme             string                    `yaml:"theme,omitempty"`
-	ApplicationConfig application.Configuration `yaml:"-"`
-	Context           context.Context           `yaml:"-"`
-}
-
-// Create - creates application state.
-func Create(appContext context.Context,
-	appConfig application.Configuration,
-	lg iLogger,
-) *Application {
-	once.Do(func() {
-		lg.Debug("[APPSTATE] Create application state")
-		appState = &Application{
-			appStateFilePath:  path.Join(appConfig.AppHome, stateFile),
-			Logger:            lg,
-			Group:             "",
-			SSHConfigEnabled:  true,
-			Theme:             "default",
-			ApplicationConfig: appConfig,
-			Context:           appContext,
-		}
-
-		// If we cannot read previously created application state, that's fine - we can continue execution.
-		lg.Debug("[APPSTATE] Application state is not ready, restore from file")
-		_ = appState.readFromFile()
-	})
-
-	return appState
+// State stores application state.
+type State struct {
+	AppHome                    string                `yaml:"-"`
+	AppMode                    constant.AppMode      `yaml:"-"`
+	Context                    context.Context       `yaml:"-"`
+	CurrentView                view                  `yaml:"-"`
+	Group                      string                `yaml:"group,omitempty"`
+	Height                     int                   `yaml:"-"`
+	IsUserDefinedSSHConfigPath bool                  `yaml:"-"`
+	Logger                     loggerInterface       `yaml:"-"`
+	LogLevel                   constant.LogLevel     `yaml:"-"`
+	ScreenLayout               constant.ScreenLayout `yaml:"screen_layout,omitempty"`
+	Selected                   int                   `yaml:"selected"`
+	SSHConfigEnabled           bool                  `yaml:"enable_ssh_config"`
+	SSHConfigFilePath          string                `yaml:"-"`
+	Theme                      string                `yaml:"theme,omitempty"`
+	Width                      int                   `yaml:"-"`
 }
 
 // Get - returns application state.
-func Get() *Application {
-	return appState
+func Get() *State {
+	return st
 }
 
 // IsInitialized - checks if the application state is initialized.
 func IsInitialized() bool {
-	return appState != nil
+	return st != nil
 }
 
-func (as *Application) readFromFile() error {
-	as.Logger.Debug("[APPSTATE] Read application state from: %q", as.appStateFilePath)
-	fileData, err := os.ReadFile(as.appStateFilePath)
-	if err != nil {
-		as.Logger.Info("[APPSTATE] Can't read application state from file '%v'", err)
-		return err
+// Initialize - creates application state.
+func Initialize(ctx context.Context,
+	cfg *config.Configuration,
+	lg loggerInterface,
+) (*State, error) {
+	var err error
+
+	once.Do(func() {
+		lg.Debug("[APPSTATE] Create application state")
+
+		// Cannot take this value from config because:
+		// 1. We must distinguish between user-defined and default paths
+		// 2. If default path does not exist, we must ignore this error(replicate what ssh does)
+		// 3. If custom path is provided, but does not exist, we must close the app with error
+		// Probably we should not be too smart here and always ignore the error or vice versa - always fail.
+		var defaultSSHConfigPath string
+		defaultSSHConfigPath, err = utils.SSHConfigDefaultFilePath()
+		if err != nil {
+			lg.Warn("[APPSTATE] Cannot determine default SSH config file path: %v.", err)
+		}
+
+		// Set default values
+		st = &State{
+			AppMode:           cfg.AppMode,
+			AppHome:           cfg.AppHome,
+			Context:           ctx,
+			Logger:            lg,
+			SSHConfigFilePath: defaultSSHConfigPath,
+		}
+
+		// Read state from file
+		st.readFromFile()
+		// Apply configuration
+		err = st.applyConfig(cfg)
+	})
+
+	return st, err
+}
+
+func (s *State) readFromFile() {
+	// Why not unmarshal directly to State? Because we want to distinguish between null values
+	// and zero values especially for boolean parameters. Using pointers for that.
+	var loadedState struct {
+		Selected int    `yaml:"selected"`
+		Group    string `yaml:"group"`
+		// Using pointers to distinguish between null and zero values.
+		Theme            *string `yaml:"theme"`
+		ScreenLayout     *string `yaml:"screen_layout"`
+		SSHConfigEnabled *bool   `yaml:"enable_ssh_config"`
 	}
 
-	err = yaml.Unmarshal(fileData, as)
+	appStateFilePath := path.Join(s.AppHome, stateFile)
+	s.Logger.Debug("[APPSTATE] Read application state from: %q", appStateFilePath)
+	fileData, err := os.ReadFile(appStateFilePath)
 	if err != nil {
-		as.Logger.Error("[APPSTATE] Can't parse application state loaded from file '%v'", err)
-		return err
+		s.Logger.Warn("[APPSTATE] Can't read application state from file. Reason: %v", err)
 	}
 
-	as.Logger.Debug("[APPSTATE] Screen layout: '%v'. Focused host id: '%v'", as.ScreenLayout, as.Selected)
+	err = yaml.Unmarshal(fileData, &loadedState)
+	if err != nil {
+		s.Logger.Error("[APPSTATE] Can't parse application state loaded from file. Reason: %v", err)
+	}
+
+	s.Group = loadedState.Group
+	s.Selected = loadedState.Selected
+
+	if loadedState.Theme == nil {
+		s.Theme = theme.DefaultTheme().Name
+	} else {
+		s.Theme = *loadedState.Theme
+	}
+
+	if loadedState.ScreenLayout == nil {
+		s.ScreenLayout = constant.ScreenLayoutDescription
+	} else {
+		s.ScreenLayout = constant.ScreenLayout(*loadedState.ScreenLayout)
+	}
+
+	if loadedState.SSHConfigEnabled == nil {
+		// If there is no value for ssh config option, then we enable it by default
+		s.SSHConfigEnabled = true
+	} else {
+		s.SSHConfigEnabled = *loadedState.SSHConfigEnabled
+	}
+
+	s.Logger.Debug("[APPSTATE] Screen layout: '%v'. Focused host id: '%v'", s.ScreenLayout, s.Selected)
+}
+
+func (s *State) applyConfig(cfg *config.Configuration) error {
+	if utils.StringEmpty(&cfg.AppMode) {
+		s.AppMode = constant.AppModeType.StartUI
+	} else {
+		s.AppMode = cfg.AppMode
+	}
+
+	if utils.StringEmpty(&cfg.LogLevel) {
+		s.LogLevel = constant.LogLevelType.INFO
+	} else {
+		s.LogLevel = cfg.LogLevel
+	}
+
+	if cfg.DisableFeature != "" {
+		if cfg.DisableFeature == config.FeatureSSHConfig {
+			s.SSHConfigEnabled = false
+		} else {
+			return fmt.Errorf("feature %q is not supported", cfg.DisableFeature)
+		}
+	}
+
+	if cfg.EnableFeature != "" {
+		if cfg.EnableFeature == config.FeatureSSHConfig {
+			s.SSHConfigEnabled = true
+		} else {
+			return fmt.Errorf("feature %q is not supported", cfg.EnableFeature)
+		}
+	}
+
+	if !utils.StringEmpty(&cfg.SSHConfigFilePath) {
+		userDefinedPath, err := utils.SSHConfigFilePath(cfg.SSHConfigFilePath)
+		if err != nil {
+			return fmt.Errorf("cannot set ssh config file path: %w", err)
+		}
+		s.SSHConfigFilePath = userDefinedPath
+		s.IsUserDefinedSSHConfigPath = true
+	}
+
+	if !utils.StringEmpty(&cfg.SetTheme) {
+		installedThemes := theme.ListInstalled(cfg.AppHome, s.Logger)
+		if !lo.Contains(installedThemes, cfg.SetTheme) {
+			installedThemesStr := strings.Join(installedThemes, ", ")
+			return fmt.Errorf("cannot find theme %q, installed themes: %v", cfg.SetTheme, installedThemesStr)
+		}
+		s.Theme = cfg.SetTheme
+	}
 
 	return nil
 }
 
 // Persist saves app state to disk.
-func (as *Application) Persist() error {
-	as.Logger.Debug("[APPSTATE] Persist application state to file: %q", as.appStateFilePath)
-	result, err := yaml.Marshal(as)
+func (s *State) Persist() error {
+	appStateFilePath := path.Join(s.AppHome, stateFile)
+	s.Logger.Debug("[APPSTATE] Persist application state to file: %q", appStateFilePath)
+	result, err := yaml.Marshal(s)
 	if err != nil {
-		as.Logger.Error("[APPSTATE] Cannot marshall application state. %v", err)
+		s.Logger.Error("[APPSTATE] Cannot marshall application state. %v", err)
 		return err
 	}
 
-	err = os.WriteFile(as.appStateFilePath, result, 0o600)
+	err = os.WriteFile(appStateFilePath, result, 0o600)
 	if err != nil {
-		as.Logger.Error("[APPSTATE] Cannot save application state. %v", err)
+		s.Logger.Error("[APPSTATE] Cannot save application state. %v", err)
 		return err
 	}
 
 	return nil
 }
 
-func (as *Application) printConfig(w io.Writer) {
-	utils.FprintfIgnoreError(w, "App home:           %s\n", as.ApplicationConfig.AppHome)
-	utils.FprintfIgnoreError(w, "Log level:          %s\n", as.ApplicationConfig.LogLevel)
-	if as.SSHConfigEnabled {
-		utils.FprintfIgnoreError(w, "SSH config enabled: %t\n", as.SSHConfigEnabled)
-		utils.FprintfIgnoreError(w, "SSH config path:    %s\n", as.ApplicationConfig.SSHConfigFilePath)
+func (s *State) print() {
+	fmt.Printf("App home:          %s\n", s.AppHome)
+	fmt.Printf("Log level:         %s\n", s.LogLevel)
+	fmt.Printf("SSH config status: %s\n", lo.Ternary(s.SSHConfigEnabled, "enabled", "disabled"))
+	if s.SSHConfigEnabled {
+		fmt.Printf("SSH config path:   %s\n", s.SSHConfigFilePath)
 	}
 }
 
 // PrintConfig outputs user-definable parameters in the console.
-func (as *Application) PrintConfig() {
-	as.printConfig(os.Stdout)
+func (s *State) PrintConfig() {
+	version.Print()
+	fmt.Println()
+	s.print()
+}
+
+func (s *State) LogDetails() {
+	s.Logger.Info("[CONFIG] Application home folder: %q\n", s.AppHome)
+	s.Logger.Info("[CONFIG] Application log level:   %q\n", s.LogLevel)
+	s.Logger.Info("[CONFIG] SSH config status:       %q\n", lo.Ternary(s.SSHConfigEnabled, "enabled", "disabled"))
+	if s.SSHConfigEnabled {
+		s.Logger.Info("[CONFIG] SSH config path:         %q\n", s.SSHConfigFilePath)
+	}
 }

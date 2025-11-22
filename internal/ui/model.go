@@ -33,7 +33,7 @@ type iLogger interface {
 func New(
 	ctx context.Context,
 	storage storage.HostStorage,
-	appState *state.Application,
+	appState *state.State,
 	log iLogger,
 ) MainModel {
 	m := MainModel{
@@ -54,7 +54,7 @@ type MainModel struct {
 	modelHostList      tea.Model
 	modelGroupList     tea.Model
 	modelHostEdit      tea.Model
-	appState           *state.Application
+	appState           *state.State
 	viewMessageContent string
 	logger             iLogger
 	viewport           viewport.Model
@@ -63,7 +63,7 @@ type MainModel struct {
 }
 
 func (m *MainModel) Init() tea.Cmd {
-	m.logger.Debug("[UI] Run init function")
+	m.logger.Debug("[UI] Init main model")
 
 	// Loads hosts from DB
 	return m.modelHostList.Init()
@@ -283,7 +283,7 @@ func (m *MainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) te
 	m.logger.Debug("[EXEC] Copy ssh-key '%s.pub' to host '%s'", identityFile, hostname)
 	if sshconfig.IsUserDefinedPath() {
 		m.logger.Warn("[EXEC] copy ssh key when alternative ssh config file is used: %q. ssh config file is ignored.",
-			m.appState.ApplicationConfig.SSHConfigFilePath)
+			m.appState.SSHConfigFilePath)
 	}
 	process := utils.BuildProcessInterceptStdAll(msg.Host.CmdSSHCopyID())
 	m.logger.Info("[EXEC] Run process: '%s'", process.String())

@@ -1,3 +1,4 @@
+screen_layout: description
 selected: 4
-screenLayout: description
 enable_ssh_config: true
+theme: default

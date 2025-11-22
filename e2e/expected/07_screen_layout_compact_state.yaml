@@ -1,3 +1,4 @@
+screen_layout: compact
 selected: 4
-screenLayout: compact
 enable_ssh_config: true
+theme: default

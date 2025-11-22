@@ -29,14 +29,14 @@ type Model struct {
 	list.Model
 
 	repo     storage.HostStorage
-	appState *state.Application
+	appState *state.State
 	logger   iLogger
 	styles   styles
 }
 
 // New - creates a new UI component which is used to select a host group from a list,
 // with pre-defined initial parameters.
-func New(_ context.Context, repo storage.HostStorage, appState *state.Application, log iLogger) *Model {
+func New(_ context.Context, repo storage.HostStorage, appState *state.State, log iLogger) *Model {
 	styles := defaultStyles()
 
 	var listItems []list.Item

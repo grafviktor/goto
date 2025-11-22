@@ -15,7 +15,7 @@ type styles struct {
 }
 
 func defaultStyles() styles {
-	themeSettings := theme.GetTheme().Styles.Input
+	themeSettings := theme.Get().Styles.Input
 
 	return styles{
 		inputError:   themeSettings.InputError,
