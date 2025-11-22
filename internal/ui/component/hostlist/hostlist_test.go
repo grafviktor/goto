@@ -24,7 +24,7 @@ func TestListModel_Init(t *testing.T) {
 	// Test Init function which loads data from storage
 	storageShouldFail := false
 	storage := testutils.NewMockStorage(storageShouldFail)
-	fakeAppState := state.Application{Selected: 1}
+	fakeAppState := state.State{Selected: 1}
 	lm := New(context.TODO(), storage, &fakeAppState, &mocklogger.Logger{})
 	teaCmd := lm.Init()
 
@@ -58,7 +58,7 @@ func TestListModel_Init(t *testing.T) {
 	lm = New(
 		context.TODO(),
 		storage,
-		&state.Application{Group: "Group 2"},
+		&state.State{Group: "Group 2"},
 		&mocklogger.Logger{},
 	)
 	lm.Init()
@@ -71,7 +71,7 @@ func TestListModel_Init(t *testing.T) {
 	lm = New(
 		context.TODO(),
 		storage,
-		&state.Application{}, // we don't need app state, as error should be reported before we can even use it
+		&state.State{}, // we don't need app state, as error should be reported before we can even use it
 		&mocklogger.Logger{},
 	)
 	teaCmd = lm.Init()
@@ -473,7 +473,7 @@ func TestListModel_editItem(t *testing.T) {
 	lm := New(
 		context.TODO(),
 		storage,
-		&state.Application{}, // we don't need app state, as error should be reported before we can even use it
+		&state.State{}, // we don't need app state, as error should be reported before we can even use it
 		&mocklogger.Logger{},
 	)
 	lm.logger = &mocklogger.Logger{}
@@ -503,7 +503,7 @@ func TestListModel_copyItem(t *testing.T) {
 	// First case - test that we receive an error when item is not selected
 	storageShouldFail := true
 	storage := testutils.NewMockStorage(storageShouldFail)
-	lm := New(context.TODO(), storage, &state.Application{}, &mocklogger.Logger{})
+	lm := New(context.TODO(), storage, &state.State{}, &mocklogger.Logger{})
 	teaCmd := lm.copyItem()
 	require.Equal(t, itemNotSelectedErrMsg, teaCmd().(message.ErrorOccurred).Err.Error())
 
@@ -670,7 +670,7 @@ func TestUpdate_GroupListSelectItem(t *testing.T) {
 	model := New(
 		context.TODO(),
 		testutils.NewMockStorage(false),
-		&state.Application{},
+		&state.State{},
 		&mocklogger.Logger{},
 	)
 	model.loadHosts()
@@ -694,7 +694,7 @@ func TestUpdate_msgHideNotification(t *testing.T) {
 	model := New(
 		context.TODO(),
 		testutils.NewMockStorage(false),
-		&state.Application{},
+		&state.State{},
 		&mocklogger.Logger{},
 	)
 	model.loadHosts()
@@ -931,7 +931,7 @@ func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
 	// "Mock Host 2"
 	// "Mock Host 3"
 	storage := testutils.NewMockStorage(false)
-	fakeAppState := state.Application{Selected: 1}
+	fakeAppState := state.State{Selected: 1}
 
 	// Create model
 	model := New(context.TODO(), storage, &fakeAppState, &mocklogger.Logger{})
@@ -977,7 +977,7 @@ func TestUpdate_ToggleBetweenScreenLayouts(t *testing.T) {
 	// "Mock Host 2"
 	// "Mock Host 3"
 	storage := testutils.NewMockStorage(false)
-	fakeAppState := state.Application{Selected: 1}
+	fakeAppState := state.State{Selected: 1}
 
 	// Create model
 	model := New(context.TODO(), storage, &fakeAppState, &mocklogger.Logger{})
@@ -1041,7 +1041,7 @@ func TestUpdate_HostFocusPreservedAfterClearFilterMessage(t *testing.T) {
 	// "Mock Host 2"
 	// "Mock Host 3"
 	storage := testutils.NewMockStorage(false)
-	fakeAppState := state.Application{Selected: 1}
+	fakeAppState := state.State{Selected: 1}
 
 	// Create model
 	model := New(context.TODO(), storage, &fakeAppState, &mocklogger.Logger{})
@@ -1087,7 +1087,7 @@ func TestUpdate_HostFocusPreservedAfterClearFilterMessage(t *testing.T) {
 
 func newMockListModel(storageShouldFail bool) *ListModel {
 	storage := testutils.NewMockStorage(storageShouldFail)
-	mockState := state.Application{Selected: 1}
+	mockState := state.State{Selected: 1}
 
 	// Create listModel using constructor function (using 'New' is important to preserve hotkeys)
 	lm := New(context.TODO(), storage, &mockState, &mocklogger.Logger{})

@@ -1,2 +1,4 @@
+screen_layout: description
 selected: 0
 enable_ssh_config: false
+theme: default

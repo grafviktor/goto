@@ -34,10 +34,10 @@ var (
 	logFileName      = "app.log"
 )
 
-// Create - creates a new logger with a specific log level.
+// Initialize - creates a new logger with a specific log level.
 // appPath - where log file will be stored.
 // userSetLogLevel - user-defined log level (debug or info).
-func Create(appPath, userSetLogLevel string) (*AppLogger, error) {
+func Initialize(appPath, userSetLogLevel string) (*AppLogger, error) {
 	var err error
 	once.Do(func() {
 		logLevel := lo.Ternary(userSetLogLevel == "debug", LevelDebug, LevelInfo)
@@ -45,7 +45,6 @@ func Create(appPath, userSetLogLevel string) (*AppLogger, error) {
 		logFilePath := path.Join(appPath, logFileName)
 		logFile, openLogFileError := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 		if openLogFileError != nil {
-			log.Printf("[MAIN] Can't create application logger: %v\n", openLogFileError)
 			err = openLogFileError
 			return
 		}

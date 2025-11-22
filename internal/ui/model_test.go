@@ -297,6 +297,6 @@ func TestUpdate_ExitWithError(t *testing.T) {
 
 // ---------------------------------
 
-func MockAppState() *state.Application {
-	return &state.Application{}
+func MockAppState() *state.State {
+	return &state.State{}
 }

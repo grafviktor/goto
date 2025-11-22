@@ -1,5 +1,4 @@
 Set Shell bash
-Enter
 Type "gg -f temp -s mock_ssh_config"
 Enter
 Sleep 100ms
@@ -13,5 +12,6 @@ Down
 Type "network host description"
 Ctrl+S
 Sleep 100ms
+Type "v"
 Type "v"
 Type "q"

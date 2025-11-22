@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/grafviktor/goto/internal/application"
+	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/state"
@@ -15,12 +15,14 @@ import (
 )
 
 func TestStorage_Initialize_SSHConfigEnabled(t *testing.T) {
-	state.Create(context.TODO(), application.Configuration{}, &mocklogger.Logger{})
-	state.Get().SSHConfigEnabled = true
-	logger := &mocklogger.Logger{}
-	appConfig := application.Configuration{}
+	st, err := state.Initialize(
+		context.TODO(),
+		&config.Configuration{},
+		&mocklogger.Logger{},
+	)
+	require.NoError(t, err, "expected no error on state initialization")
 
-	storage, err := Initialize(context.TODO(), &appConfig, logger)
+	storage, err := Initialize(context.TODO(), st, st.Logger)
 	require.NoError(t, err, "expected no error on storage initialization")
 	require.Len(t, storage.(*combinedStorage).storages, 2, "expected two inner storages")
 	// Not required, but just to verify that not errors when closing storages
@@ -28,12 +30,15 @@ func TestStorage_Initialize_SSHConfigEnabled(t *testing.T) {
 }
 
 func TestStorage_Initialize_SSHConfigDisabled(t *testing.T) {
-	state.Create(context.TODO(), application.Configuration{}, &mocklogger.Logger{})
-	state.Get().SSHConfigEnabled = false
-	logger := &mocklogger.Logger{}
-	appConfig := application.Configuration{}
+	st, err := state.Initialize(
+		context.TODO(),
+		&config.Configuration{},
+		&mocklogger.Logger{},
+	)
+	st.SSHConfigEnabled = false
+	require.NoError(t, err, "expected no error on state initialization")
 
-	storage, err := Initialize(context.TODO(), &appConfig, logger)
+	storage, err := Initialize(context.TODO(), st, st.Logger)
 	require.NoError(t, err, "expected no error on storage initialization")
 	require.Len(t, storage.(*combinedStorage).storages, 1, "expected one inner storage")
 	// Not required, but just to verify that not errors when closing storages
@@ -96,7 +101,7 @@ func TestCombinedStorage_GetAll(t *testing.T) {
 	logger := &mocklogger.Logger{}
 
 	cs := combinedStorage{
-		storages:       getMockStorages(context.TODO(), application.Configuration{}, logger),
+		storages:       getMockStorages(context.TODO(), config.Configuration{}, logger),
 		hostStorageMap: make(map[int]hostStorageMapping),
 		hosts:          make(map[int]model.Host),
 		nextID:         0,
@@ -110,7 +115,7 @@ func TestCombinedStorage_GetAll(t *testing.T) {
 
 func getMockStorages(
 	_ context.Context,
-	_ application.Configuration,
+	_ config.Configuration,
 	_ iLogger,
 ) map[constant.HostStorageEnum]HostStorage {
 	// Setup fake storages

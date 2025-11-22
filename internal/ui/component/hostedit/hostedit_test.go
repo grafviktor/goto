@@ -445,6 +445,6 @@ func TestDisplayNotificationMsg(t *testing.T) {
 	require.Nil(t, cmd)
 }
 
-func MockAppState() *state.Application {
-	return &state.Application{}
+func MockAppState() *state.State {
+	return &state.State{}
 }

@@ -1,5 +1,4 @@
-// Package application config contains configuration struct
-package application
+package config
 
 import (
 	"errors"
@@ -28,15 +27,4 @@ func (ff *FeatureFlag) Set(value string) error {
 
 	errMsg := fmt.Sprintf("\nsupported values: %s", strings.Join(SupportedFeatures, ", "))
 	return errors.New(errMsg)
-}
-
-// Configuration structs contains user-definable parameters.
-type Configuration struct {
-	AppHome                          string `env:"GG_HOME"`
-	LogLevel                         string `env:"GG_LOG_LEVEL"            envDefault:"info"`
-	SSHConfigFilePath                string `env:"GG_SSH_CONFIG_FILE_PATH"`
-	IsSSHConfigFilePathDefinedByUser bool
-	DisplayVersionAndExit            bool
-	EnableFeature                    FeatureFlag
-	DisableFeature                   FeatureFlag
 }

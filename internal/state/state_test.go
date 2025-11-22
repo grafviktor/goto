@@ -1,10 +1,13 @@
 // Package state is in charge of storing and reading application state.
+//
+//nolint:golines // Don't care about line length in unit tests.
 package state
 
 import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"testing"
@@ -13,7 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 
-	"github.com/grafviktor/goto/internal/application"
+	"github.com/grafviktor/goto/internal/config"
+	"github.com/grafviktor/goto/internal/constant"
 )
 
 type MockLogger struct {
@@ -54,14 +58,14 @@ func (m *mockOnce) Do(f func()) {
 }
 
 // Test reading app state.
-func Test_CreateApplicationState(t *testing.T) {
+func Test_Initialize(t *testing.T) {
 	// Use a mock to avoid sync.Once restrictions in tests
 	once = &mockOnce{}
 
 	// Create a mock logger for testing
 	mockLogger := MockLogger{}
 
-	underTest := Create(context.TODO(), application.Configuration{}, &mockLogger)
+	underTest, _ := Initialize(context.TODO(), &config.Configuration{}, &mockLogger)
 
 	// Ensure that the application state is not nil
 	assert.NotNil(t, underTest)
@@ -71,18 +75,210 @@ func Test_CreateApplicationState(t *testing.T) {
 	assert.Contains(t, mockLogger.Logs[0], "Create application state")
 }
 
-func Test_GetApplicationState(t *testing.T) {
+func Test_Get(t *testing.T) {
 	// Use a mock to avoid sync.Once restrictions in tests
 	once = &mockOnce{}
 
 	// Create a mock logger for testing
 	mockLogger := MockLogger{}
 
-	Create(context.TODO(), application.Configuration{}, &mockLogger)
+	Initialize(context.TODO(), &config.Configuration{}, &mockLogger)
 	underTest := Get()
 
 	// Ensure that the application state is not nil
 	assert.NotNil(t, underTest)
+}
+
+func Test_readFromFile(t *testing.T) {
+	// Use a mock to avoid sync.Once restrictions in tests
+	once = &mockOnce{}
+
+	// Set up a temporary directory for testing
+	tempDir := t.TempDir()
+
+	tests := []struct {
+		name             string
+		stateFileContent string
+		expected         State
+	}{
+		{
+			name: "State file with all fields set",
+			stateFileContent: `
+selected: 999
+enable_ssh_config: true
+group: default
+theme: dark
+screen_layout: compact
+`,
+			expected: State{
+				Selected:         999,
+				SSHConfigEnabled: true,
+				ScreenLayout:     constant.ScreenLayoutCompact,
+				Theme:            "dark",
+				Group:            "default",
+			},
+		}, {
+			name: "State file without screen layout",
+			stateFileContent: `
+selected: 999
+enable_ssh_config: true
+group: default
+theme: dark
+`,
+			expected: State{
+				Selected:         999,
+				SSHConfigEnabled: true,
+				ScreenLayout:     constant.ScreenLayoutDescription,
+				Theme:            "dark",
+				Group:            "default",
+			},
+		}, {
+			name: "State file without theme",
+			stateFileContent: `
+selected: 999
+enable_ssh_config: true
+group: default
+screen_layout: compact
+`,
+			expected: State{
+				Selected:         999,
+				SSHConfigEnabled: true,
+				ScreenLayout:     constant.ScreenLayoutCompact,
+				Theme:            "default",
+				Group:            "default",
+			},
+		}, {
+			name: "State file SSH config option disabled",
+			stateFileContent: `
+selected: 999
+enable_ssh_config: false
+group: default
+theme: dark
+screen_layout: compact
+`,
+			expected: State{
+				Selected:         999,
+				SSHConfigEnabled: false,
+				ScreenLayout:     constant.ScreenLayoutCompact,
+				Theme:            "dark",
+				Group:            "default",
+			},
+		}, {
+			name: "State file SSH config option not set, should default to enabled",
+			stateFileContent: `
+selected: 999
+group: default
+theme: dark
+screen_layout: compact
+`,
+			expected: State{
+				Selected:         999,
+				SSHConfigEnabled: true,
+				ScreenLayout:     constant.ScreenLayoutCompact,
+				Theme:            "dark",
+				Group:            "default",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := os.WriteFile(path.Join(tempDir, stateFile), []byte(tt.stateFileContent), 0o644)
+			require.NoError(t, err)
+
+			test := &State{
+				AppHome: tempDir,
+				Logger:  &MockLogger{},
+			}
+
+			test.readFromFile()
+
+			assert.Equal(t, tt.expected.Selected, test.Selected, "state.Selected value mismatch")
+			assert.Equal(t, tt.expected.SSHConfigEnabled, test.SSHConfigEnabled, "state.SSHConfigEnabled value mismatch")
+			assert.Equal(t, tt.expected.ScreenLayout, test.ScreenLayout, "state.ScreenLayout value mismatch")
+			assert.Equal(t, tt.expected.Theme, test.Theme, "state.Theme value mismatch")
+			assert.Equal(t, tt.expected.Group, test.Group, "state.Group value mismatch")
+		})
+	}
+}
+
+func Test_applyConfig(t *testing.T) {
+	// Use a mock to avoid sync.Once restrictions in tests
+	once = &mockOnce{}
+
+	tests := []struct {
+		name     string
+		testCfg  config.Configuration
+		expected State
+		wantErr  bool
+	}{
+		{
+			name:    "Empty configuration",
+			testCfg: config.Configuration{},
+			expected: State{
+				AppMode:  constant.AppModeType.StartUI,
+				LogLevel: constant.LogLevelType.INFO,
+			},
+			wantErr: false,
+		}, {
+			name:    "Supported feature enabled",
+			testCfg: config.Configuration{EnableFeature: "ssh_config"},
+			expected: State{
+				AppMode:          constant.AppModeType.StartUI,
+				LogLevel:         constant.LogLevelType.INFO,
+				SSHConfigEnabled: true,
+			},
+			wantErr: false,
+		}, {
+			name:    "Supported feature disabled",
+			testCfg: config.Configuration{DisableFeature: "ssh_config"},
+			expected: State{
+				AppMode:          constant.AppModeType.StartUI,
+				LogLevel:         constant.LogLevelType.INFO,
+				SSHConfigEnabled: false,
+			},
+			wantErr: false,
+		}, {
+			name:     "Unsupported feature disabled",
+			testCfg:  config.Configuration{DisableFeature: "super_feature"},
+			expected: State{},
+			wantErr:  true,
+		}, {
+			name:     "Unsupported feature enabled",
+			testCfg:  config.Configuration{EnableFeature: "super_feature"},
+			expected: State{},
+			wantErr:  true,
+		}, {
+			name:    "SSH config path set",
+			testCfg: config.Configuration{SSHConfigFilePath: "~/.ssh/custom_config"},
+			expected: State{
+				AppMode:                    constant.AppModeType.StartUI,
+				LogLevel:                   constant.LogLevelType.INFO,
+				SSHConfigFilePath:          "~/.ssh/custom_config",
+				IsUserDefinedSSHConfigPath: true,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := &State{}
+			err := actual.applyConfig(&tt.testCfg)
+
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expected.AppMode, actual.AppMode, "AppMode mismatch")
+				assert.Equal(t, tt.expected.LogLevel, actual.LogLevel, "LogLevel mismatch")
+				assert.Equal(t, tt.expected.Theme, actual.Theme, "Theme mismatch")
+				assert.Equal(t, tt.expected.SSHConfigFilePath, actual.SSHConfigFilePath, "SSHConfigFilePath mismatch")
+				assert.Equal(t, tt.expected.SSHConfigEnabled, actual.SSHConfigEnabled, "SSHConfigEnabled mismatch")
+				assert.Equal(t, tt.expected.IsUserDefinedSSHConfigPath, actual.IsUserDefinedSSHConfigPath, "IsSSHConfigFilePathDefinedByUser mismatch")
+			}
+		})
+	}
 }
 
 // Test persisting app state.
@@ -90,12 +286,12 @@ func Test_PersistApplicationState(t *testing.T) {
 	// Set up a temporary directory for testing
 	tempDir := t.TempDir()
 
-	// Create a mock logger for testing
-	mockLogger := MockLogger{}
-
-	// Call the Get function with the temporary directory and mock logger
-	underTest := Create(context.TODO(), application.Configuration{}, &mockLogger)
-	underTest.appStateFilePath = path.Join(tempDir, "state.yaml")
+	// Call the Initialize function with the temporary directory and mock logger
+	underTest, _ := Initialize(
+		context.TODO(),
+		&config.Configuration{AppHome: tempDir},
+		&MockLogger{},
+	)
 
 	// Modify the application state
 	underTest.Selected = 42
@@ -105,7 +301,7 @@ func Test_PersistApplicationState(t *testing.T) {
 	require.NoError(t, err)
 
 	// Read the persisted state from disk
-	persistedState := &Application{}
+	persistedState := &State{}
 	fileData, err := os.ReadFile(path.Join(tempDir, stateFile))
 	require.NoError(t, err)
 
@@ -123,8 +319,7 @@ func Test_PersistApplicationStateError(t *testing.T) {
 	mockLogger := MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
-	underTest := Create(context.TODO(), application.Configuration{}, &mockLogger)
-	underTest.appStateFilePath = "non_exitent.yaml"
+	underTest, _ := Initialize(context.TODO(), &config.Configuration{}, &mockLogger)
 
 	// Modify the application state
 	underTest.Selected = 42
@@ -134,22 +329,52 @@ func Test_PersistApplicationStateError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func Test_PrintConfigTo(t *testing.T) {
-	appConfig := application.Configuration{
+func Test_PrintConfig(t *testing.T) {
+	state := &State{
 		AppHome:           "/tmp/goto",
 		LogLevel:          "debug",
+		SSHConfigEnabled:  true,
 		SSHConfigFilePath: "/tmp/ssh_config",
 	}
-	app := &Application{
-		ApplicationConfig: appConfig,
-		SSHConfigEnabled:  true,
-	}
+
+	actualOutput := captureOutput(state.PrintConfig)
+	assert.Contains(t, actualOutput, "App home:          /tmp/goto")
+	assert.Contains(t, actualOutput, "Log level:         debug")
+	assert.Contains(t, actualOutput, "SSH config status: enabled")
+	assert.Contains(t, actualOutput, "SSH config path:   /tmp/ssh_config")
+}
+
+// captureOutput captures the output of a function and returns it as a string.
+func captureOutput(f func()) string {
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w //nolint:reassign // For testing purposes
+
+	f()
+
+	w.Close()
+	os.Stdout = oldStdout //nolint:reassign // For testing purposes
 
 	var buf bytes.Buffer
-	app.printConfig(&buf)
-	output := buf.String()
-	assert.Contains(t, output, "App home:           /tmp/goto")
-	assert.Contains(t, output, "Log level:          debug")
-	assert.Contains(t, output, "SSH config enabled: true")
-	assert.Contains(t, output, "SSH config path:    /tmp/ssh_config")
+	_, _ = io.Copy(&buf, r)
+
+	return buf.String()
+}
+
+func Test_LogDetails(t *testing.T) {
+	logger := MockLogger{}
+	state := &State{
+		AppHome:           "/tmp/goto",
+		LogLevel:          "debug",
+		SSHConfigEnabled:  true,
+		SSHConfigFilePath: "/tmp/ssh_config",
+		Logger:            &logger,
+	}
+
+	state.LogDetails()
+
+	assert.Contains(t, logger.Logs[0], `Application home folder: "/tmp/goto"`)
+	assert.Contains(t, logger.Logs[1], `Application log level:   "debug"`)
+	assert.Contains(t, logger.Logs[2], `SSH config status:       "enabled"`)
+	assert.Contains(t, logger.Logs[3], `SSH config path:         "/tmp/ssh_config"`)
 }

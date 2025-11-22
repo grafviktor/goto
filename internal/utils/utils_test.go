@@ -15,6 +15,9 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
+
+	"github.com/grafviktor/goto/internal/constant"
+	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 )
 
 func Test_stringEmpty(t *testing.T) {
@@ -48,22 +51,22 @@ func Test_StringAbbreviation(t *testing.T) {
 func Test_CreateAppDirIfNotExists(t *testing.T) {
 	tmpFile, _ := os.CreateTemp(t.TempDir(), "unit_test_tmp.")
 	defer tmpFile.Close()
-	err := CreateAppDirIfNotExists(tmpFile.Name())
+	err := createAppDirIfNotExists(tmpFile.Name())
 	require.Error(
 		t,
 		err,
 		"CreateAppDirIfNotExists should return an error when home path exists and it's not a directory",
 	)
 
-	err = CreateAppDirIfNotExists(" ")
+	err = createAppDirIfNotExists(" ")
 	require.Error(t, err, "CreateAppDirIfNotExists should return an error when argument is empty")
 
 	tmpDir := t.TempDir()
-	err = CreateAppDirIfNotExists(tmpDir)
+	err = createAppDirIfNotExists(tmpDir)
 	require.NoError(t, err, "CreateAppDirIfNotExists should not return an error when app home exists")
 
 	tmpDir = path.Join(t.TempDir(), "test")
-	err = CreateAppDirIfNotExists(tmpDir)
+	err = createAppDirIfNotExists(tmpDir)
 	require.NoError(t, err, "CreateAppDirIfNotExists should create app home folder if not exists")
 }
 
@@ -90,7 +93,7 @@ func Test_GetAppDir(t *testing.T) {
 	require.Error(t, err, "App home folder should not be empty 2")
 }
 
-func Test(t *testing.T) {
+func Test_SSHConfigFilePath(t *testing.T) {
 	// Test case: SSH config file path
 	userConfigDir, _ := os.UserHomeDir()
 	expected := path.Join(userConfigDir, ".ssh", "config")
@@ -131,7 +134,7 @@ func Test_CheckAppInstalled(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := CheckAppInstalled(tt.appName)
+			err := checkAppInstalled(tt.appName)
 
 			if tt.expectedError && err == nil {
 				t.Errorf("Expected an error, but got nil")
@@ -373,7 +376,7 @@ func Test_FetchFromURL(t *testing.T) {
 			name:          "test_2",
 			url:           ts.URL + "/test_2",
 			expectedData:  "",
-			expectedError: errors.New("failed to fetch URL " + ts.URL + "/test_2: status code 500"),
+			expectedError: errors.New("failed to fetch " + ts.URL + "/test_2: status code 500"),
 		},
 		{
 			name:          "test_3",
@@ -402,4 +405,67 @@ func Test_FetchFromURL(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_CheckAppRequirements(t *testing.T) {
+	tmpDir := t.TempDir()
+	appHomeOk := path.Join(tmpDir, "app_home")
+	appHomeBad := path.Join(tmpDir, "app_home_bad")
+
+	// Create a file instead of a directory to simulate a bad app home path
+	err := os.WriteFile(appHomeBad, []byte{}, 0o644)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name               string
+		requiredBinaryName string
+		appHome            string
+		wantErr            bool
+	}{
+		{
+			name:               "All good test",
+			requiredBinaryName: "echo",
+			appHome:            appHomeOk,
+			wantErr:            false,
+		},
+		{
+			name:               "Bad app home path",
+			requiredBinaryName: "echo",
+			appHome:            appHomeBad,
+			wantErr:            true,
+		},
+		{
+			name:               "Bad binary name",
+			requiredBinaryName: "norton_commander.exe",
+			appHome:            appHomeOk,
+			wantErr:            true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requiredBinaryInPath = tt.requiredBinaryName
+
+			err = CheckAppRequirements(tt.appHome)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_LogAndCloseApp(t *testing.T) {
+	osExitCalled := false
+	exitFunc = func(code int) {
+		osExitCalled = true
+		require.Equal(t, constant.AppExitCodeSuccess, code)
+	}
+
+	lg := &mocklogger.Logger{}
+	LogAndCloseApp(lg, constant.AppExitCodeSuccess, "test reason")
+
+	require.Len(t, lg.Logs, 2, "must be two log entries")
+	require.True(t, osExitCalled, "exitFunc should be called")
 }

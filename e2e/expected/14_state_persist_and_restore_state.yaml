@@ -1,0 +1,5 @@
+group: manual hosts
+screen_layout: compact
+selected: 2
+enable_ssh_config: false
+theme: nord

@@ -3,6 +3,11 @@ package constant
 
 import "errors"
 
+const (
+	AppExitCodeSuccess = 0
+	AppExitCodeError   = 1
+)
+
 // ErrNotFound is used by data layer.
 var ErrNotFound = errors.New("not found")
 
@@ -42,4 +47,26 @@ var HostStorageType = struct {
 	Combined:  "COMBINED",
 	SSHConfig: "SSH_CONFIG",
 	YAMLFile:  "YAML_FILE",
+}
+
+type LogLevel = string
+
+var LogLevelType = struct {
+	INFO  LogLevel
+	DEBUG LogLevel
+}{
+	INFO:  "info",
+	DEBUG: "debug",
+}
+
+type AppMode = string
+
+var AppModeType = struct {
+	StartUI     AppMode
+	DisplayInfo AppMode
+	HandleParam AppMode
+}{
+	StartUI:     "START_UI",
+	DisplayInfo: "DISPLAY_INFO",
+	HandleParam: "HANDLE_PARAM",
 }
