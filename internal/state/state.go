@@ -138,6 +138,7 @@ func (s *State) readFromFile() {
 	fileData, err := os.ReadFile(appStateFilePath)
 	if err != nil {
 		s.Logger.Warn("[APPSTATE] Can't read application state from file. Reason: %v", err)
+		fileData = []byte{}
 	}
 
 	err = yaml.Unmarshal(fileData, &loadedState)
