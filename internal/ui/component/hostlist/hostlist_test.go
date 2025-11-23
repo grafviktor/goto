@@ -1016,18 +1016,10 @@ func TestUpdate_ToggleBetweenScreenLayouts(t *testing.T) {
 }
 
 func Test_HandleKeyboardEvent_Escape(t *testing.T) {
-	// If group is selected and type Escape key, the model
-	// should dispatch open group view message
+	// If press Escape key, the app should ask the user whether
+	// it wants to close the program
 	model := newMockListModel(false)
-	model.appState.Group = "Group 1"
 	_, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEsc})
-	require.IsType(t, message.ViewGroupListOpen{}, cmd())
-
-	// If group is NOT selected and press Escape key, the app
-	// should ask the user whether it wants to close the program
-	model = newMockListModel(false)
-	model.appState.Group = ""
-	_, cmd = model.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	require.Nil(t, cmd)
 	require.Equal(t, modeCloseApp, model.mode)
 	require.Equal(t, "close app? (y/N)", utils.StripStyles(model.Title))

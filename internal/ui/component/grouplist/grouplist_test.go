@@ -15,9 +15,10 @@ import (
 
 func TestNew(t *testing.T) {
 	model := NewMockGroupModel(false)
-	require.False(t, model.FilteringEnabled())
-	require.False(t, model.ShowStatusBar())
-	require.False(t, model.FilteringEnabled())
+	require.True(t, model.FilteringEnabled())
+	// Quit app keys is disabled
+	require.False(t, model.KeyMap.Quit.Enabled())
+	require.False(t, model.KeyMap.ForceQuit.Enabled())
 	require.Equal(t, "select group", model.Title)
 }
 
@@ -61,6 +62,7 @@ func TestHandleKeyboardEvent_Enter(t *testing.T) {
 	expectedMsgs := []tea.Msg{
 		message.GroupSelect{Name: "Group 1"},
 		message.ViewGroupListClose{},
+		message.ViewGroupListResetFilter{},
 	}
 
 	require.ElementsMatch(t, expectedMsgs, actualMsgs)
