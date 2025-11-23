@@ -100,7 +100,7 @@ func (m *Model) View() string {
 }
 
 func (m *Model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
-	//exhaustive:ignore // Handle only specific keys
+	//exhaustive:ignore // Handle only specific keys, other events are handled by the list model.
 	switch msg.Type {
 	case tea.KeyEscape:
 		return m.handleEscapeKey()
@@ -171,7 +171,6 @@ func (m *Model) handleEnterKey() tea.Cmd {
 		return nil
 	}
 
-	// Otherwise, select only visible item, going to hostlist view.
 	selected := m.SelectedItem().(ListItemHostGroup).Title() //nolint:errcheck // SelectedItem always returns ListItemHostGroup
 	selected = strings.TrimSpace(selected)
 
