@@ -62,7 +62,6 @@ func TestHandleKeyboardEvent_Enter(t *testing.T) {
 	expectedMsgs := []tea.Msg{
 		message.GroupSelect{Name: "Group 1"},
 		message.ViewGroupListClose{},
-		message.ViewGroupListResetFilter{},
 	}
 
 	require.ElementsMatch(t, expectedMsgs, actualMsgs)

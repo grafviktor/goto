@@ -486,7 +486,7 @@ func (m *ListModel) onGroupSelect(msg message.GroupSelect) tea.Cmd {
 	cmds = append(cmds, m.loadHosts())
 	// Display selected group notification
 	if !utils.StringEmpty(&msg.Name) {
-		notificationMsg := fmt.Sprintf("group: %q", msg.Name)
+		notificationMsg := fmt.Sprintf("group %q", msg.Name)
 		cmds = append(cmds, m.displayNotificationMsg(notificationMsg))
 	}
 

@@ -86,8 +86,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	case message.ViewGroupListOpen:
 		return m, m.loadItems()
-	case message.ViewGroupListResetFilter:
-		m.ResetFilter()
 	}
 
 	m.Model, cmd = m.Model.Update(msg)
@@ -169,13 +167,14 @@ func (m *Model) handleEnterKey() tea.Cmd {
 	// If number of visible items is not equal to 1,
 	// let the user select the desired group manually.
 	if m.FilterState() == list.Filtering {
-		if (len(m.VisibleItems())) != 1 {
-			m.logger.Debug("[UI] Enter key. Select item in group list view.")
-			return nil
-		}
+		// if (len(m.VisibleItems())) != 1 {
+		// }
+
+		m.logger.Debug("[UI] Enter key. Select item in group list view.")
+		return nil
 	}
 
-	// Otherwise, select the only visible item, going to hostlist view.
+	// Otherwise, select only visible item, going to hostlist view.
 	selected := m.SelectedItem().(ListItemHostGroup).Title() //nolint:errcheck // SelectedItem always returns ListItemHostGroup
 	selected = strings.TrimSpace(selected)
 
@@ -187,6 +186,5 @@ func (m *Model) handleEnterKey() tea.Cmd {
 	return tea.Sequence(
 		message.TeaCmd(message.GroupSelect{Name: selected}),
 		message.TeaCmd(message.ViewGroupListClose{}),
-		message.TeaCmd(message.ViewGroupListResetFilter{}),
 	)
 }

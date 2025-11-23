@@ -32,8 +32,6 @@ type (
 	ViewGroupListOpen struct{}
 	// ViewGroupListClose - dispatched when it's required to close group list view.
 	ViewGroupListClose struct{}
-	// ViewGroupListResetFilter - dispatched when it's required to reset filter in group list view.
-	ViewGroupListResetFilter struct{}
 	// GroupSelect - is dispatched when select a group in group list view.
 	GroupSelect struct{ Name string }
 	// HideUINotification - is dispatched when it's time to hide UI notification and display normal component's title.
