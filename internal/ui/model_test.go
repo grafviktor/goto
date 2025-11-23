@@ -30,7 +30,7 @@ func TestNew(t *testing.T) {
 	var msgs []tea.Msg
 	testutils.CmdToMessage(cmd, &msgs)
 
-	require.IsType(t, message.HostSelected{}, msgs[0])
+	require.IsType(t, message.HostSelect{}, msgs[0])
 	require.IsType(t, message.RunProcessSSHLoadConfig{}, msgs[1])
 }
 
@@ -122,7 +122,7 @@ func TestHandleProcessSuccess_SSH_load_config(t *testing.T) {
 		StdOut:      "hostname localhost\r\nport 2222\r\nidentityfile /tmp\r\nuser root",
 	}
 
-	expected := message.HostSSHConfigLoaded{
+	expected := message.HostSSHConfigLoadComplete{
 		HostID: 0,
 		Config: sshconfig.Config{
 			Hostname:     "localhost",

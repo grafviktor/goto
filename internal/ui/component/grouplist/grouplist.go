@@ -46,7 +46,7 @@ func New(_ context.Context, repo storage.HostStorage, appState *state.State, log
 	delegate.SetSpacing(0)
 
 	model := list.New(listItems, delegate, 0, 0)
-	model.SetFilteringEnabled(false)
+	model.DisableQuitKeybindings() // We don't want to quit the app from this view.
 
 	// Setup model styles.
 	model.Styles = styles.styleList
@@ -65,7 +65,6 @@ func New(_ context.Context, repo storage.HostStorage, appState *state.State, log
 	}
 
 	m.Title = "select group"
-	m.SetShowStatusBar(false)
 
 	return &m
 }
@@ -74,6 +73,7 @@ func (m *Model) Init() tea.Cmd { return nil }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
+	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -83,13 +83,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case tea.KeyMsg:
 		cmd = m.handleKeyboardEvent(msg)
-		return m, cmd
-	case message.OpenViewSelectGroup:
+		cmds = append(cmds, cmd)
+	case message.ViewGroupListOpen:
 		return m, m.loadItems()
+	case message.ViewGroupListResetFilter:
+		m.ResetFilter()
 	}
 
 	m.Model, cmd = m.Model.Update(msg)
-	return m, cmd
+	// Only calculate status bar visibility AFTER the model is updated.
+	m.SetShowStatusBar(m.FilterState() != list.Unfiltered)
+
+	return m, tea.Batch(append(cmds, cmd)...)
 }
 
 func (m *Model) View() string {
@@ -97,35 +102,15 @@ func (m *Model) View() string {
 }
 
 func (m *Model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
-	var cmd tea.Cmd
-
-	//exhaustive:ignore
+	//exhaustive:ignore // Handle only specific keys
 	switch msg.Type {
 	case tea.KeyEscape:
-		m.logger.Debug("[UI] Escape key. Deselect group and exit from group list view.")
-		return tea.Sequence(
-			// If group view is shown and user presses ESC, we should
-			// deselect the group view and then show the full host list.
-			message.TeaCmd(message.GroupSelected{Name: ""}),
-			message.TeaCmd(message.CloseViewSelectGroup{}),
-		)
+		return m.handleEscapeKey()
 	case tea.KeyEnter:
-		selected := m.SelectedItem().(ListItemHostGroup).Title() //nolint:errcheck // SelectedItem always returns ListItemHostGroup
-		selected = strings.TrimSpace(selected)
-
-		if selected == noGroupSelected {
-			selected = ""
-		}
-
-		m.logger.Debug("[UI] Enter key. Select group '%s' and exit from group list view.", selected)
-		return tea.Sequence(
-			message.TeaCmd(message.GroupSelected{Name: selected}),
-			message.TeaCmd(message.CloseViewSelectGroup{}),
-		)
+		return m.handleEnterKey()
 	}
 
-	m.Model, cmd = m.Model.Update(msg)
-	return cmd
+	return nil
 }
 
 func (m *Model) loadItems() tea.Cmd {
@@ -162,4 +147,46 @@ func (m *Model) loadItems() tea.Cmd {
 	}
 
 	return m.SetItems(items)
+}
+
+func (m *Model) handleEscapeKey() tea.Cmd {
+	// If model is in filter mode and press ESC, just disable filtering.
+	if m.FilterState() == list.Filtering || m.FilterState() == list.FilterApplied {
+		m.logger.Debug("[UI] Escape key. Deactivate filter in group list view.")
+		return nil
+	}
+
+	// If group view is shown and user presses ESC, we should
+	// deselect the group view and then show the full host list.
+	m.logger.Debug("[UI] Escape key. Deselect group and exit from group list view.")
+	return tea.Sequence(
+		message.TeaCmd(message.GroupSelect{Name: ""}),
+		message.TeaCmd(message.ViewGroupListClose{}),
+	)
+}
+
+func (m *Model) handleEnterKey() tea.Cmd {
+	// If number of visible items is not equal to 1,
+	// let the user select the desired group manually.
+	if m.FilterState() == list.Filtering {
+		if (len(m.VisibleItems())) != 1 {
+			m.logger.Debug("[UI] Enter key. Select item in group list view.")
+			return nil
+		}
+	}
+
+	// Otherwise, select the only visible item, going to hostlist view.
+	selected := m.SelectedItem().(ListItemHostGroup).Title() //nolint:errcheck // SelectedItem always returns ListItemHostGroup
+	selected = strings.TrimSpace(selected)
+
+	if selected == noGroupSelected {
+		selected = ""
+	}
+
+	m.logger.Debug("[UI] Enter key. Select group '%s' and exit from group list view.", selected)
+	return tea.Sequence(
+		message.TeaCmd(message.GroupSelect{Name: selected}),
+		message.TeaCmd(message.ViewGroupListClose{}),
+		message.TeaCmd(message.ViewGroupListResetFilter{}),
+	)
 }
