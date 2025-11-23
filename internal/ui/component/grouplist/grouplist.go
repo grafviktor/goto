@@ -164,12 +164,9 @@ func (m *Model) handleEscapeKey() tea.Cmd {
 }
 
 func (m *Model) handleEnterKey() tea.Cmd {
-	// If number of visible items is not equal to 1,
-	// let the user select the desired group manually.
+	// If filter is active, by default pressing Enter just selects
+	// the first item from the list of filtered items. Prevent that.
 	if m.FilterState() == list.Filtering {
-		// if (len(m.VisibleItems())) != 1 {
-		// }
-
 		m.logger.Debug("[UI] Enter key. Select item in group list view.")
 		return nil
 	}
