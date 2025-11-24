@@ -31,6 +31,10 @@ type Configuration struct {
 	AppHome           string            `env:"GG_HOME"`
 	LogLevel          constant.LogLevel `env:"GG_LOG_LEVEL"            envDefault:"info"`
 	SSHConfigFilePath string            `env:"GG_SSH_CONFIG_FILE_PATH"`
+	// SetSSHConfigFilePath is not the same as SSHConfigFilePath, as when this is set, we must
+	// write the value to state file and exit. When SSHConfigFilePath is set, we just use it
+	// as the path to ssh config within the current application run.
+	SetSSHConfigFilePath string
 }
 
 func Initialize() (*Configuration, error) {
@@ -97,6 +101,7 @@ func parseCommandLineFlags(envConfig *Configuration, args []string, exitOnError 
 		fmt.Sprintf("Disable feature. Supported values: %s", strings.Join(SupportedFeatures, "|")),
 	)
 	fs.StringVar(&cmdConfig.SetTheme, "set-theme", "", "Set application theme")
+	fs.StringVar(&cmdConfig.SetSSHConfigFilePath, "set-ssh-config-path", "", "Set SSH configuration file path")
 
 	err := fs.Parse(args[1:]) // args should not include program name, see docs
 	if err != nil {
@@ -114,6 +119,9 @@ func parseCommandLineFlags(envConfig *Configuration, args []string, exitOnError 
 		cmdConfig.AppMode = constant.AppModeType.HandleParam
 	case cmdConfig.SetTheme != "":
 		fmt.Printf("[CONFIG] Set theme to %q\n", cmdConfig.SetTheme)
+		cmdConfig.AppMode = constant.AppModeType.HandleParam
+	case cmdConfig.SetSSHConfigFilePath != "":
+		fmt.Printf("[CONFIG] Set SSH config file path to %q\n", cmdConfig.SetSSHConfigFilePath)
 		cmdConfig.AppMode = constant.AppModeType.HandleParam
 	}
 

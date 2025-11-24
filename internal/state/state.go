@@ -131,6 +131,7 @@ func (s *State) readFromFile() {
 		Theme            *string `yaml:"theme"`
 		ScreenLayout     *string `yaml:"screen_layout"`
 		SSHConfigEnabled *bool   `yaml:"enable_ssh_config"`
+		SSHConfigPath    *string `yaml:"ssh_config_path"`
 	}
 
 	appStateFilePath := path.Join(s.AppHome, stateFile)
@@ -166,6 +167,15 @@ func (s *State) readFromFile() {
 		s.SSHConfigEnabled = true
 	} else {
 		s.SSHConfigEnabled = *loadedState.SSHConfigEnabled
+	}
+
+	if loadedState.SSHConfigPath != nil {
+		sshConfigPath, err := utils.SSHConfigFilePath(*loadedState.SSHConfigPath)
+		if err != nil {
+			s.Logger.Error("[APPSTATE] Cannot apply ssh_config file path from state file: %v", err)
+		} else {
+			s.SSHConfigFilePath = sshConfigPath
+		}
 	}
 
 	s.Logger.Debug("[APPSTATE] Screen layout: '%v'. Focused host id: '%v'", s.ScreenLayout, s.Selected)

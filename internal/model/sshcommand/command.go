@@ -18,7 +18,7 @@ func ConnectCommand(options ...Option) string {
 	}
 
 	if sshconfig.IsUserDefinedPath() {
-		addOption(&sb, OptionConfigFilePath{Value: sshconfig.GetFilePath()})
+		addOption(&sb, OptionConfigFilePath{Value: sshconfig.FilePath()})
 	}
 
 	return sb.String()
@@ -34,7 +34,7 @@ func LoadConfigCommand(options ...Option) string {
 	}
 
 	if sshconfig.IsUserDefinedPath() {
-		addOption(&sb, OptionConfigFilePath{Value: sshconfig.GetFilePath()})
+		addOption(&sb, OptionConfigFilePath{Value: sshconfig.FilePath()})
 	}
 
 	return sb.String()

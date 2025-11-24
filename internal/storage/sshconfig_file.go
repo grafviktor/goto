@@ -10,6 +10,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
+	sshConfigSettings "github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage/sshconfig"
 )
@@ -122,7 +123,7 @@ func (s *SSHConfigFile) createSSHConfigCopy() error {
 }
 
 func (s *SSHConfigFile) updateApplicationState() {
-	s.appState.SSHConfigFilePath = s.sshConfigCopy.Name()
+	sshConfigSettings.SetFilePath(s.sshConfigCopy.Name())
 }
 
 func (s *SSHConfigFile) Close() {
