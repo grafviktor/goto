@@ -19,7 +19,7 @@ func (l ListItemHost) Title() string { return l.Host.Title }
 func (l ListItemHost) Description() string { return l.Host.Description }
 
 // FilterValue - returns the field combination which are used when user performs a search in the list.
-func (l ListItemHost) FilterValue() string { return l.Host.Title + l.Host.Description }
+func (l ListItemHost) FilterValue() string { return l.Host.Title + l.Host.Description + l.Host.Address }
 
 // CompareTo - compares this listItemHost with another one.
 func (l ListItemHost) CompareTo(host ListItemHost) int {
