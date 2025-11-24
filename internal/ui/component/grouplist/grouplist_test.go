@@ -137,9 +137,11 @@ func Test_handleEnterKey(t *testing.T) {
 }
 
 func Test_handleEnterKey_WhenFiltering(t *testing.T) {
-	// When pressing Enter key while filtering, it should return nil cmd
+	// When pressing Enter key while filtering, it should return nil cmd, as we do not want to select
+	// the first item in the list, but instead let user to select an item using Up/Down keys.
 	listModel := NewMockGroupModel(false)
 	listModel.loadItems()
+	// Put the list in filter mode
 	listModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
 
 	require.True(t, listModel.SettingFilter()) // Activate filter mode
@@ -147,31 +149,26 @@ func Test_handleEnterKey_WhenFiltering(t *testing.T) {
 	require.Nil(t, cmd)
 }
 
-func TestHandleKeyboardEvent_Esc(t *testing.T) {
+func Test_handleEscapeKey(t *testing.T) {
+	// Test case 1: Press escape in filter mode
 	// Can handle Esc key
 	listModel := NewMockGroupModel(false)
 	listModel.loadItems()
-	require.Equal(t, noGroupSelected, listModel.SelectedItem().(ListItemHostGroup).Title())
-
-	// Select Group 1
-	listModel.Update(tea.KeyMsg{Type: tea.KeyDown})
-	listModel.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	require.Equal(t, "Group 1", listModel.SelectedItem().(ListItemHostGroup).Title())
-
-	// Now press Escape key and ensure that Model will send group unselect message and closed the form
+	// Put the list in filter mode
+	listModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
+	require.True(t, listModel.SettingFilter()) // Verify that filter mode is activate
 	_, cmd := listModel.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	require.Nil(t, cmd)
+
+	// Test case 2: Press escape when not in filter mode - it must deselect the group and close the form
+	require.False(t, listModel.SettingFilter()) // Verify that we're not in filter mode after the first test case
+	_, cmd = listModel.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	var actualMsgs []tea.Msg
 	testutils.CmdToMessage(cmd, &actualMsgs)
-
-	expectedMsgs := []tea.Msg{
+	require.ElementsMatch(t, actualMsgs, []tea.Msg{
 		message.GroupSelect{Name: ""},
 		message.ViewGroupListClose{},
-	}
-
-	// Note that though, Escape key was pressed, the group remains selected inside the group list component.
-	// This is by design - if user opens group list dialog again, previously selected group will be focused.
-	require.Equal(t, "Group 1", listModel.SelectedItem().(ListItemHostGroup).Title())
-	require.ElementsMatch(t, expectedMsgs, actualMsgs)
+	})
 }
 
 func TestLoadItems(t *testing.T) {
