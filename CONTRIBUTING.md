@@ -13,7 +13,7 @@ We really welcome your pull requests. We encourage you to take a look at issues 
 
 ## 💌 Features ##
 
-If you'd like to contribute a new feature, please check the [issues](https://github.com/grafviktor/goto/issues) page and ensure that something similar hasn't been planned already. If it was planned and still unnasigned, just drop a message that you're working on the implementation and go ahead.
+If you'd like to contribute a new feature, please check the [issues](https://github.com/grafviktor/goto/issues) page and ensure that something similar hasn't been planned already. If it was planned and still unassigned, just drop a message that you're working on the implementation and go ahead.
 
 If the changes you're going to make is completely new, then please head over to [discussions](https://github.com/grafviktor/goto/discussions) page and let's talk through your plans first, just to make sure that we're on the same page. Once everything is discussed, raise the issue and start the implementation.
 
