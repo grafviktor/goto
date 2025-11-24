@@ -47,38 +47,104 @@ func TestUpdate(t *testing.T) {
 	require.Equal(t, noGroupSelected, listModel.SelectedItem().(ListItemHostGroup).Title())
 }
 
-func TestHandleKeyboardEvent_Enter(t *testing.T) {
+func Test_handleKeyboardEvent(t *testing.T) {
 	listModel := NewMockGroupModel(false)
 	listModel.loadItems()
 
-	// Test case 1: Can handle "no group" selection
-	require.Equal(t, noGroupSelected, listModel.SelectedItem().(ListItemHostGroup).Title())
+	tests := []struct {
+		name      string
+		keyMsg    tea.KeyMsg
+		expectCmd bool
+	}{
+		{
+			name:      "Can handle Enter key",
+			keyMsg:    tea.KeyMsg{Type: tea.KeyEnter},
+			expectCmd: true,
+		},
+		{
+			name:      "Can handle Esc key",
+			keyMsg:    tea.KeyMsg{Type: tea.KeyEsc},
+			expectCmd: true,
+		},
+		{
+			name:      "Unhandled key returns nil cmd",
+			keyMsg:    tea.KeyMsg{Type: tea.KeyDown},
+			expectCmd: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := listModel.handleKeyboardEvent(tt.keyMsg)
+			if tt.expectCmd {
+				require.NotNil(t, cmd)
+			} else {
+				require.Nil(t, cmd)
+			}
+		})
+	}
+}
+
+func Test_handleEnterKey(t *testing.T) {
+	tests := []struct {
+		name         string
+		group        string
+		itemIndex    int
+		expectedMsgs []tea.Msg
+	}{
+		{
+			name:      "Can handle 'no group' selection",
+			group:     noGroupSelected,
+			itemIndex: 0,
+			expectedMsgs: []tea.Msg{
+				message.GroupSelect{Name: ""},
+				message.ViewGroupListClose{},
+			},
+		},
+		{
+			name:      "Can handle Group 1 selection ",
+			group:     "Group 1",
+			itemIndex: 1,
+			expectedMsgs: []tea.Msg{
+				message.GroupSelect{Name: "Group 1"},
+				message.ViewGroupListClose{},
+			},
+		},
+		{
+			name:         "Can handle empty group list ",
+			group:        "",
+			itemIndex:    55, // Out of range index, selected item will be nil
+			expectedMsgs: nil,
+		},
+	}
+
+	listModel := NewMockGroupModel(false)
+	listModel.loadItems()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			listModel.Select(tt.itemIndex)
+			cmd := listModel.handleEnterKey()
+
+			var actualMsgs []tea.Msg
+			testutils.CmdToMessage(cmd, &actualMsgs)
+			require.ElementsMatch(t, tt.expectedMsgs, actualMsgs)
+			if listModel.SelectedItem() != nil {
+				require.Equal(t, tt.group, listModel.SelectedItem().(ListItemHostGroup).Title())
+			}
+		})
+	}
+}
+
+func Test_handleEnterKey_WhenFiltering(t *testing.T) {
+	// When pressing Enter key while filtering, it should return nil cmd
+	listModel := NewMockGroupModel(false)
+	listModel.loadItems()
+	listModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
+
+	require.True(t, listModel.SettingFilter()) // Activate filter mode
 	_, cmd := listModel.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	// Press enter on "no group" item
-	var actualMsgs1 []tea.Msg
-	testutils.CmdToMessage(cmd, &actualMsgs1)
-	expectedMsgs := []tea.Msg{
-		message.GroupSelect{Name: ""},
-		message.ViewGroupListClose{},
-	}
-	require.ElementsMatch(t, expectedMsgs, actualMsgs1)
-	require.Equal(t, noGroupSelected, listModel.SelectedItem().(ListItemHostGroup).Title())
-
-	// Test case 2: Can handle "Group 1" selection (which is a manually created group in mock storage)
-	listModel.Update(tea.KeyMsg{Type: tea.KeyDown})
-	_, cmd = listModel.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	var actualMsgs2 []tea.Msg
-	testutils.CmdToMessage(cmd, &actualMsgs2)
-	expectedMsgs = []tea.Msg{
-		message.GroupSelect{Name: "Group 1"},
-		message.ViewGroupListClose{},
-	}
-
-	require.ElementsMatch(t, expectedMsgs, actualMsgs2)
-	require.Equal(t, "Group 1", listModel.SelectedItem().(ListItemHostGroup).Title())
-
-	// Test case 3: The model is in filter mode
-	t.Fail()
+	require.Nil(t, cmd)
 }
 
 func TestHandleKeyboardEvent_Esc(t *testing.T) {

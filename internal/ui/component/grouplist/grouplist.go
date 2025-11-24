@@ -111,6 +111,49 @@ func (m *Model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	return nil
 }
 
+func (m *Model) handleEscapeKey() tea.Cmd {
+	// If model is in filter mode and press ESC, just disable filtering.
+	if m.FilterState() == list.Filtering || m.FilterState() == list.FilterApplied {
+		m.logger.Debug("[UI] Escape key. Deactivate filter in group list view.")
+		return nil
+	}
+
+	// If group view is shown and user presses ESC, we should
+	// deselect the group view and then show the full host list.
+	m.logger.Debug("[UI] Escape key. Deselect group and exit from group list view.")
+	return tea.Sequence(
+		message.TeaCmd(message.GroupSelect{Name: ""}),
+		message.TeaCmd(message.ViewGroupListClose{}),
+	)
+}
+
+func (m *Model) handleEnterKey() tea.Cmd {
+	// If filter is active, by default pressing Enter just selects
+	// the first item from the list of filtered items. Prevent that.
+	if m.FilterState() == list.Filtering {
+		m.logger.Debug("[UI] Enter key. Select item in group list view.")
+		return nil
+	}
+
+	if m.SelectedItem() == nil {
+		m.logger.Debug("[UI] Enter key. No group selected, nothing to do.")
+		return nil
+	}
+
+	selected := m.SelectedItem().(ListItemHostGroup).Title() //nolint:errcheck // SelectedItem always returns ListItemHostGroup
+	selected = strings.TrimSpace(selected)
+
+	if selected == noGroupSelected {
+		selected = ""
+	}
+
+	m.logger.Debug("[UI] Enter key. Select group '%s' and exit from group list view.", selected)
+	return tea.Sequence(
+		message.TeaCmd(message.GroupSelect{Name: selected}),
+		message.TeaCmd(message.ViewGroupListClose{}),
+	)
+}
+
 func (m *Model) loadItems() tea.Cmd {
 	m.logger.Debug("[UI] Load groups from the database")
 	hosts, err := m.repo.GetAll()
@@ -145,42 +188,4 @@ func (m *Model) loadItems() tea.Cmd {
 	}
 
 	return m.SetItems(items)
-}
-
-func (m *Model) handleEscapeKey() tea.Cmd {
-	// If model is in filter mode and press ESC, just disable filtering.
-	if m.FilterState() == list.Filtering || m.FilterState() == list.FilterApplied {
-		m.logger.Debug("[UI] Escape key. Deactivate filter in group list view.")
-		return nil
-	}
-
-	// If group view is shown and user presses ESC, we should
-	// deselect the group view and then show the full host list.
-	m.logger.Debug("[UI] Escape key. Deselect group and exit from group list view.")
-	return tea.Sequence(
-		message.TeaCmd(message.GroupSelect{Name: ""}),
-		message.TeaCmd(message.ViewGroupListClose{}),
-	)
-}
-
-func (m *Model) handleEnterKey() tea.Cmd {
-	// If filter is active, by default pressing Enter just selects
-	// the first item from the list of filtered items. Prevent that.
-	if m.FilterState() == list.Filtering {
-		m.logger.Debug("[UI] Enter key. Select item in group list view.")
-		return nil
-	}
-
-	selected := m.SelectedItem().(ListItemHostGroup).Title() //nolint:errcheck // SelectedItem always returns ListItemHostGroup
-	selected = strings.TrimSpace(selected)
-
-	if selected == noGroupSelected {
-		selected = ""
-	}
-
-	m.logger.Debug("[UI] Enter key. Select group '%s' and exit from group list view.", selected)
-	return tea.Sequence(
-		message.TeaCmd(message.GroupSelect{Name: selected}),
-		message.TeaCmd(message.ViewGroupListClose{}),
-	)
 }
