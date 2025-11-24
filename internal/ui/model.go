@@ -83,21 +83,21 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.appState.Width = msg.Width
 		m.appState.Height = msg.Height
 		m.updateViewPort(msg.Width, msg.Height)
-	case message.OpenViewHostEdit:
+	case message.ViewHostEditOpen:
 		m.logger.Debug("[UI] Open host edit form")
 		m.appState.CurrentView = state.ViewEditItem
 		ctx := context.WithValue(m.appContext, hostedit.ItemID, msg.HostID)
 		m.modelHostEdit = hostedit.New(ctx, m.hostStorage, m.appState, m.logger)
-	case message.CloseViewHostEdit:
+	case message.ViewHostEditClose:
 		m.logger.Debug("[UI] Close host edit form")
 		m.appState.CurrentView = state.ViewHostList
-	case message.OpenViewSelectGroup:
+	case message.ViewGroupListOpen:
 		m.logger.Debug("[UI] Open select group form")
 		m.appState.CurrentView = state.ViewGroupList
-	case message.CloseViewSelectGroup:
+	case message.ViewGroupListClose:
 		m.logger.Debug("[UI] Close select group form")
 		m.appState.CurrentView = state.ViewHostList
-	case message.HostSelected:
+	case message.HostSelect:
 		m.logger.Debug("[UI] Update app state. Active host id: %d", msg.HostID)
 		m.appState.Selected = msg.HostID
 	case message.RunProcessSSHConnect:
@@ -296,7 +296,7 @@ func (m *MainModel) handleProcessSuccess(msg message.RunProcessSuccess) tea.Cmd 
 	if msg.ProcessType == constant.ProcessTypeSSHLoadConfig {
 		parsedSSHConfig := sshconfig.Parse(msg.StdOut)
 		m.logger.Debug("[EXEC] Host SSH config loaded: %+v", *parsedSSHConfig)
-		return message.TeaCmd(message.HostSSHConfigLoaded{
+		return message.TeaCmd(message.HostSSHConfigLoadComplete{
 			HostID: m.appState.Selected,
 			Config: *parsedSSHConfig,
 		})

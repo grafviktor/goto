@@ -145,24 +145,18 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.SetSize(msg.Width-h, msg.Height-v)
 		m.logger.Debug("[UI] Set host list size: %d %d", m.Width(), m.Height())
 		return m, nil
-	case message.HostSSHConfigLoaded:
+	case message.HostSSHConfigLoadComplete:
 		m.onHostSSHConfigLoaded(msg)
 		return m, nil
-	case message.HostUpdated:
+	case message.HostUpdate:
 		cmd := m.onHostUpdated(msg)
 		return m, cmd
-	case message.HostCreated:
+	case message.HostCreate:
 		cmd := m.onHostCreated(msg)
 		return m, cmd
-	case message.GroupSelected:
-		m.logger.Debug("[UI] Update app state. Active group: %q", msg.Name)
-		m.appState.Group = msg.Name
-		// Reset filter when group is selected
-		m.ResetFilter()
-		// We re-load hosts every time a group is selected. This is not the best way
-		// to handle this, as it leads to series of hacks here and there. But it's the
-		// simplest way to implement it.
-		return m, m.loadHosts()
+	case message.GroupSelect:
+		cmd := m.onGroupSelect(msg)
+		return m, cmd
 	case message.HideUINotification:
 		if msg.ComponentName == "hostlist" {
 			m.logger.Debug("[UI] Hide notification message")
@@ -208,7 +202,7 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		// Handle key event when some mode is enabled. For instance "removeMode".
 		return m.handleKeyEventWhenModeEnabled(msg)
 	case key.Matches(msg, m.keyMap.selectGroup):
-		return message.TeaCmd(message.OpenViewSelectGroup{})
+		return message.TeaCmd(message.ViewGroupListOpen{})
 	case key.Matches(msg, m.keyMap.connect):
 		return m.constructProcessCmd(constant.ProcessTypeSSHConnect)
 	case key.Matches(msg, m.keyMap.copyID):
@@ -218,19 +212,12 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, m.keyMap.edit):
 		return m.editItem()
 	case key.Matches(msg, m.keyMap.append):
-		return message.TeaCmd(message.OpenViewHostEdit{}) // When create a new item, jump to edit mode.
+		return message.TeaCmd(message.ViewHostEditOpen{}) // When create a new item, jump to edit mode.
 	case key.Matches(msg, m.keyMap.clone):
 		return m.copyItem()
 	case key.Matches(msg, m.keyMap.toggleLayout):
 		return m.onToggleLayout()
 	case msg.Type == tea.KeyEsc:
-		if m.appState.Group != "" {
-			// When user presses Escape key while group is selected,
-			// we should open select group form.
-			m.logger.Debug("[UI] Receive Escape key when group selected. Open view select group.")
-			return message.TeaCmd(message.OpenViewSelectGroup{})
-		}
-
 		m.logger.Debug("[UI] Receive Escape key. Ask user for confirmation to close the app.")
 		m.enterCloseAppMode()
 		return nil
@@ -351,7 +338,7 @@ func (m *ListModel) editItem() tea.Cmd {
 	// m.Model.ResetFilter()
 	m.logger.Info("[UI] Edit item id: %d, title: %s", item.ID, item.Title())
 	return tea.Sequence(
-		message.TeaCmd(message.OpenViewHostEdit{HostID: item.ID}),
+		message.TeaCmd(message.ViewHostEditOpen{HostID: item.ID}),
 		// Load SSH config for the selected host
 		message.TeaCmd(message.RunProcessSSHLoadConfig{Host: item.Host}),
 	)
@@ -407,7 +394,7 @@ func (m *ListModel) copyItem() tea.Cmd {
 
 // onHostUpdated - not only updates a host, it also re-inserts the host into
 // a correct position of the host list, to keep it sorted.
-func (m *ListModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
+func (m *ListModel) onHostUpdated(msg message.HostUpdate) tea.Cmd {
 	updatedHost := ListItemHost{Host: msg.Host}
 	// Get all item titles, replacing the updated host's title
 	allItems := lo.Map(m.Items(), func(item list.Item, _ int) list.Item {
@@ -435,7 +422,7 @@ func (m *ListModel) onHostUpdated(msg message.HostUpdated) tea.Cmd {
 	return tea.Sequence(
 		cmd,
 		m.onFocusChanged(),
-		m.displayNotificationMsg(fmt.Sprintf("saved \"%s\"", updatedHost.Title())),
+		m.displayNotificationMsg(fmt.Sprintf("saved %q", updatedHost.Title())),
 	)
 }
 
@@ -459,7 +446,7 @@ func (m *ListModel) setItemAndReorder(newIndex, currentIndex int, updatedHost Li
 	return cmd
 }
 
-func (m *ListModel) onHostCreated(msg message.HostCreated) tea.Cmd {
+func (m *ListModel) onHostCreated(msg message.HostCreate) tea.Cmd {
 	// ResetFilter is required here because, user can create a new Item which will be filtered out,
 	// therefore the user will not see any changes in the UI which is confusing.
 	// ResetFilter must be done before calculating index of the new item.
@@ -483,8 +470,27 @@ func (m *ListModel) onHostCreated(msg message.HostCreated) tea.Cmd {
 		// If host position coincides with other host, then let the underlying model to handle that
 		cmd,
 		m.onFocusChanged(),
-		m.displayNotificationMsg(fmt.Sprintf("created \"%s\"", createdHostItem.Title())),
+		m.displayNotificationMsg(fmt.Sprintf("created %q", createdHostItem.Title())),
 	)
+}
+
+func (m *ListModel) onGroupSelect(msg message.GroupSelect) tea.Cmd {
+	var cmds []tea.Cmd
+	m.logger.Debug("[UI] Update app state. Active group: %q", msg.Name)
+	m.appState.Group = msg.Name
+	// Reset filter when group is selected
+	m.ResetFilter()
+	// We re-load hosts every time a group is selected. This is not the best way
+	// to handle this, as it leads to series of hacks here and there. But it's the
+	// simplest way to implement it.
+	cmds = append(cmds, m.loadHosts())
+	// Display selected group notification
+	if !utils.StringEmpty(&msg.Name) {
+		notificationMsg := fmt.Sprintf("group %q", msg.Name)
+		cmds = append(cmds, m.displayNotificationMsg(notificationMsg))
+	}
+
+	return tea.Sequence(cmds...)
 }
 
 func (m *ListModel) onFocusChanged() tea.Cmd {
@@ -495,7 +501,7 @@ func (m *ListModel) onFocusChanged() tea.Cmd {
 		m.logger.Debug("[UI] Focus changed to host id: %v, title: %q", hostItem.ID, hostItem.Title())
 
 		return tea.Sequence(
-			message.TeaCmd(message.HostSelected{HostID: hostItem.ID}),
+			message.TeaCmd(message.HostSelect{HostID: hostItem.ID}),
 			message.TeaCmd(message.RunProcessSSHLoadConfig{Host: hostItem.Host}),
 		)
 	}
@@ -504,7 +510,7 @@ func (m *ListModel) onFocusChanged() tea.Cmd {
 	return nil
 }
 
-func (m *ListModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoaded) {
+func (m *ListModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoadComplete) {
 	for index, item := range m.Items() {
 		if hostListItem, ok := item.(ListItemHost); ok && hostListItem.ID == msg.HostID {
 			hostListItem.SSHHostConfig = &msg.Config

@@ -31,7 +31,7 @@ func TestListModel_Init(t *testing.T) {
 	var dst []tea.Msg
 	testutils.CmdToMessage(teaCmd, &dst)
 	require.Equal(t, []tea.Msg{
-		message.HostSelected{HostID: 1},
+		message.HostSelect{HostID: 1},
 		message.RunProcessSSHLoadConfig{
 			Host: host.Host{
 				ID:               1,
@@ -158,7 +158,7 @@ func TestRemoveItem(t *testing.T) {
 			want: []tea.Msg{
 				message.HideUINotification{ComponentName: "hostlist"},
 				// Because we remote item "Mock Host 1" (which has index 0), we should ensure that next available item will be focused
-				message.HostSelected{HostID: 2},
+				message.HostSelect{HostID: 2},
 				message.RunProcessSSHLoadConfig{
 					Host: host.Host{
 						ID:               2,
@@ -185,7 +185,7 @@ func TestRemoveItem(t *testing.T) {
 			want: []tea.Msg{
 				message.HideUINotification{ComponentName: "hostlist"},
 				// Because we remote item "Mock Host 1" (which has index 0), we should ensure that next available item will be focused
-				message.HostSelected{HostID: 2},
+				message.HostSelect{HostID: 2},
 				message.RunProcessSSHLoadConfig{
 					Host: host.Host{
 						ID:               2,
@@ -358,7 +358,7 @@ func TestExitRemoveItemMode(t *testing.T) {
 
 	expected := []tea.Msg{
 		// Because we remote item "Mock Host 1" (which has index 0), we should ensure that next available item will be focused
-		message.HostSelected{HostID: 1},
+		message.HostSelect{HostID: 1},
 		message.RunProcessSSHLoadConfig{
 			Host: host.Host{
 				ID:               1,
@@ -495,7 +495,7 @@ func TestListModel_editItem(t *testing.T) {
 	var dst []tea.Msg
 	testutils.CmdToMessage(teaCmd, &dst)
 
-	require.Contains(t, dst, message.OpenViewHostEdit{HostID: 1})
+	require.Contains(t, dst, message.ViewHostEditOpen{HostID: 1})
 	require.Contains(t, dst, message.RunProcessSSHLoadConfig{Host: lm.SelectedItem().(ListItemHost).Host})
 }
 
@@ -576,7 +576,7 @@ func TestUpdate_HostSSHConfigLoaded(t *testing.T) {
 		Port:         "9999",
 		User:         "mock_username",
 	}
-	lm.Update(message.HostSSHConfigLoaded{
+	lm.Update(message.HostSSHConfigLoadComplete{
 		HostID: 1,
 		Config: expectedConfig,
 	})
@@ -604,7 +604,7 @@ func TestUpdate_HostUpdated(t *testing.T) {
 		SSHHostConfig:    nil,
 	}
 
-	lm.Update(message.HostUpdated{Host: updatedHost})
+	lm.Update(message.HostUpdate{Host: updatedHost})
 	require.Equal(t, updatedHost, lm.Items()[0].(ListItemHost).Host)
 
 	// Also check that host is inserted into a correct position of the hostlist model
@@ -619,7 +619,7 @@ func TestUpdate_HostUpdated(t *testing.T) {
 		SSHHostConfig:    nil,
 	}
 
-	lm.Update(message.HostUpdated{Host: updatedHost})
+	lm.Update(message.HostUpdate{Host: updatedHost})
 	lastIndex := 2
 	require.Equal(t, updatedHost, lm.Items()[lastIndex].(ListItemHost).Host)
 }
@@ -643,7 +643,7 @@ func TestUpdate_HostCreated(t *testing.T) {
 		SSHHostConfig:    nil,
 	}
 
-	lm.Update(message.HostCreated{Host: createdHost1})
+	lm.Update(message.HostCreate{Host: createdHost1})
 	require.Len(t, lm.Items(), 4, "Wrong host list size")
 	require.Equal(t, createdHost1, lm.Items()[0].(ListItemHost).Host)
 
@@ -659,7 +659,7 @@ func TestUpdate_HostCreated(t *testing.T) {
 		SSHHostConfig:    nil,
 	}
 
-	lm.Update(message.HostCreated{Host: createdHost2})
+	lm.Update(message.HostCreate{Host: createdHost2})
 	require.Len(t, lm.Items(), 5, "Wrong host list size")
 	lastIndex := 4 // because we have 5 hosts in total
 	require.Equal(t, createdHost2, lm.Items()[lastIndex].(ListItemHost).Host)
@@ -681,7 +681,7 @@ func TestUpdate_GroupListSelectItem(t *testing.T) {
 	require.Equal(t, list.Filtering, model.FilterState())
 
 	// Dispatch message
-	model.Update(message.GroupSelected{Name: "Group 1"})
+	model.Update(message.GroupSelect{Name: "Group 1"})
 
 	// Now test, that there is only a single list in the collection
 	require.Len(t, model.Items(), 1)
@@ -833,7 +833,7 @@ func Test_handleKeyboardEvent_selectGroup(t *testing.T) {
 	model.Init()
 	_, cmd := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'z'}})
 	res := cmd()
-	require.IsType(t, message.OpenViewSelectGroup{}, res)
+	require.IsType(t, message.ViewGroupListOpen{}, res)
 }
 
 func Test_handleKeyboardEvent_connect(t *testing.T) {
@@ -1016,18 +1016,10 @@ func TestUpdate_ToggleBetweenScreenLayouts(t *testing.T) {
 }
 
 func Test_HandleKeyboardEvent_Escape(t *testing.T) {
-	// If group is selected and type Escape key, the model
-	// should dispatch open group view message
+	// If press Escape key, the app should ask the user whether
+	// it wants to close the program
 	model := newMockListModel(false)
-	model.appState.Group = "Group 1"
 	_, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEsc})
-	require.IsType(t, message.OpenViewSelectGroup{}, cmd())
-
-	// If group is NOT selected and press Escape key, the app
-	// should ask the user whether it wants to close the program
-	model = newMockListModel(false)
-	model.appState.Group = ""
-	_, cmd = model.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	require.Nil(t, cmd)
 	require.Equal(t, modeCloseApp, model.mode)
 	require.Equal(t, "close app? (y/N)", utils.StripStyles(model.Title))

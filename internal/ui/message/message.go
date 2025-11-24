@@ -16,30 +16,30 @@ type (
 	InitComplete struct{}
 	// TerminalSizePolling - is a message which is sent when terminal width and/or height changes.
 	TerminalSizePolling struct{ Width, Height int }
-	// HostSelected is required to let host list know that it's time to update title.
-	HostSelected struct{ HostID int }
-	// HostCreated - is dispatched when a new host was added to the database.
-	HostCreated struct{ Host host.Host }
-	// HostUpdated - is dispatched when host model is updated.
-	HostUpdated struct{ Host host.Host }
-	// HostSSHConfigLoaded triggers when app loads a host config using ssh -G <hostname>.
+	// HostSelect is required to let host list know that it's time to update title.
+	HostSelect struct{ HostID int }
+	// HostCreate - is dispatched when a new host was added to the database.
+	HostCreate struct{ Host host.Host }
+	// HostUpdate - is dispatched when host model is updated.
+	HostUpdate struct{ Host host.Host }
+	// HostSSHConfigLoadComplete triggers when app loads a host config using ssh -G <hostname>.
 	// The config is stored in main model: m.appState.HostSSHConfig.
-	HostSSHConfigLoaded struct {
+	HostSSHConfigLoadComplete struct {
 		HostID int
 		Config sshconfig.Config
 	}
-	// OpenViewSelectGroup - dispatched when it's required to open group list view.
-	OpenViewSelectGroup struct{}
-	// CloseViewSelectGroup - dispatched when it's required to close group list view.
-	CloseViewSelectGroup struct{}
-	// GroupSelected - is dispatched when select a group in group list view.
-	GroupSelected struct{ Name string }
+	// ViewGroupListOpen - dispatched when it's required to open group list view.
+	ViewGroupListOpen struct{}
+	// ViewGroupListClose - dispatched when it's required to close group list view.
+	ViewGroupListClose struct{}
+	// GroupSelect - is dispatched when select a group in group list view.
+	GroupSelect struct{ Name string }
 	// HideUINotification - is dispatched when it's time to hide UI notification and display normal component's title.
 	HideUINotification struct{ ComponentName string }
-	// OpenViewHostEdit fires when user press edit button on a selected host.
-	OpenViewHostEdit struct{ HostID int }
-	// CloseViewHostEdit triggers when users exits from edit form without saving results.
-	CloseViewHostEdit struct{}
+	// ViewHostEditOpen fires when user press edit button on a selected host.
+	ViewHostEditOpen struct{ HostID int }
+	// ViewHostEditClose triggers when users exits from edit form without saving results.
+	ViewHostEditClose struct{}
 	// ErrorOccurred - is dispatched when an error occurs.
 	ErrorOccurred struct{ Err error }
 	// ExitWithError - indicates that something bad happened and we need to close the application.

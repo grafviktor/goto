@@ -227,7 +227,7 @@ func (m *EditModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.SetContent(m.inputsView())
 	case debouncedMessage:
 		cmd = m.handleDebouncedMessage(msg)
-	case message.HostSSHConfigLoaded:
+	case message.HostSSHConfigLoadComplete:
 		m.host.SSHHostConfig = &msg.Config
 		m.updateInputFields()
 		m.viewport.SetContent(m.inputsView())
@@ -262,7 +262,7 @@ func (m *EditModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	switch {
 	case key.Matches(msg, m.keyMap.Discard):
 		m.logger.Info("[UI] Discard changes for host id: %v", m.host.ID)
-		return message.TeaCmd(message.CloseViewHostEdit{})
+		return message.TeaCmd(message.ViewHostEditClose{})
 	case m.host.IsReadOnly():
 		m.logger.Debug("[UI] Received a key event. Cannot modify a readonly host.")
 		return m.displayNotificationMsg("host loaded from SSH config is readonly")
@@ -340,14 +340,14 @@ func (m *EditModel) save(_ tea.Msg) tea.Cmd {
 		cmd = message.TeaCmd(message.ErrorOccurred{Err: err})
 	} else {
 		cmd = lo.Ternary(m.isNewHost,
-			message.TeaCmd(message.HostCreated{Host: host}),
-			message.TeaCmd(message.HostUpdated{Host: host}))
+			message.TeaCmd(message.HostCreate{Host: host}),
+			message.TeaCmd(message.HostUpdate{Host: host}))
 	}
 
 	return tea.Sequence(
-		message.TeaCmd(message.CloseViewHostEdit{}),
+		message.TeaCmd(message.ViewHostEditClose{}),
 		// Order matters here! That's why we use tea.Sequence instead of tea.Batch.
-		message.TeaCmd(message.HostSelected{HostID: host.ID}),
+		message.TeaCmd(message.HostSelect{HostID: host.ID}),
 		cmd,
 	)
 }

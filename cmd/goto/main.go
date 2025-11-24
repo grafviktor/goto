@@ -61,6 +61,7 @@ func main() {
 		utils.LogAndCloseApp(lgr, constant.AppExitCodeError, logMessage)
 	}
 
+	// Handle application shutdown
 	lgr.Debug("[MAIN] Save application state")
 	if err = st.Persist(); err != nil {
 		logMessage := fmt.Sprintf("[MAIN] Can't save application state before closing: %v", err)

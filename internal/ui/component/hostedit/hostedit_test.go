@@ -117,8 +117,8 @@ func TestSave(t *testing.T) {
 
 	var dst []tea.Msg
 	testutils.CmdToMessage(messageSequence, &dst)
-	require.Contains(t, dst, message.CloseViewHostEdit{})
-	require.Contains(t, dst, message.HostSelected{HostID: 0})
+	require.Contains(t, dst, message.ViewHostEditClose{})
+	require.Contains(t, dst, message.HostSelect{HostID: 0})
 }
 
 func TestCopyInputValueFromTo(t *testing.T) {
@@ -230,7 +230,7 @@ func TestUpdate_HostSSHConfigLoaded(t *testing.T) {
 	require.NotEqual(t, "default: Mock User", model.inputs[inputLogin].Placeholder)
 	require.NotEqual(t, "default: Mock Port", model.inputs[inputNetworkPort].Placeholder)
 
-	model.Update(message.HostSSHConfigLoaded{
+	model.Update(message.HostSSHConfigLoadComplete{
 		HostID: 0,
 		Config: sshconfig.Config{
 			IdentityFile: "Mock Identity File",
@@ -380,7 +380,7 @@ func TestUpdate_KeyDiscard(t *testing.T) {
 		Type: tea.KeyEscape,
 	})
 
-	require.Equal(t, message.CloseViewHostEdit{}, cmd())
+	require.Equal(t, message.ViewHostEditClose{}, cmd())
 }
 
 func TestUpdate_KeySave(t *testing.T) {
@@ -394,13 +394,13 @@ func TestUpdate_KeySave(t *testing.T) {
 	testutils.CmdToMessage(cmd, &msgs)
 
 	for _, msg := range msgs {
-		if _, ok := msg.(message.HostSelected); ok {
+		if _, ok := msg.(message.HostSelect); ok {
 			continue
 		}
-		if _, ok := msg.(message.CloseViewHostEdit); ok {
+		if _, ok := msg.(message.ViewHostEditClose); ok {
 			continue
 		}
-		if _, ok := msg.(message.HostUpdated); ok {
+		if _, ok := msg.(message.HostUpdate); ok {
 			continue
 		}
 
