@@ -178,6 +178,46 @@ screen_layout: compact
 				Theme:            "dark",
 				Group:            "default",
 			},
+		}, {
+			name: "Valid SSH config path should be picked up by state",
+			stateFileContent: `
+selected: 999
+enable_ssh_config: true
+group: default
+theme: dark
+screen_layout: compact
+ssh_config_path: /tmp/some_path
+`,
+			expected: State{
+				Selected:                   999,
+				SSHConfigEnabled:           true,
+				ScreenLayout:               constant.ScreenLayoutCompact,
+				Theme:                      "dark",
+				Group:                      "default",
+				SSHConfigPath:              "/tmp/some_path",
+				SetSSHConfigPath:           "/tmp/some_path",
+				IsUserDefinedSSHConfigPath: true,
+			},
+		}, {
+			name: "Not valid SSH config path should NOT be picked up by state",
+			stateFileContent: `
+selected: 999
+enable_ssh_config: true
+group: default
+theme: dark
+screen_layout: compact
+ssh_config_path: smb://some/path
+`,
+			expected: State{
+				Selected:                   999,
+				SSHConfigEnabled:           true,
+				ScreenLayout:               constant.ScreenLayoutCompact,
+				Theme:                      "dark",
+				Group:                      "default",
+				SSHConfigPath:              "",
+				SetSSHConfigPath:           "",
+				IsUserDefinedSSHConfigPath: false,
+			},
 		},
 	}
 
@@ -258,6 +298,21 @@ func Test_applyConfig(t *testing.T) {
 				IsUserDefinedSSHConfigPath: true,
 			},
 			wantErr: false,
+		}, {
+			name:    "User used '--set-ssh-config-path' parameter",
+			testCfg: config.Configuration{SetSSHConfigPath: "~/.ssh/custom_config"},
+			expected: State{
+				AppMode:          constant.AppModeType.StartUI,
+				LogLevel:         constant.LogLevelType.INFO,
+				SSHConfigPath:    "",
+				SetSSHConfigPath: "~/.ssh/custom_config",
+			},
+			wantErr: false,
+		}, {
+			name:     "User used '--set-ssh-config-path' parameter and unsupported path",
+			testCfg:  config.Configuration{SetSSHConfigPath: "smb://somepath/custom_config"},
+			expected: State{},
+			wantErr:  true,
 		},
 	}
 
@@ -274,6 +329,7 @@ func Test_applyConfig(t *testing.T) {
 				assert.Equal(t, tt.expected.LogLevel, actual.LogLevel, "LogLevel mismatch")
 				assert.Equal(t, tt.expected.Theme, actual.Theme, "Theme mismatch")
 				assert.Equal(t, tt.expected.SSHConfigPath, actual.SSHConfigPath, "SSHConfigPath mismatch")
+				assert.Equal(t, tt.expected.SetSSHConfigPath, actual.SetSSHConfigPath, "SetSSHConfigPath mismatch")
 				assert.Equal(t, tt.expected.SSHConfigEnabled, actual.SSHConfigEnabled, "SSHConfigEnabled mismatch")
 				assert.Equal(t, tt.expected.IsUserDefinedSSHConfigPath, actual.IsUserDefinedSSHConfigPath, "IsUserDefinedSSHConfigPath mismatch")
 			}
