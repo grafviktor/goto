@@ -45,7 +45,7 @@ func newSSHConfigStorage(
 	st *state.State,
 	logger iLogger,
 ) *SSHConfigFile {
-	lexer := sshconfig.NewFileLexer(st.SSHConfigFilePath, logger)
+	lexer := sshconfig.NewFileLexer(st.SSHConfigPath, logger)
 	parser := sshconfig.NewParser(lexer, logger)
 	return &SSHConfigFile{
 		fileLexer:  lexer,
@@ -123,7 +123,7 @@ func (s *SSHConfigFile) createSSHConfigCopy() error {
 }
 
 func (s *SSHConfigFile) updateApplicationState() {
-	sshConfigSettings.SetFilePath(s.sshConfigCopy.Name())
+	sshConfigSettings.SetPath(s.sshConfigCopy.Name())
 }
 
 func (s *SSHConfigFile) Close() {

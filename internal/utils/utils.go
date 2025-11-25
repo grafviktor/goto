@@ -187,8 +187,8 @@ func FetchFromURL(urlPath string) (io.ReadCloser, error) {
 	return resp.Body, nil
 }
 
-// SSHConfigFilePath - returns ssh_config path or error.
-func SSHConfigFilePath(userDefinedPath string) (string, error) {
+// SSHConfigPath - returns ssh_config path or error.
+func SSHConfigPath(userDefinedPath string) (string, error) {
 	if !StringEmpty(&userDefinedPath) {
 		if IsSupportedURL(userDefinedPath) {
 			return userDefinedPath, nil

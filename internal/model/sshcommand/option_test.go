@@ -126,7 +126,7 @@ func Test_ConnectCommand(t *testing.T) {
 
 	// Check that the command uses custom SSH config file path if defined
 	state.Initialize(context.TODO(),
-		&config.Configuration{SSHConfigFilePath: "~/.ssh/custom_config"},
+		&config.Configuration{SSHConfigPath: "~/.ssh/custom_config"},
 		&mocklogger.Logger{})
 	actual := ConnectCommand(OptionAddress{Value: "example.com"})
 	require.Contains(t, actual, `ssh example.com -F "~/.ssh/custom_config"`)
@@ -161,7 +161,7 @@ func Test_LoadConfigCommand(t *testing.T) {
 
 	// Repeat the first test with a custom SSH config file path
 	mockLogger := mocklogger.Logger{}
-	state.Initialize(context.TODO(), &config.Configuration{SSHConfigFilePath: "~/.ssh/custom_config"}, &mockLogger)
+	state.Initialize(context.TODO(), &config.Configuration{SSHConfigPath: "~/.ssh/custom_config"}, &mockLogger)
 	actual := LoadConfigCommand(tests[0].option)
 	// Should use contains because on Windows version the command starts from 'cmd /c ...'
 	require.Contains(t, actual, `ssh -G example.com -F "~/.ssh/custom_config"`)

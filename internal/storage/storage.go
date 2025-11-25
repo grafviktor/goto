@@ -73,7 +73,7 @@ func getStorages(
 	sshConfigEnabled := st.SSHConfigEnabled
 	logger.Debug("[STORAGE] SSH config storage enable: '%t'", sshConfigEnabled)
 	if sshConfigEnabled {
-		logger.Info("[STORAGE] Load ssh hosts from ssh config file: %q", st.SSHConfigFilePath)
+		logger.Info("[STORAGE] Load ssh hosts from ssh config file: %q", st.SSHConfigPath)
 		sshConfigStorage := newSSHConfigStorage(ctx, st, logger)
 		storageMap[sshConfigStorage.Type()] = sshConfigStorage
 	}

@@ -81,17 +81,17 @@ func IsUserDefinedPath() bool {
 
 var sshConfigPath *string
 
-// SetFilePath - set SSH config file path.
-func SetFilePath(path string) {
+// SetPath - set SSH config file path.
+func SetPath(path string) {
 	sshConfigPath = &path
 }
 
-// FilePath - returns SSH config file path which is defined in application configuration.
-func FilePath() string {
+// Path - returns SSH config file path which is defined in application configuration.
+func Path() string {
 	if sshConfigPath != nil {
 		return *sshConfigPath
 	}
 
 	// Fallback to application state.
-	return state.Get().SSHConfigFilePath
+	return state.Get().SSHConfigPath
 }

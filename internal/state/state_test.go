@@ -250,11 +250,11 @@ func Test_applyConfig(t *testing.T) {
 			wantErr:  true,
 		}, {
 			name:    "SSH config path set",
-			testCfg: config.Configuration{SSHConfigFilePath: "~/.ssh/custom_config"},
+			testCfg: config.Configuration{SSHConfigPath: "~/.ssh/custom_config"},
 			expected: State{
 				AppMode:                    constant.AppModeType.StartUI,
 				LogLevel:                   constant.LogLevelType.INFO,
-				SSHConfigFilePath:          "~/.ssh/custom_config",
+				SSHConfigPath:              "~/.ssh/custom_config",
 				IsUserDefinedSSHConfigPath: true,
 			},
 			wantErr: false,
@@ -273,9 +273,9 @@ func Test_applyConfig(t *testing.T) {
 				assert.Equal(t, tt.expected.AppMode, actual.AppMode, "AppMode mismatch")
 				assert.Equal(t, tt.expected.LogLevel, actual.LogLevel, "LogLevel mismatch")
 				assert.Equal(t, tt.expected.Theme, actual.Theme, "Theme mismatch")
-				assert.Equal(t, tt.expected.SSHConfigFilePath, actual.SSHConfigFilePath, "SSHConfigFilePath mismatch")
+				assert.Equal(t, tt.expected.SSHConfigPath, actual.SSHConfigPath, "SSHConfigPath mismatch")
 				assert.Equal(t, tt.expected.SSHConfigEnabled, actual.SSHConfigEnabled, "SSHConfigEnabled mismatch")
-				assert.Equal(t, tt.expected.IsUserDefinedSSHConfigPath, actual.IsUserDefinedSSHConfigPath, "IsSSHConfigFilePathDefinedByUser mismatch")
+				assert.Equal(t, tt.expected.IsUserDefinedSSHConfigPath, actual.IsUserDefinedSSHConfigPath, "IsUserDefinedSSHConfigPath mismatch")
 			}
 		})
 	}
@@ -331,10 +331,10 @@ func Test_PersistApplicationStateError(t *testing.T) {
 
 func Test_PrintConfig(t *testing.T) {
 	state := &State{
-		AppHome:           "/tmp/goto",
-		LogLevel:          "debug",
-		SSHConfigEnabled:  true,
-		SSHConfigFilePath: "/tmp/ssh_config",
+		AppHome:          "/tmp/goto",
+		LogLevel:         "debug",
+		SSHConfigEnabled: true,
+		SSHConfigPath:    "/tmp/ssh_config",
 	}
 
 	actualOutput := captureOutput(state.PrintConfig)
@@ -364,11 +364,11 @@ func captureOutput(f func()) string {
 func Test_LogDetails(t *testing.T) {
 	logger := MockLogger{}
 	state := &State{
-		AppHome:           "/tmp/goto",
-		LogLevel:          "debug",
-		SSHConfigEnabled:  true,
-		SSHConfigFilePath: "/tmp/ssh_config",
-		Logger:            &logger,
+		AppHome:          "/tmp/goto",
+		LogLevel:         "debug",
+		SSHConfigEnabled: true,
+		SSHConfigPath:    "/tmp/ssh_config",
+		Logger:           &logger,
 	}
 
 	state.LogDetails()

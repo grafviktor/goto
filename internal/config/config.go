@@ -23,18 +23,18 @@ const (
 
 // Configuration structs contains user-definable parameters.
 type Configuration struct {
-	AppMode           constant.AppMode
-	AppName           string
-	DisableFeature    FeatureFlag
-	EnableFeature     FeatureFlag
-	SetTheme          string
-	AppHome           string            `env:"GG_HOME"`
-	LogLevel          constant.LogLevel `env:"GG_LOG_LEVEL"            envDefault:"info"`
-	SSHConfigFilePath string            `env:"GG_SSH_CONFIG_FILE_PATH"`
-	// SetSSHConfigFilePath is not the same as SSHConfigFilePath, as when this is set, we must
-	// write the value to state file and exit. When SSHConfigFilePath is set, we just use it
+	AppMode        constant.AppMode
+	AppName        string
+	DisableFeature FeatureFlag
+	EnableFeature  FeatureFlag
+	SetTheme       string
+	AppHome        string            `env:"GG_HOME"`
+	LogLevel       constant.LogLevel `env:"GG_LOG_LEVEL"            envDefault:"info"`
+	SSHConfigPath  string            `env:"GG_SSH_CONFIG_FILE_PATH"`
+	// SetSSHConfigPath is not the same as SSHConfigPath, as when this is set, we must
+	// write the value to state file and exit. When SSHConfigPath is set, we just use it
 	// as the path to ssh config within the current application run.
-	SetSSHConfigFilePath string
+	SetSSHConfigPath string
 }
 
 func Initialize() (*Configuration, error) {
@@ -85,9 +85,9 @@ func parseCommandLineFlags(envConfig *Configuration, args []string, exitOnError 
 	fs.StringVar(&cmdConfig.AppHome, "f", envConfig.AppHome, "Application home folder")
 	fs.StringVar(&cmdConfig.LogLevel, "l", envConfig.LogLevel, "Log verbosity level: debug, info")
 	fs.StringVar(
-		&cmdConfig.SSHConfigFilePath,
+		&cmdConfig.SSHConfigPath,
 		"s",
-		envConfig.SSHConfigFilePath,
+		envConfig.SSHConfigPath,
 		"Specifies an alternative per-user SSH configuration file path",
 	)
 	fs.Var(
@@ -101,7 +101,7 @@ func parseCommandLineFlags(envConfig *Configuration, args []string, exitOnError 
 		fmt.Sprintf("Disable feature. Supported values: %s", strings.Join(SupportedFeatures, "|")),
 	)
 	fs.StringVar(&cmdConfig.SetTheme, "set-theme", "", "Set application theme")
-	fs.StringVar(&cmdConfig.SetSSHConfigFilePath, "set-ssh-config-path", "", "Set SSH configuration file path")
+	fs.StringVar(&cmdConfig.SetSSHConfigPath, "set-ssh-config-path", "", "Set SSH configuration file path or URL.")
 
 	err := fs.Parse(args[1:]) // args should not include program name, see docs
 	if err != nil {
@@ -120,8 +120,8 @@ func parseCommandLineFlags(envConfig *Configuration, args []string, exitOnError 
 	case cmdConfig.SetTheme != "":
 		fmt.Printf("[CONFIG] Set theme to %q\n", cmdConfig.SetTheme)
 		cmdConfig.AppMode = constant.AppModeType.HandleParam
-	case cmdConfig.SetSSHConfigFilePath != "":
-		fmt.Printf("[CONFIG] Set SSH config file path to %q\n", cmdConfig.SetSSHConfigFilePath)
+	case cmdConfig.SetSSHConfigPath != "":
+		fmt.Printf("[CONFIG] Set SSH config file path to %q\n", cmdConfig.SetSSHConfigPath)
 		cmdConfig.AppMode = constant.AppModeType.HandleParam
 	}
 
