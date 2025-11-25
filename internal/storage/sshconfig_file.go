@@ -56,6 +56,13 @@ func newSSHConfigStorage(
 
 // GetAll - returns all hosts.
 func (s *SSHConfigFile) GetAll() ([]model.Host, error) {
+	// Optimization - this is a readonly storage. Therefore, it's pointless to reload
+	// hosts from the file if they are already loaded. That especially increases
+	// the performance when the app read hosts from a remote location.
+	if s.innerStorage != nil {
+		return lo.Values(s.innerStorage), nil
+	}
+
 	hosts, err := s.fileParser.Parse()
 	if err != nil {
 		return nil, err
