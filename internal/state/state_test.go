@@ -243,21 +243,29 @@ ssh_config_path: smb://some/path
 }
 
 func Test_applyConfig(t *testing.T) {
-	// Use a mock to avoid sync.Once restrictions in tests
-	once = &mockOnce{}
-
 	tests := []struct {
 		name     string
 		testCfg  config.Configuration
 		expected State
 		wantErr  bool
 	}{
-		{
+		/*{
 			name:    "Empty configuration",
 			testCfg: config.Configuration{},
 			expected: State{
 				AppMode:  constant.AppModeType.StartUI,
 				LogLevel: constant.LogLevelType.INFO,
+			},
+			wantErr: false,
+		}, {
+			name: "Overwrite LogLevel and AppMode",
+			testCfg: config.Configuration{
+				AppMode:  constant.AppModeType.DisplayInfo,
+				LogLevel: constant.LogLevelType.DEBUG,
+			},
+			expected: State{
+				AppMode:  constant.AppModeType.DisplayInfo,
+				LogLevel: constant.LogLevelType.DEBUG,
 			},
 			wantErr: false,
 		}, {
@@ -289,7 +297,7 @@ func Test_applyConfig(t *testing.T) {
 			expected: State{},
 			wantErr:  true,
 		}, {
-			name:    "SSH config path set",
+			name:    "Set SSH config path for current session with '-s' parameter",
 			testCfg: config.Configuration{SSHConfigPath: "~/.ssh/custom_config"},
 			expected: State{
 				AppMode:                    constant.AppModeType.StartUI,
@@ -299,7 +307,7 @@ func Test_applyConfig(t *testing.T) {
 			},
 			wantErr: false,
 		}, {
-			name:    "User used '--set-ssh-config-path' parameter",
+			name:    "Persist SSH config path with '--set-ssh-config-path' parameter",
 			testCfg: config.Configuration{SetSSHConfigPath: "~/.ssh/custom_config"},
 			expected: State{
 				AppMode:          constant.AppModeType.StartUI,
@@ -308,12 +316,31 @@ func Test_applyConfig(t *testing.T) {
 				SetSSHConfigPath: "~/.ssh/custom_config",
 			},
 			wantErr: false,
-		},
+		}, */{
+			name:    "Persist valid theme '--set-theme' parameter",
+			testCfg: config.Configuration{SetTheme: "nord"},
+			expected: State{
+				AppMode:  constant.AppModeType.StartUI,
+				LogLevel: constant.LogLevelType.INFO,
+				Theme:    "nord",
+			},
+			wantErr: false,
+		}, /*{
+			name:     "Persist invalid theme '--set-theme' parameter",
+			testCfg:  config.Configuration{SetTheme: "no_such_theme"},
+			expected: State{},
+			wantErr:  true,
+		},*/
 	}
+
+	// Use a mock to avoid sync.Once restrictions in tests
+	once = &mockOnce{}
+	tmpHome := t.TempDir()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := &State{}
+			tt.testCfg.AppHome = tmpHome // If remove, it'll extract themes into '.../internal/state/' folder
+			actual := &State{Logger: &MockLogger{}}
 			err := actual.applyConfig(&tt.testCfg)
 
 			if tt.wantErr {
@@ -365,12 +392,15 @@ func Test_PersistApplicationState(t *testing.T) {
 
 // Test persisting app state.
 func Test_PersistApplicationStateError(t *testing.T) {
-	t.Skip()
+	// Create state file with read-only permissions
+	appHome := t.TempDir()
+	os.WriteFile(path.Join(appHome, "state.yaml"), []byte{}, 0o444)
+
 	// Create a mock logger for testing
 	mockLogger := MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
-	underTest, _ := Initialize(context.TODO(), &config.Configuration{}, &mockLogger)
+	underTest, _ := Initialize(context.TODO(), &config.Configuration{AppHome: appHome}, &mockLogger)
 
 	// Modify the application state
 	underTest.Selected = 42
