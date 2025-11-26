@@ -237,13 +237,13 @@ ssh_config_path: http://example.com/ssh_config
 			// On Windows "/tmp/some_path" becomes "C:/tmp/some_path"
 			expectedSSHConfigPath := tt.expected.SSHConfigPath
 			if !utils.StringEmpty(&tt.expected.SSHConfigPath) {
-				tt.expected.SSHConfigPath, _ = utils.SSHConfigPath(tt.expected.SSHConfigPath)
+				expectedSSHConfigPath, _ = utils.SSHConfigPath(tt.expected.SSHConfigPath)
 			}
 
 			// On Windows "/tmp/some_path" becomes "C:/tmp/some_path"
 			expectedSetSSHConfigPath := tt.expected.SetSSHConfigPath
 			if !utils.StringEmpty(&expectedSetSSHConfigPath) {
-				tt.expected.SetSSHConfigPath, _ = utils.SSHConfigPath(tt.expected.SetSSHConfigPath)
+				expectedSetSSHConfigPath, _ = utils.SSHConfigPath(tt.expected.SetSSHConfigPath)
 			}
 
 			assert.Equal(t, tt.expected.Theme, test.Theme, "state.Theme value mismatch")
