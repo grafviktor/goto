@@ -18,6 +18,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 type MockLogger struct {
@@ -233,13 +234,25 @@ ssh_config_path: http://example.com/ssh_config
 
 			test.readFromFile()
 
+			// On Windows "/tmp/some_path" becomes "C:/tmp/some_path"
+			expectedSSHConfigPath := tt.expected.SSHConfigPath
+			if !utils.StringEmpty(&tt.expected.SSHConfigPath) {
+				tt.expected.SSHConfigPath, _ = utils.SSHConfigPath(tt.expected.SSHConfigPath)
+			}
+
+			// On Windows "/tmp/some_path" becomes "C:/tmp/some_path"
+			expectedSetSSHConfigPath := tt.expected.SetSSHConfigPath
+			if !utils.StringEmpty(&expectedSetSSHConfigPath) {
+				tt.expected.SetSSHConfigPath, _ = utils.SSHConfigPath(tt.expected.SetSSHConfigPath)
+			}
+
 			assert.Equal(t, tt.expected.Theme, test.Theme, "state.Theme value mismatch")
 			assert.Equal(t, tt.expected.Group, test.Group, "state.Group value mismatch")
 			assert.Equal(t, tt.expected.Selected, test.Selected, "state.Selected value mismatch")
+			assert.Equal(t, expectedSSHConfigPath, test.SSHConfigPath, "state.SSHConfigPath value mismatch")
 			assert.Equal(t, tt.expected.ScreenLayout, test.ScreenLayout, "state.ScreenLayout value mismatch")
-			assert.Equal(t, tt.expected.SSHConfigPath, test.SSHConfigPath, "state.SSHConfigPath value mismatch")
+			assert.Equal(t, expectedSetSSHConfigPath, test.SetSSHConfigPath, "state.SetSSHConfigPath value mismatch")
 			assert.Equal(t, tt.expected.SSHConfigEnabled, test.SSHConfigEnabled, "state.SSHConfigEnabled value mismatch")
-			assert.Equal(t, tt.expected.SetSSHConfigPath, test.SetSSHConfigPath, "state.SetSSHConfigPath value mismatch")
 			assert.Equal(t, tt.expected.IsUserDefinedSSHConfigPath, test.IsUserDefinedSSHConfigPath, "state.IsUserDefinedSSHConfigPath value mismatch")
 		})
 	}
