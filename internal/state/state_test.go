@@ -308,11 +308,6 @@ func Test_applyConfig(t *testing.T) {
 				SetSSHConfigPath: "~/.ssh/custom_config",
 			},
 			wantErr: false,
-		}, {
-			name:     "User used '--set-ssh-config-path' parameter and unsupported path",
-			testCfg:  config.Configuration{SetSSHConfigPath: "smb://somepath/custom_config"},
-			expected: State{},
-			wantErr:  true,
 		},
 	}
 

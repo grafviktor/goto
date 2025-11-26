@@ -59,27 +59,25 @@ func (s *SSHConfigFile) GetAll() ([]model.Host, error) {
 	// Optimization - this is a readonly storage. Therefore, it's pointless to reload
 	// hosts from the file if they are already loaded. That especially increases
 	// the performance when the app read hosts from a remote location.
-	if s.innerStorage != nil {
-		return lo.Values(s.innerStorage), nil
-	}
+	if s.innerStorage == nil {
+		hosts, err := s.fileParser.Parse()
+		if err != nil {
+			return nil, err
+		}
 
-	hosts, err := s.fileParser.Parse()
-	if err != nil {
-		return nil, err
-	}
+		err = s.createSSHConfigCopy()
+		if err != nil {
+			return nil, err
+		}
 
-	err = s.createSSHConfigCopy()
-	if err != nil {
-		return nil, err
-	}
-
-	s.updateApplicationState()
-	s.innerStorage = make(map[int]model.Host, len(hosts))
-	for i := range hosts {
-		// Make sure that not assigning '0' as host id, because '0' is empty host identifier.
-		// Consider to use '-1' for all new hostnames.
-		hosts[i].ID = i + 1
-		s.innerStorage[i+1] = hosts[i]
+		s.updateApplicationState()
+		s.innerStorage = make(map[int]model.Host, len(hosts))
+		for i := range hosts {
+			// Make sure that not assigning '0' as host id, because '0' is empty host identifier.
+			// Consider to use '-1' for all new hostnames.
+			hosts[i].ID = i + 1
+			s.innerStorage[i+1] = hosts[i]
+		}
 	}
 
 	values := lo.Values(s.innerStorage)

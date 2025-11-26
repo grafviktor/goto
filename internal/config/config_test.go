@@ -186,6 +186,20 @@ func Test_parseCommandLineFlags(t *testing.T) {
 				SetTheme:       "",
 			},
 			wantError: false,
+		}, {
+			name: "Set ssh config path",
+			args: []string{"--set-ssh-config-path", "/tmp/custom_config2"},
+			wantConfig: &Configuration{
+				AppHome:          "/tmp/home",
+				AppMode:          "HANDLE_PARAM",
+				DisableFeature:   "",
+				EnableFeature:    "",
+				LogLevel:         "info",
+				SSHConfigPath:    "/tmp/custom_config", // this comes from env config, see above
+				SetSSHConfigPath: "/tmp/custom_config2",
+				SetTheme:         "",
+			},
+			wantError: false,
 		},
 	}
 
@@ -208,6 +222,7 @@ func Test_parseCommandLineFlags(t *testing.T) {
 			require.Equal(t, tt.wantConfig.EnableFeature, cfg.EnableFeature)
 			require.Equal(t, tt.wantConfig.LogLevel, cfg.LogLevel)
 			require.Equal(t, tt.wantConfig.SSHConfigPath, cfg.SSHConfigPath)
+			require.Equal(t, tt.wantConfig.SetSSHConfigPath, cfg.SetSSHConfigPath)
 			require.Equal(t, tt.wantConfig.SetTheme, cfg.SetTheme)
 		})
 	}
