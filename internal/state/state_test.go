@@ -249,7 +249,7 @@ func Test_applyConfig(t *testing.T) {
 		expected State
 		wantErr  bool
 	}{
-		/*{
+		{
 			name:    "Empty configuration",
 			testCfg: config.Configuration{},
 			expected: State{
@@ -316,7 +316,7 @@ func Test_applyConfig(t *testing.T) {
 				SetSSHConfigPath: "~/.ssh/custom_config",
 			},
 			wantErr: false,
-		}, */{
+		}, {
 			name:    "Persist valid theme '--set-theme' parameter",
 			testCfg: config.Configuration{SetTheme: "nord"},
 			expected: State{
@@ -325,12 +325,12 @@ func Test_applyConfig(t *testing.T) {
 				Theme:    "nord",
 			},
 			wantErr: false,
-		}, /*{
+		}, {
 			name:     "Persist invalid theme '--set-theme' parameter",
 			testCfg:  config.Configuration{SetTheme: "no_such_theme"},
 			expected: State{},
 			wantErr:  true,
-		},*/
+		},
 	}
 
 	// Use a mock to avoid sync.Once restrictions in tests
