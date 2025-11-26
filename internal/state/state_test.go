@@ -199,14 +199,14 @@ ssh_config_path: /tmp/some_path
 				IsUserDefinedSSHConfigPath: true,
 			},
 		}, {
-			name: "Not valid SSH config path should NOT be picked up by state",
+			name: "Valid remote SSH config path should be picked up by state",
 			stateFileContent: `
 selected: 999
 enable_ssh_config: true
 group: default
 theme: dark
 screen_layout: compact
-ssh_config_path: smb://some/path
+ssh_config_path: http://example.com/ssh_config
 `,
 			expected: State{
 				Selected:                   999,
@@ -214,9 +214,9 @@ ssh_config_path: smb://some/path
 				ScreenLayout:               constant.ScreenLayoutCompact,
 				Theme:                      "dark",
 				Group:                      "default",
-				SSHConfigPath:              "",
-				SetSSHConfigPath:           "",
-				IsUserDefinedSSHConfigPath: false,
+				SSHConfigPath:              "http://example.com/ssh_config",
+				SetSSHConfigPath:           "http://example.com/ssh_config",
+				IsUserDefinedSSHConfigPath: true,
 			},
 		},
 	}
@@ -233,11 +233,14 @@ ssh_config_path: smb://some/path
 
 			test.readFromFile()
 
-			assert.Equal(t, tt.expected.Selected, test.Selected, "state.Selected value mismatch")
-			assert.Equal(t, tt.expected.SSHConfigEnabled, test.SSHConfigEnabled, "state.SSHConfigEnabled value mismatch")
-			assert.Equal(t, tt.expected.ScreenLayout, test.ScreenLayout, "state.ScreenLayout value mismatch")
 			assert.Equal(t, tt.expected.Theme, test.Theme, "state.Theme value mismatch")
 			assert.Equal(t, tt.expected.Group, test.Group, "state.Group value mismatch")
+			assert.Equal(t, tt.expected.Selected, test.Selected, "state.Selected value mismatch")
+			assert.Equal(t, tt.expected.ScreenLayout, test.ScreenLayout, "state.ScreenLayout value mismatch")
+			assert.Equal(t, tt.expected.SSHConfigPath, test.SSHConfigPath, "state.SSHConfigPath value mismatch")
+			assert.Equal(t, tt.expected.SSHConfigEnabled, test.SSHConfigEnabled, "state.SSHConfigEnabled value mismatch")
+			assert.Equal(t, tt.expected.SetSSHConfigPath, test.SetSSHConfigPath, "state.SetSSHConfigPath value mismatch")
+			assert.Equal(t, tt.expected.IsUserDefinedSSHConfigPath, test.IsUserDefinedSSHConfigPath, "state.IsUserDefinedSSHConfigPath value mismatch")
 		})
 	}
 }
