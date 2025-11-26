@@ -69,6 +69,11 @@ func getRegexFirstMatchingGroup(groups []string) string {
 	return ""
 }
 
+/*
+  SSHconfig paths below have nothing to do with model/config and
+  should be moved out of here! This is a good victim for refactoring.
+*/
+
 // IsUserDefinedPath - checks if user re-defined SSH config file path.
 func IsUserDefinedPath() bool {
 	if !state.IsInitialized() {
@@ -81,7 +86,7 @@ func IsUserDefinedPath() bool {
 
 var sshConfigPath *string
 
-// SetPath - set SSH config file path.
+// SetPath - set SSH config file path. This function does not validate or refine path.
 func SetPath(path string) {
 	sshConfigPath = &path
 }

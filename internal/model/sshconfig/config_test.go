@@ -9,6 +9,7 @@ import (
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/testutils/mocklogger"
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 func TestGetCurrentOSUser(t *testing.T) {
@@ -53,7 +54,8 @@ func Test_Path(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Nil(t, sshConfigPath)
-	require.Equal(t, "/tmp/mock_config", Path())
+	expectedPath, _ := utils.SSHConfigPath("/tmp/mock_config")
+	require.Equal(t, expectedPath, Path())
 
 	SetPath("/custom/mock_config2")
 	require.Equal(t, "/custom/mock_config2", Path())

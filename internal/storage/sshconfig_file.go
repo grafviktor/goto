@@ -70,7 +70,8 @@ func (s *SSHConfigFile) GetAll() ([]model.Host, error) {
 			return nil, err
 		}
 
-		s.updateApplicationState()
+		s.activateTempSSHConfig()
+
 		s.innerStorage = make(map[int]model.Host, len(hosts))
 		for i := range hosts {
 			// Make sure that not assigning '0' as host id, because '0' is empty host identifier.
@@ -127,7 +128,7 @@ func (s *SSHConfigFile) createSSHConfigCopy() error {
 	return nil
 }
 
-func (s *SSHConfigFile) updateApplicationState() {
+func (s *SSHConfigFile) activateTempSSHConfig() {
 	sshConfigSettings.SetPath(s.sshConfigCopy.Name())
 }
 
