@@ -55,6 +55,10 @@ type loggerInterface interface {
 
 // State stores application state.
 type State struct {
+	// Note that the app load ssh_config_file_path from SSHConfigPath,
+	// but persists it to disk using SetSSHConfigPath.
+	// This is done to distinguish between --set-ssh-config-path flag usage and
+	// and setting the path via command line -s or env variable.
 	AppHome                    string                `yaml:"-"`
 	AppMode                    constant.AppMode      `yaml:"-"`
 	Context                    context.Context       `yaml:"-"`
@@ -65,9 +69,10 @@ type State struct {
 	Logger                     loggerInterface       `yaml:"-"`
 	LogLevel                   constant.LogLevel     `yaml:"-"`
 	ScreenLayout               constant.ScreenLayout `yaml:"screen_layout,omitempty"`
+	SetSSHConfigPath           string                `yaml:"ssh_config_path,omitempty"`
 	Selected                   int                   `yaml:"selected"`
 	SSHConfigEnabled           bool                  `yaml:"enable_ssh_config"`
-	SSHConfigFilePath          string                `yaml:"-"`
+	SSHConfigPath              string                `yaml:"-"`
 	Theme                      string                `yaml:"theme,omitempty"`
 	Width                      int                   `yaml:"-"`
 }
@@ -105,11 +110,11 @@ func Initialize(ctx context.Context,
 
 		// Set default values
 		st = &State{
-			AppMode:           cfg.AppMode,
-			AppHome:           cfg.AppHome,
-			Context:           ctx,
-			Logger:            lg,
-			SSHConfigFilePath: defaultSSHConfigPath,
+			AppMode:       cfg.AppMode,
+			AppHome:       cfg.AppHome,
+			Context:       ctx,
+			Logger:        lg,
+			SSHConfigPath: defaultSSHConfigPath,
 		}
 
 		// Read state from file
@@ -131,6 +136,7 @@ func (s *State) readFromFile() {
 		Theme            *string `yaml:"theme"`
 		ScreenLayout     *string `yaml:"screen_layout"`
 		SSHConfigEnabled *bool   `yaml:"enable_ssh_config"`
+		SSHConfigPath    *string `yaml:"ssh_config_path"`
 	}
 
 	appStateFilePath := path.Join(s.AppHome, stateFile)
@@ -168,9 +174,24 @@ func (s *State) readFromFile() {
 		s.SSHConfigEnabled = *loadedState.SSHConfigEnabled
 	}
 
+	if loadedState.SSHConfigPath != nil {
+		var sshConfigPath string
+		sshConfigPath, err = utils.SSHConfigPath(*loadedState.SSHConfigPath)
+		if err != nil {
+			s.Logger.Error("[APPSTATE] Cannot apply ssh_config file path from state file: %v", err)
+		} else {
+			s.SSHConfigPath = sshConfigPath
+			s.IsUserDefinedSSHConfigPath = true
+			// This value is only used when persist to disk, as
+			// we want to keep SSHConfigPath across app restarts.
+			s.SetSSHConfigPath = sshConfigPath
+		}
+	}
+
 	s.Logger.Debug("[APPSTATE] Screen layout: '%v'. Focused host id: '%v'", s.ScreenLayout, s.Selected)
 }
 
+//nolint:gocognit // this function performs a single task and can't be splitted
 func (s *State) applyConfig(cfg *config.Configuration) error {
 	if utils.StringEmpty(&cfg.AppMode) {
 		s.AppMode = constant.AppModeType.StartUI
@@ -200,12 +221,23 @@ func (s *State) applyConfig(cfg *config.Configuration) error {
 		}
 	}
 
-	if !utils.StringEmpty(&cfg.SSHConfigFilePath) {
-		userDefinedPath, err := utils.SSHConfigFilePath(cfg.SSHConfigFilePath)
+	// This will only trigger if user used --set-ssh-config-path flag.
+	// The app will close after persisting the new path.
+	// We do not need to assign the value to s.SSHConfigPath as the app will exit now.
+	if !utils.StringEmpty(&cfg.SetSSHConfigPath) {
+		userDefinedPath, err := utils.SSHConfigPath(cfg.SetSSHConfigPath)
 		if err != nil {
 			return fmt.Errorf("cannot set ssh config file path: %w", err)
 		}
-		s.SSHConfigFilePath = userDefinedPath
+		s.SetSSHConfigPath = userDefinedPath
+	}
+
+	if !utils.StringEmpty(&cfg.SSHConfigPath) {
+		userDefinedPath, err := utils.SSHConfigPath(cfg.SSHConfigPath)
+		if err != nil {
+			return fmt.Errorf("cannot set ssh config file path: %w", err)
+		}
+		s.SSHConfigPath = userDefinedPath
 		s.IsUserDefinedSSHConfigPath = true
 	}
 
@@ -245,7 +277,7 @@ func (s *State) print() {
 	fmt.Printf("Log level:         %s\n", s.LogLevel)
 	fmt.Printf("SSH config status: %s\n", lo.Ternary(s.SSHConfigEnabled, "enabled", "disabled"))
 	if s.SSHConfigEnabled {
-		fmt.Printf("SSH config path:   %s\n", s.SSHConfigFilePath)
+		fmt.Printf("SSH config path:   %s\n", s.SSHConfigPath)
 	}
 }
 
@@ -261,6 +293,6 @@ func (s *State) LogDetails() {
 	s.Logger.Info("[CONFIG] Application log level:   %q\n", s.LogLevel)
 	s.Logger.Info("[CONFIG] SSH config status:       %q\n", lo.Ternary(s.SSHConfigEnabled, "enabled", "disabled"))
 	if s.SSHConfigEnabled {
-		s.Logger.Info("[CONFIG] SSH config path:         %q\n", s.SSHConfigFilePath)
+		s.Logger.Info("[CONFIG] SSH config path:         %q\n", s.SSHConfigPath)
 	}
 }

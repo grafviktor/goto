@@ -1,9 +1,15 @@
 package sshconfig
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/grafviktor/goto/internal/config"
+	"github.com/grafviktor/goto/internal/state"
+	"github.com/grafviktor/goto/internal/testutils/mocklogger"
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 func TestGetCurrentOSUser(t *testing.T) {
@@ -38,4 +44,19 @@ func TestParseConfig(t *testing.T) {
 
 	actual = Parse(unixMockSSHConfig)
 	require.Equal(t, expected, actual)
+}
+
+func Test_Path(t *testing.T) {
+	_, err := state.Initialize(
+		context.TODO(),
+		&config.Configuration{SSHConfigPath: "/tmp/mock_config"},
+		&mocklogger.Logger{})
+
+	require.NoError(t, err)
+	require.Nil(t, sshConfigPath)
+	expectedPath, _ := utils.SSHConfigPath("/tmp/mock_config")
+	require.Equal(t, expectedPath, Path())
+
+	SetPath("/custom/mock_config2")
+	require.Equal(t, "/custom/mock_config2", Path())
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/constant"
 	model "github.com/grafviktor/goto/internal/model/host"
+	sshConfigSettings "github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/storage/sshconfig"
 )
@@ -44,7 +45,7 @@ func newSSHConfigStorage(
 	st *state.State,
 	logger iLogger,
 ) *SSHConfigFile {
-	lexer := sshconfig.NewFileLexer(st.SSHConfigFilePath, logger)
+	lexer := sshconfig.NewFileLexer(st.SSHConfigPath, logger)
 	parser := sshconfig.NewParser(lexer, logger)
 	return &SSHConfigFile{
 		fileLexer:  lexer,
@@ -55,23 +56,29 @@ func newSSHConfigStorage(
 
 // GetAll - returns all hosts.
 func (s *SSHConfigFile) GetAll() ([]model.Host, error) {
-	hosts, err := s.fileParser.Parse()
-	if err != nil {
-		return nil, err
-	}
+	// Optimization - this is a readonly storage. Therefore, it's pointless to reload
+	// hosts from the file if they are already loaded. That especially increases
+	// the performance when the app read hosts from a remote location.
+	if s.innerStorage == nil {
+		hosts, err := s.fileParser.Parse()
+		if err != nil {
+			return nil, err
+		}
 
-	err = s.createSSHConfigCopy()
-	if err != nil {
-		return nil, err
-	}
+		err = s.createSSHConfigCopy()
+		if err != nil {
+			return nil, err
+		}
 
-	s.updateApplicationState()
-	s.innerStorage = make(map[int]model.Host, len(hosts))
-	for i := range hosts {
-		// Make sure that not assigning '0' as host id, because '0' is empty host identifier.
-		// Consider to use '-1' for all new hostnames.
-		hosts[i].ID = i + 1
-		s.innerStorage[i+1] = hosts[i]
+		s.activateTempSSHConfig()
+
+		s.innerStorage = make(map[int]model.Host, len(hosts))
+		for i := range hosts {
+			// Make sure that not assigning '0' as host id, because '0' is empty host identifier.
+			// Consider to use '-1' for all new hostnames.
+			hosts[i].ID = i + 1
+			s.innerStorage[i+1] = hosts[i]
+		}
 	}
 
 	values := lo.Values(s.innerStorage)
@@ -121,8 +128,8 @@ func (s *SSHConfigFile) createSSHConfigCopy() error {
 	return nil
 }
 
-func (s *SSHConfigFile) updateApplicationState() {
-	s.appState.SSHConfigFilePath = s.sshConfigCopy.Name()
+func (s *SSHConfigFile) activateTempSSHConfig() {
+	sshConfigSettings.SetPath(s.sshConfigCopy.Name())
 }
 
 func (s *SSHConfigFile) Close() {

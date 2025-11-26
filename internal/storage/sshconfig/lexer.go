@@ -26,9 +26,9 @@ type Lexer struct {
 }
 
 // NewFileLexer creates a new instance of Lexer for the given SSH config file path.
-func NewFileLexer(sshConfigFilePath string, log iLogger) *Lexer {
+func NewFileLexer(sshConfigPath string, log iLogger) *Lexer {
 	var pathType string
-	if utils.IsSupportedURL(sshConfigFilePath) {
+	if utils.IsSupportedURL(sshConfigPath) {
 		pathType = pathTypeURL
 	} else {
 		pathType = pathTypeFile
@@ -36,7 +36,7 @@ func NewFileLexer(sshConfigFilePath string, log iLogger) *Lexer {
 
 	return &Lexer{
 		pathType:    pathType,
-		currentPath: sshConfigFilePath,
+		currentPath: sshConfigPath,
 		rawData:     []byte{},
 		logger:      log,
 	}

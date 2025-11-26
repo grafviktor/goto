@@ -485,10 +485,8 @@ func (m *ListModel) onGroupSelect(msg message.GroupSelect) tea.Cmd {
 	// simplest way to implement it.
 	cmds = append(cmds, m.loadHosts())
 	// Display selected group notification
-	if !utils.StringEmpty(&msg.Name) {
-		notificationMsg := fmt.Sprintf("group %q", msg.Name)
-		cmds = append(cmds, m.displayNotificationMsg(notificationMsg))
-	}
+	message := lo.Ternary(utils.StringEmpty(&msg.Name), "display all hosts", fmt.Sprintf("group %q", msg.Name))
+	cmds = append(cmds, m.displayNotificationMsg(message))
 
 	return tea.Sequence(cmds...)
 }

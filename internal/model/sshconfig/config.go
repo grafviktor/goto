@@ -69,6 +69,11 @@ func getRegexFirstMatchingGroup(groups []string) string {
 	return ""
 }
 
+/*
+  SSHconfig paths below have nothing to do with model/config and
+  should be moved out of here! This is a good victim for refactoring.
+*/
+
 // IsUserDefinedPath - checks if user re-defined SSH config file path.
 func IsUserDefinedPath() bool {
 	if !state.IsInitialized() {
@@ -79,7 +84,19 @@ func IsUserDefinedPath() bool {
 	return state.Get().IsUserDefinedSSHConfigPath
 }
 
-// GetFilePath - returns SSH config file path which is defined in application configuration.
-func GetFilePath() string {
-	return state.Get().SSHConfigFilePath
+var sshConfigPath *string
+
+// SetPath - set SSH config file path. This function does not validate or refine path.
+func SetPath(path string) {
+	sshConfigPath = &path
+}
+
+// Path - returns SSH config file path which is defined in application configuration.
+func Path() string {
+	if sshConfigPath != nil {
+		return *sshConfigPath
+	}
+
+	// Fallback to application state.
+	return state.Get().SSHConfigPath
 }

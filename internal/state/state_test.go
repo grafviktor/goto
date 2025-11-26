@@ -18,6 +18,7 @@ import (
 
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 type MockLogger struct {
@@ -178,6 +179,46 @@ screen_layout: compact
 				Theme:            "dark",
 				Group:            "default",
 			},
+		}, {
+			name: "Valid SSH config path should be picked up by state",
+			stateFileContent: `
+selected: 999
+enable_ssh_config: true
+group: default
+theme: dark
+screen_layout: compact
+ssh_config_path: /tmp/some_path
+`,
+			expected: State{
+				Selected:                   999,
+				SSHConfigEnabled:           true,
+				ScreenLayout:               constant.ScreenLayoutCompact,
+				Theme:                      "dark",
+				Group:                      "default",
+				SSHConfigPath:              "/tmp/some_path",
+				SetSSHConfigPath:           "/tmp/some_path",
+				IsUserDefinedSSHConfigPath: true,
+			},
+		}, {
+			name: "Valid remote SSH config path should be picked up by state",
+			stateFileContent: `
+selected: 999
+enable_ssh_config: true
+group: default
+theme: dark
+screen_layout: compact
+ssh_config_path: http://example.com/ssh_config
+`,
+			expected: State{
+				Selected:                   999,
+				SSHConfigEnabled:           true,
+				ScreenLayout:               constant.ScreenLayoutCompact,
+				Theme:                      "dark",
+				Group:                      "default",
+				SSHConfigPath:              "http://example.com/ssh_config",
+				SetSSHConfigPath:           "http://example.com/ssh_config",
+				IsUserDefinedSSHConfigPath: true,
+			},
 		},
 	}
 
@@ -193,19 +234,31 @@ screen_layout: compact
 
 			test.readFromFile()
 
-			assert.Equal(t, tt.expected.Selected, test.Selected, "state.Selected value mismatch")
-			assert.Equal(t, tt.expected.SSHConfigEnabled, test.SSHConfigEnabled, "state.SSHConfigEnabled value mismatch")
-			assert.Equal(t, tt.expected.ScreenLayout, test.ScreenLayout, "state.ScreenLayout value mismatch")
+			// On Windows "/tmp/some_path" becomes "C:/tmp/some_path"
+			expectedSSHConfigPath := tt.expected.SSHConfigPath
+			if !utils.StringEmpty(&tt.expected.SSHConfigPath) {
+				expectedSSHConfigPath, _ = utils.SSHConfigPath(tt.expected.SSHConfigPath)
+			}
+
+			// On Windows "/tmp/some_path" becomes "C:/tmp/some_path"
+			expectedSetSSHConfigPath := tt.expected.SetSSHConfigPath
+			if !utils.StringEmpty(&expectedSetSSHConfigPath) {
+				expectedSetSSHConfigPath, _ = utils.SSHConfigPath(tt.expected.SetSSHConfigPath)
+			}
+
 			assert.Equal(t, tt.expected.Theme, test.Theme, "state.Theme value mismatch")
 			assert.Equal(t, tt.expected.Group, test.Group, "state.Group value mismatch")
+			assert.Equal(t, tt.expected.Selected, test.Selected, "state.Selected value mismatch")
+			assert.Equal(t, expectedSSHConfigPath, test.SSHConfigPath, "state.SSHConfigPath value mismatch")
+			assert.Equal(t, tt.expected.ScreenLayout, test.ScreenLayout, "state.ScreenLayout value mismatch")
+			assert.Equal(t, expectedSetSSHConfigPath, test.SetSSHConfigPath, "state.SetSSHConfigPath value mismatch")
+			assert.Equal(t, tt.expected.SSHConfigEnabled, test.SSHConfigEnabled, "state.SSHConfigEnabled value mismatch")
+			assert.Equal(t, tt.expected.IsUserDefinedSSHConfigPath, test.IsUserDefinedSSHConfigPath, "state.IsUserDefinedSSHConfigPath value mismatch")
 		})
 	}
 }
 
 func Test_applyConfig(t *testing.T) {
-	// Use a mock to avoid sync.Once restrictions in tests
-	once = &mockOnce{}
-
 	tests := []struct {
 		name     string
 		testCfg  config.Configuration
@@ -218,6 +271,17 @@ func Test_applyConfig(t *testing.T) {
 			expected: State{
 				AppMode:  constant.AppModeType.StartUI,
 				LogLevel: constant.LogLevelType.INFO,
+			},
+			wantErr: false,
+		}, {
+			name: "Overwrite LogLevel and AppMode",
+			testCfg: config.Configuration{
+				AppMode:  constant.AppModeType.DisplayInfo,
+				LogLevel: constant.LogLevelType.DEBUG,
+			},
+			expected: State{
+				AppMode:  constant.AppModeType.DisplayInfo,
+				LogLevel: constant.LogLevelType.DEBUG,
 			},
 			wantErr: false,
 		}, {
@@ -249,21 +313,50 @@ func Test_applyConfig(t *testing.T) {
 			expected: State{},
 			wantErr:  true,
 		}, {
-			name:    "SSH config path set",
-			testCfg: config.Configuration{SSHConfigFilePath: "~/.ssh/custom_config"},
+			name:    "Set SSH config path for current session with '-s' parameter",
+			testCfg: config.Configuration{SSHConfigPath: "~/.ssh/custom_config"},
 			expected: State{
 				AppMode:                    constant.AppModeType.StartUI,
 				LogLevel:                   constant.LogLevelType.INFO,
-				SSHConfigFilePath:          "~/.ssh/custom_config",
+				SSHConfigPath:              "~/.ssh/custom_config",
 				IsUserDefinedSSHConfigPath: true,
 			},
 			wantErr: false,
+		}, {
+			name:    "Persist SSH config path with '--set-ssh-config-path' parameter",
+			testCfg: config.Configuration{SetSSHConfigPath: "~/.ssh/custom_config"},
+			expected: State{
+				AppMode:          constant.AppModeType.StartUI,
+				LogLevel:         constant.LogLevelType.INFO,
+				SSHConfigPath:    "",
+				SetSSHConfigPath: "~/.ssh/custom_config",
+			},
+			wantErr: false,
+		}, {
+			name:    "Persist valid theme '--set-theme' parameter",
+			testCfg: config.Configuration{SetTheme: "nord"},
+			expected: State{
+				AppMode:  constant.AppModeType.StartUI,
+				LogLevel: constant.LogLevelType.INFO,
+				Theme:    "nord",
+			},
+			wantErr: false,
+		}, {
+			name:     "Persist invalid theme '--set-theme' parameter",
+			testCfg:  config.Configuration{SetTheme: "no_such_theme"},
+			expected: State{},
+			wantErr:  true,
 		},
 	}
 
+	// Use a mock to avoid sync.Once restrictions in tests
+	once = &mockOnce{}
+	tmpHome := t.TempDir()
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := &State{}
+			tt.testCfg.AppHome = tmpHome // If remove, it'll extract themes into '.../internal/state/' folder
+			actual := &State{Logger: &MockLogger{}}
 			err := actual.applyConfig(&tt.testCfg)
 
 			if tt.wantErr {
@@ -273,9 +366,10 @@ func Test_applyConfig(t *testing.T) {
 				assert.Equal(t, tt.expected.AppMode, actual.AppMode, "AppMode mismatch")
 				assert.Equal(t, tt.expected.LogLevel, actual.LogLevel, "LogLevel mismatch")
 				assert.Equal(t, tt.expected.Theme, actual.Theme, "Theme mismatch")
-				assert.Equal(t, tt.expected.SSHConfigFilePath, actual.SSHConfigFilePath, "SSHConfigFilePath mismatch")
+				assert.Equal(t, tt.expected.SSHConfigPath, actual.SSHConfigPath, "SSHConfigPath mismatch")
+				assert.Equal(t, tt.expected.SetSSHConfigPath, actual.SetSSHConfigPath, "SetSSHConfigPath mismatch")
 				assert.Equal(t, tt.expected.SSHConfigEnabled, actual.SSHConfigEnabled, "SSHConfigEnabled mismatch")
-				assert.Equal(t, tt.expected.IsUserDefinedSSHConfigPath, actual.IsUserDefinedSSHConfigPath, "IsSSHConfigFilePathDefinedByUser mismatch")
+				assert.Equal(t, tt.expected.IsUserDefinedSSHConfigPath, actual.IsUserDefinedSSHConfigPath, "IsUserDefinedSSHConfigPath mismatch")
 			}
 		})
 	}
@@ -314,12 +408,15 @@ func Test_PersistApplicationState(t *testing.T) {
 
 // Test persisting app state.
 func Test_PersistApplicationStateError(t *testing.T) {
-	t.Skip()
+	// Create state file with read-only permissions
+	appHome := t.TempDir()
+	os.WriteFile(path.Join(appHome, "state.yaml"), []byte{}, 0o444)
+
 	// Create a mock logger for testing
 	mockLogger := MockLogger{}
 
 	// Call the Get function with the temporary directory and mock logger
-	underTest, _ := Initialize(context.TODO(), &config.Configuration{}, &mockLogger)
+	underTest, _ := Initialize(context.TODO(), &config.Configuration{AppHome: appHome}, &mockLogger)
 
 	// Modify the application state
 	underTest.Selected = 42
@@ -331,10 +428,10 @@ func Test_PersistApplicationStateError(t *testing.T) {
 
 func Test_PrintConfig(t *testing.T) {
 	state := &State{
-		AppHome:           "/tmp/goto",
-		LogLevel:          "debug",
-		SSHConfigEnabled:  true,
-		SSHConfigFilePath: "/tmp/ssh_config",
+		AppHome:          "/tmp/goto",
+		LogLevel:         "debug",
+		SSHConfigEnabled: true,
+		SSHConfigPath:    "/tmp/ssh_config",
 	}
 
 	actualOutput := captureOutput(state.PrintConfig)
@@ -364,11 +461,11 @@ func captureOutput(f func()) string {
 func Test_LogDetails(t *testing.T) {
 	logger := MockLogger{}
 	state := &State{
-		AppHome:           "/tmp/goto",
-		LogLevel:          "debug",
-		SSHConfigEnabled:  true,
-		SSHConfigFilePath: "/tmp/ssh_config",
-		Logger:            &logger,
+		AppHome:          "/tmp/goto",
+		LogLevel:         "debug",
+		SSHConfigEnabled: true,
+		SSHConfigPath:    "/tmp/ssh_config",
+		Logger:           &logger,
 	}
 
 	state.LogDetails()

@@ -93,11 +93,11 @@ func Test_GetAppDir(t *testing.T) {
 	require.Error(t, err, "App home folder should not be empty 2")
 }
 
-func Test_SSHConfigFilePath(t *testing.T) {
+func Test_SSHConfigPath(t *testing.T) {
 	// Test case: SSH config file path
 	userConfigDir, _ := os.UserHomeDir()
 	expected := path.Join(userConfigDir, ".ssh", "config")
-	got, _ := SSHConfigFilePath("")
+	got, _ := SSHConfigPath("")
 	require.Equal(t, expected, got, "Should return default ssh config file path")
 
 	// Test case: custom file path
@@ -105,12 +105,12 @@ func Test_SSHConfigFilePath(t *testing.T) {
 	require.NoError(t, err, "Should create a temporary file for testing")
 	defer tempFile.Close() // clean up
 	customPath := tempFile.Name()
-	got, err = SSHConfigFilePath(customPath)
+	got, err = SSHConfigPath(customPath)
 	require.NoError(t, err, "Should not return any errors because the path is valid")
 	require.Equal(t, customPath, got, "Should return custom ssh config file path")
 
 	// Test case: custom file path - unsupported URL
-	_, err = SSHConfigFilePath("http://127.0.0.1/ssh_config")
+	_, err = SSHConfigPath("http://127.0.0.1/ssh_config")
 	require.NoError(t, err, "Should not return any errors because that's a valid URL")
 }
 
