@@ -1,5 +1,9 @@
 ## Demonstrations and use cases ##
 
+### Search effectively across all your records ###
+
+![Depicts how to search hosts through the database](search_through_database.gif)
+
 ### Easily manage your hosts database ###
 
 ![Demonstrates how to duplicate an existing record in the GOTO database.](duplicate_existing_record.gif)

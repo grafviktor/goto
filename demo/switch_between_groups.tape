@@ -5,8 +5,8 @@ Set Shell "bash"
 Set FontSize 13
 Set Width 600
 Set Height 400
-Set Padding 20
-
+Set Padding 10
+Set LoopOffset 5%
 
 # Run gg
 Type "gg"
@@ -54,10 +54,6 @@ Sleep 500ms
 Enter
 Sleep 500ms
 
-Escape
-Sleep 500ms
-Escape
-Sleep 500ms
 Escape
 Sleep 1s
 Type y

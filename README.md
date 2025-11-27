@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/grafviktor/goto/master/LICENSE)
 [![Codecov](https://codecov.io/gh/grafviktor/goto/branch/develop/graph/badge.svg?token=tTyTsuCvNb&)](https://codecov.io/gh/grafviktor/goto)
 
-This tiny app helps to maintain a list of ssh servers. Unlike PuTTY it doesn't incorporate any connection logic, but relying on `ssh` utility which should be installed on your system.
+This is a tool for managing and organizing your SSH servers. Unlike PuTTY it doesn't include any connection logic, but integrates with `ssh` utility which should be installed on your system. It's perfect for dev teams allowing SSH configurations to be centrally stored on an internal server and shared across developers or entire tech. departments.
 
 Supported platforms: macOS, Linux, Windows.
 
@@ -55,17 +55,21 @@ gg
 
 ## 2. Functional demo ##
 
-### 2.1. Edit your database and connect to remote machines ###
+### 2.1. This is your interface to ssh config file ###
 
-![Shows how to open ssh session using goto](demo/edit_and_connect.gif)
+![Shows how to set path to a remote ssh config file](demo/ssh_config_show_hosts.gif)
+
+_Note: Includes are also supported._
 
 ### 2.2. Organize your hostnames into logical groups ###
 
 ![Shows how to switch between hosts groups](demo/switch_between_groups.gif)
 
-### 2.3. Search efficiently across all your records ###
+### 2.3. Edit your database and connect to remote boxes ###
 
-![Depicts how to search hosts through the database](demo/search_through_database.gif)
+![Shows how to open ssh session using goto](demo/edit_and_connect.gif)
+
+_Note: you can only edit hosts loaded from yaml storage. Please see section 4._
 
 Find more demos and uses cases [here](demo/README.md).
 
@@ -75,14 +79,6 @@ Please also refer [F.A.Q.](FAQ.md) page which provides additional configuration 
 
 ### 3.1. Command line options ###
 
-* `-d` - disable feature, only supported value is ssh_config;
-  ```bash
-  gg -d "ssh_config" # since version 1.4.0
-  ```
-* `-e` - enable feature, only supported value is ssh_config;
-  ```bash
-  gg -e "ssh_config" # since version 1.4.0
-  ```
 * `-f` - specify the application home folder;
   ```bash
   gg -f /tmp/goto
@@ -98,6 +94,14 @@ Please also refer [F.A.Q.](FAQ.md) page which provides additional configuration 
 * `--set-ssh-config-path` - set SSH configuration file path or url;
   ```bash
   gg --set-ssh-config-path http://company-repo/devops-team/unix/ssh_cofig # since version 1.5.0
+  ```
+* `-d` - disable feature, only supported value is ssh_config;
+  ```bash
+  gg -d "ssh_config" # since version 1.4.0
+  ```
+* `-e` - enable feature, only supported value is ssh_config;
+  ```bash
+  gg -e "ssh_config" # since version 1.4.0
   ```
 * `--set-theme` - set application color theme;
   ```bash

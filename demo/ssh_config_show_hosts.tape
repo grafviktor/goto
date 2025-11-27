@@ -54,35 +54,54 @@
 
 Set PlaybackSpeed 1
 Output ssh_config_show_hosts.gif
-Require echo
+Require python3
+
 Set Shell "bash"
 Set FontSize 13
 Set Width 600
 Set Height 400
-Set Padding 20
-Env GG_SSH_CONFIG_FILE_PATH .ssh/config
+Set Padding 10
+Set LoopOffset 75%
 
+# Run http server and set theme
 Hide
-Type "gg"
+Type "python3 -m http.server 8080 &"
+Enter
+Sleep 100ms
+
+Type "gg --set-theme nord"
+Enter
+Sleep 100ms
+Type clear
 Enter
 Show
+
 Sleep 1s
-Hide
-Type "q"
-Type "clear"
-Enter
-Show
-Type "cat .ssh/config"
-Sleep 1s
-Enter
-Sleep 3s
 Type "gg"
 Sleep 1s
 Enter
 Sleep 2s
-Down
+Escape
+Sleep 1s
+Type y
+Sleep 1s
+
+Type "gg --set-ssh-config-path http://127.0.0.1:8080/ssh_config_show_hosts.config"
+Sleep 1s
+Enter
+Sleep 4s
+
+Type "gg"
+Sleep 500ms
+Enter
 Sleep 1s
 Down
 Sleep 1s
 Down
 Sleep 1s
+Down
+Sleep 1s
+Escape
+Sleep 1s
+Type y
+Sleep 3s

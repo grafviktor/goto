@@ -1,11 +1,19 @@
 Output duplicate_existing_record.gif
-Require echo
 
 Set Shell "bash"
 Set FontSize 13
 Set Width 600
 Set Height 400
-Set Padding 20
+Set Padding 10
+Set LoopOffset 25%
+
+Hide
+
+Type "gg --set-theme nord"
+Enter
+Sleep 100ms
+Type clear
+Enter
 
 Show
 
