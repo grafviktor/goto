@@ -57,15 +57,21 @@ gg
 
 ### 2.1. This is your interface to ssh config file ###
 
+This video shows how to set path to a remote ssh config.
+
 ![Shows how to set path to a remote ssh config file](demo/ssh_config_show_hosts.gif)
 
 _Note: Includes are also supported._
 
 ### 2.2. Organize your hostnames into logical groups ###
 
+In this video, hosts are grouped into categories such as Dev, Beta, and Prod.
+
 ![Shows how to switch between hosts groups](demo/switch_between_groups.gif)
 
 ### 2.3. Edit your database and connect to remote boxes ###
+
+Here we edit a previously saved host and connect to it.
 
 ![Shows how to open ssh session using goto](demo/edit_and_connect.gif)
 
@@ -93,7 +99,7 @@ Please also refer [F.A.Q.](FAQ.md) page which provides additional configuration 
   ```
 * `--set-ssh-config-path` - set SSH configuration file path or url;
   ```bash
-  gg --set-ssh-config-path http://company-repo/devops-team/unix/ssh_cofig # since version 1.5.0
+  gg --set-ssh-config-path https://company-repo/devops-team/ssh_config # since version 1.5.0
   ```
 * `-d` - disable feature, only supported value is ssh_config;
   ```bash
