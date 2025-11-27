@@ -91,9 +91,17 @@ Please also refer [F.A.Q.](FAQ.md) page which provides additional configuration 
   ```bash
   gg -l debug
   ```
-* `-s` - define an alternative per-user SSH configuration file path;
+* `-s` - define an alternative SSH configuration file path for current session;
   ```bash
   gg -s /mnt/nfs_share/ssh/config # since version 1.4.0
+  ```
+* `--set-ssh-config-path` - set SSH configuration file path or url;
+  ```bash
+  gg --set-ssh-config-path http://company-repo/devops-team/unix/ssh_cofig # since version 1.5.0
+  ```
+* `--set-theme` - set application color theme;
+  ```bash
+  gg --set-theme nord # since version 1.5.0
   ```
 * `-h` - display help;
 * `-v` - display version and configuration details.

@@ -1,5 +1,12 @@
 # Changelog
 
+**[v1.5.0](https://github.com/grafviktor/goto/compare/v1.4.1...v1.5.0) - 2025-11-27**
+
+* SSH config can be located on a remote host, supported protocols: http(s), ftp [[details](https://github.com/grafviktor/goto/issues/97)].
+* You can use filter in groups view [[details](https://github.com/grafviktor/goto/issues/91)].
+* UI themes support. 2 themes included: "nord" and "solarized-dark" [[details](https://github.com/grafviktor/goto/issues/89)].
+* It's now possible to filter hosts by hostname [[details](https://github.com/grafviktor/goto/issues/118)].
+
 **[v1.4.1](https://github.com/grafviktor/goto/compare/v1.4.0...v1.4.1) - 2025-06-21**
 
 * Fix issues which were uncovered in ssh_config parser [[details](https://github.com/grafviktor/goto/issues/102)].
