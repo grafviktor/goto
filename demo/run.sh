@@ -9,7 +9,7 @@ export GG_HOME=.
 export GG_LOG_LEVEL=debug
 
 function cleanup() {
-    rm -rf hosts.yaml state.yaml app.log .ssh 2>/dev/null
+    rm -rf hosts.yaml state.yaml app.log .ssh themes 2>/dev/null
 }
 
 cleanup

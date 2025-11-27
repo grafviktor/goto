@@ -54,12 +54,21 @@
 
 Set PlaybackSpeed 1
 Output edit_and_connect.gif
-Require echo
+
 Set Shell "bash"
 Set FontSize 13
 Set Width 600
 Set Height 400
-Set Padding 20
+Set Padding 10
+Set LoopOffset 25%
+
+Hide
+
+Type "gg --set-theme solarized-dark"
+Enter
+Sleep 100ms
+Type clear
+Enter
 
 Show
 Sleep 1
