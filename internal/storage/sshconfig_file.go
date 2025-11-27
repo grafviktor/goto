@@ -65,7 +65,7 @@ func (s *SSHConfigFile) GetAll() ([]model.Host, error) {
 			return nil, err
 		}
 
-		err = s.createSSHConfigCopy()
+		err = s.createTempSSHConfigCopy()
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +112,7 @@ func (s *SSHConfigFile) Type() constant.HostStorageEnum {
 	return constant.HostStorageType.SSHConfig
 }
 
-func (s *SSHConfigFile) createSSHConfigCopy() error {
+func (s *SSHConfigFile) createTempSSHConfigCopy() error {
 	rawData := s.fileLexer.GetRawData()
 	sshConfigCopy, err := os.CreateTemp("", "goto_sshconfig_*")
 	if err != nil {
@@ -121,11 +121,13 @@ func (s *SSHConfigFile) createSSHConfigCopy() error {
 	s.sshConfigCopy = sshConfigCopy
 
 	_, err = sshConfigCopy.Write(rawData)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	// We need to close this file to make sure that other processes (like ssh) can read it.
+	// If not close now, Windows will fail to read the file. We close it anyway, independently
+	// if the write call above was successful or not.
+	_ = s.sshConfigCopy.Close()
+
+	return err
 }
 
 func (s *SSHConfigFile) activateTempSSHConfig() {
@@ -141,6 +143,5 @@ func (s *SSHConfigFile) deleteSSHConfigCopy() {
 		return
 	}
 
-	_ = s.sshConfigCopy.Close()
 	_ = os.Remove(s.sshConfigCopy.Name())
 }
