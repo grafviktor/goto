@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/grafviktor/goto/master/LICENSE)
 [![Codecov](https://codecov.io/gh/grafviktor/goto/branch/develop/graph/badge.svg?token=tTyTsuCvNb&)](https://codecov.io/gh/grafviktor/goto)
 
-This is a tool for managing and organizing your SSH servers. Unlike PuTTY it doesn't include any connection logic, but integrates with `ssh` utility which should be installed on your system. It's perfect for dev teams allowing SSH configurations to be centrally stored on an internal server and shared across developers or entire tech. departments.
+This is a tool for managing and organizing your SSH servers. Unlike PuTTY it doesn't include any connection logic, but integrates with `ssh` utility which should be installed on your system. It's perfect for dev teams allowing SSH configurations to be centrally stored on an internal server and shared across developers or entire tech departments.
 
 Supported platforms: macOS, Linux, Windows.
 
@@ -55,9 +55,9 @@ gg
 
 ## 2. Functional demo ##
 
-### 2.1. This is your interface to ssh config file ###
+### 2.1. This is your interface to ssh configuration ###
 
-This video shows how to set path to a remote ssh config.
+This video shows how to set path to a remote ssh config, which is shared among team members.
 
 ![Shows how to set path to a remote ssh config file](demo/ssh_config_show_hosts.gif)
 
@@ -65,13 +65,13 @@ _Note: Includes are also supported._
 
 ### 2.2. Organize your hostnames into logical groups ###
 
-In this video, hosts are grouped into categories such as Dev, Beta, and Prod.
+This video represents hosts grouped into categories such as Dev, Beta, and Prod.
 
 ![Shows how to switch between hosts groups](demo/switch_between_groups.gif)
 
-### 2.3. Edit your database and connect to remote boxes ###
+### 2.3. Edit your entries and connect to remote boxes ###
 
-Here we edit a previously saved host and connect to it.
+Adjust hostname before connecting to it.
 
 ![Shows how to open ssh session using goto](demo/edit_and_connect.gif)
 

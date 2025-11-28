@@ -61,10 +61,14 @@ Set FontSize 13
 Set Width 600
 Set Height 400
 Set Padding 10
-Set LoopOffset 75%
+Set LoopOffset 70%
 
 # Run http server and set theme
 Hide
+Type "mkdir devops"
+Enter
+Type "cp ssh_config_show_hosts.config devops/ssh_cfg"
+Enter
 Type "python3 -m http.server 8080 &"
 Enter
 Sleep 100ms
@@ -77,16 +81,8 @@ Enter
 Show
 
 Sleep 1s
-Type "gg"
-Sleep 1s
-Enter
-Sleep 2s
-Escape
-Sleep 1s
-Type y
-Sleep 1s
 
-Type "gg --set-ssh-config-path http://127.0.0.1:8080/ssh_config_show_hosts.config"
+Type "gg --set-ssh-config-path http://127.0.0.1:8080/devops/ssh_cfg"
 Sleep 1s
 Enter
 Sleep 4s
@@ -104,4 +100,6 @@ Sleep 1s
 Escape
 Sleep 1s
 Type y
-Sleep 3s
+Hide
+Type "rm -r devops"
+Enter
