@@ -57,11 +57,11 @@ gg
 
 ### 2.1. This is your interface to ssh configuration ###
 
-This video shows how to set path to a remote SSH configuration, which is shared among team members.
+This video demonstrates how to set path to a remote SSH configuration, which is shared among team members.
 
 ![Shows how to set path to a remote ssh config file](demo/ssh_config_show_hosts.gif)
 
-_Note: Includes are also supported._
+_Note: SSH Include directive is also supported. This allows you to create an access hierarchy - for example, a root configuration will be used by UNIX team, with leaf configurations distributed across specific departments._
 
 ### 2.2. Organize your hostnames into logical groups ###
 
