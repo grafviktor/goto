@@ -65,12 +65,14 @@ gg -e ssh_config
 
 **Q: How can I manually set path to my ssh_config file?**
 
-You have 2 options:
-1. Use `-s` key to define ssh_config file location. The downside of this approach is that you will need to use this key every time you run the app.
-2. More convenient way is to define environment variable with name: `GG_SSH_CONFIG_FILE_PATH`. For instance:
+You have 3 options:
+1. Use `-s` key to define ssh_config file location. This approach is good when you want to quickly test something.
+2. Use `--set-ssh-config-path` key to permanently set ssh_config file location.
+3. Another way is to define environment variable with name: `GG_SSH_CONFIG_FILE_PATH`. For instance:
     ```bash
     export GG_SSH_CONFIG_FILE_PATH="/mnt/c/Users/D.Vader/.ssh/config"
     ```
+Please note that ssh config path can also be a URL. Please read the documentation about this feature this [document](SSH_CONFIG.md).
 
 **Q: Can I assign a specific group to a host which is located in my ssh_config?**
 
