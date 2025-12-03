@@ -146,4 +146,4 @@ To set ssh_config URL permanently, please use --set-ssh-config-path parameter.
 gg --set-ssh-config-path "https://raw.githubusercontent.com/grafviktor/goto/refs/heads/develop/docs/example/root_config"
 ```
 
-The limitation of this approach is that GOTO cannot edit host entries loaded from remote ssh_config files. If you need to adjust hostnames before connecting or create new entries on the fly, please consider using YAML storage which is described in project [README](../README.md#41-yaml-storage-location-and-structure) file.
+The limitation of this approach is that GOTO cannot edit host entries loaded from remote ssh_config files. If you need to adjust hostnames before connecting or create new entries on the fly, please consider using YAML storage which is described in the project's [README](../README.md#41-yaml-storage-location-and-structure) file.
