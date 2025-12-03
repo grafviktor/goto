@@ -1,0 +1,39 @@
+############ MO DEV ############
+# This file is to be used by Middle Office Devs.
+# They're not interested in accessing other servers.
+
+Host MIDDLE_OFFICE.DEV1
+  # GG:GROUP: MIDDLE OFFICE DEV
+  # GG:DESCRIPTION: Location: NY
+  User mo-developer
+  HostName dev-host1.localdomain
+
+Host MIDDLE_OFFICE.DEV2
+  # GG:GROUP: MIDDLE OFFICE DEV
+  # GG:DESCRIPTION: Location: London
+  User mo-developer
+  HostName dev-host2.localdomain
+
+Host MIDDLE_OFFICE.QA1
+  # GG:GROUP: MIDDLE OFFICE DEV
+  # GG:DESCRIPTION: Location: NY
+  User mo-developer
+  HostName qa-host1.localdomain
+
+Host MIDDLE_OFFICE.QA2
+  # GG:GROUP: MIDDLE OFFICE DEV
+  # GG:DESCRIPTION: Location: London
+  User mo-developer
+  HostName qa-host2.localdomain
+
+Host MIDDLE_OFFICE.UAT1
+  # GG:GROUP: MIDDLE OFFICE DEV
+  # GG:DESCRIPTION: Location: NY
+  User mo-developer
+  HostName uat-host1.localdomain
+
+Host MIDDLE_OFFICE.UAT2
+  # GG:GROUP: MIDDLE OFFICE DEV
+  # GG:DESCRIPTION: Location: London
+  User mo-developer
+  HostName uat-host2.localdomain

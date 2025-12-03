@@ -1,0 +1,21 @@
+############ FO DEV ############
+# This file is to be used by Front Office Devs.
+# They're not interested in accessing other servers.
+
+Host FRONT_OFFICE.*
+	User fo-developer
+
+Host FRONT_OFFICE.DEV
+  # GG:GROUP: FRONT OFFICE DEV
+  # GG:DESCRIPTION: Location: NY
+  HostName dev-host.localdomain
+
+Host FRONT_OFFICE.QA
+  # GG:GROUP: FRONT OFFICE DEV
+  # GG:DESCRIPTION: Location: NY
+  HostName qa-host.localdomain
+
+Host FRONT_OFFICE.UAT
+  # GG:GROUP: FRONT OFFICE DEV
+  # GG:DESCRIPTION: Location: NY
+  HostName uat-host.localdomain

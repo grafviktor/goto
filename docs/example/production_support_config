@@ -1,0 +1,30 @@
+######## PROD SUPPORT #######
+# This file is to be used by Front Office Devs.
+# They're not interested in accessing other servers.
+
+Host PROD.CLUSTER.*
+	User prod-support
+
+Host PROD.CLUSTER.FRONT_OFFICE
+  # GG:GROUP: PRODUCTION SUPPORT
+  # GG:DESCRIPTION: Location: NY
+  HostName prod-host1.localdomain
+
+Host PROD.CLUSTER.MIDDLE_OFFICE
+  # GG:GROUP: PRODUCTION SUPPORT
+  # GG:DESCRIPTION: Location: London
+  HostName prod-host2.localdomain
+
+Host PROD.CLUSTER.FRONT_OFFICE_LOG
+  # GG:GROUP: PRODUCTION SUPPORT
+  # GG:DESCRIPTION: Location: NY
+  RequestTTY yes
+  RemoteCommand less ${HOME}/service1/service.log
+  HostName prod-host1.localdomain
+
+Host PROD.CLUSTER.MIDDLE_OFFICE_LOG
+  # GG:GROUP: PRODUCTION SUPPORT
+  # GG:DESCRIPTION: Location: London
+  RequestTTY yes
+  RemoteCommand less ${HOME}/service2/service.log
+  HostName prod-host2.localdomain

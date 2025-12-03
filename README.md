@@ -61,7 +61,7 @@ This video demonstrates how to set path to a remote SSH configuration, which is 
 
 ![Shows how to set path to a remote ssh config file](demo/ssh_config_show_hosts.gif)
 
-_Note: SSH Include directive is also supported. This allows you to create an access hierarchy - for example, a root configuration will be used by UNIX team, with leaf configurations distributed across specific departments._
+_Note: SSH Include directive is also supported. This allows you to create an access hierarchy - for example, a root configuration will be used by UNIX team, with leaf configurations distributed across specific departments. Please read more in [this document](docs/SSH_CONFIG.md)._
 
 ### 2.2. Organize your hostnames into logical groups ###
 
@@ -81,7 +81,7 @@ Find more demos and uses cases [here](demo/README.md).
 
 ## 3. Configuration ##
 
-Please also refer [F.A.Q.](FAQ.md) page which provides additional configuration details and usage examples.
+Please also refer [F.A.Q.](docs/FAQ.md) page which provides additional configuration details and usage examples.
 
 ### 3.1. Command line options ###
 
