@@ -61,7 +61,7 @@ This video demonstrates how to set path to a remote SSH configuration, which is 
 
 ![Shows how to set path to a remote ssh config file](demo/ssh_config_show_hosts.gif)
 
-_Note: SSH Include directive is also supported. This allows you to create an access hierarchy - for example, a root configuration will be used by UNIX team, with leaf configurations distributed across specific departments._
+_Note: SSH Include directive is also supported. This allows you to create an access hierarchy - for example, a root configuration will be used by UNIX team, with leaf configurations distributed across specific departments. Please read more in [this document](docs/SSH_CONFIG.md)._
 
 ### 2.2. Organize your hostnames into logical groups ###
 
@@ -81,7 +81,7 @@ Find more demos and uses cases [here](demo/README.md).
 
 ## 3. Configuration ##
 
-Please also refer [F.A.Q.](FAQ.md) page which provides additional configuration details and usage examples.
+Please also refer [F.A.Q.](docs/FAQ.md) page which provides additional configuration details and usage examples.
 
 ### 3.1. Command line options ###
 
@@ -126,7 +126,7 @@ Please also refer [F.A.Q.](FAQ.md) page which provides additional configuration 
 
 2 file storages are supported:
 
-* ssh_config - readonly storage type. Goto loads all hosts from your `~/.ssh/config` file. See `man ssh_config`, if you want to find out more about OpenSSH client configuration file.
+* ssh_config - readonly storage type. Goto loads all hosts from your `~/.ssh/config` file. See `man ssh_config`, if you want to find out more about OpenSSH client configuration file. The application also supports remote ssh_config files. Please read [SSH_CONFIG.md](docs/SSH_CONFIG.md) document for more details about ssh_config usage with GOTO.
 * yaml file - writable storage type, but supports less options than ssh_config. Please section 4.1 if you want to find out more about yaml file structure and its location.
 
 ### 4.1 Yaml storage location and structure ###

@@ -1,0 +1,8 @@
+######## CONFIG ROOT ########
+# Root file includes all other files.
+# This file is to be used by Unixes and DevOpses,
+# as they want to have access to all servers.
+
+Include front_office_config
+Include middle_office_config
+Include production_support_config
