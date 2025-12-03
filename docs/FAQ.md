@@ -72,7 +72,7 @@ You have 3 options:
     ```bash
     export GG_SSH_CONFIG_FILE_PATH="/mnt/c/Users/D.Vader/.ssh/config"
     ```
-Please note that ssh config path can also be a URL. Please read more about this feature in this [document](SSH_CONFIG.md).
+Please note that ssh config path can also be a URL. Please read more about this feature in a dedicated [documentation file](SSH_CONFIG.md).
 
 **Q: Can I assign a specific group to a host which is located in my ssh_config?**
 
