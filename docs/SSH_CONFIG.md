@@ -4,6 +4,8 @@ The application can load ssh_config file directly from a URL. This feature helps
 
 The diagram below illustrates a typical server-access hierarchy: Unix and DevOps teams often require access to all company servers, while Development and Production Support teams only need access to specific subsets.
 
+This document provides an example of how to implement such a structure using GOTO and ssh_config files.
+
 ![users to server access schema](img/central_ssh_config.png)
 
 Thanks to ssh_config file format, it supports including additional configuration files. GOTO extends this capability even further by allowing included files to be stored remotely.
@@ -128,7 +130,7 @@ Host PROD.CLUSTER.MIDDLE_OFFICE_LOG
 </details>
 
 
-In order to see this configuration in action, you can run GOTO with the following parameters. **Don't forget that you can switch between hosts groups using `z` key when the application is running. Otherwise you way see only selected group hosts!**
+In order to see this configuration in action, you can run GOTO with the following parameters. **Don't forget that you can switch between hosts groups using `z` key when the application is running. Otherwise you may see only a subset of hosts belonging to the active group!**
 
 ```bash
 # Want to be a Production Support engineer?
@@ -143,3 +145,5 @@ To set ssh_config URL permanently, please use --set-ssh-config-path parameter.
 ```bash
 gg --set-ssh-config-path "https://raw.githubusercontent.com/grafviktor/goto/refs/heads/develop/docs/example/root_config"
 ```
+
+The limitation of this approach is that GOTO cannot edit host entries loaded from remote ssh_config files. If you need to adjust hostnames before connecting or create new entries on the fly, please consider using YAML storage which is described in project [README](../README.md#41-yaml-storage-location-and-structure) file.
