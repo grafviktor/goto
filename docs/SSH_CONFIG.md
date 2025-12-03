@@ -130,7 +130,7 @@ Host PROD.CLUSTER.MIDDLE_OFFICE_LOG
 </details>
 
 
-In order to see this configuration in action, you can run GOTO with the parameters below. **Don't forget that you can switch between hosts groups using `z` key when the application is running. Otherwise you may see only a subset of hosts belonging to the active group!**
+In order to see this configuration in action, you can run GOTO with the parameters below. **Don't forget that you can switch between host groups using `z` key when the application is running. Otherwise you may see only a subset of hosts belonging to the active group!**
 
 ```bash
 # Want to be a Production Support engineer?
