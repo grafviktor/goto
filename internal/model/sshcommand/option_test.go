@@ -91,7 +91,7 @@ func Test_AddOption(t *testing.T) {
 	}
 }
 
-func Test_ConnectCommand(t *testing.T) {
+func Test_Build_ConnectCommand(t *testing.T) {
 	tests := []struct {
 		name           string
 		cmd            string
@@ -117,7 +117,7 @@ func Test_ConnectCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := ConnectCommand(tt.options...)
+			actual := Build(tt.options...)
 			// Use Contains in order to pass Windows tests. On Windows,
 			// the command starts from 'cmd /c ssh' instead of just 'ssh'
 			require.Contains(t, actual, tt.expectedResult)
@@ -128,11 +128,11 @@ func Test_ConnectCommand(t *testing.T) {
 	state.Initialize(context.TODO(),
 		&config.Configuration{SSHConfigPath: "~/.ssh/custom_config"},
 		&mocklogger.Logger{})
-	actual := ConnectCommand(OptionAddress{Value: "example.com"})
+	actual := Build(OptionAddress{Value: "example.com"})
 	require.Contains(t, actual, `ssh example.com -F "~/.ssh/custom_config"`)
 }
 
-func Test_LoadConfigCommand(t *testing.T) {
+func Test_Build_LoadConfigCommand(t *testing.T) {
 	tests := []struct {
 		name           string
 		option         OptionReadHostConfig
@@ -152,7 +152,7 @@ func Test_LoadConfigCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := LoadConfigCommand(tt.option)
+			actual := Build(tt.option)
 			// Use Contains in order to pass Windows tests. On Windows,
 			// the command starts from 'cmd /c ssh' instead of just 'ssh'
 			require.Contains(t, actual, tt.expectedResult)
@@ -162,7 +162,7 @@ func Test_LoadConfigCommand(t *testing.T) {
 	// Repeat the first test with a custom SSH config file path
 	mockLogger := mocklogger.Logger{}
 	state.Initialize(context.TODO(), &config.Configuration{SSHConfigPath: "~/.ssh/custom_config"}, &mockLogger)
-	actual := LoadConfigCommand(tests[0].option)
+	actual := Build(tests[0].option)
 	// Should use contains because on Windows version the command starts from 'cmd /c ...'
 	require.Contains(t, actual, `ssh -G example.com -F "~/.ssh/custom_config"`)
 }
