@@ -33,6 +33,7 @@ fi
 cd "$(dirname "$(readlink -f "$0")")" || exit 1
 
 export VHS_PUBLISH=false # disable "Host your GIF on vhs.charm.sh: vhs publish <file>.gif" message
+export GG_LOG_LEVEL=debug
 TMP_HOME=temp
 RED_COLOR="\e[31m"
 GREEN_COLOR="\e[32m"
@@ -109,8 +110,15 @@ function check_log_no_errors() {
     return 0
 }
 
+function print_app_log() {
+    printf "\n  ${RED_COLOR}-===== Application log =====-${NO_COLOR}\n"
+    cat "${TMP_HOME}"/app.log
+    printf "\n  ${RED_COLOR}-===== Application state =====-${NO_COLOR}\n"
+    cat "${TMP_HOME}"/state.yaml
+}
+
 function cleanup() {
-    rm -rf out.gif "${TMP_HOME}"/*
+    rm -rf out.gif "${TMP_HOME:?}"/*
 }
 
 for file in *.tape; do
@@ -124,12 +132,14 @@ for file in *.tape; do
     check_expected "$filename_without_extension"
     if [ "$?" -ne 0 ]; then
         printf "${MSG_FAIL} %s\n" "${file}"
+        print_app_log
         exit 1
     fi
 
     check_log_no_errors "$filename_without_extension"
     if [ "$?" -ne 0 ]; then
         printf "${MSG_FAIL} %s\n" "Errors found in log file"
+        print_app_log
         exit 1
     fi
 

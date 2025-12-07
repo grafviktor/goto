@@ -5,6 +5,7 @@ package state
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -229,10 +230,16 @@ func (s *State) applyConfig(cfg *config.Configuration) error {
 		if err != nil {
 			return fmt.Errorf("cannot set ssh config file path: %w", err)
 		}
+		if !s.SSHConfigEnabled {
+			fmt.Println("[CONFIG] Warning: ssh_config support is disabled. The specified path will not be used.")
+		}
 		s.SetSSHConfigPath = userDefinedPath
 	}
 
 	if !utils.StringEmpty(&cfg.SSHConfigPath) {
+		if !s.SSHConfigEnabled {
+			return errors.New("you must enable ssh_config support to use this option")
+		}
 		userDefinedPath, err := utils.SSHConfigPath(cfg.SSHConfigPath)
 		if err != nil {
 			return fmt.Errorf("cannot set ssh config file path: %w", err)

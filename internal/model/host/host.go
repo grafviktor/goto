@@ -66,16 +66,16 @@ func (h *Host) IsUserDefinedSSHCommand() bool {
 // CmdSSHConnect - returns SSH command for connecting to a remote host.
 func (h *Host) CmdSSHConnect() string {
 	if h.IsUserDefinedSSHCommand() {
-		return sshcommand.ConnectCommand(sshcommand.OptionAddress{Value: h.Address})
+		return sshcommand.Build(sshcommand.OptionAddress{Value: h.Address})
 	}
 
 	if h.StorageType == constant.HostStorageType.SSHConfig {
 		// When it's SSHConfig storage type, we need to use the title as a host name.
 		// This is because the by addressing the host by alias, we get all its settings from ssh_config.
-		return sshcommand.ConnectCommand(sshcommand.OptionAddress{Value: h.Title})
+		return sshcommand.Build(sshcommand.OptionAddress{Value: h.Title})
 	}
 
-	return sshcommand.ConnectCommand([]sshcommand.Option{
+	return sshcommand.Build([]sshcommand.Option{
 		sshcommand.OptionPrivateKey{Value: h.IdentityFilePath},
 		sshcommand.OptionRemotePort{Value: h.RemotePort},
 		sshcommand.OptionLoginName{Value: h.LoginName},
@@ -86,14 +86,14 @@ func (h *Host) CmdSSHConnect() string {
 // CmdSSHConfig - returns SSH command for loading host default configuration.
 func (h *Host) CmdSSHConfig() string {
 	if h.StorageType == constant.HostStorageType.SSHConfig {
-		return sshcommand.LoadConfigCommand(sshcommand.OptionReadHostConfig{Value: h.Title})
+		return sshcommand.Build(sshcommand.OptionReadHostConfig{Value: h.Title})
 	}
 
 	if h.IsUserDefinedSSHCommand() {
-		return sshcommand.LoadConfigCommand(sshcommand.OptionReadHostConfig{Value: h.Address})
+		return sshcommand.Build(sshcommand.OptionReadHostConfig{Value: h.Address})
 	}
 
-	return sshcommand.LoadConfigCommand([]sshcommand.Option{
+	return sshcommand.Build([]sshcommand.Option{
 		sshcommand.OptionPrivateKey{Value: h.IdentityFilePath},
 		sshcommand.OptionRemotePort{Value: h.RemotePort},
 		sshcommand.OptionLoginName{Value: h.LoginName},
