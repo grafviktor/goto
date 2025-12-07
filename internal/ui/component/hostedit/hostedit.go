@@ -526,7 +526,7 @@ func (m *EditModel) handleReadonlyHost() {
 	m.logger.Debug("[UI] Update input components. All parameters are disabled.")
 	lo.ForEach(m.inputs, func(_ input.Input, n int) {
 		m.inputs[n].PlaceholderStyle = m.styles.textReadonly
-		m.inputs[n].Placeholder = fmt.Sprintf("%s: %s", "readonly", m.host.getHostAttributeValueByIndex(n))
+		m.inputs[n].Placeholder = m.host.getSSHConfigValueByIndex(n)
 		m.inputs[n].SetValue("")
 		m.inputs[n].SetEnabled(false)
 	})
