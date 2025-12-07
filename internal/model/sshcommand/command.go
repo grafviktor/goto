@@ -33,7 +33,7 @@ func LoadConfigCommand(options ...Option) string {
 		addOption(&sb, option)
 	}
 
-	if sshconfig.IsUserDefinedPath() {
+	if sshconfig.IsEnabled() && sshconfig.IsUserDefinedPath() {
 		addOption(&sb, OptionConfigFilePath{Value: sshconfig.Path()})
 	}
 

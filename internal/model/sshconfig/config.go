@@ -84,6 +84,16 @@ func IsUserDefinedPath() bool {
 	return state.Get().IsUserDefinedSSHConfigPath
 }
 
+// IsEnabled - checks if SSH config feature is enabled in application state.
+func IsEnabled() bool {
+	if !state.IsInitialized() {
+		// We may only be here during unit tests.
+		return false
+	}
+
+	return state.Get().SSHConfigEnabled
+}
+
 var sshConfigPath *string
 
 // SetPath - set SSH config file path. This function does not validate or refine path.
