@@ -1,5 +1,6 @@
 group: manual hosts
 screen_layout: compact
+ssh_config_path: /tmp/no_such_config_file
 selected: 2
 enable_ssh_config: false
 theme: nord

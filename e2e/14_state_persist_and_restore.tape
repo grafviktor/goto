@@ -12,11 +12,11 @@
 # * theme
 
 Set Shell bash
-Type "gg -f temp -d ssh_config"
+Type "gg -f temp -d ssh_config --set-ssh-config-path /tmp/no_such_config_file"
 Enter
 Sleep 100ms
 
-Type "gg -f temp -s mock_ssh_config -l debug"
+Type "gg -f temp -l debug"
 Enter
 Sleep 100ms
 
@@ -70,7 +70,7 @@ Enter
 
 # Now run the app again
 Sleep 100ms
-Type "gg -f temp -s mock_ssh_config -l debug"
+Type "gg -f temp -l debug"
 Enter
 Sleep 100ms
 # And quit from the app again

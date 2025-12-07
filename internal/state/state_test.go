@@ -313,15 +313,24 @@ func Test_applyConfig(t *testing.T) {
 			expected: State{},
 			wantErr:  true,
 		}, {
-			name:    "Set SSH config path for current session with '-s' parameter",
-			testCfg: config.Configuration{SSHConfigPath: "~/.ssh/custom_config"},
+			name: "Set SSH config path for current session with '-s' parameter when ssh_config is enabled",
+			testCfg: config.Configuration{
+				SSHConfigPath: "~/.ssh/custom_config",
+				EnableFeature: "ssh_config",
+			},
 			expected: State{
 				AppMode:                    constant.AppModeType.StartUI,
 				LogLevel:                   constant.LogLevelType.INFO,
 				SSHConfigPath:              "~/.ssh/custom_config",
+				SSHConfigEnabled:           true,
 				IsUserDefinedSSHConfigPath: true,
 			},
 			wantErr: false,
+		}, {
+			name:     "Set SSH config path for current session with '-s' parameter when ssh_config is disabled",
+			testCfg:  config.Configuration{SSHConfigPath: "~/.ssh/custom_config"},
+			expected: State{},
+			wantErr:  true,
 		}, {
 			name:    "Persist SSH config path with '--set-ssh-config-path' parameter",
 			testCfg: config.Configuration{SetSSHConfigPath: "~/.ssh/custom_config"},
