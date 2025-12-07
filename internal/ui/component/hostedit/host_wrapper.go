@@ -27,6 +27,27 @@ func (m *hostModelWrapper) getHostAttributeValueByIndex(inputType int) string {
 	}
 }
 
+func (m *hostModelWrapper) getSSHConfigValueByIndex(inputType int) string {
+	switch inputType {
+	case inputTitle:
+		return m.Title
+	case inputAddress:
+		return m.SSHHostConfig.Hostname
+	case inputGroup:
+		return m.Group
+	case inputDescription:
+		return m.Description
+	case inputLogin:
+		return m.SSHHostConfig.User
+	case inputNetworkPort:
+		return m.SSHHostConfig.Port
+	case inputIdentityFile:
+		return m.SSHHostConfig.IdentityFile
+	default:
+		return ""
+	}
+}
+
 func (m *hostModelWrapper) setHostAttributeByIndex(inputType int, value string) {
 	switch inputType {
 	case inputTitle:

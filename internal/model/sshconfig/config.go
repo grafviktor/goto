@@ -55,10 +55,10 @@ func currentUsername() string {
 }
 
 var (
-	sshConfigHostnameRe     = regexp.MustCompile(`(?i)hostname\s+(.*[^\r\n])`)
-	sshConfigIdentityFileRe = regexp.MustCompile(`(?i)identityfile\s+(.*[^\r\n])`)
-	sshConfigPortRe         = regexp.MustCompile(`(?i)port\s+(.*[^\r\n])`)
-	sshConfigUserRe         = regexp.MustCompile(`(?i)user\s+(.*[^\r\n])`)
+	sshConfigHostnameRe     = regexp.MustCompile(`(?im)^hostname\s+(.*[^\r\n])`)
+	sshConfigIdentityFileRe = regexp.MustCompile(`(?im)^identityfile\s+(.*[^\r\n])`)
+	sshConfigPortRe         = regexp.MustCompile(`(?im)^port\s+(.*[^\r\n])`)
+	sshConfigUserRe         = regexp.MustCompile(`(?im)^user\s+(.*[^\r\n])`)
 )
 
 func getRegexFirstMatchingGroup(groups []string) string {
