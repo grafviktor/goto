@@ -62,6 +62,10 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.State, 
 
 	var listItems []list.Item
 	model := list.New(listItems, delegate, 0, 0)
+	// This line affects sorting when filtering enabled. What UnsortedFilter
+	// does - it filters the collection, but leaves initial items order unchanged.
+	// Default filter on the contrary - filters the collection based on the match rank.
+	model.Filter = list.UnsortedFilter
 
 	// Setup styles.
 	styles := defaultStyles()
