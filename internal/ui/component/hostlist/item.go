@@ -20,16 +20,11 @@ func (l ListItemHost) Title() string { return l.Host.Title }
 // Description - self-explanatory.
 func (l ListItemHost) Description() string { return l.Host.Description }
 
-var filterRankDelimiter = "_$$$$$_"
-
 // FilterValue - returns the field combination which are used when user performs a search in the list.
 func (l ListItemHost) FilterValue() string {
-	// return l.Host.Title + "" +l.Host.Description + l.Host.Address
-	return fmt.Sprintf("%s%s%s%s%s",
+	return fmt.Sprintf("%s\n%s\n%s",
 		l.Host.Title,
-		filterRankDelimiter,
 		l.Host.Address,
-		filterRankDelimiter,
 		l.Host.Description)
 }
 
