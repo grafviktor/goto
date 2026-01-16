@@ -1,6 +1,8 @@
 package hostlist
 
 import (
+	"fmt"
+
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/constant"
@@ -19,7 +21,12 @@ func (l ListItemHost) Title() string { return l.Host.Title }
 func (l ListItemHost) Description() string { return l.Host.Description }
 
 // FilterValue - returns the field combination which are used when user performs a search in the list.
-func (l ListItemHost) FilterValue() string { return l.Host.Title + l.Host.Description + l.Host.Address }
+func (l ListItemHost) FilterValue() string {
+	return fmt.Sprintf("%s\n%s\n%s",
+		l.Host.Title,
+		l.Host.Address,
+		l.Host.Description)
+}
 
 // CompareTo - compares this listItemHost with another one.
 func (l ListItemHost) CompareTo(host ListItemHost) int {
