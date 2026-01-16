@@ -153,7 +153,7 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
     identity_file_path: /home/user/.ssh/id_rsa_microsoft
 ```
 
-## 5. [F.A.Q.](FAQ.md) ##
+## 5. [F.A.Q.](docs/FAQ.md) ##
 
 ## 6. [Contributing guidelines](CONTRIBUTING.md) ##
 
