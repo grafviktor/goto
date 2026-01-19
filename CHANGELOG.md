@@ -1,5 +1,11 @@
 # Changelog
 
+**[v1.5.1](https://github.com/grafviktor/goto/compare/v1.5.0...v1.5.1) - 2026-01-20**
+
+* Remove fuzzy filtering from the host list [[details](https://github.com/grafviktor/goto/issues/133)].
+* The app tries to read ssh host config from remote hosts even when ssh_config is disabled [[details](https://github.com/grafviktor/goto/issues/130)].
+* The app does not show identity file path and network port for hosts loaded from ssh_config [[details](https://github.com/grafviktor/goto/issues/123)].
+
 **[v1.5.0](https://github.com/grafviktor/goto/compare/v1.4.1...v1.5.0) - 2025-11-27**
 
 * SSH config can be located on a remote host, supported protocols: http(s), ftp [[details](https://github.com/grafviktor/goto/issues/97)].
