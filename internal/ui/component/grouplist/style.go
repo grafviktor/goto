@@ -22,7 +22,7 @@ type styles struct {
 	stylePaginatorActiveDot   string
 	stylePaginatorInactiveDot string
 
-	// Margings for the whole UI component.
+	// Margins for the whole UI component.
 	styleComponentMargins lipgloss.Style
 }
 

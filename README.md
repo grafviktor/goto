@@ -2,6 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/grafviktor/goto/master/LICENSE)
 [![Codecov](https://codecov.io/gh/grafviktor/goto/branch/develop/graph/badge.svg?token=tTyTsuCvNb&)](https://codecov.io/gh/grafviktor/goto)
+[![Go Report Card](https://goreportcard.com/badge/github.com/grafviktor/goto)](https://goreportcard.com/report/github.com/grafviktor/goto)
 
 This is a tool for managing and organizing your SSH servers. Unlike PuTTY it doesn't include any connection logic, but integrates with `ssh` utility which should be installed on your system. It's perfect for dev teams allowing SSH configurations to be centrally stored on an internal server and shared across developers or entire tech departments.
 

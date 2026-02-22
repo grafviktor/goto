@@ -29,7 +29,7 @@ type styles struct {
 	// Status empty - where we display a host group, if it was changed.
 	groupHint lipgloss.Style
 
-	// Margings for the whole UI component.
+	// Margins for the whole UI component.
 	componentMargins lipgloss.Style
 }
 
