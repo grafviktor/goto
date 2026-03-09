@@ -7,6 +7,7 @@ import (
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/list"
 	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/compat"
 )
 
 // AdaptiveColor supports both light and dark theme variants.
@@ -16,8 +17,8 @@ type AdaptiveColor struct {
 }
 
 // toLipgloss converts AdaptiveColor to lipgloss.AdaptiveColor.
-func (c AdaptiveColor) toLipgloss() lipgloss.AdaptiveColor {
-	return lipgloss.AdaptiveColor{Light: c.Light, Dark: c.Dark}
+func (c AdaptiveColor) toLipgloss() compat.AdaptiveColor {
+	return compat.AdaptiveColor{Light: lipgloss.Color(c.Light), Dark: lipgloss.Color(c.Dark)}
 }
 
 // ColorsList defines all colors which can be overridden in the application.
@@ -61,7 +62,7 @@ func (t *Theme) computeStyles() {
 }
 
 func (t *Theme) listStyles() list.Styles {
-	s := list.DefaultStyles()
+	s := list.DefaultStyles(true)
 	s.TitleBar = lipgloss.NewStyle().Padding(0, 0, 1, 2)
 	s.Title = lipgloss.NewStyle().
 		Background(t.Colors.BackgroundColorTitle.toLipgloss()).

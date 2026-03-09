@@ -67,9 +67,10 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.State, 
 	// Setup styles.
 	styles := defaultStyles()
 	model.Styles = styles.list
-	model.FilterInput.PromptStyle = styles.prompt
-	model.FilterInput.TextStyle = styles.filterInput
-	model.FilterInput.Cursor.Style = styles.cursor
+	// FIXME: Styles are broken after bubbletea update
+	// model.FilterInput.PromptStyle = styles.prompt
+	// model.FilterInput.TextStyle = styles.filterInput
+	// model.FilterInput.Cursor.Style = styles.cursor
 	model.Paginator.ActiveDot = styles.paginatorActiveDot
 	model.Paginator.InactiveDot = styles.paginatorInactiveDot
 	model.Help.Styles = styles.help
@@ -214,7 +215,7 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		return m.copyItem()
 	case key.Matches(msg, m.keyMap.toggleLayout):
 		return m.onToggleLayout()
-	case msg.Type == tea.KeyEsc:
+	case msg.Key().Code == tea.KeyEsc:
 		m.logger.Debug("[UI] Receive Escape key. Ask user for confirmation to close the app.")
 		m.enterCloseAppMode()
 		return nil
@@ -224,8 +225,8 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	}
 }
 
-func (m *ListModel) View() string {
-	return m.styles.componentMargins.Render(m.Model.View())
+func (m *ListModel) View() tea.View {
+	return tea.NewView(m.styles.componentMargins.Render(m.Model.View()))
 }
 
 func (m *ListModel) updateChildModel(msg tea.Msg) tea.Cmd {

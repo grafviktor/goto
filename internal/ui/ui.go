@@ -19,7 +19,7 @@ func Start(ctx context.Context, storage storage.HostStorage, appState *state.Sta
 	}
 
 	uiComponent := New(ctx, storage, appState, appState.Logger)
-	p := tea.NewProgram(&uiComponent, tea.WithAltScreen())
+	p := tea.NewProgram(&uiComponent)
 
 	appState.Logger.Debug("[UI] Start user interface")
 	if _, err := p.Run(); err != nil {

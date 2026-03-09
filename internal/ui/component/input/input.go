@@ -29,7 +29,8 @@ func New() *Input {
 	inputModel := textinput.New()
 	inputModel.Prompt = ""
 	styles := defaultStyles()
-	inputModel.PlaceholderStyle = styles.textReadonly
+	// FIXME: Styles are broken after bubbletea update
+	// inputModel.PlaceholderStyle = styles.textReadonly
 
 	return &Input{
 		Model:         inputModel,
@@ -59,7 +60,7 @@ func (l *Input) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return l, cmd
 }
 
-func (l *Input) View() string {
+func (l *Input) View() tea.View {
 	view := l.Model.View()
 
 	switch {
@@ -76,7 +77,8 @@ func (l *Input) View() string {
 		view = fmt.Sprintf("%s %s", tooltip, view)
 	}
 
-	return fmt.Sprintf("%s\n%s%s", l.labelView(), l.prompt(), view)
+	viewContent := fmt.Sprintf("%s\n%s%s", l.labelView(), l.prompt(), view)
+	return tea.NewView(viewContent)
 }
 
 // Focus the Input if it's not disabled.

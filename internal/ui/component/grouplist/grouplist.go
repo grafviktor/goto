@@ -50,8 +50,9 @@ func New(_ context.Context, repo storage.HostStorage, appState *state.State, log
 
 	// Setup model styles.
 	model.Styles = styles.styleList
-	model.FilterInput.PromptStyle = styles.stylePrompt
-	model.FilterInput.TextStyle = styles.styleFilterInput
+	// FIXME: Styles are broken after bubbletea update
+	// model.FilterInput.PromptStyle = styles.stylePrompt
+	// model.FilterInput.TextStyle = styles.styleFilterInput
 	model.Paginator.ActiveDot = styles.stylePaginatorActiveDot
 	model.Paginator.InactiveDot = styles.stylePaginatorInactiveDot
 	model.Help.Styles = styles.styleHelp
@@ -81,7 +82,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.SetSize(msg.Width-h, msg.Height-v)
 		m.logger.Debug("[UI] Set group list size: %d %d", m.Width(), m.Height())
 		return m, nil
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		cmd = m.handleKeyboardEvent(msg)
 		cmds = append(cmds, cmd)
 	case message.ViewGroupListOpen:
@@ -95,13 +96,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(append(cmds, cmd)...)
 }
 
-func (m *Model) View() string {
-	return m.styles.styleComponentMargins.Render(m.Model.View())
+func (m *Model) View() tea.View {
+	return tea.NewView(m.styles.styleComponentMargins.Render(m.Model.View()))
 }
 
-func (m *Model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
+func (m *Model) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 	//exhaustive:ignore // Handle only specific keys, other events are handled by the list model.
-	switch msg.Type {
+	switch msg.Code {
 	case tea.KeyEscape:
 		return m.handleEscapeKey()
 	case tea.KeyEnter:

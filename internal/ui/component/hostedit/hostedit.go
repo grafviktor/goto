@@ -166,7 +166,8 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.State, l
 	var t input.Input
 	for i := range m.inputs {
 		t = *input.New()
-		t.Cursor.Style = m.styles.cursor
+		// FIXME: Styles are broken after bubbletea update
+		// t.Cursor.Style = m.styles.cursor
 
 		switch i {
 		case inputTitle:
@@ -243,7 +244,7 @@ func (m *EditModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *EditModel) View() string {
+func (m *EditModel) View() tea.View {
 	if !m.ready {
 		// Create viewport, ideally this call should be located in init function,
 		// but this function does not trigger for child components
@@ -251,7 +252,8 @@ func (m *EditModel) View() string {
 	}
 
 	viewPortContent := m.viewport.View()
-	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), viewPortContent, m.helpView())
+	viewContent := fmt.Sprintf("%s\n%s\n%s", m.headerView(), viewPortContent, m.helpView())
+	return tea.NewView(viewContent)
 }
 
 func (m *EditModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
@@ -434,11 +436,13 @@ func (m *EditModel) updateViewPort(msg tea.Msg) {
 
 	if !m.ready {
 		m.ready = true
-		m.viewport = viewport.New(m.appState.Width, m.appState.Height-headerHeight-helpMenuHeight)
+		m.viewport = viewport.New(
+			viewport.WithWidth(m.appState.Width),
+			viewport.WithHeight(m.appState.Height-headerHeight-helpMenuHeight))
 		m.viewport.SetContent(m.inputsView())
 	} else if resizeMsg, ok := msg.(tea.WindowSizeMsg); ok {
-		m.viewport.Width = resizeMsg.Width
-		m.viewport.Height = resizeMsg.Height - headerHeight - helpMenuHeight
+		m.viewport.SetWidth(resizeMsg.Width)
+		m.viewport.SetHeight(resizeMsg.Height - headerHeight - helpMenuHeight)
 		m.logger.Debug("[UI] Set edit host viewport size: %d %d", m.viewport.Width, m.viewport.Height)
 	}
 }
@@ -469,10 +473,10 @@ func (m *EditModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 	// Update index of the focused element
 	if key.Matches(keyMsg, m.keyMap.Up) && m.focusedInput > minFocusIndex { //nolint:gocritic // readable without switch
 		m.focusedInput--
-		m.viewport.LineUp(inputHeight)
+		m.viewport.ScrollUp(inputHeight)
 	} else if key.Matches(keyMsg, m.keyMap.Down) && m.focusedInput < maxFocusIndex {
 		m.focusedInput++
-		m.viewport.LineDown(inputHeight)
+		m.viewport.ScrollDown(inputHeight)
 	} else {
 		m.logger.Debug("[UI] Reached first or last selectable input field: %d", m.focusedInput)
 		return nil
@@ -525,7 +529,8 @@ func (m *EditModel) updateInputFields() {
 func (m *EditModel) handleReadonlyHost() {
 	m.logger.Debug("[UI] Update input components. All parameters are disabled.")
 	lo.ForEach(m.inputs, func(_ input.Input, n int) {
-		m.inputs[n].PlaceholderStyle = m.styles.textReadonly
+		// FIXME: Styles are broken after bubbletea update
+		// m.inputs[n].PlaceholderStyle = m.styles.textReadonly
 		m.inputs[n].Placeholder = m.host.getSSHConfigValueByIndex(n)
 		m.inputs[n].SetValue("")
 		m.inputs[n].SetEnabled(false)
@@ -574,7 +579,7 @@ func (m *EditModel) handleEditableHost() {
 func (m *EditModel) inputsView() string {
 	var b strings.Builder
 	for i := range m.inputs {
-		b.WriteString(m.inputs[i].View())
+		b.WriteString(m.inputs[i].View().Content)
 		if i < len(m.inputs) {
 			b.WriteString("\n\n")
 		}
