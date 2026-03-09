@@ -4,9 +4,9 @@
 package theme
 
 import (
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/list"
+	"charm.land/lipgloss/v2"
 )
 
 // AdaptiveColor supports both light and dark theme variants.

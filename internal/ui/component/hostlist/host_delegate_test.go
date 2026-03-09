@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 

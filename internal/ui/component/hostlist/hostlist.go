@@ -9,9 +9,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/list"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/list"
+	tea "charm.land/bubbletea/v2"
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/constant"
@@ -309,7 +309,7 @@ func (m *ListModel) removeItem() tea.Cmd {
 			1 (7) (2)
 			1 (7) (3) // index = 3, in m.filteredItems we delete item "1 (7) (3)"
 
-		To raise a bug in https://github.com/charmbracelet/bubbles project
+		To raise a bug in https://charm.land/bubbles/v2 project
 	*/
 	m.Model.RemoveItem(index)
 	// We have to reset filter when remove an item from the list because of the aforementioned bug.

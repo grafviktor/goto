@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/list"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/list"
+	tea "charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -944,7 +944,7 @@ func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
 	// Enable filtering mode
 	model.Update(tea.KeyMsg{
 		// KeyRunes equals to "-1". See
-		// https://github.com/charmbracelet/bubbletea/blob/2ac3642f644d1c4ea67642910e77f7f56c58d2e9/key.go#L205
+		// https://charm.land/bubbletea/v2/blob/2ac3642f644d1c4ea67642910e77f7f56c58d2e9/key.go#L205
 		Type:  tea.KeyRunes,
 		Runes: []rune{'/'},
 	})

@@ -3,7 +3,7 @@ package hostlist
 import (
 	"testing"
 
-	"github.com/charmbracelet/bubbles/list"
+	"charm.land/bubbles/v2/list"
 	"github.com/stretchr/testify/require"
 )
 
