@@ -2,6 +2,8 @@ package ui
 
 import (
 	"context"
+	"errors"
+	"syscall"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -23,6 +25,12 @@ func Start(ctx context.Context, storage storage.HostStorage, appState *state.Sta
 
 	appState.Logger.Debug("[UI] Start user interface")
 	if _, err := p.Run(); err != nil {
+		var errno syscall.Errno
+		if errors.As(err, &errno) {
+			appState.Logger.Error("[UI] Syscall error code: %v %T %#v", err, err, err)
+			return errors.New("Unsupported terminal type or terminal is running in legacy mode.")
+		}
+
 		appState.Logger.Error("[UI] Error starting user interface: %v", err)
 		return err
 	}
