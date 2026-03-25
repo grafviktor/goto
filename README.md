@@ -82,7 +82,7 @@ Find more demos and uses cases [here](demo/README.md).
 
 ## 3. Configuration ##
 
-Please also refer [F.A.Q.](docs/FAQ.md) page which provides additional configuration details and usage examples.
+Please also refer [F.A.Q.](docs/FAQ.md) page which provides additional configuration details and usage examples. See more information about hosts grouping in [this document](docs/GROUPS.md) and ssh_config usage in [this document](docs/SSH_CONFIG.md).
 
 ### 3.1. Command line options ###
 

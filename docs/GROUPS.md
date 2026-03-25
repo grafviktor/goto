@@ -10,7 +10,7 @@ For yaml storage, you can assign a group to a host by adding a value to the 'Gro
 
 ![group setup in yaml](./img/yaml_storage_group.png)
 
-It can be tedious to assign a group to each host if you have lots of entries. Alternative approach would be to use your favorite text editor and tweak the hosts file directly. The path to the hosts file can be found in `gg -v` output.
+It can be tedious to assign a group to each host if you have lots of entries. The alternative approach would be to use your favorite text editor and tweak the hosts file directly. The path to the hosts file can be found in `gg -v` output.
 
 1. Find the path to the hosts file:
 
@@ -38,8 +38,7 @@ It can be tedious to assign a group to each host if you have lots of entries. Al
 
 ### SSH storage (ssh_config) ###
 
-Goto does not allow you to edit ssh_config file directly. You should edit the file using your favorite text editor and add a meta comment called `# GG:GROUP` in your host entry.
-
+Goto does not allow you to edit ssh_config file directly. You should edit ssh_config file using your favorite text editor and add a meta comment called `# GG:GROUP` for your host entries.
 
 1. Open ssh_config file in your favorite text editor:
 
