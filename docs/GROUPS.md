@@ -10,6 +10,10 @@ For yaml storage, you can assign a group to a host by adding a value to the 'Gro
 
 ![group setup in yaml](./img/yaml_storage_group.png)
 
+Then save the host (`Ctrl+S`) and when on the main screen type `z` to display the groups list and select the group you want to filter by.
+
+![list of groups](./img/list_of_groups.png)
+
 It can be tedious to assign a group to each host if you have lots of entries. The alternative approach would be to use your favorite text editor and tweak the hosts file directly. The path to the hosts file can be found in `gg -v` output.
 
 1. Find the path to the hosts file:

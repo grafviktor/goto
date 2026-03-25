@@ -167,7 +167,7 @@ Application may not start on Windows platform if your terminal is set to use leg
 
 ## 9. [License](LICENSE) ##
 
-## 10. Thanks ##
+## 🙏 Thanks ##
 
 * To people who find time to contribute whether it is a bug report, a feature or a pull request.
 * To [Charmbracelet project](https://charm.sh/) for the glamorous [Bubbletea](https://github.com/charmbracelet/bubbletea) library.
