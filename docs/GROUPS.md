@@ -10,7 +10,7 @@ For yaml storage, you can assign a group to a host by adding a value to the 'Gro
 
 ![group setup in yaml](./img/yaml_storage_group.png)
 
-Then save the host (`Ctrl+S`) and when on the main screen type `z` to display the groups list and select the group you want to filter by.
+Then save the host (`Ctrl+S`) and when on the main screen type `z` to display the groups list and select the group which you just created.
 
 ![list of groups](./img/list_of_groups.png)
 
