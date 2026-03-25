@@ -42,7 +42,7 @@ func New(_ context.Context, repo storage.HostStorage, appState *state.State, log
 	var listItems []list.Item
 	delegate := list.NewDefaultDelegate()
 	delegate.ShowDescription = false
-	delegate.Styles = styles.styleListDelegate
+	delegate.Styles = styles.listDelegate
 	delegate.SetSpacing(0)
 
 	model := list.New(listItems, delegate, 0, 0)
@@ -50,15 +50,15 @@ func New(_ context.Context, repo storage.HostStorage, appState *state.State, log
 
 	// Setup filter input styles.
 	filterStyles := model.FilterInput.Styles()
-	filterStyles.Focused.Prompt = styles.stylePrompt
-	filterStyles.Focused.Text = styles.styleFilterInput
+	filterStyles.Focused.Prompt = styles.prompt
+	filterStyles.Focused.Text = styles.filterInput
 	model.FilterInput.SetStyles(filterStyles)
 
 	// Setup model styles.
-	model.Styles = styles.styleList
-	model.Paginator.ActiveDot = styles.stylePaginatorActiveDot
-	model.Paginator.InactiveDot = styles.stylePaginatorInactiveDot
-	model.Help.Styles = styles.styleHelp
+	model.Styles = styles.list
+	model.Paginator.ActiveDot = styles.paginatorActiveDot
+	model.Paginator.InactiveDot = styles.paginatorInactiveDot
+	model.Help.Styles = styles.help
 
 	m := Model{
 		Model:    model,
@@ -81,7 +81,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		h, v := m.styles.styleComponentMargins.GetFrameSize()
+		h, v := m.styles.componentMargins.GetFrameSize()
 		m.SetSize(msg.Width-h, msg.Height-v)
 		m.logger.Debug("[UI] Set group list size: %d %d", m.Width(), m.Height())
 		return m, nil
@@ -100,7 +100,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) View() tea.View {
-	return tea.NewView(m.styles.styleComponentMargins.Render(m.Model.View()))
+	return tea.NewView(m.styles.componentMargins.Render(m.Model.View()))
 }
 
 func (m *Model) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {

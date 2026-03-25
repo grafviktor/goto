@@ -67,10 +67,12 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.State, 
 	// Setup styles.
 	styles := defaultStyles()
 	model.Styles = styles.list
-	// FIXME: Styles are broken after bubbletea update
-	// model.FilterInput.PromptStyle = styles.prompt
-	// model.FilterInput.TextStyle = styles.filterInput
-	// model.FilterInput.Cursor.Style = styles.cursor
+
+	filterStyles := model.FilterInput.Styles()
+	filterStyles.Focused.Prompt = styles.prompt
+	filterStyles.Focused.Text = styles.filterInput
+	model.FilterInput.SetStyles(filterStyles)
+
 	model.Paginator.ActiveDot = styles.paginatorActiveDot
 	model.Paginator.InactiveDot = styles.paginatorInactiveDot
 	model.Help.Styles = styles.help
