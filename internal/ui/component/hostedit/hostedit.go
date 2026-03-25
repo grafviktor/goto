@@ -573,6 +573,12 @@ func (m *EditModel) handleEditableHost() {
 		} else {
 			m.inputs[n].SetValue("")
 		}
+
+		// If not resize explicitly, there will be visible just a first letter
+		// of placeholder text. See https://github.com/charmbracelet/bubbles/issues/779
+		m.inputs[n].SetWidth(
+			max(len(m.inputs[n].Value()),
+				len(m.inputs[n].Placeholder)))
 	})
 }
 

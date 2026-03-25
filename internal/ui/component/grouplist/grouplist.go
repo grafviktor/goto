@@ -48,11 +48,14 @@ func New(_ context.Context, repo storage.HostStorage, appState *state.State, log
 	model := list.New(listItems, delegate, 0, 0)
 	model.DisableQuitKeybindings() // We don't want to quit the app from this view.
 
+	// Setup filter input styles.
+	filterStyles := model.FilterInput.Styles()
+	filterStyles.Focused.Prompt = styles.stylePrompt
+	filterStyles.Focused.Text = styles.styleFilterInput
+	model.FilterInput.SetStyles(filterStyles)
+
 	// Setup model styles.
 	model.Styles = styles.styleList
-	// FIXME: Styles are broken after bubbletea update
-	// model.FilterInput.PromptStyle = styles.stylePrompt
-	// model.FilterInput.TextStyle = styles.styleFilterInput
 	model.Paginator.ActiveDot = styles.stylePaginatorActiveDot
 	model.Paginator.InactiveDot = styles.stylePaginatorInactiveDot
 	model.Help.Styles = styles.styleHelp

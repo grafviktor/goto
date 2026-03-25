@@ -29,8 +29,10 @@ func New() *Input {
 	inputModel := textinput.New()
 	inputModel.Prompt = ""
 	styles := defaultStyles()
-	// FIXME: Styles are broken after bubbletea update
-	// inputModel.PlaceholderStyle = styles.textReadonly
+	s := textinput.DefaultStyles(true)
+	s.Focused.Placeholder = styles.textReadonly
+	s.Focused.Text = styles.textFocused
+	inputModel.SetStyles(s)
 
 	return &Input{
 		Model:         inputModel,
@@ -45,7 +47,7 @@ func (l *Input) Init() tea.Cmd { return nil }
 func (l *Input) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
-	_, ok := msg.(tea.KeyMsg)
+	_, ok := msg.(tea.KeyPressMsg)
 	if ok && !l.Enabled() {
 		// If Input is disabled and it's a key message, then ignore it
 		return l, nil
