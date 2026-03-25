@@ -66,7 +66,7 @@ _Note: SSH Include directive is also supported. This allows you to create an acc
 
 ### 2.2. Organize your hostnames into logical groups ###
 
-This video represents hosts grouped into categories such as Dev, Beta, and Prod.
+Find more information about hosts grouping [here](docs/GROUPS.md). The video represents hosts grouped into categories such as Dev, Beta, and Prod.
 
 ![Shows how to switch between hosts groups](demo/switch_between_groups.gif)
 
@@ -154,15 +154,19 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
     identity_file_path: /home/user/.ssh/id_rsa_microsoft
 ```
 
-## 5. [F.A.Q.](docs/FAQ.md) ##
+## 5. Known issues ##
 
-## 6. [Contributing guidelines](CONTRIBUTING.md) ##
+Application may not start on Windows platform if your terminal is set to use legacy console. Either disable legacy console mode or run terminal session manually and then start the application from the inside. Google "how to disable legacy console on windows" for more details.
 
-## 7. [Changelog](CHANGELOG.md) ##
+## 6. [F.A.Q.](docs/FAQ.md) ##
 
-## 8. [License](LICENSE) ##
+## 7. [Contributing guidelines](CONTRIBUTING.md) ##
 
-## 9. Thanks ##
+## 8. [Changelog](CHANGELOG.md) ##
+
+## 9. [License](LICENSE) ##
+
+## 10. Thanks ##
 
 * To people who find time to contribute whether it is a bug report, a feature or a pull request.
 * To [Charmbracelet project](https://charm.sh/) for the glamorous [Bubbletea](https://github.com/charmbracelet/bubbletea) library.

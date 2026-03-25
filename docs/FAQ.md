@@ -90,6 +90,8 @@ Host SOME_HOST_ALIAS
 
 Once the application runs, you will find your host in group with name "Production" (press `z` to display the group list). The description will be "Shadow Prod machine".
 
+See more about groups in [this document](GROUPS.md).
+
 **Q: Why can't I edit hosts, which were loaded from `~/.ssh/config`?**
 
 AI says that there are over 100 supported configuration options in ssh_config. The UI which could support all these options would look rather complex. If you want to change hosts loaded from your ssh config, edit your ssh_config file directly using your favorite text editor and restart `goto`, to update the changes.
