@@ -53,22 +53,22 @@ func Test_handleKeyboardEvent(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		keyMsg    tea.KeyMsg
+		keyMsg    tea.KeyPressMsg
 		expectCmd bool
 	}{
 		{
 			name:      "Can handle Enter key",
-			keyMsg:    tea.KeyMsg{Type: tea.KeyEnter},
+			keyMsg:    tea.KeyPressMsg{Code: tea.KeyEnter},
 			expectCmd: true,
 		},
 		{
 			name:      "Can handle Esc key",
-			keyMsg:    tea.KeyMsg{Type: tea.KeyEsc},
+			keyMsg:    tea.KeyPressMsg{Code: tea.KeyEsc},
 			expectCmd: true,
 		},
 		{
 			name:      "Unhandled key returns nil cmd",
-			keyMsg:    tea.KeyMsg{Type: tea.KeyDown},
+			keyMsg:    tea.KeyPressMsg{Code: tea.KeyDown},
 			expectCmd: false,
 		},
 	}
@@ -142,10 +142,10 @@ func Test_handleEnterKey_WhenFiltering(t *testing.T) {
 	listModel := NewMockGroupModel(false)
 	listModel.loadItems()
 	// Put the list in filter mode
-	listModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
+	listModel.Update(tea.KeyPressMsg{Code: '/'})
 
 	require.True(t, listModel.SettingFilter()) // Activate filter mode
-	_, cmd := listModel.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := listModel.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	require.Nil(t, cmd)
 }
 
@@ -155,14 +155,14 @@ func Test_handleEscapeKey(t *testing.T) {
 	listModel := NewMockGroupModel(false)
 	listModel.loadItems()
 	// Put the list in filter mode
-	listModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
+	listModel.Update(tea.KeyPressMsg{Code: '/'})
 	require.True(t, listModel.SettingFilter()) // Verify that filter mode is activate
-	_, cmd := listModel.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	_, cmd := listModel.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	require.Nil(t, cmd)
 
 	// Test case 2: Press escape when not in filter mode - it must deselect the group and close the form
 	require.False(t, listModel.SettingFilter()) // Verify that we're not in filter mode after the first test case
-	_, cmd = listModel.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	_, cmd = listModel.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	var actualMsgs []tea.Msg
 	testutils.CmdToMessage(cmd, &actualMsgs)
 	require.ElementsMatch(t, actualMsgs, []tea.Msg{

@@ -37,8 +37,9 @@ func TestNew(t *testing.T) {
 func TestUpdate_KeyMsg(t *testing.T) {
 	// Random key test - make sure that the app reacts on Ctrl+C
 	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
-	_, cmd := model.Update(tea.KeyMsg{
-		Type: tea.KeyCtrlC,
+	_, cmd := model.Update(tea.KeyPressMsg{
+		Code: 'c',
+		Mod:  tea.ModCtrl,
 	})
 
 	assert.NotNil(t, model)
