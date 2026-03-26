@@ -137,7 +137,6 @@ func (t *Theme) listHelpStyles() help.Styles {
 }
 
 type ListExtraStyles struct {
-	Cursor            lipgloss.Style
 	GroupAbbreviation lipgloss.Style
 	GroupHint         lipgloss.Style
 	Prompt            lipgloss.Style
@@ -149,9 +148,6 @@ type ListExtraStyles struct {
 
 func (t *Theme) listExtraStyles() ListExtraStyles {
 	s := ListExtraStyles{}
-
-	s.Cursor = lipgloss.NewStyle().
-		Foreground(t.Colors.TextColorSelected2.toLipgloss())
 
 	s.GroupAbbreviation = lipgloss.NewStyle().
 		// Swap colors between each other to separate group abbreviation from title.
@@ -180,6 +176,7 @@ func (t *Theme) listExtraStyles() ListExtraStyles {
 
 // InputStyles contains styles for input components.
 type InputStyles struct {
+	Cursor       lipgloss.Style
 	InputFocused lipgloss.Style
 	InputError   lipgloss.Style
 	TextFocused  lipgloss.Style
@@ -189,6 +186,8 @@ type InputStyles struct {
 
 func (t *Theme) inputStyles() InputStyles {
 	s := InputStyles{}
+	s.Cursor = lipgloss.NewStyle().
+		Foreground(t.Colors.TextColorSelected2.toLipgloss())
 	s.InputFocused = lipgloss.NewStyle().
 		BorderForeground(t.Colors.TextColorSelected2.toLipgloss()).
 		Foreground(t.Colors.TextColorSelected1.toLipgloss())
@@ -207,6 +206,7 @@ func (t *Theme) inputStyles() InputStyles {
 
 // EditForm contains styles for host edit components.
 type EditForm struct {
+	KeyMap        lipgloss.Style
 	SelectedTitle lipgloss.Style
 	Title         lipgloss.Style
 	TextReadonly  lipgloss.Style
@@ -215,6 +215,9 @@ type EditForm struct {
 func (t *Theme) editFormStyles() EditForm {
 	s := EditForm{}
 
+	s.KeyMap = lipgloss.NewStyle().
+		Foreground(t.Colors.TextColorReadonly.toLipgloss()).
+		Margin(2, 2, 1)
 	s.SelectedTitle = lipgloss.NewStyle().
 		BorderForeground(t.Colors.TextColorSelected2.toLipgloss()).
 		Foreground(t.Colors.TextColorSelected1.toLipgloss())
@@ -224,7 +227,6 @@ func (t *Theme) editFormStyles() EditForm {
 		Padding(0, 1).
 		Margin(1, 2, 0)
 	s.TextReadonly = lipgloss.NewStyle().
-		Foreground(t.Colors.TextColorReadonly.toLipgloss()).
-		Margin(2, 2, 1)
+		Foreground(t.Colors.TextColorReadonly.toLipgloss())
 	return s
 }

@@ -67,7 +67,6 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.State, 
 	// Setup styles.
 	styles := defaultStyles()
 	model.Styles = styles.list
-
 	filterStyles := model.FilterInput.Styles()
 	filterStyles.Focused.Prompt = styles.prompt
 	filterStyles.Focused.Text = styles.filterInput

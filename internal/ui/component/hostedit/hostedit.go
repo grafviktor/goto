@@ -11,6 +11,7 @@ import (
 
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -166,9 +167,6 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.State, l
 	var t input.Input
 	for i := range m.inputs {
 		t = *input.New()
-		// FIXME: Styles are broken after bubbletea update
-		// t.Cursor.Style = m.styles.cursor
-
 		switch i {
 		case inputTitle:
 			t.SetLabel("Title")
@@ -529,11 +527,20 @@ func (m *EditModel) updateInputFields() {
 func (m *EditModel) handleReadonlyHost() {
 	m.logger.Debug("[UI] Update input components. All parameters are disabled.")
 	lo.ForEach(m.inputs, func(_ input.Input, n int) {
-		// FIXME: Styles are broken after bubbletea update
-		// m.inputs[n].PlaceholderStyle = m.styles.textReadonly
+		s := textinput.DefaultStyles(true)
+		s.Blurred.Placeholder = m.styles.textReadonly
+		m.inputs[n].SetStyles(s)
 		m.inputs[n].Placeholder = m.host.getSSHConfigValueByIndex(n)
 		m.inputs[n].SetValue("")
 		m.inputs[n].SetEnabled(false)
+
+		// FIXME: Bubbletea bug!
+		// If not resize explicitly, there will be visible just a first letter
+		// of placeholder text. See https://github.com/charmbracelet/bubbles/issues/779
+		value := m.inputs[n].Value()
+		if utils.StringEmpty(&value) {
+			m.inputs[n].SetWidth(len(m.inputs[n].Placeholder))
+		}
 	})
 }
 
@@ -574,11 +581,13 @@ func (m *EditModel) handleEditableHost() {
 			m.inputs[n].SetValue("")
 		}
 
+		// FIXME: Bubbletea bug!
 		// If not resize explicitly, there will be visible just a first letter
 		// of placeholder text. See https://github.com/charmbracelet/bubbles/issues/779
-		m.inputs[n].SetWidth(
-			max(len(m.inputs[n].Value()),
-				len(m.inputs[n].Placeholder)))
+		value := m.inputs[n].Value()
+		if utils.StringEmpty(&value) {
+			m.inputs[n].SetWidth(len(m.inputs[n].Placeholder))
+		}
 	})
 }
 
@@ -599,7 +608,7 @@ func (m *EditModel) headerView() string {
 }
 
 func (m *EditModel) helpView() string {
-	return m.styles.textReadonly.Render(m.help.View(m.keyMap))
+	return m.styles.keyMap.Render(m.help.View(m.keyMap))
 }
 
 func (m *EditModel) SetTitle(title string) {

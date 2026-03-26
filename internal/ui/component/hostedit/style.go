@@ -9,7 +9,7 @@ import (
 
 type styles struct {
 	componentMargins lipgloss.Style
-	cursor           lipgloss.Style
+	keyMap           lipgloss.Style
 	selectedTitle    lipgloss.Style
 	title            lipgloss.Style
 	textReadonly     lipgloss.Style
@@ -21,8 +21,8 @@ func defaultStyles() styles {
 
 	return styles{
 		componentMargins: lipgloss.NewStyle().Margin(1, 0),
-		cursor:           themeSettings.ListExtra.Cursor,
 		help:             themeSettings.ListHelp,
+		keyMap:           themeSettings.EditForm.KeyMap,
 		selectedTitle:    themeSettings.EditForm.SelectedTitle,
 		textReadonly:     themeSettings.EditForm.TextReadonly,
 		title:            themeSettings.EditForm.Title,

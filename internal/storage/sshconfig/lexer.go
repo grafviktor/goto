@@ -218,7 +218,7 @@ func isTokenFollowedDelimiter(str, prefix string) bool {
 	prefixLen := len(prefix)
 	delimiters := []rune{' ', '\t'}
 
-	// Should support metadata token which ends with space or color.
+	// Should support metadata token which ends with space or colon.
 	// For instance "# GG:GROUP value" or "# GG:GROUP: value" are valid
 	if strings.HasPrefix(str, "# GG:") {
 		delimiters = append(delimiters, ':')

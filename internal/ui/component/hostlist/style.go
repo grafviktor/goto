@@ -9,7 +9,6 @@ import (
 )
 
 type styles struct {
-	cursor       lipgloss.Style
 	list         list.Styles
 	help         help.Styles
 	listDelegate list.DefaultItemStyles
@@ -38,7 +37,6 @@ func defaultStyles() styles {
 
 	return styles{
 		componentMargins:     lipgloss.NewStyle().Margin(1, 2, 1, 0), //nolint:mnd // magic numbers are OK for styles
-		cursor:               themeSettings.ListExtra.Cursor,
 		filterInput:          themeSettings.ListExtra.FilterInput,
 		groupAbbreviation:    themeSettings.ListExtra.GroupAbbreviation,
 		groupHint:            themeSettings.ListExtra.GroupHint,

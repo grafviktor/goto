@@ -32,6 +32,7 @@ func New() *Input {
 	s := textinput.DefaultStyles(true)
 	s.Focused.Placeholder = styles.textReadonly
 	s.Focused.Text = styles.textFocused
+	s.Cursor.Color = styles.cursor.GetForeground()
 	inputModel.SetStyles(s)
 
 	return &Input{
