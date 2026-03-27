@@ -11,6 +11,7 @@ import (
 	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/testutils/mocklogger"
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 func TestBuildScreenLayout(t *testing.T) {
@@ -103,11 +104,11 @@ func TestHostDelegate_Render(t *testing.T) {
 	for _, tc := range tests {
 		var buf bytes.Buffer
 		mockModel := newMockListModel(false)
-		mockModel.Update(
-			tea.WindowSizeMsg{Width: 100, Height: 100},
-		) // required, otherwise the model does not render anything
+		// resize required, otherwise the model does not render anything
+		mockModel.Update(tea.WindowSizeMsg{Width: 100, Height: 100})
 		hostDelegate := NewHostDelegate(&tc.layout, &tc.appStateGroup, &mocklogger.Logger{})
 		hostDelegate.Render(&buf, mockModel.Model, 0, tc.listItemHost)
-		require.Contains(t, buf.String(), tc.expectedDesc)
+		actualDesc := buf.String()
+		require.Contains(t, utils.StripStyles(actualDesc), tc.expectedDesc)
 	}
 }

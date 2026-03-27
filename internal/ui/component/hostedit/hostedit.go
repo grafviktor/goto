@@ -533,14 +533,6 @@ func (m *EditModel) handleReadonlyHost() {
 		m.inputs[n].Placeholder = m.host.getSSHConfigValueByIndex(n)
 		m.inputs[n].SetValue("")
 		m.inputs[n].SetEnabled(false)
-
-		// FIXME: Bubbletea bug!
-		// If not resize explicitly, there will be visible just a first letter
-		// of placeholder text. See https://github.com/charmbracelet/bubbles/issues/779
-		value := m.inputs[n].Value()
-		if utils.StringEmpty(&value) {
-			m.inputs[n].SetWidth(len(m.inputs[n].Placeholder))
-		}
 	})
 }
 
@@ -579,14 +571,6 @@ func (m *EditModel) handleEditableHost() {
 			m.inputs[n].SetValue(m.host.getHostAttributeValueByIndex(n))
 		} else {
 			m.inputs[n].SetValue("")
-		}
-
-		// FIXME: Bubbletea bug!
-		// If not resize explicitly, there will be visible just a first letter
-		// of placeholder text. See https://github.com/charmbracelet/bubbles/issues/779
-		value := m.inputs[n].Value()
-		if utils.StringEmpty(&value) {
-			m.inputs[n].SetWidth(len(m.inputs[n].Placeholder))
 		}
 	})
 }
