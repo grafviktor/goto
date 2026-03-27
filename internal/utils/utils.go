@@ -80,8 +80,8 @@ var ansiRegex = regexp.MustCompile("\x1b\\[[0-9;]*m")
 
 // StripStyles - removes lipgloss styles from a string.
 func StripStyles(input string) string {
-	input = strings.TrimSpace(input)
-	return ansiRegex.ReplaceAllString(input, "")
+	input = ansiRegex.ReplaceAllString(input, "")
+	return strings.TrimSpace(input)
 }
 
 // AppDir - returns application home folder where all files are stored.
