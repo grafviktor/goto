@@ -13,18 +13,16 @@ func TestInput_Update_KeyMsg(t *testing.T) {
 
 	model := New()
 	model.Focus()
-	model.Update(tea.KeyMsg{
-		Type:  tea.KeyRunes,
-		Runes: []rune{'t', 'e', 's', 't'},
+	model.Update(tea.KeyPressMsg{
+		Text: "test",
 	})
 
 	assert.Equal(t, "test", model.Value())
 	model.SetValue("")
 	model.SetEnabled(false)
 
-	model.Update(tea.KeyMsg{
-		Type:  tea.KeyRunes,
-		Runes: []rune{'t', 'e', 's', 't', '2'},
+	model.Update(tea.KeyPressMsg{
+		Text: "test2",
 	})
 	require.Empty(t, model.Value())
 }
