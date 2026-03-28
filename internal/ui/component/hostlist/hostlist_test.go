@@ -457,7 +457,7 @@ func TestListModel_title_when_filter_is_enabled(t *testing.T) {
 	// Enable filter
 	model.Update(tea.KeyPressMsg{Code: '/'})
 	assert.Equal(t, list.Filtering, model.FilterState())
-	model.Update(tea.KeyPressMsg{Code: '3'})
+	model.Update(tea.KeyPressMsg{Text: "3"})
 	// Press down key and make sure that title is properly updated
 	model.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	assert.Equal(t, list.FilterApplied, model.FilterState())
@@ -725,7 +725,7 @@ func Test_handleKeyboardEvent_cancelWhileFiltering(t *testing.T) {
 	require.Equal(t, list.Filtering, model.FilterState())
 
 	// When in filter mode type '2', so only "Mock Host 2" will become visible
-	_, cmds := model.Update(tea.KeyPressMsg{Code: '2'})
+	_, cmds := model.Update(tea.KeyPressMsg{Text: "2"})
 
 	// Extract batch messages returned by the model
 	msgs := []tea.Msg{}
@@ -776,7 +776,7 @@ func Test_handleKeyboardEvent_clearFilter(t *testing.T) {
 	require.Equal(t, list.Filtering, model.FilterState())
 
 	// When in filter mode type '2', so only "Mock Host 2" will become visible
-	_, cmds := model.Update(tea.KeyPressMsg{Code: '2'})
+	_, cmds := model.Update(tea.KeyPressMsg{Text: "2"})
 
 	// Extract batch messages returned by the model
 	msgs := []tea.Msg{}
@@ -932,7 +932,7 @@ func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
 	assert.True(t, model.SettingFilter())
 
 	// Now press "1" button. Only one item should left in the host list - with title: "Mock Host 1"
-	_, cmds := model.Update(tea.KeyPressMsg{Code: '1'})
+	_, cmds := model.Update(tea.KeyPressMsg{Text: "1"})
 
 	// Extract batch messages from cmd
 	msgs := []tea.Msg{}
@@ -967,18 +967,18 @@ func TestUpdate_ToggleBetweenScreenLayouts(t *testing.T) {
 	assert.Equal(t, fakeAppState.ScreenLayout, layoutNotSet)
 
 	// Toggle layout
-	model.Update(tea.KeyPressMsg{Code: 'v'})
+	model.Update(tea.KeyPressMsg{Text: "v"})
 
 	fakeAppState.ScreenLayout = constant.ScreenLayoutCompact
 	// Ensure that screen layout is equal to
 	require.Equal(t, constant.ScreenLayoutCompact, fakeAppState.ScreenLayout)
 
 	// Toggle layout again and check that it's now set to "normal"
-	model.Update(tea.KeyPressMsg{Code: 'c'})
+	model.Update(tea.KeyPressMsg{Text: "v"})
 	require.Equal(t, constant.ScreenLayoutDescription, fakeAppState.ScreenLayout)
 
 	// Toggle layout again and check that it's now set to "group"
-	model.Update(tea.KeyPressMsg{Code: 'v'})
+	model.Update(tea.KeyPressMsg{Text: "v"})
 	require.Equal(t, constant.ScreenLayoutGroup, fakeAppState.ScreenLayout)
 }
 
@@ -1020,7 +1020,7 @@ func TestUpdate_HostFocusPreservedAfterClearFilterMessage(t *testing.T) {
 	assert.Equal(t, list.Filtering, model.FilterState())
 
 	// When in filter mode type '2', so only "Mock Host 2" will become visible
-	_, cmds := model.Update(tea.KeyPressMsg{Code: '2'})
+	_, cmds := model.Update(tea.KeyPressMsg{Text: "2"})
 
 	// Extract batch messages returned by the model
 	msgs := []tea.Msg{}
