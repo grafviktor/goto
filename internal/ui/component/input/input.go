@@ -82,7 +82,7 @@ func (i *Input) setPlaceholderWidth() {
 
 	value := i.Model.Value()
 	if utils.StringEmpty(&value) {
-		i.SetWidth(len(i.Placeholder))
+		i.SetWidth(utf8.RuneCountInString(i.Placeholder))
 	} else {
 		// If there is a value, then just reset width back to its initial state, which is 0, and let the component calculate it by itself.
 		i.SetWidth(0)
