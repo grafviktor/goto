@@ -135,7 +135,7 @@ func (m *ListModel) loadHosts() tea.Cmd {
 
 func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m, m.handleKeyboardEvent(msg)
 	case tea.WindowSizeMsg:
 		// Triggers immediately after app start because we render this component by default
@@ -170,7 +170,7 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
+func (m *ListModel) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 	switch {
 	case m.SettingFilter():
 		m.logger.Debug("[UI] Process key message when in filter mode")
@@ -689,7 +689,7 @@ func (m *ListModel) enterCloseAppMode() {
 	m.updateTitle()
 }
 
-func (m *ListModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
+func (m *ListModel) handleKeyEventWhenModeEnabled(msg tea.KeyPressMsg) tea.Cmd {
 	if key.Matches(msg, m.keyMap.confirm) {
 		return m.confirmAction()
 	}

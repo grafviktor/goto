@@ -83,7 +83,7 @@ func TestListModel_Init(t *testing.T) {
 
 func Test_listModel_Change_Selection(t *testing.T) {
 	tests := []struct {
-		tea.KeyMsg
+		tea.KeyPressMsg
 
 		name                   string
 		expectedSelectionIndex int
@@ -132,7 +132,7 @@ func Test_listModel_Change_Selection(t *testing.T) {
 			model.Select(1)
 
 			// Receive updated model
-			model.Update(tt.KeyMsg)
+			model.Update(tt.KeyPressMsg)
 
 			// Check if the selected index is correct
 			require.Equal(t, tt.expectedSelectionIndex, model.Index())

@@ -67,8 +67,8 @@ func (i *Input) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (i *Input) SetValue(value string) {
-	i.setPlaceholderWidth()
 	i.Model.SetValue(value)
+	i.setPlaceholderWidth()
 }
 
 // TODO: Cover with tests.

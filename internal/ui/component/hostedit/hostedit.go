@@ -221,7 +221,7 @@ func (m *EditModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		// This message never comes through automatically on Windows OS, we send it from init_win.go.
 		m.updateViewPort(msg)
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		cmd = m.handleKeyboardEvent(msg)
 		m.viewport.SetContent(m.inputsView())
 	case debouncedMessage:
@@ -254,7 +254,7 @@ func (m *EditModel) View() tea.View {
 	return tea.NewView(viewContent)
 }
 
-func (m *EditModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
+func (m *EditModel) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 	// If title displays an error, due to an incorrect title for instance
 	// once user presses any button, we should reset it to default value
 	m.title = defaultTitle
@@ -447,7 +447,7 @@ func (m *EditModel) updateViewPort(msg tea.Msg) {
 
 func (m *EditModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
-	keyMsg, _ := msg.(tea.KeyMsg)
+	keyMsg, _ := msg.(tea.KeyPressMsg)
 
 	enabledInputs := lo.Filter(m.inputs, func(i input.Input, _ int) bool {
 		return i.Enabled()
