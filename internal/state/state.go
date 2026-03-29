@@ -22,11 +22,11 @@ import (
 	"github.com/grafviktor/goto/internal/version"
 )
 
-type view int
+type View int
 
 const (
 	// ViewHostList mode is active when we browse through a list of hostnames.
-	ViewHostList view = iota
+	ViewHostList View = iota
 	// ViewGroupList mode is active when the app displays available host groups.
 	ViewGroupList
 	// ViewEditItem mode is active when we edit existing or add a new host.
@@ -63,7 +63,7 @@ type State struct {
 	AppHome                    string                `yaml:"-"`
 	AppMode                    constant.AppMode      `yaml:"-"`
 	Context                    context.Context       `yaml:"-"`
-	CurrentView                view                  `yaml:"-"`
+	CurrentView                View                  `yaml:"-"`
 	Group                      string                `yaml:"group,omitempty"`
 	Height                     int                   `yaml:"-"`
 	IsUserDefinedSSHConfigPath bool                  `yaml:"-"`

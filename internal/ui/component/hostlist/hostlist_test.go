@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/list"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/list"
+	tea "charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -83,40 +83,43 @@ func TestListModel_Init(t *testing.T) {
 
 func Test_listModel_Change_Selection(t *testing.T) {
 	tests := []struct {
-		tea.KeyMsg
+		tea.KeyPressMsg
 
 		name                   string
 		expectedSelectionIndex int
 	}{
 		// Simulate focus next event
 		{
-			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+			tea.KeyPressMsg{Code: 'j'},
 			"Select next using 'j' key",
 			2,
 		},
 		{
-			tea.KeyMsg{Type: tea.KeyDown},
+			tea.KeyPressMsg{Code: tea.KeyDown},
 			"Select next using '↓' key",
 			2,
 		},
 		{
-			tea.KeyMsg{Type: tea.KeyTab},
+			tea.KeyPressMsg{Code: tea.KeyTab},
 			"Select next using 'tab' key",
 			2,
 		},
 		// Simulate focus previous event
 		{
-			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}},
+			tea.KeyPressMsg{Code: 'k'},
 			"Select previous using 'k' key",
 			0,
 		},
 		{
-			tea.KeyMsg{Type: tea.KeyUp},
+			tea.KeyPressMsg{Code: tea.KeyUp},
 			"Select previous using '↑' key",
 			0,
 		},
 		{
-			tea.KeyMsg{Type: tea.KeyShiftTab},
+			tea.KeyPressMsg{
+				Code: tea.KeyTab,
+				Mod:  tea.ModShift,
+			},
 			"Select previous using 'shift+tab' key",
 			0,
 		},
@@ -129,7 +132,7 @@ func Test_listModel_Change_Selection(t *testing.T) {
 			model.Select(1)
 
 			// Receive updated model
-			model.Update(tt.KeyMsg)
+			model.Update(tt.KeyPressMsg)
 
 			// Check if the selected index is correct
 			require.Equal(t, tt.expectedSelectionIndex, model.Index())
@@ -351,10 +354,7 @@ func TestExitRemoveItemMode(t *testing.T) {
 	require.Equal(t, modeRemoveItem, model.mode)
 
 	// Reject the action by pressing 'n' (it can be any key apart from 'y')
-	_, cmd := model.Update(tea.KeyMsg{
-		Type:  -1, // Type '-1' should be equal to 'KeyRunes'
-		Runes: []rune{'n'},
-	})
+	_, cmd := model.Update(tea.KeyPressMsg{Code: 'n'})
 
 	expected := []tea.Msg{
 		// Because we remote item "Mock Host 1" (which has index 0), we should ensure that next available item will be focused
@@ -445,7 +445,7 @@ func TestListModel_title_when_app_just_starts(t *testing.T) {
 	// When app just starts, it should display "press 'n' to add a new host"
 	require.Equal(t, "press 'n' to add a new host", utils.StripStyles(model.Title))
 	// When press 'down' key, it should display a proper ssh connection string
-	model.Update(tea.KeyMsg{Type: tea.KeyDown})
+	model.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", utils.StripStyles(model.Title))
 }
 
@@ -455,11 +455,11 @@ func TestListModel_title_when_filter_is_enabled(t *testing.T) {
 	model.logger = &mocklogger.Logger{}
 	assert.Equal(t, list.Unfiltered, model.FilterState())
 	// Enable filter
-	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	model.Update(tea.KeyPressMsg{Code: '/'})
 	assert.Equal(t, list.Filtering, model.FilterState())
-	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}})
+	model.Update(tea.KeyPressMsg{Text: "3"})
 	// Press down key and make sure that title is properly updated
-	model.Update(tea.KeyMsg{Type: tea.KeyDown})
+	model.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	assert.Equal(t, list.FilterApplied, model.FilterState())
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", utils.StripStyles(model.Title))
 }
@@ -539,11 +539,11 @@ func TestListModel_updateKeyMap(t *testing.T) {
 	// then some of the keyboard shortcuts should NOT be shown.
 	// Removing all hosts.
 	lm.enterRemoveItemMode()
-	lm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+	lm.Update(tea.KeyPressMsg{Code: 'y'})
 	lm.enterRemoveItemMode()
-	lm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+	lm.Update(tea.KeyPressMsg{Code: 'y'})
 	lm.enterRemoveItemMode()
-	lm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+	lm.Update(tea.KeyPressMsg{Code: 'y'})
 
 	displayedKeys = lm.keyMap.ShortHelp()
 
@@ -677,7 +677,7 @@ func TestUpdate_GroupListSelectItem(t *testing.T) {
 	// Load All items from the collection
 	require.Len(t, model.Items(), 3)
 	// Enable filter
-	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	model.Update(tea.KeyPressMsg{Code: '/'})
 	require.Equal(t, list.Filtering, model.FilterState())
 
 	// Dispatch message
@@ -721,17 +721,11 @@ func Test_handleKeyboardEvent_cancelWhileFiltering(t *testing.T) {
 
 	// Check that current status is "Unfiltered" and then enter filtering mode
 	require.Equal(t, list.Unfiltered, model.FilterState())
-	model.Update(tea.KeyMsg{
-		Type:  tea.KeyRunes,
-		Runes: []rune{'/'},
-	})
+	model.Update(tea.KeyPressMsg{Code: '/'})
 	require.Equal(t, list.Filtering, model.FilterState())
 
 	// When in filter mode type '2', so only "Mock Host 2" will become visible
-	_, cmds := model.Update(tea.KeyMsg{
-		Type:  tea.KeyRunes,
-		Runes: []rune{'2'},
-	})
+	_, cmds := model.Update(tea.KeyPressMsg{Text: "2"})
 
 	// Extract batch messages returned by the model
 	msgs := []tea.Msg{}
@@ -746,7 +740,7 @@ func Test_handleKeyboardEvent_cancelWhileFiltering(t *testing.T) {
 
 	// When in filter mode type 'Esc', and ensure that we exited filter mode but the
 	// focus is set on the first item from the search results
-	_, cmds = model.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	_, cmds = model.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	// Extract batch messages returned by the model
 	testutils.CmdToMessage(cmds, &msgs)
 
@@ -778,17 +772,11 @@ func Test_handleKeyboardEvent_clearFilter(t *testing.T) {
 
 	// Check that current status is "Unfiltered" and then enter filtering mode
 	require.Equal(t, list.Unfiltered, model.FilterState())
-	model.Update(tea.KeyMsg{
-		Type:  tea.KeyRunes,
-		Runes: []rune{'/'},
-	})
+	model.Update(tea.KeyPressMsg{Code: '/'})
 	require.Equal(t, list.Filtering, model.FilterState())
 
 	// When in filter mode type '2', so only "Mock Host 2" will become visible
-	_, cmds := model.Update(tea.KeyMsg{
-		Type:  tea.KeyRunes,
-		Runes: []rune{'2'},
-	})
+	_, cmds := model.Update(tea.KeyPressMsg{Text: "2"})
 
 	// Extract batch messages returned by the model
 	msgs := []tea.Msg{}
@@ -803,7 +791,7 @@ func Test_handleKeyboardEvent_clearFilter(t *testing.T) {
 
 	// When in filter mode press 'Enter', and ensure that
 	// focus is set to host "Mock Host 2"
-	_, cmds = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmds = model.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	// Extract batch messages returned by the model
 	testutils.CmdToMessage(cmds, &msgs)
 	for _, m := range msgs {
@@ -817,7 +805,7 @@ func Test_handleKeyboardEvent_clearFilter(t *testing.T) {
 
 	// Now press 'Esc', and ensure that we exited filter mode but the
 	// focus is set on the same item which was focused while we were in filter mode
-	_, cmds = model.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	_, cmds = model.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	// Extract batch messages returned by the model
 	testutils.CmdToMessage(cmds, &msgs)
 	for _, m := range msgs {
@@ -831,7 +819,7 @@ func Test_handleKeyboardEvent_clearFilter(t *testing.T) {
 func Test_handleKeyboardEvent_selectGroup(t *testing.T) {
 	model := newMockListModel(false)
 	model.Init()
-	_, cmd := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'z'}})
+	_, cmd := model.Update(tea.KeyPressMsg{Code: 'z'})
 	res := cmd()
 	require.IsType(t, message.ViewGroupListOpen{}, res)
 }
@@ -849,7 +837,7 @@ func Test_handleKeyboardEvent_connect(t *testing.T) {
 	require.Equal(t, "Mock Host 1", model.SelectedItem().(ListItemHost).Title())
 
 	// Hit enter
-	_, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := model.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	require.IsType(t, message.RunProcessSSHConnect{}, cmd())
 }
 
@@ -864,9 +852,8 @@ func Test_handleKeyboardEvent_copyID(t *testing.T) {
 	require.IsType(t, ListItemHost{}, model.SelectedItem())
 	require.Equal(t, "Mock Host 1", model.SelectedItem().(ListItemHost).Title())
 
-	_, cmds := model.Update(tea.KeyMsg{
-		Type:  tea.KeyRunes,
-		Runes: []rune{'t'},
+	_, cmds := model.Update(tea.KeyPressMsg{
+		Code: 't',
 	})
 
 	msgs := []tea.Msg{}
@@ -889,10 +876,7 @@ func Test_handleKeyboardEvent_remove(t *testing.T) {
 	require.IsType(t, ListItemHost{}, model.SelectedItem())
 	require.Equal(t, "Mock Host 1", model.SelectedItem().(ListItemHost).Title())
 
-	_, cmds := model.Update(tea.KeyMsg{
-		Type:  tea.KeyRunes,
-		Runes: []rune{'x'},
-	})
+	_, cmds := model.Update(tea.KeyPressMsg{Code: 'x'})
 
 	msgs := []tea.Msg{}
 	testutils.CmdToMessage(cmds, &msgs)
@@ -942,21 +926,13 @@ func TestUpdate_SearchFunctionOfInnerModelIsNotRegressed(t *testing.T) {
 	assert.Len(t, model.VisibleItems(), 3)
 
 	// Enable filtering mode
-	model.Update(tea.KeyMsg{
-		// KeyRunes equals to "-1". See
-		// https://github.com/charmbracelet/bubbletea/blob/2ac3642f644d1c4ea67642910e77f7f56c58d2e9/key.go#L205
-		Type:  tea.KeyRunes,
-		Runes: []rune{'/'},
-	})
+	model.Update(tea.KeyPressMsg{Code: '/'})
 
 	// Check that filtering mode is enabled
 	assert.True(t, model.SettingFilter())
 
 	// Now press "1" button. Only one item should left in the host list - with title: "Mock Host 1"
-	_, cmds := model.Update(tea.KeyMsg{
-		Type:  tea.KeyRunes,
-		Runes: []rune{'1'},
-	})
+	_, cmds := model.Update(tea.KeyPressMsg{Text: "1"})
 
 	// Extract batch messages from cmd
 	msgs := []tea.Msg{}
@@ -991,27 +967,16 @@ func TestUpdate_ToggleBetweenScreenLayouts(t *testing.T) {
 	assert.Equal(t, fakeAppState.ScreenLayout, layoutNotSet)
 
 	// Toggle layout
-	model.Update(tea.KeyMsg{
-		Type:  tea.KeyRunes,
-		Runes: []rune{'v'},
-	})
-
-	fakeAppState.ScreenLayout = constant.ScreenLayoutCompact
-	// Ensure that screen layout is equal to
+	model.Update(tea.KeyPressMsg{Text: "v"})
+	// Ensure that screen layout is equal to "compact"
 	require.Equal(t, constant.ScreenLayoutCompact, fakeAppState.ScreenLayout)
 
 	// Toggle layout again and check that it's now set to "normal"
-	model.Update(tea.KeyMsg{
-		Type:  tea.KeyRunes,
-		Runes: []rune{'v'},
-	})
+	model.Update(tea.KeyPressMsg{Text: "v"})
 	require.Equal(t, constant.ScreenLayoutDescription, fakeAppState.ScreenLayout)
 
 	// Toggle layout again and check that it's now set to "group"
-	model.Update(tea.KeyMsg{
-		Type:  tea.KeyRunes,
-		Runes: []rune{'v'},
-	})
+	model.Update(tea.KeyPressMsg{Text: "v"})
 	require.Equal(t, constant.ScreenLayoutGroup, fakeAppState.ScreenLayout)
 }
 
@@ -1019,7 +984,7 @@ func Test_HandleKeyboardEvent_Escape(t *testing.T) {
 	// If press Escape key, the app should ask the user whether
 	// it wants to close the program
 	model := newMockListModel(false)
-	_, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	_, cmd := model.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	require.Nil(t, cmd)
 	require.Equal(t, modeCloseApp, model.mode)
 	require.Equal(t, "close app? (y/N)", utils.StripStyles(model.Title))
@@ -1049,17 +1014,11 @@ func TestUpdate_HostFocusPreservedAfterClearFilterMessage(t *testing.T) {
 
 	// Check that current status is "Unfiltered" and then enter filtering mode
 	assert.Equal(t, list.Unfiltered, model.FilterState())
-	model.Update(tea.KeyMsg{
-		Type:  tea.KeyRunes,
-		Runes: []rune{'/'},
-	})
+	model.Update(tea.KeyPressMsg{Code: '/'})
 	assert.Equal(t, list.Filtering, model.FilterState())
 
 	// When in filter mode type '2', so only "Mock Host 2" will become visible
-	_, cmds := model.Update(tea.KeyMsg{
-		Type:  tea.KeyRunes,
-		Runes: []rune{'2'},
-	})
+	_, cmds := model.Update(tea.KeyPressMsg{Text: "2"})
 
 	// Extract batch messages returned by the model
 	msgs := []tea.Msg{}

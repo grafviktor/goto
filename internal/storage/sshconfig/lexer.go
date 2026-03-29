@@ -216,16 +216,16 @@ func isTokenIndented(str string) bool {
 
 func isTokenFollowedDelimiter(str, prefix string) bool {
 	prefixLen := len(prefix)
-	delimiters := []rune{' ', '\t'}
+	delimiters := []byte{' ', '\t'}
 
-	// Should support metadata token which ends with space or color.
+	// Should support metadata token which ends with space or colon.
 	// For instance "# GG:GROUP value" or "# GG:GROUP: value" are valid
 	if strings.HasPrefix(str, "# GG:") {
 		delimiters = append(delimiters, ':')
 	}
 
-	_, found := lo.Find(delimiters, func(d rune) bool {
-		return str[prefixLen] == byte(d)
+	_, found := lo.Find(delimiters, func(d byte) bool {
+		return str[prefixLen] == d
 	})
 
 	return found

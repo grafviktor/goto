@@ -8,7 +8,8 @@ import (
 	"runtime"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -37,8 +38,9 @@ func TestNew(t *testing.T) {
 func TestUpdate_KeyMsg(t *testing.T) {
 	// Random key test - make sure that the app reacts on Ctrl+C
 	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
-	_, cmd := model.Update(tea.KeyMsg{
-		Type: tea.KeyCtrlC,
+	_, cmd := model.Update(tea.KeyPressMsg{
+		Code: 'c',
+		Mod:  tea.ModCtrl,
 	})
 
 	assert.NotNil(t, model)
@@ -295,8 +297,73 @@ func TestUpdate_ExitWithError(t *testing.T) {
 	require.Equal(t, "mock error message", m.(*MainModel).exitError.Error())
 }
 
+func Test_view(t *testing.T) {
+	fakeModelFactory := func(modelViewContent string) tea.Model {
+		return modelFunc{
+			init:   func() tea.Cmd { return nil },
+			update: func(_ tea.Msg) (tea.Model, tea.Cmd) { return nil, nil },
+			view: func() tea.View {
+				return tea.NewView(modelViewContent)
+			},
+		}
+	}
+
+	m := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	// There will be no output without setting proper size of the viewport.
+	m.viewport = viewport.New(viewport.WithHeight(1))
+	m.modelGroupList = fakeModelFactory("mock group list")
+	m.modelHostList = fakeModelFactory("mock host list")
+	m.viewMessageContent = "mock message content"
+	m.modelHostEdit = fakeModelFactory("mock host edit")
+
+	tests := []struct {
+		name     string
+		appState state.View
+		expected string
+	}{
+		{
+			name:     "View should return group list when app state is ViewGroupList",
+			appState: state.ViewGroupList,
+			expected: "mock group list",
+		},
+		{
+			name:     "View should return host list when app state is ViewHostList",
+			appState: state.ViewHostList,
+			expected: "mock host list",
+		},
+		{
+			name:     "View should return message content when app state is ViewMessage",
+			appState: state.ViewMessage,
+			expected: "mock message content",
+		},
+		{
+			name:     "View should return host edit when app state is ViewEditItem",
+			appState: state.ViewEditItem,
+			expected: "mock host edit",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m.appState.CurrentView = tt.appState
+			m.viewport.SetWidth(len(tt.expected))
+			require.Equal(t, tt.expected, m.View().Content)
+		})
+	}
+}
+
 // ---------------------------------
 
 func MockAppState() *state.State {
 	return &state.State{}
 }
+
+type modelFunc struct {
+	init   func() tea.Cmd
+	update func(tea.Msg) (tea.Model, tea.Cmd)
+	view   func() tea.View
+}
+
+func (m modelFunc) Init() tea.Cmd                           { return m.init() }
+func (m modelFunc) Update(msg tea.Msg) (tea.Model, tea.Cmd) { return m.update(msg) }
+func (m modelFunc) View() tea.View                          { return m.view() }

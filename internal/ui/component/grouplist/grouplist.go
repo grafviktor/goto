@@ -7,8 +7,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/list"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/list"
+	tea "charm.land/bubbletea/v2"
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/model/host"
@@ -42,19 +42,23 @@ func New(_ context.Context, repo storage.HostStorage, appState *state.State, log
 	var listItems []list.Item
 	delegate := list.NewDefaultDelegate()
 	delegate.ShowDescription = false
-	delegate.Styles = styles.styleListDelegate
+	delegate.Styles = styles.listDelegate
 	delegate.SetSpacing(0)
 
 	model := list.New(listItems, delegate, 0, 0)
 	model.DisableQuitKeybindings() // We don't want to quit the app from this view.
 
+	// Setup filter input styles.
+	filterStyles := model.FilterInput.Styles()
+	filterStyles.Focused.Prompt = styles.prompt
+	filterStyles.Focused.Text = styles.filterInput
+	model.FilterInput.SetStyles(filterStyles)
+
 	// Setup model styles.
-	model.Styles = styles.styleList
-	model.FilterInput.PromptStyle = styles.stylePrompt
-	model.FilterInput.TextStyle = styles.styleFilterInput
-	model.Paginator.ActiveDot = styles.stylePaginatorActiveDot
-	model.Paginator.InactiveDot = styles.stylePaginatorInactiveDot
-	model.Help.Styles = styles.styleHelp
+	model.Styles = styles.list
+	model.Paginator.ActiveDot = styles.paginatorActiveDot
+	model.Paginator.InactiveDot = styles.paginatorInactiveDot
+	model.Help.Styles = styles.help
 
 	m := Model{
 		Model:    model,
@@ -77,11 +81,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		h, v := m.styles.styleComponentMargins.GetFrameSize()
+		h, v := m.styles.componentMargins.GetFrameSize()
 		m.SetSize(msg.Width-h, msg.Height-v)
 		m.logger.Debug("[UI] Set group list size: %d %d", m.Width(), m.Height())
 		return m, nil
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		cmd = m.handleKeyboardEvent(msg)
 		cmds = append(cmds, cmd)
 	case message.ViewGroupListOpen:
@@ -95,13 +99,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(append(cmds, cmd)...)
 }
 
-func (m *Model) View() string {
-	return m.styles.styleComponentMargins.Render(m.Model.View())
+func (m *Model) View() tea.View {
+	return tea.NewView(m.styles.componentMargins.Render(m.Model.View()))
 }
 
-func (m *Model) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
+func (m *Model) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 	//exhaustive:ignore // Handle only specific keys, other events are handled by the list model.
-	switch msg.Type {
+	switch msg.Code {
 	case tea.KeyEscape:
 		return m.handleEscapeKey()
 	case tea.KeyEnter:

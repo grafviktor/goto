@@ -76,7 +76,8 @@ linters:
     - gocyclo # computes and checks the cyclomatic complexity of functions
     - godot # checks if comments end in a period
     - gomoddirectives # manages the use of 'replace', 'retract', and 'excludes' directives in go.mod
-    - goprintffuncname # checks that printf-like functions are named with f at the end
+    # Requires to remove logger.Debug to logger.Debugf and logger.Info to logger.Infof, etc... I don't like it.
+    # - goprintffuncname # checks that printf-like functions are named with f at the end
     - gosec # inspects source code for security problems
     - govet # reports suspicious constructs, such as Printf calls whose arguments do not align with the format string
     - iface # checks the incorrect use of interfaces, helping developers avoid interface pollution

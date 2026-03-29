@@ -9,9 +9,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/list"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/list"
+	tea "charm.land/bubbletea/v2"
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/constant"
@@ -67,9 +67,11 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.State, 
 	// Setup styles.
 	styles := defaultStyles()
 	model.Styles = styles.list
-	model.FilterInput.PromptStyle = styles.prompt
-	model.FilterInput.TextStyle = styles.filterInput
-	model.FilterInput.Cursor.Style = styles.cursor
+	filterStyles := model.FilterInput.Styles()
+	filterStyles.Focused.Prompt = styles.prompt
+	filterStyles.Focused.Text = styles.filterInput
+	model.FilterInput.SetStyles(filterStyles)
+
 	model.Paginator.ActiveDot = styles.paginatorActiveDot
 	model.Paginator.InactiveDot = styles.paginatorInactiveDot
 	model.Help.Styles = styles.help
@@ -94,7 +96,6 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.State, 
 	m.AdditionalShortHelpKeys = delegateKeys.ShortHelp
 	m.AdditionalFullHelpKeys = delegateKeys.FullHelp
 
-	// m.Title = colorTheme.Styles.Common.Title.Render(defaultListTitle)
 	m.Title = defaultListTitle
 
 	return &m
@@ -134,7 +135,7 @@ func (m *ListModel) loadHosts() tea.Cmd {
 
 func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m, m.handleKeyboardEvent(msg)
 	case tea.WindowSizeMsg:
 		// Triggers immediately after app start because we render this component by default
@@ -169,7 +170,7 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
+func (m *ListModel) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 	switch {
 	case m.SettingFilter():
 		m.logger.Debug("[UI] Process key message when in filter mode")
@@ -214,7 +215,7 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 		return m.copyItem()
 	case key.Matches(msg, m.keyMap.toggleLayout):
 		return m.onToggleLayout()
-	case msg.Type == tea.KeyEsc:
+	case msg.Key().Code == tea.KeyEsc:
 		m.logger.Debug("[UI] Receive Escape key. Ask user for confirmation to close the app.")
 		m.enterCloseAppMode()
 		return nil
@@ -224,8 +225,8 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyMsg) tea.Cmd {
 	}
 }
 
-func (m *ListModel) View() string {
-	return m.styles.componentMargins.Render(m.Model.View())
+func (m *ListModel) View() tea.View {
+	return tea.NewView(m.styles.componentMargins.Render(m.Model.View()))
 }
 
 func (m *ListModel) updateChildModel(msg tea.Msg) tea.Cmd {
@@ -309,7 +310,7 @@ func (m *ListModel) removeItem() tea.Cmd {
 			1 (7) (2)
 			1 (7) (3) // index = 3, in m.filteredItems we delete item "1 (7) (3)"
 
-		To raise a bug in https://github.com/charmbracelet/bubbles project
+		To raise a bug in https://charm.land/bubbles/v2 project
 	*/
 	m.Model.RemoveItem(index)
 	// We have to reset filter when remove an item from the list because of the aforementioned bug.
@@ -688,7 +689,7 @@ func (m *ListModel) enterCloseAppMode() {
 	m.updateTitle()
 }
 
-func (m *ListModel) handleKeyEventWhenModeEnabled(msg tea.KeyMsg) tea.Cmd {
+func (m *ListModel) handleKeyEventWhenModeEnabled(msg tea.KeyPressMsg) tea.Cmd {
 	if key.Matches(msg, m.keyMap.confirm) {
 		return m.confirmAction()
 	}

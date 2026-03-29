@@ -1,15 +1,14 @@
 package hostlist
 
 import (
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/list"
+	"charm.land/lipgloss/v2"
 
 	"github.com/grafviktor/goto/internal/ui/theme"
 )
 
 type styles struct {
-	cursor       lipgloss.Style
 	list         list.Styles
 	help         help.Styles
 	listDelegate list.DefaultItemStyles
@@ -38,7 +37,6 @@ func defaultStyles() styles {
 
 	return styles{
 		componentMargins:     lipgloss.NewStyle().Margin(1, 2, 1, 0), //nolint:mnd // magic numbers are OK for styles
-		cursor:               themeSettings.ListExtra.Cursor,
 		filterInput:          themeSettings.ListExtra.FilterInput,
 		groupAbbreviation:    themeSettings.ListExtra.GroupAbbreviation,
 		groupHint:            themeSettings.ListExtra.GroupHint,

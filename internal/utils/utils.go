@@ -80,8 +80,8 @@ var ansiRegex = regexp.MustCompile("\x1b\\[[0-9;]*m")
 
 // StripStyles - removes lipgloss styles from a string.
 func StripStyles(input string) string {
-	input = strings.TrimSpace(input)
-	return ansiRegex.ReplaceAllString(input, "")
+	input = ansiRegex.ReplaceAllString(input, "")
+	return strings.TrimSpace(input)
 }
 
 // AppDir - returns application home folder where all files are stored.
@@ -265,7 +265,7 @@ func BuildProcess(cmd string) *exec.Cmd {
 	command := commandWithArguments[0]
 	arguments := commandWithArguments[1:]
 
-	return exec.Command(command, arguments...)
+	return exec.Command(command, arguments...) //nolint:noctx // I'm not going to cancel the process.
 }
 
 // ProcessBufferWriter - is an object which pretends to be a writer, however it saves all data into a temporary buffer

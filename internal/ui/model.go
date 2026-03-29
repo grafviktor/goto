@@ -7,8 +7,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/sshconfig"
@@ -75,7 +75,7 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		m.logger.Debug("[UI] Keyboard event: '%v'", msg)
 		return m.handleKeyEvent(msg)
 	case tea.WindowSizeMsg:
@@ -136,29 +136,31 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m *MainModel) View() string {
+func (m *MainModel) View() tea.View {
 	// Build UI
-	var content string
+	var content tea.View
 	switch m.appState.CurrentView {
 	case state.ViewHostList:
 		content = m.modelHostList.View()
 	case state.ViewGroupList:
 		content = m.modelGroupList.View()
 	case state.ViewMessage:
-		content = m.viewMessageContent
+		content = tea.NewView(m.viewMessageContent)
 	case state.ViewEditItem:
 		content = m.modelHostEdit.View()
 	}
 
 	// Wrap UI into the ViewPort
-	m.viewport.SetContent(content)
+	m.viewport.SetContent(content.Content)
 	viewPortContent := m.viewport.View()
 
-	return viewPortContent
+	view := tea.NewView(viewPortContent)
+	view.AltScreen = true
+	return view
 }
 
-func (m *MainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if msg.Type == tea.KeyCtrlC {
+func (m *MainModel) handleKeyEvent(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	if msg.String() == "ctrl+c" {
 		m.logger.Debug("[UI] Receive Ctrl+C. Quit the application")
 		return m, tea.Quit
 	}
@@ -187,10 +189,10 @@ func (m *MainModel) handleKeyEvent(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m *MainModel) updateViewPort(w, h int) tea.Model {
 	if !m.ready {
 		m.ready = true
-		m.viewport = viewport.New(m.appState.Width, m.appState.Height)
+		m.viewport = viewport.New(viewport.WithWidth(m.appState.Width), viewport.WithHeight(m.appState.Height))
 	} else {
-		m.viewport.Width = w
-		m.viewport.Height = h
+		m.viewport.SetWidth(w)
+		m.viewport.SetHeight(h)
 	}
 
 	return m

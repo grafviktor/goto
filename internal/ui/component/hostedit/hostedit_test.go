@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -129,39 +129,31 @@ func TestCopyInputValueFromTo(t *testing.T) {
 	assert.Equal(t, inputTitle, hostEditModel.focusedInput)
 
 	// Type word 'test' in title
-	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
-	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
-	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
-	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
+	hostEditModel.Update(tea.KeyPressMsg{Text: "test"})
 
 	// Check that both inputs contain the same values
 	require.Equal(t, "test", hostEditModel.inputs[inputTitle].Value())
 	require.Equal(t, "test", hostEditModel.inputs[inputAddress].Value())
 
 	// Select address input
-	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyDown})
+	hostEditModel.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	// Check that selected input is now address
 	assert.Equal(t, inputAddress, hostEditModel.focusedInput)
 
 	// Append word 'test' to address, so it will become "testtest"
-	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
-	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
-	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
-	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
+	hostEditModel.Update(tea.KeyPressMsg{Text: "test"})
 
 	// Check that address was updated, but title still preserves the initial value
 	require.Equal(t, "test", hostEditModel.inputs[inputTitle].Value())
 	require.Equal(t, "testtest", hostEditModel.inputs[inputAddress].Value())
 
 	// Select title again
-	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyUp})
+	hostEditModel.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	// Check that selected input is title
 	assert.Equal(t, inputTitle, hostEditModel.focusedInput)
 
 	// Append '123' to title, so it will become "test123"
-	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}})
-	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}})
-	hostEditModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}})
+	hostEditModel.Update(tea.KeyPressMsg{Text: "123"})
 
 	// Check that title was updated, but address still preserves the initial value
 	require.Equal(t, "test123", hostEditModel.inputs[inputTitle].Value())
@@ -188,34 +180,30 @@ func TestHandleCopyInputValueShortcut(t *testing.T) {
 	assert.Equal(t, "test", model.inputs[inputTitle].Value())
 	assert.Equal(t, "test", model.inputs[inputAddress].Value())
 	// Append '123' to title, so it will become 'test123'
-	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}})
-	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}})
-	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}})
+	model.Update(tea.KeyPressMsg{Text: "123"})
 	// Confirm that 'Title' value is 'test123' and 'Address' hasn't changed
 	require.Equal(t, "test123", model.inputs[inputTitle].Value())
 	require.Equal(t, "test", model.inputs[inputAddress].Value())
 	// Now press the shortcut which will copy Title value to Address
-	model.Update(tea.KeyMsg{
-		Type: tea.KeyEnter,
-		Alt:  true,
+	model.Update(tea.KeyPressMsg{
+		Code: tea.KeyEnter,
+		Mod:  tea.ModAlt,
 	})
 	// Confirm that 'Title' and 'Host' values are now equal top 'test123'
 	assert.Equal(t, "test123", model.inputs[inputTitle].Value())
 	assert.Equal(t, "test123", model.inputs[inputAddress].Value())
 
 	// Then select address input and append '456', so the value will be test123456
-	model.Update(tea.KeyMsg{Type: tea.KeyDown})
+	model.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	assert.Equal(t, inputAddress, model.focusedInput)
-	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'4'}})
-	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}})
-	model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}})
+	model.Update(tea.KeyPressMsg{Text: "456"})
 	// Check that title still preserves value 'teste123' and address was updated
 	assert.Equal(t, "test123", model.inputs[inputTitle].Value())
 	assert.Equal(t, "test123456", model.inputs[inputAddress].Value())
 	// Now press the shortcut which will copy Address value to Title
-	model.Update(tea.KeyMsg{
-		Type: tea.KeyEnter,
-		Alt:  true,
+	model.Update(tea.KeyPressMsg{
+		Code: tea.KeyEnter,
+		Mod:  tea.ModAlt,
 	})
 	// Ensure that 'Title' and 'Host' values are now equal top 'test123456'
 	assert.Equal(t, "test123456", model.inputs[inputTitle].Value())
@@ -376,8 +364,8 @@ func TestUpdateInputPlaceHolders(t *testing.T) {
 func TestUpdate_KeyDiscard(t *testing.T) {
 	// When press escape, should receive close form cmd
 	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
-	_, cmd := model.Update(tea.KeyMsg{
-		Type: tea.KeyEscape,
+	_, cmd := model.Update(tea.KeyPressMsg{
+		Code: tea.KeyEscape,
 	})
 
 	require.Equal(t, message.ViewHostEditClose{}, cmd())
@@ -386,8 +374,9 @@ func TestUpdate_KeyDiscard(t *testing.T) {
 func TestUpdate_KeySave(t *testing.T) {
 	// When press escape, should receive close form cmd
 	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
-	_, cmd := model.Update(tea.KeyMsg{
-		Type: tea.KeyCtrlS,
+	_, cmd := model.Update(tea.KeyPressMsg{
+		Code: 's',
+		Mod:  tea.ModCtrl,
 	})
 
 	var msgs []tea.Msg
@@ -416,9 +405,10 @@ func TestUpdate_KeyEventWhenHostIsReadOnly(t *testing.T) {
 	storage.Hosts[0].StorageType = constant.HostStorageType.SSHConfig
 	model := New(context.TODO(), storage, MockAppState(), &mocklogger.Logger{})
 
-	_, cmd := model.Update(tea.KeyMsg{
+	_, cmd := model.Update(tea.KeyPressMsg{
 		// Save host shortcut
-		Type: tea.KeyCtrlS,
+		Code: 's',
+		Mod:  tea.ModCtrl,
 	})
 
 	// When host is read-only, the title should display a warning message

@@ -4,7 +4,7 @@ package testutils_test
 import (
 	"reflect"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // CmdToMessage - should only be used in unit tests.

@@ -4,9 +4,10 @@
 package theme
 
 import (
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/list"
+	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/compat"
 )
 
 // AdaptiveColor supports both light and dark theme variants.
@@ -16,8 +17,8 @@ type AdaptiveColor struct {
 }
 
 // toLipgloss converts AdaptiveColor to lipgloss.AdaptiveColor.
-func (c AdaptiveColor) toLipgloss() lipgloss.AdaptiveColor {
-	return lipgloss.AdaptiveColor{Light: c.Light, Dark: c.Dark}
+func (c AdaptiveColor) toLipgloss() compat.AdaptiveColor {
+	return compat.AdaptiveColor{Light: lipgloss.Color(c.Light), Dark: lipgloss.Color(c.Dark)}
 }
 
 // ColorsList defines all colors which can be overridden in the application.
@@ -61,7 +62,7 @@ func (t *Theme) computeStyles() {
 }
 
 func (t *Theme) listStyles() list.Styles {
-	s := list.DefaultStyles()
+	s := list.DefaultStyles(true)
 	s.TitleBar = lipgloss.NewStyle().Padding(0, 0, 1, 2)
 	s.Title = lipgloss.NewStyle().
 		Background(t.Colors.BackgroundColorTitle.toLipgloss()).
@@ -136,7 +137,6 @@ func (t *Theme) listHelpStyles() help.Styles {
 }
 
 type ListExtraStyles struct {
-	Cursor            lipgloss.Style
 	GroupAbbreviation lipgloss.Style
 	GroupHint         lipgloss.Style
 	Prompt            lipgloss.Style
@@ -148,9 +148,6 @@ type ListExtraStyles struct {
 
 func (t *Theme) listExtraStyles() ListExtraStyles {
 	s := ListExtraStyles{}
-
-	s.Cursor = lipgloss.NewStyle().
-		Foreground(t.Colors.TextColorSelected2.toLipgloss())
 
 	s.GroupAbbreviation = lipgloss.NewStyle().
 		// Swap colors between each other to separate group abbreviation from title.
@@ -179,6 +176,7 @@ func (t *Theme) listExtraStyles() ListExtraStyles {
 
 // InputStyles contains styles for input components.
 type InputStyles struct {
+	Cursor       lipgloss.Style
 	InputFocused lipgloss.Style
 	InputError   lipgloss.Style
 	TextFocused  lipgloss.Style
@@ -188,6 +186,8 @@ type InputStyles struct {
 
 func (t *Theme) inputStyles() InputStyles {
 	s := InputStyles{}
+	s.Cursor = lipgloss.NewStyle().
+		Foreground(t.Colors.TextColorSelected2.toLipgloss())
 	s.InputFocused = lipgloss.NewStyle().
 		BorderForeground(t.Colors.TextColorSelected2.toLipgloss()).
 		Foreground(t.Colors.TextColorSelected1.toLipgloss())
@@ -206,6 +206,7 @@ func (t *Theme) inputStyles() InputStyles {
 
 // EditForm contains styles for host edit components.
 type EditForm struct {
+	KeyMap        lipgloss.Style
 	SelectedTitle lipgloss.Style
 	Title         lipgloss.Style
 	TextReadonly  lipgloss.Style
@@ -214,6 +215,9 @@ type EditForm struct {
 func (t *Theme) editFormStyles() EditForm {
 	s := EditForm{}
 
+	s.KeyMap = lipgloss.NewStyle().
+		Foreground(t.Colors.TextColorReadonly.toLipgloss()).
+		Margin(2, 2, 1)
 	s.SelectedTitle = lipgloss.NewStyle().
 		BorderForeground(t.Colors.TextColorSelected2.toLipgloss()).
 		Foreground(t.Colors.TextColorSelected1.toLipgloss())
@@ -223,7 +227,6 @@ func (t *Theme) editFormStyles() EditForm {
 		Padding(0, 1).
 		Margin(1, 2, 0)
 	s.TextReadonly = lipgloss.NewStyle().
-		Foreground(t.Colors.TextColorReadonly.toLipgloss()).
-		Margin(2, 2, 1)
+		Foreground(t.Colors.TextColorReadonly.toLipgloss())
 	return s
 }
