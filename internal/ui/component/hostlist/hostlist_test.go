@@ -968,9 +968,7 @@ func TestUpdate_ToggleBetweenScreenLayouts(t *testing.T) {
 
 	// Toggle layout
 	model.Update(tea.KeyPressMsg{Text: "v"})
-
-	fakeAppState.ScreenLayout = constant.ScreenLayoutCompact
-	// Ensure that screen layout is equal to
+	// Ensure that screen layout is equal to "compact"
 	require.Equal(t, constant.ScreenLayoutCompact, fakeAppState.ScreenLayout)
 
 	// Toggle layout again and check that it's now set to "normal"
