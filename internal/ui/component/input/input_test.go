@@ -36,10 +36,10 @@ func TestInput_Display_Tooltip(t *testing.T) {
 	model.SetValue("mock text")
 
 	model.SetDisplayTooltip(true)
-	require.Contains(t, model.View(), "mock tooltip")
-	require.Contains(t, model.View(), "mock text")
+	require.Contains(t, model.View().Content, "mock tooltip")
+	require.Contains(t, model.View().Content, "mock text")
 
 	model.SetDisplayTooltip(false)
-	require.NotContains(t, model.View(), "mock tooltip")
-	require.Contains(t, model.View(), "mock text")
+	require.NotContains(t, model.View().Content, "mock tooltip")
+	require.Contains(t, model.View().Content, "mock text")
 }

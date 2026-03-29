@@ -96,7 +96,6 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.State, 
 	m.AdditionalShortHelpKeys = delegateKeys.ShortHelp
 	m.AdditionalFullHelpKeys = delegateKeys.FullHelp
 
-	// m.Title = colorTheme.Styles.Common.Title.Render(defaultListTitle)
 	m.Title = defaultListTitle
 
 	return &m
