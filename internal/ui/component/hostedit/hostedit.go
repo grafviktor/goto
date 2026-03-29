@@ -441,7 +441,7 @@ func (m *EditModel) updateViewPort(msg tea.Msg) {
 	} else if resizeMsg, ok := msg.(tea.WindowSizeMsg); ok {
 		m.viewport.SetWidth(resizeMsg.Width)
 		m.viewport.SetHeight(resizeMsg.Height - headerHeight - helpMenuHeight)
-		m.logger.Debug("[UI] Set edit host viewport size: %d %d", m.viewport.Width, m.viewport.Height)
+		m.logger.Debug("[UI] Set edit host viewport size: %d %d", m.viewport.Width(), m.viewport.Height())
 	}
 }
 
