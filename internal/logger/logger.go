@@ -68,7 +68,7 @@ type AppLogger struct {
 	innerLogger *log.Logger
 }
 
-func (l *AppLogger) print(prefix, format string, args ...any) {
+func (l *AppLogger) printf(prefix, format string, args ...any) {
 	msg := fmt.Sprintf("[%s] %s", prefix, format)
 	msg = fmt.Sprintf(msg, args...)
 	if l.logFile != nil {
@@ -79,25 +79,25 @@ func (l *AppLogger) print(prefix, format string, args ...any) {
 // Debug - prints debug message if log level is set to debug.
 func (l *AppLogger) Debug(format string, args ...any) {
 	if l.logLevel <= LevelDebug {
-		l.print("DEBG", format, args...)
+		l.printf("DEBG", format, args...)
 	}
 }
 
 // Info - prints info message if log level is set to debug or info.
 func (l *AppLogger) Info(format string, args ...any) {
 	if l.logLevel <= LevelInfo {
-		l.print("INFO", format, args...)
+		l.printf("INFO", format, args...)
 	}
 }
 
 // Warn - prints a warning message regardless of the log level.
 func (l *AppLogger) Warn(format string, args ...any) {
-	l.print("WARN", format, args...)
+	l.printf("WARN", format, args...)
 }
 
 // Error - prints an error message regardless of the log level.
 func (l *AppLogger) Error(format string, args ...any) {
-	l.print("ERRO", format, args...)
+	l.printf("ERRO", format, args...)
 }
 
 // Close - closes the log file.

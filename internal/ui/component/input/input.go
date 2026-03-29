@@ -8,8 +8,9 @@ import (
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"github.com/grafviktor/goto/internal/utils"
 	"github.com/samber/lo"
+
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 // Input - input UI component.
@@ -70,7 +71,7 @@ func (i *Input) SetValue(value string) {
 	i.Model.SetValue(value)
 }
 
-// TODO: Cover with tests
+// TODO: Cover with tests.
 func (i *Input) setPlaceholderWidth() {
 	// Bubbletea bug!
 	// If not resize explicitly, there will be visible just a first letter
