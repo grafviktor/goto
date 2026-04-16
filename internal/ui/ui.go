@@ -25,14 +25,7 @@ func Start(ctx context.Context, storage storage.HostStorage, appState *state.Sta
 
 	appState.Logger.Debug("[UI] Start user interface")
 	if _, err := p.Run(); err != nil {
-		var errno syscall.Errno
-		if errors.As(err, &errno) {
-			appState.Logger.Error("[UI] Syscall error code: %v %T %#v", err, err, err)
-			return errors.New("unsupported terminal type or terminal is running in legacy mode")
-		}
-
-		appState.Logger.Error("[UI] Error starting user interface: %v", err)
-		return err
+		return handleUIStartError(err, appState.Logger)
 	}
 
 	// There is no way to return error from Bubble Tea application,
@@ -44,4 +37,18 @@ func Start(ctx context.Context, storage storage.HostStorage, appState *state.Sta
 	}
 
 	return nil
+}
+
+func handleUIStartError(err error, logger iLogger) error {
+	var errno syscall.Errno
+	if errors.As(err, &errno) {
+		logger.Error("[UI] Syscall error code: %v %T %#v", err, err, err)
+		if err.Error() == "The parameter is incorrect." {
+			return errors.New("unsupported terminal type or terminal is running in legacy mode")
+		}
+	} else {
+		logger.Error("[UI] Error starting user interface: %v %#v", err, err)
+	}
+
+	return err
 }
