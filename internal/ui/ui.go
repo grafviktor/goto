@@ -28,7 +28,7 @@ func Start(ctx context.Context, storage storage.HostStorage, appState *state.Sta
 		var errno syscall.Errno
 		if errors.As(err, &errno) {
 			appState.Logger.Error("[UI] Syscall error code: %v %T %#v", err, err, err)
-			return errors.New("Unsupported terminal type or terminal is running in legacy mode.")
+			return errors.New("unsupported terminal type or terminal is running in legacy mode")
 		}
 
 		appState.Logger.Error("[UI] Error starting user interface: %v", err)
