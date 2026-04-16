@@ -43,7 +43,10 @@ func handleUIStartError(err error, logger iLogger) error {
 	var errno syscall.Errno
 	if errors.As(err, &errno) {
 		logger.Error("[UI] Syscall error code: %v %T %#v", err, err, err)
-		if errno.Error() == "The parameter is incorrect." {
+		// See \go\src\internal\syscall\windows\symlink_windows.go:
+		// ERROR_INVALID_PARAMETER syscall.Errno = 87
+		windowsErrInvalidParameter := syscall.Errno(87)
+		if errno == windowsErrInvalidParameter {
 			return errors.New("unsupported terminal type or terminal is running in legacy mode")
 		}
 	} else {
