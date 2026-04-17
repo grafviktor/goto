@@ -2,8 +2,6 @@ package ui
 
 import (
 	"context"
-	"errors"
-	"syscall"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -37,21 +35,4 @@ func Start(ctx context.Context, storage storage.HostStorage, appState *state.Sta
 	}
 
 	return nil
-}
-
-func handleUIStartError(err error, logger iLogger) error {
-	var errno syscall.Errno
-	if errors.As(err, &errno) {
-		logger.Error("[UI] Syscall error code: %v %T %#v", err, err, err)
-		// See \go\src\internal\syscall\windows\symlink_windows.go:
-		// ERROR_INVALID_PARAMETER syscall.Errno = 87
-		windowsErrInvalidParameter := syscall.Errno(87)
-		if errno == windowsErrInvalidParameter {
-			return errors.New("unsupported terminal type or terminal is running in legacy mode")
-		}
-	} else {
-		logger.Error("[UI] Error starting user interface: %v %#v", err, err)
-	}
-
-	return err
 }
