@@ -15,8 +15,8 @@ func handleUIStartError(err error, logger iLogger) error {
 	if errors.As(err, &errno) {
 		handleSyscallError(err, errno, logger)
 	} else {
-		displayMessageBox("Application Error", fmt.Sprintf("Failed to start user interface: %v", err))
 		logger.Error("[UI] Error starting user interface: %v", err)
+		displayMessageBox("Application Error", fmt.Sprintf("Failed to start user interface: %v", err))
 	}
 
 	return err
