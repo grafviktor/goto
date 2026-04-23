@@ -14,7 +14,7 @@ func handleUIStartError(err error, logger iLogger) error {
 		errMsg := fmt.Sprintf("syscall error: %s (error code: %d)", err.Error(), errno)
 		logger.Error("[UI] Error starting user interface - %s", errMsg)
 	} else {
-		logger.Error("[UI] Error starting user interface: %v %#v", err, err)
+		logger.Error("[UI] Error starting user interface: %v", err)
 	}
 
 	return err

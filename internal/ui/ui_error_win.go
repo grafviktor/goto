@@ -16,7 +16,7 @@ func handleUIStartError(err error, logger iLogger) error {
 		handleSyscallError(err, errno, logger)
 	} else {
 		displayMessageBox("Application Error", fmt.Sprintf("Failed to start user interface: %v", err))
-		logger.Error("[UI] Error starting user interface: %v %#v", err, err)
+		logger.Error("[UI] Error starting user interface: %v", err)
 	}
 
 	return err
@@ -25,8 +25,8 @@ func handleUIStartError(err error, logger iLogger) error {
 func handleSyscallError(err error, errno syscall.Errno, logger iLogger) {
 	if errno == windows.ERROR_INVALID_PARAMETER {
 		// See \go\src\internal\syscall\windows\symlink_windows.go: ERROR_INVALID_PARAMETER (code: 87)
-		logger.Error("[UI] Error starting user interface - terminal error: %v %T %#v", err, err, err)
-		displayMessageBox("Terminal Error", "Unsupported terminal type or terminal is running in legacy mode")
+		logger.Error("[UI] Error starting user interface - unsupported terminal type or terminal is running in legacy mode.")
+		displayMessageBox("Terminal Error", "Unsupported terminal type or\nterminal is running in legacy mode.")
 	} else {
 		errMsg := fmt.Sprintf("syscall error: %s (error code: %d)", err.Error(), errno)
 		logger.Error("[UI] Error starting user interface - %s", errMsg)
