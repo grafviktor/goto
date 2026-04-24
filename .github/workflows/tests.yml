@@ -17,10 +17,13 @@ jobs:
         include:
           - os: windows
             cgo: 0
+            race: ""
           - os: ubuntu
             cgo: 1
+            race: "-race"
           - os: macOS
             cgo: 1
+            race: "-race"
     env:
       OS: ${{ matrix.os }}-latest
       GO: ${{ matrix.go-version }}
@@ -35,13 +38,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
           cache: true
       - name: Test
-        run: |
-          # With Go 1.25 and CGO enabled the pipeline hangs. Without CGO enabled "-race" is not supported for Go 1.25.
-          if [ "${{ matrix.go-version }}" = "1.25.x" ]; then
-            go test       -coverpkg=./internal/... -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
-          else
-            go test -race -coverpkg=./internal/... -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
-          fi
+        run: go test -coverpkg=./internal/... ${{ matrix.race }} -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
