@@ -26,16 +26,8 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
-      # - name: Test
-      #   run: go test -coverpkg=./internal/... -race -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
       - name: Test
-        run: |
-          go test -v -timeout=5m -coverpkg=./internal/... -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
-        if: runner.os == 'Windows'
-      - name: Test (race)
-        run: |
-          go test -v -timeout=5m -coverpkg=./internal/... -race -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
-        if: runner.os != 'Windows'
+        run: go test -coverpkg=./internal/... -race -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
