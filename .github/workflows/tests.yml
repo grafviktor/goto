@@ -1,12 +1,8 @@
-name: tests
-on:
-  push:
-    branches:
-      - develop
-  pull_request:
-  workflow_dispatch:
 jobs:
   unit:
+    defaults:
+      run:
+        shell: cmd
     concurrency:
       group: unit-${{ github.ref }}-${{ matrix.os }}-${{ matrix.go-version }}
       cancel-in-progress: true
@@ -27,4 +23,3 @@ jobs:
           cache: true
       - name: Test
         run: go test -coverpkg=./internal/... -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
-
