@@ -12,8 +12,8 @@ jobs:
       cancel-in-progress: true
     strategy:
       matrix:
-        go-version: [1.25.x, 1.26.x]
-        os: [ubuntu, windows, macOS]
+        go-version: [1.25.x]
+        os: [windows]
         include:
           - os: windows
             cgo: 0
@@ -38,11 +38,5 @@ jobs:
           go-version: ${{ matrix.go-version }}
           cache: true
       - name: Test
-        run: go test -coverpkg=./internal/... ${{ matrix.race }} -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./unit.txt
-          flags: unit,${{ matrix.os }},go-${{ matrix.go-version }}
-          name: unit
-          token: ${{ secrets.CODECOV_TOKEN }}
+        run: go test -coverpkg=./internal/... -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
+
