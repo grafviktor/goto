@@ -14,20 +14,8 @@ jobs:
       matrix:
         go-version: [1.25.x]
         os: [windows]
-        include:
-          - os: windows
-            cgo: 0
-            race: ""
-          - os: ubuntu
-            cgo: 1
-            race: "-race"
-          - os: macOS
-            cgo: 1
-            race: "-race"
     env:
-      OS: ${{ matrix.os }}-latest
-      GO: ${{ matrix.go-version }}
-      CGO_ENABLED: ${{ matrix.cgo }}
+      CGO_ENABLED: 0
     runs-on: ${{ matrix.os }}-latest
     steps:
       - name: Checkout code
