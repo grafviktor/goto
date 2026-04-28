@@ -7,9 +7,6 @@ on:
   workflow_dispatch:
 jobs:
   unit:
-    defaults:
-      run:
-        shell: cmd
     concurrency:
       group: unit-${{ github.ref }}-${{ matrix.os }}-${{ matrix.go-version }}
       cancel-in-progress: true
