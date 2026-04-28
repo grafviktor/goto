@@ -14,8 +14,6 @@ jobs:
       matrix:
         go-version: [1.24.x]
         os: [windows]
-    env:
-      CGO_ENABLED: 0
     runs-on: ${{ matrix.os }}-latest
     steps:
       - name: Checkout code
