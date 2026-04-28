@@ -26,5 +26,5 @@ jobs:
           go-version: ${{ matrix.go-version }}
           cache: true
       - name: Test
-        run: go test -timeout 120s -p 1 -v -vet=off -count=1 -coverprofile unit.txt ./...
+        run: go test -timeout 120s ./...
 
