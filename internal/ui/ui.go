@@ -23,8 +23,7 @@ func Start(ctx context.Context, storage storage.HostStorage, appState *state.Sta
 
 	appState.Logger.Debug("[UI] Start user interface")
 	if _, err := p.Run(); err != nil {
-		appState.Logger.Error("[UI] Error starting user interface: %v", err)
-		return err
+		return handleUIStartError(err, appState.Logger)
 	}
 
 	// There is no way to return error from Bubble Tea application,
