@@ -334,6 +334,11 @@ func (l *Lexer) handleIncludeToken(token SSHToken) []SSHToken {
 
 func (l *Lexer) includeLocalFileToken(localPath string) []SSHToken {
 	tokens := []SSHToken{}
+
+	if strings.HasPrefix(p, "~") {
+		localPath = expandTildePath(localPath)
+	}
+
 	if !filepath.IsAbs(localPath) {
 		localPath = filepath.Join(filepath.Dir(l.currentPath), localPath)
 	}
@@ -366,6 +371,25 @@ func (l *Lexer) includeLocalFileToken(localPath string) []SSHToken {
 	}
 
 	return tokens
+}
+
+func expandTildePath(path string) string {
+	// "~", "~/" and "~\"
+	if p == "~" || strings.HasPrefix(p, "~/") || strings.HasPrefix(p, "~\\") {
+		home, err := os.UserHomeDir()
+		if err != nil || home == "" {
+			return p
+		}
+
+		rest := strings.TrimLeft(strings.TrimPrefix(p, "~"), "/\\")
+		if rest == "" {
+			return home
+		}
+
+		return filepath.Join(home, rest)
+	}
+
+	return path
 }
 
 func (l *Lexer) includeRemoteFileToken(remotePath string) []SSHToken {
