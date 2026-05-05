@@ -83,7 +83,7 @@ func (l *Lexer) loadFromDataSource(
 		return children, nil
 	}
 
-	l.logger.Info("[SSHCONFIG] Load included file: %s", includeToken.value)
+	l.logger.Info("[SSHCONFIG] Load file: %s", includeToken.value)
 	rdr, err := newReader(includeToken.value, l.pathType)
 	if err != nil {
 		l.logger.Error("[SSHCONFIG] Error opening file %s: %+v", includeToken.value, err)
@@ -328,7 +328,10 @@ func (l *Lexer) handleIncludeToken(token SSHToken) []SSHToken {
 	switch {
 	// Order matters! Check for tilde prefix first.
 	case strings.HasPrefix(token.value, "~"):
-		return l.includeLocalFileToken(expandTildePath(token.value))
+		// If path starts from tilde, we load the included file from the local file system.
+		// This allows to set some user default values, even if config is stored remotely.
+		expandedPath := l.expandTildePath(token.value)
+		return l.includeLocalFileToken(expandedPath)
 	case l.pathType == pathTypeURL:
 		return l.includeRemoteFileToken(token.value)
 	default:
@@ -373,22 +376,28 @@ func (l *Lexer) includeLocalFileToken(localPath string) []SSHToken {
 	return tokens
 }
 
-func expandTildePath(localPath string) string {
-	if strings.HasPrefix(localPath, "~") {
-		home, err := os.UserHomeDir()
-		if err != nil || home == "" {
-			return localPath
-		}
-
-		rest := strings.TrimLeft(strings.TrimPrefix(localPath, "~"), "/\\")
-		if rest == "" {
-			return home
-		}
-
-		return filepath.Join(home, rest)
+func (l *Lexer) expandTildePath(localPath string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		l.logger.Error("[SSHCONFIG]: Cannot expand tilde in path: %v", err)
+		return localPath
 	}
 
-	return localPath
+	if home == "" {
+		l.logger.Error("[SSHCONFIG]: Cannot find user home directory to expand tilde in path: %s", localPath)
+		return localPath
+	}
+
+	// Linux:   "~/.path/config" => ".path/config."
+	// Windows: "~\.path\config" => ".path\config".
+	rest := strings.TrimLeft(strings.TrimPrefix(localPath, "~"), "/\\")
+	if rest == "" {
+		return home
+	}
+
+	// Linux:   /home/user, .  .path/config => /home/user/.path/config
+	// Windows: C:\Users\user, .path\config => C:\Users\user\.path\config
+	return filepath.Join(home, rest)
 }
 
 func (l *Lexer) includeRemoteFileToken(remotePath string) []SSHToken {
