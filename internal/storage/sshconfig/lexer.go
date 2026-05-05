@@ -103,6 +103,7 @@ func (l *Lexer) loadFromDataSource(
 		}
 
 		line = stripInlineComments(line)
+		line = strings.TrimSpace(line)
 		token := l.readToken(line)
 
 		if token.kind == tokenKind.IncludeFile {
@@ -134,21 +135,21 @@ func (l *Lexer) loadFromDataSource(
 func (l *Lexer) readToken(line string) SSHToken {
 	var token SSHToken
 	switch {
-	case matchToken(line, "User", true):
+	case matchToken(line, "User"):
 		token = l.usernameToken(line)
-	case matchToken(line, "HostName", true):
+	case matchToken(line, "HostName"):
 		token = l.hostnameToken(line)
-	case matchToken(line, "Host", false):
+	case matchToken(line, "Host"):
 		token = l.hostToken(line)
-	case matchToken(line, "Port", true):
+	case matchToken(line, "Port"):
 		token = l.networkPortToken(line)
-	case matchToken(line, "Include", false):
+	case matchToken(line, "Include"):
 		token = l.keyValuesToken(tokenKind.IncludeFile, line)
-	case matchToken(line, "IdentityFile", true):
+	case matchToken(line, "IdentityFile"):
 		token = l.identityFileToken(line)
-	case matchToken(line, "# GG:GROUP", true):
+	case matchToken(line, "# GG:GROUP"):
 		token = l.metaDataToken(tokenKind.Group, line)
-	case matchToken(line, "# GG:DESCRIPTION", true):
+	case matchToken(line, "# GG:DESCRIPTION"):
 		token = l.metaDataToken(tokenKind.Description, line)
 	default:
 		token = SSHToken{kind: tokenKind.Unsupported}
@@ -189,17 +190,13 @@ func stripInlineComments(line string) string {
 	return line
 }
 
-func matchToken(line, prefix string, shouldBeIndented bool) bool {
+func matchToken(line, prefix string) bool {
 	trimmedLine := strings.TrimSpace(line)
 	if utils.StringEmpty(&trimmedLine) {
 		return false
 	}
 
 	if len(prefix) >= len(trimmedLine) {
-		return false
-	}
-
-	if isTokenIndented(line) != shouldBeIndented {
 		return false
 	}
 
