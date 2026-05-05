@@ -325,19 +325,19 @@ func (l *Lexer) handleIncludeToken(token SSHToken) []SSHToken {
 		return []SSHToken{}
 	}
 
-	if l.pathType == pathTypeURL {
+	switch {
+	// Order matters! Check for tilde prefix first.
+	case strings.HasPrefix(token.value, "~"):
+		return l.includeLocalFileToken(expandTildePath(token.value))
+	case l.pathType == pathTypeURL:
 		return l.includeRemoteFileToken(token.value)
+	default:
+		return l.includeLocalFileToken(token.value)
 	}
-
-	return l.includeLocalFileToken(token.value)
 }
 
 func (l *Lexer) includeLocalFileToken(localPath string) []SSHToken {
 	tokens := []SSHToken{}
-
-	if strings.HasPrefix(p, "~") {
-		localPath = expandTildePath(localPath)
-	}
 
 	if !filepath.IsAbs(localPath) {
 		localPath = filepath.Join(filepath.Dir(l.currentPath), localPath)
@@ -373,15 +373,14 @@ func (l *Lexer) includeLocalFileToken(localPath string) []SSHToken {
 	return tokens
 }
 
-func expandTildePath(path string) string {
-	// "~", "~/" and "~\"
-	if p == "~" || strings.HasPrefix(p, "~/") || strings.HasPrefix(p, "~\\") {
+func expandTildePath(localPath string) string {
+	if strings.HasPrefix(localPath, "~") {
 		home, err := os.UserHomeDir()
 		if err != nil || home == "" {
-			return p
+			return localPath
 		}
 
-		rest := strings.TrimLeft(strings.TrimPrefix(p, "~"), "/\\")
+		rest := strings.TrimLeft(strings.TrimPrefix(localPath, "~"), "/\\")
 		if rest == "" {
 			return home
 		}
@@ -389,7 +388,7 @@ func expandTildePath(path string) string {
 		return filepath.Join(home, rest)
 	}
 
-	return path
+	return localPath
 }
 
 func (l *Lexer) includeRemoteFileToken(remotePath string) []SSHToken {
