@@ -43,9 +43,9 @@ func (p *Parser) Parse() ([]model.Host, error) {
 
 	for _, token := range hostTokens {
 		// Every non-Host token decorates the current host. If the lexer
-		// emitted a sub-option (e.g. HostName) before any Host line — which
+		// emitted a sub-option (e.g. HostName) before any Host line, which
 		// happens when the ssh config has leading whitespace on Host lines
-		// (#142) — currentHost is still nil and dereferencing it crashes
+		// (#142), currentHost is still nil and dereferencing it crashes
 		// the TUI. Skip the orphan token instead of panicking.
 		if token.kind != tokenKind.Host && p.currentHost == nil {
 			continue
