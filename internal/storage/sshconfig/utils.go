@@ -4,7 +4,6 @@
 package sshconfig
 
 import (
-	"errors"
 	"net/http"
 	"os"
 	"regexp"
@@ -52,27 +51,6 @@ var hostnameRegex = regexp.MustCompile(
 
 func isNetworkPortNumberValid(port int) bool {
 	return port >= 0 && port <= 65535
-}
-
-/*
-Regex to match exactly two or more words.
-
-"hello world",     // Valid.
-"  foo   bar  ",   // Valid.
-"oneword",         // Invalid.
-"three word test", // Valid.
-"",                // Invalid.
-*/
-var twoWordsRegex = regexp.MustCompile(`^(\S+)\s+(.+)$`)
-
-func parseKeyValuesLine(line string) (string, string, error) {
-	matches := twoWordsRegex.FindStringSubmatch(line)
-	// Ideally it should be a loop, not regex.
-	if len(matches) > 1 {
-		return matches[1], matches[2], nil
-	}
-
-	return "", "", errors.New("not a key value string")
 }
 
 func isTextFileMime(filename string) bool {

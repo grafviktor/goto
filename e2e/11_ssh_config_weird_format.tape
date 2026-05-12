@@ -8,7 +8,9 @@ Type z
 Down
 Enter
 
-# Go to the very end of the list
+# Go to the very end of the list and exit the application.
+# After that we check that all hosts were read from the config file
+# by comparing selected host ID in state file and the quantity of hosts in ssh config.
 Type G
 
 Type "q"

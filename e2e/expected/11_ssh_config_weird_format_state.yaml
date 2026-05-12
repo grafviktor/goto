@@ -1,5 +1,5 @@
 group: ssh_config
 screen_layout: description
-selected: 9
+selected: 11
 enable_ssh_config: true
 theme: default

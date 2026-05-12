@@ -7,8 +7,9 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 	"golang.org/x/sys/windows"
+
+	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 )
 
 func TestHandleUIStartError(t *testing.T) {
