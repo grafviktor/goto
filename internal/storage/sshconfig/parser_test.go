@@ -114,3 +114,27 @@ func TestParser_Parse_NoLexer(t *testing.T) {
 	require.Error(t, err)
 	require.Nil(t, hosts)
 }
+
+func TestParser_Parse_OrphanSubOptionDoesNotPanic(t *testing.T) {
+	lexer := &mockLexer{
+		tokens: []SSHToken{
+			{kind: tokenKind.Hostname, value: "orphan.example.com"},
+			{kind: tokenKind.User, value: "orphan"},
+			{kind: tokenKind.Host, value: "good"},
+			{kind: tokenKind.Hostname, value: "good.example.com"},
+		},
+	}
+	parser := NewParser(lexer, &mocklogger.Logger{})
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("Parse panicked on orphan sub-option tokens: %v", r)
+		}
+	}()
+
+	hosts, err := parser.Parse()
+	require.NoError(t, err)
+	require.Len(t, hosts, 1)
+	require.Equal(t, "good", hosts[0].Title)
+	require.Equal(t, "good.example.com", hosts[0].Address)
+}

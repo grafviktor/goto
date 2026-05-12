@@ -42,6 +42,9 @@ func (p *Parser) Parse() ([]model.Host, error) {
 	p.foundHosts = nil
 
 	for _, token := range hostTokens {
+		if token.kind != tokenKind.Host && p.currentHost == nil {
+			continue
+		}
 		switch token.kind {
 		case tokenKind.Host:
 			// New host found, append current host if it is valid.
