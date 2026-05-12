@@ -115,19 +115,11 @@ func TestParser_Parse_NoLexer(t *testing.T) {
 	require.Nil(t, hosts)
 }
 
-// TestParser_Parse_OrphanSubOptionDoesNotPanic regression-tests #142:
-// when the ssh config file has leading whitespace on Host lines, the lexer
-// emits sub-option tokens (Hostname, User, etc.) BEFORE any Host token, so
-// p.currentHost is still nil and the original switch dereferenced it,
-// crashing the TUI with a nil pointer panic.
 func TestParser_Parse_OrphanSubOptionDoesNotPanic(t *testing.T) {
 	lexer := &mockLexer{
 		tokens: []SSHToken{
-			// Lexer emits these because matchToken("Host", false) rejects
-			// indented "Host" lines, leaving "HostName" indented and matched.
 			{kind: tokenKind.Hostname, value: "orphan.example.com"},
 			{kind: tokenKind.User, value: "orphan"},
-			// Then a properly-indented block parses normally.
 			{kind: tokenKind.Host, value: "good"},
 			{kind: tokenKind.Hostname, value: "good.example.com"},
 		},
