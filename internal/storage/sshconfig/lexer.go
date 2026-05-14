@@ -193,38 +193,39 @@ func stripInlineComments(line string) string {
 	return line
 }
 
-func matchToken(line, prefix string) bool {
+func matchToken(line, token string) bool {
+	// Remove leading and trailing whitespace: "  User root" -> "User root"
+	line = strings.TrimSpace(line)
 	if utils.StringEmpty(&line) {
 		return false
 	}
 
-	if len(prefix) >= len(line) {
+	// If token prefix is longer than the line itself, it can't match.
+	if len(token) >= len(line) {
 		return false
 	}
 
-	if !isTokenFollowedDelimiter(line, prefix) {
+	if !isTokenFollowedDelimiter(line, token) {
 		return false
 	}
 
-	return strings.HasPrefix(strings.ToLower(line), strings.ToLower(prefix))
+	return strings.HasPrefix(strings.ToLower(line), strings.ToLower(token))
 }
 
-// func isTokenIndented(str string) bool {
-// 	return len(str) > 0 && (str[0] == ' ' || str[0] == '\t')
-// }
-
-func isTokenFollowedDelimiter(str, prefix string) bool {
-	prefixLen := len(prefix)
+func isTokenFollowedDelimiter(line, token string) bool {
+	prefixLen := len(token)
 	delimiters := []byte{' ', '\t'}
 
 	// Should support metadata token which ends with space or colon.
 	// For instance "# GG:GROUP value" or "# GG:GROUP: value" are valid
-	if strings.HasPrefix(str, "# GG:") {
+	if strings.HasPrefix(line, "# GG:") {
 		delimiters = append(delimiters, ':')
 	}
 
+	// Check if token is followed one of the delimiters. For example,
+	// "User root" and "User\troot" are valid, but "User=root" is not.
 	_, found := lo.Find(delimiters, func(d byte) bool {
-		return str[prefixLen] == d
+		return line[prefixLen] == d
 	})
 
 	return found

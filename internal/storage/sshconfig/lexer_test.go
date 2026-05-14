@@ -200,9 +200,9 @@ func TestLexer_Tokenize_IncludeDepthLimit(t *testing.T) {
 
 func Test_matchToken(t *testing.T) {
 	tests := []struct {
-		str    string
-		prefix string
-		want   bool
+		str   string
+		token string
+		want  bool
 	}{
 		{"Host test", "host", true},
 		{"HOST test", "host", true},
@@ -214,8 +214,8 @@ func Test_matchToken(t *testing.T) {
 		{"\t# GG:GROUP: test", "# GG:GROUP", true},
 	}
 	for _, tt := range tests {
-		if got := matchToken(tt.str, tt.prefix); got != tt.want {
-			t.Errorf("hasPrefixIgnoreCase(%q, %q) = %v, want %v", tt.str, tt.prefix, got, tt.want)
+		if got := matchToken(tt.str, tt.token); got != tt.want {
+			t.Errorf("hasPrefixIgnoreCase(%q, %q) = %v, want %v", tt.str, tt.token, got, tt.want)
 		}
 	}
 }
