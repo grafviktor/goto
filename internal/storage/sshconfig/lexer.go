@@ -348,6 +348,12 @@ func (l *Lexer) includeLocalFileToken(localPath string) []SSHToken {
 
 	matches, err := filepath.Glob(localPath)
 	if err != nil {
+		l.logger.Error("[SSHCONFIG] Cannot process Include pattern %s: %v", localPath, err)
+		return tokens
+	}
+
+	if len(matches) == 0 {
+		l.logger.Error("[SSHCONFIG] No files match Include pattern: %s", localPath)
 		return tokens
 	}
 
@@ -355,14 +361,17 @@ func (l *Lexer) includeLocalFileToken(localPath string) []SSHToken {
 		var info os.FileInfo
 		info, err = os.Stat(path)
 		if err != nil {
+			l.logger.Error("[SSHCONFIG] Cannot access file %s: %v", path, err)
 			continue
 		}
 
 		if info.IsDir() {
+			l.logger.Error("[SSHCONFIG] Path is a directory: %s", path)
 			continue
 		}
 
 		if !isTextFileMime(path) {
+			l.logger.Error("[SSHCONFIG] Not a text file: %s", path)
 			continue
 		}
 
