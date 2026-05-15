@@ -29,6 +29,8 @@ func NewParser(lexer lexer, log iLogger) *Parser {
 }
 
 // Parse processes the tokens from the lexer and constructs a slice of Host models.
+// When this function receives a refined list of tokens, there are no unsupported
+// tokens, comments, or include file tokens.
 func (p *Parser) Parse() ([]model.Host, error) {
 	if p.lexer == nil {
 		return nil, errors.New("lexer is not set")
@@ -44,7 +46,7 @@ func (p *Parser) Parse() ([]model.Host, error) {
 	for _, token := range hostTokens {
 		if token.kind != tokenKind.Host && p.currentHost == nil {
 			// Something went wrong - the app assigns values to the current host before it is created. This means that the first token must be Host.
-			p.logger.Error("[SSHCONFIG] Unexpected token %s before host declaration", token.value)
+			p.logger.Error("[SSHCONFIG] Unexpected token %s with value %v before host declaration", token.kind, token.value)
 			continue
 		}
 

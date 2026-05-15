@@ -83,7 +83,7 @@ func (l *Lexer) loadFromDataSource(
 		return children, nil
 	}
 
-	l.logger.Info("[SSHCONFIG] Loading included file: %s", includeToken.value)
+	l.logger.Info("[SSHCONFIG] Load included file: %s", includeToken.value)
 	rdr, err := newReader(includeToken.value, l.pathType)
 	if err != nil {
 		l.logger.Error("[SSHCONFIG] Error opening file %s: %+v", includeToken.value, err)

@@ -63,7 +63,7 @@ type MainModel struct {
 }
 
 func (m *MainModel) Init() tea.Cmd {
-	m.logger.Debug("[UI] Init main model")
+	m.logger.Debug("[UI] Render main view")
 
 	// Loads hosts from DB
 	return m.modelHostList.Init()
