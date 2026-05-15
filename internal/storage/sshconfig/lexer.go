@@ -2,10 +2,12 @@ package sshconfig
 
 import (
 	"bufio"
+	"errors"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -132,23 +134,25 @@ func (l *Lexer) loadFromDataSource(
 }
 
 func (l *Lexer) readToken(line string) SSHToken {
+	line = strings.TrimSpace(line)
+
 	var token SSHToken
 	switch {
-	case matchToken(line, "User", true):
+	case matchToken(line, "User"):
 		token = l.usernameToken(line)
-	case matchToken(line, "HostName", true):
+	case matchToken(line, "HostName"):
 		token = l.hostnameToken(line)
-	case matchToken(line, "Host", false):
+	case matchToken(line, "Host"):
 		token = l.hostToken(line)
-	case matchToken(line, "Port", true):
+	case matchToken(line, "Port"):
 		token = l.networkPortToken(line)
-	case matchToken(line, "Include", false):
+	case matchToken(line, "Include"):
 		token = l.keyValuesToken(tokenKind.IncludeFile, line)
-	case matchToken(line, "IdentityFile", true):
+	case matchToken(line, "IdentityFile"):
 		token = l.identityFileToken(line)
-	case matchToken(line, "# GG:GROUP", true):
+	case matchToken(line, "# GG:GROUP"):
 		token = l.metaDataToken(tokenKind.Group, line)
-	case matchToken(line, "# GG:DESCRIPTION", true):
+	case matchToken(line, "# GG:DESCRIPTION"):
 		token = l.metaDataToken(tokenKind.Description, line)
 	default:
 		token = SSHToken{kind: tokenKind.Unsupported}
@@ -189,43 +193,39 @@ func stripInlineComments(line string) string {
 	return line
 }
 
-func matchToken(line, prefix string, shouldBeIndented bool) bool {
-	trimmedLine := strings.TrimSpace(line)
-	if utils.StringEmpty(&trimmedLine) {
+func matchToken(line, token string) bool {
+	// Remove leading and trailing whitespace: "  User root" -> "User root"
+	line = strings.TrimSpace(line)
+	if utils.StringEmpty(&line) {
 		return false
 	}
 
-	if len(prefix) >= len(trimmedLine) {
+	// If token prefix is longer than the line itself, it can't match.
+	if len(token) >= len(line) {
 		return false
 	}
 
-	if isTokenIndented(line) != shouldBeIndented {
+	if !isTokenFollowedDelimiter(line, token) {
 		return false
 	}
 
-	if !isTokenFollowedDelimiter(trimmedLine, prefix) {
-		return false
-	}
-
-	return strings.HasPrefix(strings.ToLower(trimmedLine), strings.ToLower(prefix))
+	return strings.HasPrefix(strings.ToLower(line), strings.ToLower(token))
 }
 
-func isTokenIndented(str string) bool {
-	return len(str) > 0 && (str[0] == ' ' || str[0] == '\t')
-}
-
-func isTokenFollowedDelimiter(str, prefix string) bool {
-	prefixLen := len(prefix)
+func isTokenFollowedDelimiter(line, token string) bool {
+	prefixLen := len(token)
 	delimiters := []byte{' ', '\t'}
 
 	// Should support metadata token which ends with space or colon.
 	// For instance "# GG:GROUP value" or "# GG:GROUP: value" are valid
-	if strings.HasPrefix(str, "# GG:") {
+	if strings.HasPrefix(line, "# GG:") {
 		delimiters = append(delimiters, ':')
 	}
 
+	// Check if token is followed one of the delimiters. For example,
+	// "User root" and "User\troot" are valid, but "User=root" is not.
 	_, found := lo.Find(delimiters, func(d byte) bool {
-		return str[prefixLen] == d
+		return line[prefixLen] == d
 	})
 
 	return found
@@ -244,8 +244,7 @@ func (l *Lexer) hostToken(line string) SSHToken {
 	}
 }
 
-func (l *Lexer) usernameToken(rawLine string) SSHToken {
-	line := strings.TrimSpace(rawLine)
+func (l *Lexer) usernameToken(line string) SSHToken {
 	key, value, err := parseKeyValuesLine(line)
 	if err != nil {
 		return SSHToken{kind: tokenKind.Unsupported}
@@ -264,8 +263,7 @@ func (l *Lexer) usernameToken(rawLine string) SSHToken {
 
 const maxHostnameLength = 253
 
-func (l *Lexer) hostnameToken(rawLine string) SSHToken {
-	line := strings.TrimSpace(rawLine)
+func (l *Lexer) hostnameToken(line string) SSHToken {
 	key, value, err := parseKeyValuesLine(line)
 	if err != nil {
 		return SSHToken{kind: tokenKind.Unsupported}
@@ -286,8 +284,7 @@ func (l *Lexer) hostnameToken(rawLine string) SSHToken {
 	}
 }
 
-func (l *Lexer) networkPortToken(rawLine string) SSHToken {
-	line := strings.TrimSpace(rawLine)
+func (l *Lexer) networkPortToken(line string) SSHToken {
 	key, value, err := parseKeyValuesLine(line)
 	if err != nil {
 		return SSHToken{kind: tokenKind.Unsupported}
@@ -437,4 +434,25 @@ func (l *Lexer) keyValuesToken(kind tokenEnum, line string) SSHToken {
 		key:   key,
 		value: value,
 	}
+}
+
+/*
+Regex to match exactly two or more words.
+
+"hello world",     // Valid.
+"  foo   bar  ",   // Valid.
+"oneword",         // Invalid.
+"three word test", // Valid.
+"",                // Invalid.
+*/
+var twoWordsRegex = regexp.MustCompile(`^(\S+)\s+(.+)$`)
+
+func parseKeyValuesLine(line string) (string, string, error) {
+	matches := twoWordsRegex.FindStringSubmatch(line)
+	// Ideally it should be a loop, not regex.
+	if len(matches) > 1 {
+		return matches[1], matches[2], nil
+	}
+
+	return "", "", errors.New("not a key value string")
 }

@@ -200,24 +200,22 @@ func TestLexer_Tokenize_IncludeDepthLimit(t *testing.T) {
 
 func Test_matchToken(t *testing.T) {
 	tests := []struct {
-		str        string
-		prefix     string
-		identation bool
-		want       bool
+		str   string
+		token string
+		want  bool
 	}{
-		{"Host test", "host", false, true},
-		{"\tHost test", "host", false, false},
-		{"HOST test", "host", false, true},
-		{"\tUser alice", "USER", true, true},
-		{" Port 22", "port", true, true},
-		{"\tIdentityFile foo", "identityfile", true, true},
-		{"\tSomethingElse", "host", true, false},
-		{"\t# GG:GROUP test", "# GG:GROUP", true, true},
-		{"\t# GG:GROUP: test", "# GG:GROUP", true, true},
+		{"Host test", "host", true},
+		{"HOST test", "host", true},
+		{"\tUser alice", "USER", true},
+		{" Port 22", "port", true},
+		{"\tIdentityFile foo", "identityfile", true},
+		{"\tSomethingElse", "host", false},
+		{"\t# GG:GROUP test", "# GG:GROUP", true},
+		{"\t# GG:GROUP: test", "# GG:GROUP", true},
 	}
 	for _, tt := range tests {
-		if got := matchToken(tt.str, tt.prefix, tt.identation); got != tt.want {
-			t.Errorf("hasPrefixIgnoreCase(%q, %q, %v) = %v, want %v", tt.str, tt.prefix, tt.identation, got, tt.want)
+		if got := matchToken(tt.str, tt.token); got != tt.want {
+			t.Errorf("hasPrefixIgnoreCase(%q, %q) = %v, want %v", tt.str, tt.token, got, tt.want)
 		}
 	}
 }
