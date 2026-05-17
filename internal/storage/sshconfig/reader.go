@@ -9,9 +9,9 @@ import (
 	"github.com/grafviktor/goto/internal/utils"
 )
 
-func newReader(value, kind string) (*reader, error) {
+func newReader(value string, kind pathType) (*reader, error) {
 	switch kind {
-	case "url":
+	case pathTypeURL:
 		urlReader, err := utils.FetchFromURL(value)
 		if err != nil {
 			return nil, err
@@ -22,7 +22,7 @@ func newReader(value, kind string) (*reader, error) {
 			reader: urlReader,
 			closer: urlReader,
 		}, nil
-	case "file":
+	case pathTypeFile:
 		stat, err := os.Stat(value)
 		if err != nil {
 			return nil, err
@@ -52,7 +52,7 @@ func newReader(value, kind string) (*reader, error) {
 }
 
 type reader struct {
-	kind   string
+	kind   pathType
 	reader io.Reader
 	closer io.Closer
 }

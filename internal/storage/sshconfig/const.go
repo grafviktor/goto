@@ -1,6 +1,13 @@
 package sshconfig
 
+type pathType string
+
 const (
-	pathTypeFile = "file"
-	pathTypeURL  = "url"
+	pathTypeFile pathType = "file"
+	pathTypeURL  pathType = "url"
 )
+
+type configSource struct {
+	path string
+	kind pathType
+}
