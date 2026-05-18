@@ -224,7 +224,7 @@ func isTokenFollowedDelimiter(line, token string) bool {
 }
 
 func (l *Lexer) hostToken(line string) SSHToken {
-	_, value, err := parseKeyValuesLine(line)
+	value, err := parseKeyValuesLine(line)
 	if err != nil {
 		return SSHToken{kind: tokenKind.Unsupported}
 	}
@@ -236,7 +236,7 @@ func (l *Lexer) hostToken(line string) SSHToken {
 }
 
 func (l *Lexer) usernameToken(line string) SSHToken {
-	_, value, err := parseKeyValuesLine(line)
+	value, err := parseKeyValuesLine(line)
 	if err != nil {
 		return SSHToken{kind: tokenKind.Unsupported}
 	}
@@ -254,7 +254,7 @@ func (l *Lexer) usernameToken(line string) SSHToken {
 const maxHostnameLength = 253
 
 func (l *Lexer) hostnameToken(line string) SSHToken {
-	_, value, err := parseKeyValuesLine(line)
+	value, err := parseKeyValuesLine(line)
 	if err != nil {
 		return SSHToken{kind: tokenKind.Unsupported}
 	}
@@ -274,7 +274,7 @@ func (l *Lexer) hostnameToken(line string) SSHToken {
 }
 
 func (l *Lexer) networkPortToken(line string) SSHToken {
-	_, value, err := parseKeyValuesLine(line)
+	value, err := parseKeyValuesLine(line)
 	if err != nil {
 		return SSHToken{kind: tokenKind.Unsupported}
 	}
@@ -296,7 +296,7 @@ func (l *Lexer) networkPortToken(line string) SSHToken {
 
 func (l *Lexer) identityFileToken(line string) SSHToken {
 	trimmedLine := strings.TrimSpace(line)
-	_, value, err := parseKeyValuesLine(trimmedLine)
+	value, err := parseKeyValuesLine(trimmedLine)
 	if err != nil {
 		return SSHToken{kind: tokenKind.Unsupported}
 	}
@@ -445,7 +445,7 @@ func (l *Lexer) metaDataToken(kind tokenEnum, line string) SSHToken {
 }
 
 func (l *Lexer) keyValuesToken(kind tokenEnum, line string) SSHToken {
-	_, value, err := parseKeyValuesLine(line)
+	value, err := parseKeyValuesLine(line)
 	if err != nil {
 		return SSHToken{kind: tokenKind.Unsupported}
 	}
@@ -467,12 +467,12 @@ Regex to match exactly two or more words.
 */
 var twoWordsRegex = regexp.MustCompile(`^(\S+)\s+(.+)$`)
 
-func parseKeyValuesLine(line string) (string, string, error) {
+func parseKeyValuesLine(line string) (string, error) {
 	matches := twoWordsRegex.FindStringSubmatch(line)
 	// Ideally it should be a loop, not regex.
 	if len(matches) > 1 {
-		return matches[1], matches[2], nil
+		return matches[2], nil
 	}
 
-	return "", "", errors.New("not a key value string")
+	return "", errors.New("not a key value string")
 }

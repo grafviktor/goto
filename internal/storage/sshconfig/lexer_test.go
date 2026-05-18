@@ -74,17 +74,15 @@ func TestLexer_Tokenize_Unsupported(t *testing.T) {
 Host test
     UnknownKey value
 `
+	rootConfig := configSource{
+		value:     config,
+		valueType: valueTypeRaw,
+	}
 	lex := &Lexer{
-		pathType:    "string",
-		currentPath: config,
-		logger:      &mocklogger.Logger{},
+		rootConfig: rootConfig,
+		logger:     &mocklogger.Logger{},
 	}
-	parent := SSHToken{
-		kind:  tokenKind.IncludeFile,
-		key:   "Include",
-		value: config,
-	}
-	tokens, _ := lex.loadFromDataSource(parent, nil, 0)
+	tokens, _ := lex.loadFromDataSource(rootConfig, nil, 0)
 
 	if len(tokens) != 1 {
 		t.Fatalf("expected 1 token, got %d", len(tokens))
@@ -98,17 +96,15 @@ func TestLexer_Tokenize_InvalidUser(t *testing.T) {
 	const config = `
 User invalid!user
 `
+	rootConfig := configSource{
+		value:     config,
+		valueType: valueTypeRaw,
+	}
 	lex := &Lexer{
-		pathType:    "string",
-		currentPath: config,
-		logger:      &mocklogger.Logger{},
+		rootConfig: rootConfig,
+		logger:     &mocklogger.Logger{},
 	}
-	parent := SSHToken{
-		kind:  tokenKind.IncludeFile,
-		key:   "Include",
-		value: config,
-	}
-	tokens, _ := lex.loadFromDataSource(parent, nil, 0)
+	tokens, _ := lex.loadFromDataSource(rootConfig, nil, 0)
 	if len(tokens) != 0 {
 		t.Errorf("expected 0 tokens for invalid user, got %d", len(tokens))
 	}
@@ -118,17 +114,15 @@ func TestLexer_Tokenize_InvalidPort(t *testing.T) {
 	const config = `
 Port notaport
 `
+	rootConfig := configSource{
+		value:     config,
+		valueType: valueTypeRaw,
+	}
 	lex := &Lexer{
-		pathType:    "string",
-		currentPath: config,
-		logger:      &mocklogger.Logger{},
+		rootConfig: rootConfig,
+		logger:     &mocklogger.Logger{},
 	}
-	parent := SSHToken{
-		kind:  tokenKind.IncludeFile,
-		key:   "Include",
-		value: config,
-	}
-	tokens, _ := lex.loadFromDataSource(parent, nil, 0)
+	tokens, _ := lex.loadFromDataSource(rootConfig, nil, 0)
 	if len(tokens) != 0 {
 		t.Errorf("expected 0 tokens for invalid port, got %d", len(tokens))
 	}
@@ -158,42 +152,44 @@ func TestLexer_Tokenize_IncludeFile(t *testing.T) {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
 
+	rootConfig := configSource{
+		value:     includedConfig1,
+		valueType: valueTypeFile,
+	}
 	lex := &Lexer{
-		pathType:    "file",
-		currentPath: filepath.Join(tmpDir, "config"),
-		logger:      &mocklogger.Logger{},
+		rootConfig: rootConfig,
+		logger:     &mocklogger.Logger{},
 	}
-
-	// That's our starting token which includes the file we created above.
-	parent := SSHToken{
-		kind:  tokenKind.IncludeFile,
-		key:   "Include",
-		value: includedConfig1,
-	}
-
-	tokens, _ := lex.loadFromDataSource(parent, nil, 0)
+	tokens, _ := lex.loadFromDataSource(rootConfig, nil, 0)
 	require.Len(t, tokens, 1, "expected 1 token for included host")
 }
 
 func TestLexer_Tokenize_IncludeDepthLimit(t *testing.T) {
-	// Simulate include depth limit by recursive call
+	// Simulate include depth limit reached by recursive call
+	tmpDir := t.TempDir()
+	includedConfig := filepath.Join(tmpDir, "config_included1")
+
+	// Create a config file with a single line - Include pointing to another file.
+	content := "Host mock-host\n"
+	content += fmt.Sprintf("Include %s\n", includedConfig)
+	if err := os.WriteFile(includedConfig, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	rootConfig := configSource{
+		value:     includedConfig,
+		valueType: valueTypeFile,
+	}
+	logger := &mocklogger.Logger{}
 	lex := &Lexer{
-		pathType:    "string",
-		currentPath: "irrelevant",
-		logger:      &mocklogger.Logger{},
+		rootConfig: rootConfig,
+		logger:     logger,
 	}
-	parent := SSHToken{
-		kind:  tokenKind.IncludeFile,
-		key:   "Include",
-		value: "irrelevant",
-	}
-	// Should not panic or recurse infinitely
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("should not panic on max include depth, got %v", r)
-		}
-	}()
-	_, _ = lex.loadFromDataSource(parent, nil, maxFileIncludeDepth)
+
+	tokens, err := lex.loadFromDataSource(rootConfig, nil, 0)
+	require.Len(t, tokens, maxFileIncludeDepth, "expected tokens is not equal to max include depth")
+	require.NoError(t, err, "should not error on max include depth")
+	require.Contains(t, logger.Logs, "[SSHCONFIG] Max include depth reached", "expected log about max include depth")
 }
 
 func Test_matchToken(t *testing.T) {
@@ -219,7 +215,17 @@ func Test_matchToken(t *testing.T) {
 }
 
 func TestLexer_handleIncludeToken_localFile(t *testing.T) {
-	// tmpDir will be automatically cleaned removed after the test
+	rootConfig := configSource{
+		value:     "it won't be read",
+		valueType: valueTypeFile,
+	}
+
+	lex := &Lexer{
+		rootConfig: rootConfig,
+		logger:     &mocklogger.Logger{},
+	}
+
+	// Create the included file, this file will be read by handleIncludeToken.
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "config_included")
 	// Create a config file with a single line - Host. That's enough for the test.
@@ -227,22 +233,16 @@ func TestLexer_handleIncludeToken_localFile(t *testing.T) {
 	if err := os.WriteFile(tmpFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
-
-	lex := &Lexer{
-		pathType:    "file",
-		currentPath: filepath.Join(tmpDir, "config"),
-		logger:      &mocklogger.Logger{},
-	}
-
 	// That's our starting token which includes the file we created above.
 	token := SSHToken{
 		kind:  tokenKind.IncludeFile,
-		key:   "Include",
-		value: filepath.Join(tmpDir, "config_included"),
+		value: tmpFile,
 	}
 
-	tokens := lex.handleIncludeToken(token)
-	require.Len(t, tokens, 1, "expected 1 include token")
+	configSources := lex.handleIncludeToken(token, rootConfig)
+	require.Len(t, configSources, 1, "expected 1 include token")
+	require.Equal(t, tmpFile, configSources[0].value, "unexpected included file path")
+	require.Equal(t, valueTypeFile, configSources[0].valueType, "unexpected value type for included file")
 }
 
 func TestLexer_handleIncludeToken_remoteFile(t *testing.T) {
@@ -297,29 +297,34 @@ func TestLexer_handleIncludeToken_remoteFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			rootConfig := configSource{
+				value:     "it won't be read",
+				valueType: valueTypeURL,
+			}
+
 			lex := &Lexer{
-				pathType:    pathTypeURL,
-				currentPath: tt.baseURL,
-				logger:      &mocklogger.Logger{},
+				rootConfig: rootConfig,
+				logger:     &mocklogger.Logger{},
 			}
 
 			startingPointToken := SSHToken{
 				kind:  tokenKind.IncludeFile,
-				key:   "Include",
 				value: tt.sourceTokenURL,
 			}
 
-			tokens := lex.handleIncludeToken(startingPointToken)
-			require.Len(t, tokens, 1, "expected 1 include token")
-			require.Equal(t, tt.expectedTokenURL, tokens[0].value, "unexpected included file URL")
+			configSource := lex.handleIncludeToken(startingPointToken, rootConfig)
+			require.Len(t, configSource, 1, "expected 1 include token")
+			require.Equal(t, tt.expectedTokenURL, configSource[0].value, "unexpected included file URL")
 		})
 	}
 }
 
 func TestLexer_MetaDataToken(t *testing.T) {
 	lex := &Lexer{}
-	line := "# GG:GROUP mock_group"
-	token := lex.metaDataToken(tokenKind.Group, line)
-	require.Equal(t, "GROUP", token.key, "wrong token key")
-	require.Equal(t, "mock_group", token.value, "wrong token value")
+	lines := []string{"# GG:GROUP mock_group", "# GG:GROUP: mock_group"}
+	for _, line := range lines {
+		token := lex.metaDataToken(tokenKind.Group, line)
+		require.Equal(t, tokenKind.Group, token.kind, "wrong token kind")
+		require.Equal(t, "mock_group", token.value, "wrong token value")
+	}
 }

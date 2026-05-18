@@ -42,6 +42,8 @@ func newReader(value string, kind valueTypeEnum) (*reader, error) {
 			reader: file,
 			closer: file,
 		}, nil
+	case valueTypeRaw:
+		fallthrough
 	default:
 		// For raw value, we can directly create a reader from the string. This is a unit test path.
 		return &reader{
