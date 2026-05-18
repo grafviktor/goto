@@ -1,13 +1,14 @@
 package sshconfig
 
-type pathType string
+type valueTypeEnum string
 
 const (
-	pathTypeFile pathType = "file"
-	pathTypeURL  pathType = "url"
+	valueTypeFile valueTypeEnum = "file"
+	valueTypeURL  valueTypeEnum = "url"
+	valueTypeRaw  valueTypeEnum = "raw"
 )
 
 type configSource struct {
-	path string
-	kind pathType
+	value     string
+	valueType valueTypeEnum
 }

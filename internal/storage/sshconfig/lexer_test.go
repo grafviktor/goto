@@ -24,17 +24,15 @@ Host test
     IdentityFile ~/.ssh/id_rsa
 	HostkeyAlgorithms +ssh-dss,ssh-rsa
 `
+	rootConfig := configSource{
+		value:     config,
+		valueType: valueTypeRaw,
+	}
 	lex := &Lexer{
-		pathType:    "string",
-		currentPath: config,
-		logger:      &mocklogger.Logger{},
+		rootConfig: rootConfig,
+		logger:     &mocklogger.Logger{},
 	}
-	parent := SSHToken{
-		kind:  tokenKind.IncludeFile,
-		key:   "Include",
-		value: config,
-	}
-	tokens, _ := lex.loadFromDataSource(parent, nil, 0)
+	tokens, _ := lex.loadFromDataSource(rootConfig, nil, 0)
 
 	wantKinds := []tokenEnum{
 		tokenKind.Host,

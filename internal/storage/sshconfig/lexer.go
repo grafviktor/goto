@@ -28,16 +28,16 @@ type Lexer struct {
 
 // NewFileLexer creates a new instance of Lexer for the given SSH config file path.
 func NewFileLexer(sshConfigPath string, log iLogger) *Lexer {
-	var pathType pathType
+	var pathType valueTypeEnum
 	if utils.IsSupportedURL(sshConfigPath) {
-		pathType = pathTypeURL
+		pathType = valueTypeURL
 	} else {
-		pathType = pathTypeFile
+		pathType = valueTypeFile
 	}
 
 	parent := configSource{
-		kind: pathType,
-		path: sshConfigPath,
+		valueType: pathType,
+		value:     sshConfigPath,
 	}
 
 	return &Lexer{
@@ -76,16 +76,16 @@ func (l *Lexer) loadFromDataSource(
 		return children, nil
 	}
 
-	l.logger.Info("[SSHCONFIG] Load file: %s", src.path)
-	rdr, err := newReader(src.path, src.kind)
+	l.logger.Info("[SSHCONFIG] Load file: %s", src.value)
+	rdr, err := newReader(src.value, src.valueType)
 	if err != nil {
-		l.logger.Error("[SSHCONFIG] Error opening file %s: %+v", src.path, err)
+		l.logger.Error("[SSHCONFIG] Error opening file %s: %+v", src.value, err)
 		return nil, err
 	}
 
 	defer func() {
 		if closeErr := rdr.Close(); closeErr != nil {
-			l.logger.Error("[SSHCONFIG] Error closing file %s: %v", src.path, closeErr)
+			l.logger.Error("[SSHCONFIG] Error closing file %s: %v", src.value, closeErr)
 		}
 	}()
 
@@ -315,7 +315,7 @@ func (l *Lexer) handleIncludeToken(token SSHToken, parent configSource) []config
 		// This allows to set some user default values, even if config is stored remotely.
 		expandedPath := l.expandTildePath(token.value)
 		return l.includeLocalFileToken(expandedPath, parent)
-	case parent.kind == pathTypeURL:
+	case parent.valueType == valueTypeURL:
 		return l.includeRemoteFileToken(token.value, parent)
 	default:
 		return l.includeLocalFileToken(token.value, parent)
@@ -326,7 +326,7 @@ func (l *Lexer) includeLocalFileToken(localPath string, parent configSource) []c
 	sources := []configSource{}
 
 	if !filepath.IsAbs(localPath) {
-		localPath = filepath.Join(filepath.Dir(parent.path), localPath)
+		localPath = filepath.Join(filepath.Dir(parent.value), localPath)
 	}
 
 	matches, err := filepath.Glob(localPath)
@@ -359,8 +359,8 @@ func (l *Lexer) includeLocalFileToken(localPath string, parent configSource) []c
 		}
 
 		sources = append(sources, configSource{
-			path: path,
-			kind: pathTypeFile,
+			value:     path,
+			valueType: valueTypeFile,
 		})
 	}
 
@@ -395,8 +395,8 @@ func (l *Lexer) includeRemoteFileToken(remotePath string, parent configSource) [
 	if utils.IsSupportedURL(remotePath) {
 		// If remotePath is already a full URL, use it as is.
 		return []configSource{{
-			kind: pathTypeURL,
-			path: remotePath,
+			valueType: valueTypeURL,
+			value:     remotePath,
 		}}
 	}
 
@@ -406,7 +406,7 @@ func (l *Lexer) includeRemoteFileToken(remotePath string, parent configSource) [
 		// If remotePath is absolute, extract base URL from lexer.currentPath and try to fetch the file
 		// from the server root. I.e. "http://127.0.0.1:8080" + "/path/to/resource".
 		var baseURL string
-		baseURL, err = utils.ExtractBaseURL(parent.path)
+		baseURL, err = utils.ExtractBaseURL(parent.value)
 		remotePath = baseURL + remotePath
 	} else {
 		// If remotePath is relative, take the base URL as the directory part of the parent.path.
@@ -416,7 +416,7 @@ func (l *Lexer) includeRemoteFileToken(remotePath string, parent configSource) [
 		// Result
 		// remotePath = "http://127.0.0.1:8080/path/ssh_config_included"
 		var u *url.URL
-		u, err = url.Parse(parent.path)
+		u, err = url.Parse(parent.value)
 		if err == nil {
 			u.Path = path.Join(path.Dir(u.Path), remotePath)
 			remotePath = u.String()
@@ -429,8 +429,8 @@ func (l *Lexer) includeRemoteFileToken(remotePath string, parent configSource) [
 	}
 
 	return []configSource{{
-		kind: pathTypeURL,
-		path: remotePath,
+		valueType: valueTypeURL,
+		value:     remotePath,
 	}}
 }
 
