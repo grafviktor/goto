@@ -309,8 +309,8 @@ func (l *Lexer) identityFileToken(line string) SSHToken {
 
 func (l *Lexer) handleIncludeToken(token SSHToken, parent configSource) []configSource {
 	switch {
-	// Order matters! Check for tilde prefix first.
-	case strings.HasPrefix(token.value, "~"):
+	// Order matters! Check for tilde first.
+	case startsWithTilde(token.value):
 		// If path starts from tilde, we load the included file from the local file system.
 		// This allows to set some user default values, even if config is stored remotely.
 		expandedPath := l.expandTildePath(token.value)
@@ -454,6 +454,10 @@ func (l *Lexer) keyValuesToken(kind tokenEnum, line string) SSHToken {
 		kind:  kind,
 		value: value,
 	}
+}
+
+func startsWithTilde(s string) bool {
+	return strings.HasPrefix(s, "~/") || strings.HasPrefix(s, "~\\")
 }
 
 /*

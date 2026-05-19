@@ -215,16 +215,6 @@ func Test_matchToken(t *testing.T) {
 }
 
 func TestLexer_handleIncludeToken_localFile(t *testing.T) {
-	rootConfig := configSource{
-		value:     "it won't be read",
-		valueType: valueTypeFile,
-	}
-
-	lex := &Lexer{
-		rootConfig: rootConfig,
-		logger:     &mocklogger.Logger{},
-	}
-
 	// Create the included file, this file will be read by handleIncludeToken.
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "config_included")
@@ -233,16 +223,52 @@ func TestLexer_handleIncludeToken_localFile(t *testing.T) {
 	if err := os.WriteFile(tmpFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
-	// That's our starting token which includes the file we created above.
-	token := SSHToken{
-		kind:  tokenKind.IncludeFile,
-		value: tmpFile,
+
+	tests := []struct {
+		tokenValue string
+		expected   configSource
+	}{
+		{
+			tokenValue: tmpFile,
+			expected: configSource{
+				value:     tmpFile,
+				valueType: valueTypeFile,
+			},
+		},
+		// {
+		// 	tokenValue: "~/" + "config_included",
+		// 	expected: configSource{
+		// 		value:     tmpFile,
+		// 		valueType: valueTypeFile,
+		// 	},
+		// },
 	}
 
-	configSources := lex.handleIncludeToken(token, rootConfig)
-	require.Len(t, configSources, 1, "expected 1 include token")
-	require.Equal(t, tmpFile, configSources[0].value, "unexpected included file path")
-	require.Equal(t, valueTypeFile, configSources[0].valueType, "unexpected value type for included file")
+	for _, tt := range tests {
+		t.Run(tt.tokenValue, func(t *testing.T) {
+
+			rootConfig := configSource{
+				value:     "it won't be read",
+				valueType: valueTypeFile,
+			}
+
+			lex := &Lexer{
+				rootConfig: rootConfig,
+				logger:     &mocklogger.Logger{},
+			}
+
+			// That's our starting token which includes the file we created above.
+			token := SSHToken{
+				kind:  tokenKind.IncludeFile,
+				value: tt.tokenValue,
+			}
+
+			configSources := lex.handleIncludeToken(token, rootConfig)
+			require.Len(t, configSources, 1, "expected 1 include token")
+			require.Equal(t, tt.tokenValue, configSources[0].value, "unexpected included file path")
+			require.Equal(t, valueTypeFile, configSources[0].valueType, "unexpected value type for included file")
+		})
+	}
 }
 
 func TestLexer_handleIncludeToken_remoteFile(t *testing.T) {
