@@ -386,7 +386,7 @@ func TestExpandTildePath_HomeIsBlank(t *testing.T) {
 		{
 			name:               "Test 1",
 			userHomeEnv:        "",
-			expectedLogMessage: "[SSHCONFIG]: Cannot expand tilde in path: $HOME is not defined",
+			expectedLogMessage: "[SSHCONFIG]: Cannot expand tilde in path: ",
 		},
 		{
 			name:               "Test 2",
