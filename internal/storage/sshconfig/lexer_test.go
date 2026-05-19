@@ -298,7 +298,7 @@ func TestLexer_handleIncludeToken_remoteFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rootConfig := configSource{
-				value:     "it won't be read",
+				value:     tt.baseURL,
 				valueType: valueTypeURL,
 			}
 
