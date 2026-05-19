@@ -374,19 +374,19 @@ func (l *Lexer) expandTildePath(localPath string) string {
 		return localPath
 	}
 
-	if home == "" {
+	if strings.TrimSpace(home) == "" {
 		l.logger.Error("[SSHCONFIG]: Cannot find user home directory to expand tilde in path: %s", localPath)
 		return localPath
 	}
 
-	// Linux:   "~/.path/config" => ".path/config."
-	// Windows: "~\.path\config" => ".path\config".
+	// Unix:   "~/.path/config" => "/.path/config => .path/config".
+	// Windows: "~\.path\config" => "\.path\config => .path\config".
 	rest := strings.TrimLeft(strings.TrimPrefix(localPath, "~"), "/\\")
 	if rest == "" {
 		return home
 	}
 
-	// Linux:   /home/user, .  .path/config => /home/user/.path/config
+	// Unix:   /home/user, .  .path/config => /home/user/.path/config
 	// Windows: C:\Users\user, .path\config => C:\Users\user\.path\config
 	return filepath.Join(home, rest)
 }

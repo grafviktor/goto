@@ -217,6 +217,11 @@ func Test_matchToken(t *testing.T) {
 func TestLexer_handleIncludeToken_localFile(t *testing.T) {
 	// Create the included file, this file will be read by handleIncludeToken.
 	tmpDir := t.TempDir()
+
+	// Re-define HOME and USERPROFILE to point to our temp directory, that's for tilde path test.
+	t.Setenv("USERPROFILE", tmpDir) // For Windows
+	t.Setenv("HOME", tmpDir)        // For Unix
+
 	tmpFile := filepath.Join(tmpDir, "config_included")
 	// Create a config file with a single line - Host. That's enough for the test.
 	content := "Host mock-local-host\n"
@@ -235,18 +240,17 @@ func TestLexer_handleIncludeToken_localFile(t *testing.T) {
 				valueType: valueTypeFile,
 			},
 		},
-		// {
-		// 	tokenValue: "~/" + "config_included",
-		// 	expected: configSource{
-		// 		value:     tmpFile,
-		// 		valueType: valueTypeFile,
-		// 	},
-		// },
+		{
+			tokenValue: "~/" + "config_included",
+			expected: configSource{
+				value:     tmpFile,
+				valueType: valueTypeFile,
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.tokenValue, func(t *testing.T) {
-
 			rootConfig := configSource{
 				value:     "it won't be read",
 				valueType: valueTypeFile,
@@ -265,8 +269,9 @@ func TestLexer_handleIncludeToken_localFile(t *testing.T) {
 
 			configSources := lex.handleIncludeToken(token, rootConfig)
 			require.Len(t, configSources, 1, "expected 1 include token")
-			require.Equal(t, tt.tokenValue, configSources[0].value, "unexpected included file path")
-			require.Equal(t, valueTypeFile, configSources[0].valueType, "unexpected value type for included file")
+			require.Equal(t, tt.expected.value, configSources[0].value, "unexpected included file path")
+			require.Equal(t, tt.expected.valueType, configSources[0].valueType,
+				"unexpected value type for included file")
 		})
 	}
 }
@@ -352,5 +357,58 @@ func TestLexer_MetaDataToken(t *testing.T) {
 		token := lex.metaDataToken(tokenKind.Group, line)
 		require.Equal(t, tokenKind.Group, token.kind, "wrong token kind")
 		require.Equal(t, "mock_group", token.value, "wrong token value")
+	}
+}
+
+func TestExpandTildePath(t *testing.T) {
+	// I don't want to hardcode c:\users\test or /home/test, as I will have to split the test
+	// for Windows and Unix. Using temp directory for simplicity.
+	tmpDir := t.TempDir()
+	t.Setenv("USERPROFILE", tmpDir) // For Windows
+	t.Setenv("HOME", tmpDir)        // For Unix
+
+	lex := &Lexer{
+		rootConfig: configSource{},
+		logger:     &mocklogger.Logger{},
+	}
+
+	expanded := lex.expandTildePath("~/config")
+	expected := filepath.Join(tmpDir, "config")
+	require.Equal(t, expected, expanded, "expanded path does not match expected")
+}
+
+func TestExpandTildePath_HomeIsBlank(t *testing.T) {
+	tests := []struct {
+		name               string
+		userHomeEnv        string
+		expectedLogMessage string
+	}{
+		{
+			name:               "Test 1",
+			userHomeEnv:        "",
+			expectedLogMessage: "[SSHCONFIG]: Cannot expand tilde in path: $HOME is not defined",
+		},
+		{
+			name:               "Test 2",
+			userHomeEnv:        "   ",
+			expectedLogMessage: "[SSHCONFIG]: Cannot find user home directory to expand tilde in path: ~/config",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("USERPROFILE", tt.userHomeEnv) // For Windows
+			t.Setenv("HOME", tt.userHomeEnv)        // For Unix
+
+			logger := &mocklogger.Logger{}
+			lex := &Lexer{
+				rootConfig: configSource{},
+				logger:     logger,
+			}
+
+			expanded := lex.expandTildePath("~/config")
+			require.Equal(t, "~/config", expanded, "expanded path does not match expected")
+			require.Contains(t, logger.Logs[0], tt.expectedLogMessage, "expected log about missing HOME variable")
+		})
 	}
 }
