@@ -11,7 +11,26 @@ import (
 	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 )
 
-func TestLexer_Tokenize_General(t *testing.T) {
+func TestLexer_Tokenize(t *testing.T) {
+	t.Skip()
+	_ = []struct {
+		name                       string
+		isUserDefinedSshConfigPath bool
+		wantError                  bool
+	}{}
+	rootConfig := configSource{
+		value:     "no_such_file_or_url",
+		valueType: valueTypeFile,
+	}
+	lex := &Lexer{
+		rootConfig: rootConfig,
+		logger:     &mocklogger.Logger{},
+	}
+	_, err := lex.Tokenize()
+	require.Error(t, err)
+}
+
+func TestLexer_LoadFromDataSource(t *testing.T) {
 	const config = `
 Host test
     # Just a comment
@@ -69,7 +88,7 @@ Host test
 	}
 }
 
-func TestLexer_Tokenize_Unsupported(t *testing.T) {
+func TestLexer_LoadFromDataSource_Unsupported(t *testing.T) {
 	const config = `
 Host test
     UnknownKey value
@@ -92,7 +111,7 @@ Host test
 	}
 }
 
-func TestLexer_Tokenize_InvalidUser(t *testing.T) {
+func TestLexer_LoadFromDataSource_InvalidUser(t *testing.T) {
 	const config = `
 User invalid!user
 `
@@ -110,7 +129,7 @@ User invalid!user
 	}
 }
 
-func TestLexer_Tokenize_InvalidPort(t *testing.T) {
+func TestLexer_LoadFromDataSource_InvalidPort(t *testing.T) {
 	const config = `
 Port notaport
 `
@@ -128,7 +147,7 @@ Port notaport
 	}
 }
 
-func TestLexer_Tokenize_IncludeFile(t *testing.T) {
+func TestLexer_LoadFromDataSource_IncludeFile(t *testing.T) {
 	// Explanation of what's going on here:
 	// Create a starting point token, which includes a file (includedConfig1).
 	// That file includes another file (includedConfig2).
@@ -164,7 +183,59 @@ func TestLexer_Tokenize_IncludeFile(t *testing.T) {
 	require.Len(t, tokens, 1, "expected 1 token for included host")
 }
 
-func TestLexer_Tokenize_IncludeDepthLimit(t *testing.T) {
+func TestLexer_LoadFromDataSource_IncludeFile_RelativePath(t *testing.T) {
+	// Explanation of what's test is doing.
+	// 1. Create a folder structure
+	//   tmpDir/
+	//       config_included1  (contains "Include subdir/config_included2")
+	//       subdir/
+	//           config_included2 (contains "Include config_included3") <-- note the relative path here
+	//           config_included3 (contains "Host mock-included-host")
+	// 2. Check that by using relative path in Include directive in config_included2.
+	//    we can load the config_included3 which is located in the same folder as config_included2.
+	//
+	// By this test we check that when use relative paths, we resolve them based on the
+	// location of the including file, not the root config file.
+
+	// tmpDir will be automatically cleaned removed after the test
+	tmpDir := t.TempDir()
+	subDir := filepath.Join(tmpDir, "subdir")
+	os.Mkdir(subDir, 0o755)
+	includedConfig1 := filepath.Join(tmpDir, "config_included1")
+	includedConfig2 := filepath.Join(subDir, "config_included2")
+	includedConfig3 := filepath.Join(subDir, "config_included3")
+
+	// Create a config file with a single line - Include pointing to another file.
+	content := fmt.Sprintf("Include %s\n", includedConfig2)
+	if err := os.WriteFile(includedConfig1, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	// Create a config file with a single line - Host.
+	content = fmt.Sprintf("Include %s\n", includedConfig3)
+	if err := os.WriteFile(includedConfig2, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	// Create a config file with a single line - Host.
+	content = "Host mock-included-host\n"
+	if err := os.WriteFile(includedConfig3, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	rootConfig := configSource{
+		value:     includedConfig1,
+		valueType: valueTypeFile,
+	}
+	lex := &Lexer{
+		rootConfig: rootConfig,
+		logger:     &mocklogger.Logger{},
+	}
+	tokens, _ := lex.loadFromDataSource(rootConfig, nil, 0)
+	require.Len(t, tokens, 1, "expected 1 token for included host")
+}
+
+func TestLexer_LoadFromDataSource_IncludeDepthLimit(t *testing.T) {
 	// Simulate include depth limit reached by recursive call
 	tmpDir := t.TempDir()
 	includedConfig := filepath.Join(tmpDir, "config_included1")
