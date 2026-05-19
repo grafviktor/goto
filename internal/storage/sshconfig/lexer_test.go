@@ -1,6 +1,7 @@
 package sshconfig
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,26 +9,48 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/grafviktor/goto/internal/config"
+	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 )
 
 func TestLexer_Tokenize(t *testing.T) {
-	t.Skip()
-	_ = []struct {
+	tests := []struct {
 		name                       string
-		isUserDefinedSshConfigPath bool
+		isUserDefinedSSHConfigPath bool
 		wantError                  bool
-	}{}
-	rootConfig := configSource{
-		value:     "no_such_file_or_url",
-		valueType: valueTypeFile,
+	}{{
+		name:                       "Test 1",
+		isUserDefinedSSHConfigPath: true,
+		wantError:                  false,
+	}, {
+		name:                       "Test 2",
+		isUserDefinedSSHConfigPath: false,
+		wantError:                  true,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rootConfig := configSource{
+				value:     "no_such_file_or_url",
+				valueType: valueTypeFile,
+			}
+			lex := &Lexer{
+				rootConfig: rootConfig,
+				logger:     &mocklogger.Logger{},
+			}
+
+			if tt.wantError {
+				t.Skip() // Need to find a way to set user-defined SSH config path.
+				state.Initialize(context.TODO(), &config.Configuration{}, &mocklogger.Logger{})
+				_, err := lex.Tokenize()
+				require.Error(t, err, "expected error for invalid SSH config path")
+			} else {
+				_, err := lex.Tokenize()
+				require.NoError(t, err, "did not expect error for user-defined SSH config path")
+			}
+		})
 	}
-	lex := &Lexer{
-		rootConfig: rootConfig,
-		logger:     &mocklogger.Logger{},
-	}
-	_, err := lex.Tokenize()
-	require.Error(t, err)
 }
 
 func TestLexer_LoadFromDataSource(t *testing.T) {
@@ -212,7 +235,7 @@ func TestLexer_LoadFromDataSource_IncludeFile_RelativePath(t *testing.T) {
 	}
 
 	// Create a config file with a single line - Host.
-	content = fmt.Sprintf("Include %s\n", includedConfig3)
+	content = fmt.Sprintf("Include %s\n", "config_included3") // That's a relative path!
 	if err := os.WriteFile(includedConfig2, []byte(content), 0o644); err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
