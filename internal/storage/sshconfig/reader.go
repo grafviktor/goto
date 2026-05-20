@@ -9,9 +9,9 @@ import (
 	"github.com/grafviktor/goto/internal/utils"
 )
 
-func newReader(value, kind string) (*reader, error) {
+func newReader(value string, kind valueTypeEnum) (*reader, error) {
 	switch kind {
-	case "url":
+	case valueTypeURL:
 		urlReader, err := utils.FetchFromURL(value)
 		if err != nil {
 			return nil, err
@@ -22,7 +22,7 @@ func newReader(value, kind string) (*reader, error) {
 			reader: urlReader,
 			closer: urlReader,
 		}, nil
-	case "file":
+	case valueTypeFile:
 		stat, err := os.Stat(value)
 		if err != nil {
 			return nil, err
@@ -42,7 +42,10 @@ func newReader(value, kind string) (*reader, error) {
 			reader: file,
 			closer: file,
 		}, nil
+	case valueTypeRaw:
+		fallthrough
 	default:
+		// For raw value, we can directly create a reader from the string. This is a unit test path.
 		return &reader{
 			kind:   kind,
 			reader: strings.NewReader(value),
@@ -52,7 +55,7 @@ func newReader(value, kind string) (*reader, error) {
 }
 
 type reader struct {
-	kind   string
+	kind   valueTypeEnum
 	reader io.Reader
 	closer io.Closer
 }

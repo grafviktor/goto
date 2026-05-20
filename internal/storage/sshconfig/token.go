@@ -25,7 +25,6 @@ var tokenKind = struct {
 }
 
 type SSHToken struct {
-	key   string
 	value string
 	kind  tokenEnum
 }

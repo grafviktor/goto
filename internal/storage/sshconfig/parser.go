@@ -45,8 +45,9 @@ func (p *Parser) Parse() ([]model.Host, error) {
 
 	for _, token := range hostTokens {
 		if token.kind != tokenKind.Host && p.currentHost == nil {
-			// Something went wrong - the app assigns values to the current host before it is created. This means that the first token must be Host.
-			p.logger.Error("[SSHCONFIG] Unexpected token %s with value %v before host declaration", token.kind, token.value)
+			// Something went wrong - the app assigns values to the current host before it is created.
+			p.logger.Error("[SSHCONFIG] Unexpected token %s with value %v before host declaration",
+				token.kind, token.value)
 			continue
 		}
 

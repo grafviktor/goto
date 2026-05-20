@@ -1,6 +1,7 @@
 package sshconfig
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,10 +9,51 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/grafviktor/goto/internal/config"
+	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 )
 
-func TestLexer_Tokenize_General(t *testing.T) {
+func TestLexer_Tokenize(t *testing.T) {
+	tests := []struct {
+		name                       string
+		isUserDefinedSSHConfigPath bool
+		wantError                  bool
+	}{{
+		name:                       "Test 1",
+		isUserDefinedSSHConfigPath: true,
+		wantError:                  false,
+	}, {
+		name:                       "Test 2",
+		isUserDefinedSSHConfigPath: false,
+		wantError:                  true,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rootConfig := configSource{
+				value:     "no_such_file_or_url",
+				valueType: valueTypeFile,
+			}
+			lex := &Lexer{
+				rootConfig: rootConfig,
+				logger:     &mocklogger.Logger{},
+			}
+
+			if tt.wantError {
+				state.Initialize(context.TODO(), &config.Configuration{}, &mocklogger.Logger{})
+				state.Get().IsUserDefinedSSHConfigPath = true
+				_, err := lex.Tokenize()
+				require.Error(t, err, "expected error for invalid SSH config path")
+			} else {
+				_, err := lex.Tokenize()
+				require.NoError(t, err, "did not expect error for user-defined SSH config path")
+			}
+		})
+	}
+}
+
+func TestLexer_LoadFromDataSource(t *testing.T) {
 	const config = `
 Host test
     # Just a comment
@@ -24,17 +66,15 @@ Host test
     IdentityFile ~/.ssh/id_rsa
 	HostkeyAlgorithms +ssh-dss,ssh-rsa
 `
+	rootConfig := configSource{
+		value:     config,
+		valueType: valueTypeRaw,
+	}
 	lex := &Lexer{
-		pathType:    "string",
-		currentPath: config,
-		logger:      &mocklogger.Logger{},
+		rootConfig: rootConfig,
+		logger:     &mocklogger.Logger{},
 	}
-	parent := SSHToken{
-		kind:  tokenKind.IncludeFile,
-		key:   "Include",
-		value: config,
-	}
-	tokens, _ := lex.loadFromDataSource(parent, nil, 0)
+	tokens, _ := lex.loadFromDataSource(rootConfig, nil, 0)
 
 	wantKinds := []tokenEnum{
 		tokenKind.Host,
@@ -71,22 +111,20 @@ Host test
 	}
 }
 
-func TestLexer_Tokenize_Unsupported(t *testing.T) {
+func TestLexer_LoadFromDataSource_Unsupported(t *testing.T) {
 	const config = `
 Host test
     UnknownKey value
 `
+	rootConfig := configSource{
+		value:     config,
+		valueType: valueTypeRaw,
+	}
 	lex := &Lexer{
-		pathType:    "string",
-		currentPath: config,
-		logger:      &mocklogger.Logger{},
+		rootConfig: rootConfig,
+		logger:     &mocklogger.Logger{},
 	}
-	parent := SSHToken{
-		kind:  tokenKind.IncludeFile,
-		key:   "Include",
-		value: config,
-	}
-	tokens, _ := lex.loadFromDataSource(parent, nil, 0)
+	tokens, _ := lex.loadFromDataSource(rootConfig, nil, 0)
 
 	if len(tokens) != 1 {
 		t.Fatalf("expected 1 token, got %d", len(tokens))
@@ -96,47 +134,43 @@ Host test
 	}
 }
 
-func TestLexer_Tokenize_InvalidUser(t *testing.T) {
+func TestLexer_LoadFromDataSource_InvalidUser(t *testing.T) {
 	const config = `
 User invalid!user
 `
+	rootConfig := configSource{
+		value:     config,
+		valueType: valueTypeRaw,
+	}
 	lex := &Lexer{
-		pathType:    "string",
-		currentPath: config,
-		logger:      &mocklogger.Logger{},
+		rootConfig: rootConfig,
+		logger:     &mocklogger.Logger{},
 	}
-	parent := SSHToken{
-		kind:  tokenKind.IncludeFile,
-		key:   "Include",
-		value: config,
-	}
-	tokens, _ := lex.loadFromDataSource(parent, nil, 0)
+	tokens, _ := lex.loadFromDataSource(rootConfig, nil, 0)
 	if len(tokens) != 0 {
 		t.Errorf("expected 0 tokens for invalid user, got %d", len(tokens))
 	}
 }
 
-func TestLexer_Tokenize_InvalidPort(t *testing.T) {
+func TestLexer_LoadFromDataSource_InvalidPort(t *testing.T) {
 	const config = `
 Port notaport
 `
+	rootConfig := configSource{
+		value:     config,
+		valueType: valueTypeRaw,
+	}
 	lex := &Lexer{
-		pathType:    "string",
-		currentPath: config,
-		logger:      &mocklogger.Logger{},
+		rootConfig: rootConfig,
+		logger:     &mocklogger.Logger{},
 	}
-	parent := SSHToken{
-		kind:  tokenKind.IncludeFile,
-		key:   "Include",
-		value: config,
-	}
-	tokens, _ := lex.loadFromDataSource(parent, nil, 0)
+	tokens, _ := lex.loadFromDataSource(rootConfig, nil, 0)
 	if len(tokens) != 0 {
 		t.Errorf("expected 0 tokens for invalid port, got %d", len(tokens))
 	}
 }
 
-func TestLexer_Tokenize_IncludeFile(t *testing.T) {
+func TestLexer_LoadFromDataSource_IncludeFile(t *testing.T) {
 	// Explanation of what's going on here:
 	// Create a starting point token, which includes a file (includedConfig1).
 	// That file includes another file (includedConfig2).
@@ -160,42 +194,145 @@ func TestLexer_Tokenize_IncludeFile(t *testing.T) {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
 
+	rootConfig := configSource{
+		value:     includedConfig1,
+		valueType: valueTypeFile,
+	}
 	lex := &Lexer{
-		pathType:    "file",
-		currentPath: filepath.Join(tmpDir, "config"),
-		logger:      &mocklogger.Logger{},
+		rootConfig: rootConfig,
+		logger:     &mocklogger.Logger{},
 	}
-
-	// That's our starting token which includes the file we created above.
-	parent := SSHToken{
-		kind:  tokenKind.IncludeFile,
-		key:   "Include",
-		value: includedConfig1,
-	}
-
-	tokens, _ := lex.loadFromDataSource(parent, nil, 0)
+	tokens, _ := lex.loadFromDataSource(rootConfig, nil, 0)
 	require.Len(t, tokens, 1, "expected 1 token for included host")
 }
 
-func TestLexer_Tokenize_IncludeDepthLimit(t *testing.T) {
-	// Simulate include depth limit by recursive call
+func TestLexer_LoadFromDataSource_IncludeFile_RelativePath(t *testing.T) {
+	// Explanation of what this test is doing.
+	// 1. Create a folder structure
+	//   tmpDir/
+	//       config_included1  (contains "Include subdir/config_included2")
+	//       subdir/
+	//           config_included2 (contains "Include config_included3") <-- note the relative path here
+	//           config_included3 (contains "Host mock-included-host")
+	// 2. Check that by using relative path in Include directive in config_included2.
+	//    we can load the config_included3 which is located in the same folder as config_included2.
+	//
+	// By this test we check that when use relative paths, we resolve them based on the
+	// location of the including file, not the root config file.
+
+	// tmpDir will be automatically cleaned removed after the test
+	tmpDir := t.TempDir()
+	subDir := filepath.Join(tmpDir, "subdir")
+	os.Mkdir(subDir, 0o755)
+	includedConfig1 := filepath.Join(tmpDir, "config_included1")
+	includedConfig2 := filepath.Join(subDir, "config_included2")
+	includedConfig3 := filepath.Join(subDir, "config_included3")
+
+	// Create a config file with a single line - Include pointing to another file.
+	content := fmt.Sprintf("Include %s\n", includedConfig2)
+	if err := os.WriteFile(includedConfig1, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	// Create a config file with a single line - Host.
+	content = fmt.Sprintf("Include %s\n", "config_included3") // That's a relative path!
+	if err := os.WriteFile(includedConfig2, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	// Create a config file with a single line - Host.
+	content = "Host mock-included-host\n"
+	if err := os.WriteFile(includedConfig3, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	rootConfig := configSource{
+		value:     includedConfig1,
+		valueType: valueTypeFile,
+	}
 	lex := &Lexer{
-		pathType:    "string",
-		currentPath: "irrelevant",
-		logger:      &mocklogger.Logger{},
+		rootConfig: rootConfig,
+		logger:     &mocklogger.Logger{},
 	}
-	parent := SSHToken{
-		kind:  tokenKind.IncludeFile,
-		key:   "Include",
-		value: "irrelevant",
+	tokens, _ := lex.loadFromDataSource(rootConfig, nil, 0)
+	require.Len(t, tokens, 1, "expected 1 token for included host")
+}
+
+func TestLexer_LoadFromDataSource_IncludeFile_UsingMask(t *testing.T) {
+	// Explanation of what this test is doing.
+	// 1. Create a folder structure
+	//   tmpDir/
+	//       parent_config.conf (contains "Include conf.d/config_*.conf")
+	//       conf.d/
+	//           config_included1.conf (contains "Host mock-included-host1")
+	//           config_included2.conf (contains "Host mock-included-host2")
+	// 2. Check that by using a mask in Include directive in parent_config.conf
+	//    we can load both config files from the subdir.
+
+	tmpDir := t.TempDir()
+	confDir := filepath.Join(tmpDir, "conf.d")
+	os.Mkdir(confDir, 0o755)
+
+	parentConfig := filepath.Join(tmpDir, "parent_config.conf")
+	confIncluded1 := filepath.Join(confDir, "config_included1.conf")
+	confIncluded2 := filepath.Join(confDir, "config_included2.conf")
+
+	// Create a config file with a single line - Include pointing to another file.
+	content := fmt.Sprintf("Include %s/*.conf\n", confDir)
+	if err := os.WriteFile(parentConfig, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
 	}
-	// Should not panic or recurse infinitely
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("should not panic on max include depth, got %v", r)
-		}
-	}()
-	_, _ = lex.loadFromDataSource(parent, nil, maxFileIncludeDepth)
+
+	// Create a config file with a single line - Host mock-included-host1.
+	content = "Host mock-included-host1\n"
+	if err := os.WriteFile(confIncluded1, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	// Create a config file with a single line - Host mock-included-host2.
+	content = "Host mock-included-host2\n"
+	if err := os.WriteFile(confIncluded2, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	rootConfig := configSource{
+		value:     parentConfig,
+		valueType: valueTypeFile,
+	}
+	lex := &Lexer{
+		rootConfig: rootConfig,
+		logger:     &mocklogger.Logger{},
+	}
+	tokens, _ := lex.loadFromDataSource(rootConfig, nil, 0)
+	require.Len(t, tokens, 2, "expected 2 tokens for included hosts")
+}
+
+func TestLexer_LoadFromDataSource_IncludeDepthLimit(t *testing.T) {
+	// Simulate include depth limit reached by recursive call
+	tmpDir := t.TempDir()
+	includedConfig := filepath.Join(tmpDir, "config_included1")
+
+	// Create a config file with a single line - Include pointing to another file.
+	content := "Host mock-host\n"
+	content += fmt.Sprintf("Include %s\n", includedConfig)
+	if err := os.WriteFile(includedConfig, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	rootConfig := configSource{
+		value:     includedConfig,
+		valueType: valueTypeFile,
+	}
+	logger := &mocklogger.Logger{}
+	lex := &Lexer{
+		rootConfig: rootConfig,
+		logger:     logger,
+	}
+
+	tokens, err := lex.loadFromDataSource(rootConfig, nil, 0)
+	require.Len(t, tokens, maxFileIncludeDepth, "expected tokens is not equal to max include depth")
+	require.NoError(t, err, "should not error on max include depth")
+	require.Contains(t, logger.Logs, "[SSHCONFIG] Max include depth reached", "expected log about max include depth")
 }
 
 func Test_matchToken(t *testing.T) {
@@ -221,8 +358,13 @@ func Test_matchToken(t *testing.T) {
 }
 
 func TestLexer_handleIncludeToken_localFile(t *testing.T) {
-	// tmpDir will be automatically cleaned removed after the test
+	// Create the included file, this file will be read by handleIncludeToken.
 	tmpDir := t.TempDir()
+
+	// Re-define HOME and USERPROFILE to point to our temp directory, that's for tilde path test.
+	t.Setenv("USERPROFILE", tmpDir) // For Windows
+	t.Setenv("HOME", tmpDir)        // For Unix
+
 	tmpFile := filepath.Join(tmpDir, "config_included")
 	// Create a config file with a single line - Host. That's enough for the test.
 	content := "Host mock-local-host\n"
@@ -230,21 +372,51 @@ func TestLexer_handleIncludeToken_localFile(t *testing.T) {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
 
-	lex := &Lexer{
-		pathType:    "file",
-		currentPath: filepath.Join(tmpDir, "config"),
-		logger:      &mocklogger.Logger{},
+	tests := []struct {
+		tokenValue string
+		expected   configSource
+	}{
+		{
+			tokenValue: tmpFile,
+			expected: configSource{
+				value:     tmpFile,
+				valueType: valueTypeFile,
+			},
+		},
+		{
+			tokenValue: "~/" + "config_included",
+			expected: configSource{
+				value:     tmpFile,
+				valueType: valueTypeFile,
+			},
+		},
 	}
 
-	// That's our starting token which includes the file we created above.
-	token := SSHToken{
-		kind:  tokenKind.IncludeFile,
-		key:   "Include",
-		value: filepath.Join(tmpDir, "config_included"),
-	}
+	for _, tt := range tests {
+		t.Run(tt.tokenValue, func(t *testing.T) {
+			rootConfig := configSource{
+				value:     "it won't be read",
+				valueType: valueTypeFile,
+			}
 
-	tokens := lex.handleIncludeToken(token)
-	require.Len(t, tokens, 1, "expected 1 include token")
+			lex := &Lexer{
+				rootConfig: rootConfig,
+				logger:     &mocklogger.Logger{},
+			}
+
+			// That's our starting token which includes the file we created above.
+			token := SSHToken{
+				kind:  tokenKind.IncludeFile,
+				value: tt.tokenValue,
+			}
+
+			configSources := lex.handleIncludeToken(token, rootConfig)
+			require.Len(t, configSources, 1, "expected 1 include token")
+			require.Equal(t, tt.expected.value, configSources[0].value, "unexpected included file path")
+			require.Equal(t, tt.expected.valueType, configSources[0].valueType,
+				"unexpected value type for included file")
+		})
+	}
 }
 
 func TestLexer_handleIncludeToken_remoteFile(t *testing.T) {
@@ -299,29 +471,87 @@ func TestLexer_handleIncludeToken_remoteFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			rootConfig := configSource{
+				value:     tt.baseURL,
+				valueType: valueTypeURL,
+			}
+
 			lex := &Lexer{
-				pathType:    pathTypeURL,
-				currentPath: tt.baseURL,
-				logger:      &mocklogger.Logger{},
+				rootConfig: rootConfig,
+				logger:     &mocklogger.Logger{},
 			}
 
 			startingPointToken := SSHToken{
 				kind:  tokenKind.IncludeFile,
-				key:   "Include",
 				value: tt.sourceTokenURL,
 			}
 
-			tokens := lex.handleIncludeToken(startingPointToken)
-			require.Len(t, tokens, 1, "expected 1 include token")
-			require.Equal(t, tt.expectedTokenURL, tokens[0].value, "unexpected included file URL")
+			configSource := lex.handleIncludeToken(startingPointToken, rootConfig)
+			require.Len(t, configSource, 1, "expected 1 include token")
+			require.Equal(t, tt.expectedTokenURL, configSource[0].value, "unexpected included file URL")
 		})
 	}
 }
 
 func TestLexer_MetaDataToken(t *testing.T) {
 	lex := &Lexer{}
-	line := "# GG:GROUP mock_group"
-	token := lex.metaDataToken(tokenKind.Group, line)
-	require.Equal(t, "GROUP", token.key, "wrong token key")
-	require.Equal(t, "mock_group", token.value, "wrong token value")
+	lines := []string{"# GG:GROUP mock_group", "# GG:GROUP: mock_group"}
+	for _, line := range lines {
+		token := lex.metaDataToken(tokenKind.Group, line)
+		require.Equal(t, tokenKind.Group, token.kind, "wrong token kind")
+		require.Equal(t, "mock_group", token.value, "wrong token value")
+	}
+}
+
+func TestExpandTildePath(t *testing.T) {
+	// I don't want to hardcode c:\users\test or /home/test, as I will have to split the test
+	// for Windows and Unix. Using temp directory for simplicity.
+	tmpDir := t.TempDir()
+	t.Setenv("USERPROFILE", tmpDir) // For Windows
+	t.Setenv("HOME", tmpDir)        // For Unix
+
+	lex := &Lexer{
+		rootConfig: configSource{},
+		logger:     &mocklogger.Logger{},
+	}
+
+	expanded := lex.expandTildePath("~/config")
+	expected := filepath.Join(tmpDir, "config")
+	require.Equal(t, expected, expanded, "expanded path does not match expected")
+}
+
+func TestExpandTildePath_HomeIsBlank(t *testing.T) {
+	tests := []struct {
+		name               string
+		userHomeEnv        string
+		expectedLogMessage string
+	}{
+		{
+			name:               "Test 1",
+			userHomeEnv:        "",
+			expectedLogMessage: "[SSHCONFIG]: Cannot expand tilde in path: ",
+		},
+		{
+			name:               "Test 2",
+			userHomeEnv:        "   ",
+			expectedLogMessage: "[SSHCONFIG]: Cannot find user home directory to expand tilde in path: ~/config",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("USERPROFILE", tt.userHomeEnv) // For Windows
+			t.Setenv("HOME", tt.userHomeEnv)        // For Unix
+
+			logger := &mocklogger.Logger{}
+			lex := &Lexer{
+				rootConfig: configSource{},
+				logger:     logger,
+			}
+
+			expanded := lex.expandTildePath("~/config")
+			require.Equal(t, "~/config", expanded, "expanded path does not match expected")
+			require.Contains(t, logger.Logs[0], tt.expectedLogMessage, "expected log about missing HOME variable")
+		})
+	}
 }
