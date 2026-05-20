@@ -41,8 +41,8 @@ func TestLexer_Tokenize(t *testing.T) {
 			}
 
 			if tt.wantError {
-				t.Skip() // Need to find a way to set user-defined SSH config path.
 				state.Initialize(context.TODO(), &config.Configuration{}, &mocklogger.Logger{})
+				state.Get().IsUserDefinedSSHConfigPath = true
 				_, err := lex.Tokenize()
 				require.Error(t, err, "expected error for invalid SSH config path")
 			} else {
@@ -207,7 +207,7 @@ func TestLexer_LoadFromDataSource_IncludeFile(t *testing.T) {
 }
 
 func TestLexer_LoadFromDataSource_IncludeFile_RelativePath(t *testing.T) {
-	// Explanation of what's test is doing.
+	// Explanation of what this test is doing.
 	// 1. Create a folder structure
 	//   tmpDir/
 	//       config_included1  (contains "Include subdir/config_included2")
@@ -256,6 +256,55 @@ func TestLexer_LoadFromDataSource_IncludeFile_RelativePath(t *testing.T) {
 	}
 	tokens, _ := lex.loadFromDataSource(rootConfig, nil, 0)
 	require.Len(t, tokens, 1, "expected 1 token for included host")
+}
+
+func TestLexer_LoadFromDataSource_IncludeFile_UsingMask(t *testing.T) {
+	// Explanation of what this test is doing.
+	// 1. Create a folder structure
+	//   tmpDir/
+	//       parent_config.conf (contains "Include conf.d/config_*.conf")
+	//       conf.d/
+	//           config_included1.conf (contains "Host mock-included-host1")
+	//           config_included2.conf (contains "Host mock-included-host2")
+	// 2. Check that by using a mask in Include directive in parent_config.conf
+	//    we can load both config files from the subdir.
+
+	tmpDir := t.TempDir()
+	confDir := filepath.Join(tmpDir, "conf.d")
+	os.Mkdir(confDir, 0o755)
+
+	parentConfig := filepath.Join(tmpDir, "parent_config.conf")
+	confIncluded1 := filepath.Join(confDir, "config_included1.conf")
+	confIncluded2 := filepath.Join(confDir, "config_included2.conf")
+
+	// Create a config file with a single line - Include pointing to another file.
+	content := fmt.Sprintf("Include %s/*.conf\n", confDir)
+	if err := os.WriteFile(parentConfig, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	// Create a config file with a single line - Host mock-included-host1.
+	content = "Host mock-included-host1\n"
+	if err := os.WriteFile(confIncluded1, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	// Create a config file with a single line - Host mock-included-host2.
+	content = "Host mock-included-host2\n"
+	if err := os.WriteFile(confIncluded2, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+
+	rootConfig := configSource{
+		value:     parentConfig,
+		valueType: valueTypeFile,
+	}
+	lex := &Lexer{
+		rootConfig: rootConfig,
+		logger:     &mocklogger.Logger{},
+	}
+	tokens, _ := lex.loadFromDataSource(rootConfig, nil, 0)
+	require.Len(t, tokens, 2, "expected 2 tokens for included hosts")
 }
 
 func TestLexer_LoadFromDataSource_IncludeDepthLimit(t *testing.T) {

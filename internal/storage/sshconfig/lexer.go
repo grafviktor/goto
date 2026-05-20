@@ -329,6 +329,8 @@ func (l *Lexer) includeLocalFileToken(localPath string, parent configSource) []c
 		localPath = filepath.Join(filepath.Dir(parent.value), localPath)
 	}
 
+	// filepath.Glob does not support recursive globbing (**), like ./conf.d/**/*.conf,
+	// currently can only use simple mask like ./conf.d/config_*.conf.
 	matches, err := filepath.Glob(localPath)
 	if err != nil {
 		l.logger.Error("[SSHCONFIG] Cannot process Include pattern %s: %v", localPath, err)
