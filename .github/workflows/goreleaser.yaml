@@ -2,8 +2,6 @@ name: release
 
 on:
   push:
-    branches:
-      - master
     tags:
       - 'v*'
 
@@ -11,7 +9,31 @@ permissions:
   contents: write
 
 jobs:
-  goreleaser:
+  verify-master-branch:
+    # This job will fail, if you push the tag, but forget to push master branch.
+    # I.e. you have to `git push origin master --tags`
+    name: Verify tag is on master branch
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure tag is reachable from master
+        run: |
+          BRANCH=master
+          git fetch origin "$BRANCH"
+
+          if git merge-base --is-ancestor "${GITHUB_SHA}" "origin/${BRANCH}"; then
+            echo "Tag commit is on ${BRANCH}. Continue with release."
+          else
+            echo "::error::Tag is NOT on ${BRANCH}. Exit with failure."
+            exit 1
+          fi
+
+  release:
+    name: Create release
+    needs: verify-master-branch
     runs-on: ubuntu-24.04
 
     steps:

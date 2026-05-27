@@ -59,7 +59,7 @@ builds:
         - cmd: bash build/exe/embed-icon.sh {{ .Arch }}
           output: true
       post:
-        - cmd: rm -f cmd/icon_windows_{{ .Arch }}.syso
+        - cmd: rm -f cmd/goto/icon_windows_{{ .Arch }}.syso
 
 archives:
   - id: default
