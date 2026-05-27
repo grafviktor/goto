@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Embeds icon.ico into the Windows binary via a .syso file in cmd/.
 # Requires: go install github.com/akavel/rsrc@latest
-set -euo pipefail
+set -e
 
 arch="${1:?usage: embed-icon.sh <amd64|arm64>}"
 
@@ -13,4 +13,4 @@ if [[ ! -f icon.ico ]]; then
 fi
 
 rsrc -arch "$arch" -ico icon.ico -o "icon_windows_${arch}.syso"
-mv -f "icon_windows_${arch}.syso" ../../cmd/
+mv -f "icon_windows_${arch}.syso" ../../cmd/goto/
