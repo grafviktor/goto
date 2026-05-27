@@ -1,3 +1,7 @@
+## Embed icon into Windows executable ##
+
+### Icon Info ###
+
 * Created in Inkscape
 * Original font - Fira Code (Thanks for Tonsky!)
 * Converted to .ico with the help of [www.freeconvert.com](https://www.freeconvert.com/svg-to-ico/download)
