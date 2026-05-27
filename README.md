@@ -40,16 +40,14 @@ yay -S goto-ssh-bin
 
 #### macOS (Homebrew) ####
 
-_Maintained externally by the open-source community._
-
 You can install `goto` via Homebrew using a community tap:
 
 ```bash
-brew tap avasilic/goto
-brew install goto-ssh
+brew tap grafviktor/goto
+brew install --cask goto-ssh-manager
 ```
 
-This installs the gg binary (renamed automatically). Run it with:
+This installs the `gg` binary onto your system. Run it with:
 ```bash
 gg
 ```

@@ -107,7 +107,7 @@ nfpms:
       buildhost: localhost
 
 homebrew_casks:
-  - name: goto
+  - name: goto-ssh-manager
     ids:
       - default
     binaries:
