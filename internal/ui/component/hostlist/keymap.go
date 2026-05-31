@@ -101,6 +101,7 @@ func (k *keyMap) keysForReadonlyHost() {
 		k.cursorDown.SetEnabled(true)
 		k.cursorUp.SetEnabled(true)
 		k.edit.SetEnabled(true)
+		k.edit.SetHelp("e", "view")
 		k.remove.SetEnabled(false)
 	}
 }
@@ -109,6 +110,7 @@ func (k *keyMap) keysForWritableHost() {
 	if k.keyMapState != keyMapState.EditkeysShown {
 		k.keyMapState = keyMapState.EditkeysShown
 		k.keysSetEnabled(true)
+		k.edit.SetHelp("e", "edit")
 	}
 }
 

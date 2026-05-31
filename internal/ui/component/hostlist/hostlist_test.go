@@ -464,6 +464,57 @@ func TestListModel_title_when_filter_is_enabled(t *testing.T) {
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", utils.StripStyles(model.Title))
 }
 
+func TestCmdSSHConnectPreview(t *testing.T) {
+	tests := []struct {
+		name     string
+		host     host.Host
+		expected string
+	}{
+		{
+			name: "YAML file host",
+			host: host.Host{
+				Title:            "MOCK_HOST_1",
+				Address:          "localhost",
+				RemotePort:       "2222",
+				LoginName:        "root",
+				IdentityFilePath: "id_rsa",
+				StorageType:      constant.HostStorageType.YAMLFile,
+			},
+			expected: "ssh -i id_rsa -p 2222 -l root localhost",
+		},
+		{
+			name: "SSH config host",
+			host: host.Host{
+				Title: "MOCK_HOST_2",
+				SSHHostConfig: &sshconfig.Config{
+					Hostname:     "localhost",
+					IdentityFile: "id_rsa",
+					Port:         "2222",
+					User:         "root",
+				},
+				StorageType: constant.HostStorageType.SSHConfig,
+			},
+			expected: "ssh root@localhost -p 2222",
+		},
+		{
+			name: "SSH config host, config not yet loaded",
+			host: host.Host{
+				Title:         "MOCK_HOST_3",
+				SSHHostConfig: nil,
+				StorageType:   constant.HostStorageType.SSHConfig,
+			},
+			expected: "ssh MOCK_HOST_3",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := cmdSSHConnectPreview(tt.host)
+			require.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
 func TestListModel_editItem(t *testing.T) {
 	// Test edit item function by making sure that it's returning correct messages
 
