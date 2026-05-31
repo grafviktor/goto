@@ -1,5 +1,14 @@
 # Changelog
 
+**[v1.6.0](https://github.com/grafviktor/goto/compare/v1.5.1...v1.6.0) - 2026-05-31**
+
+* Fix a crash when parsing malformed SSH config files
+ [[details](https://github.com/grafviktor/goto/issues/142)].
+* Support tilde paths (e.g. `Include ~/.ssh/included_config`) in SSH config files [[details](https://github.com/grafviktor/goto/issues/140)].
+* Improve error handling on Windows [[details](https://github.com/grafviktor/goto/issues/137)].
+* Migrate to Bubble Tea v2 [[details](https://github.com/grafviktor/goto/issues/136)].
+* Build .deb, .rpm, and Homebrew packages with GoReleaser [[details](https://github.com/grafviktor/goto/issues/128)].
+
 **[v1.5.1](https://github.com/grafviktor/goto/compare/v1.5.0...v1.5.1) - 2026-01-20**
 
 * Remove fuzzy filtering from the host list [[details](https://github.com/grafviktor/goto/issues/133)].

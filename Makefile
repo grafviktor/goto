@@ -28,7 +28,7 @@ lint:
 audit:
 	@echo 'If something is not right, make sure these utilities are installed:'
 	@echo '  * If gofumpt is not installed, then: go install mvdan.cc/gofumpt@latest'
-	@echo '  * For staticcheck: go install honnef.co/go/tools/cmd/staticcheck@2026.1'
+	@echo '  * For staticcheck: go install honnef.co/go/tools/cmd/staticcheck@2026.1, re-download it if it fails with the a go version, also see staticcheck -debug.version.'
 	@echo '  * If goimports is not installed, then: go install golang.org/x/tools/cmd/goimports@latest'
 	@echo '  * For golangci-lint: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $$(go env GOPATH)/bin v2.11.4'
 	@echo 'Tidy and verify module dependencies...'

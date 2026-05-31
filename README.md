@@ -40,16 +40,14 @@ yay -S goto-ssh-bin
 
 #### macOS (Homebrew) ####
 
-_Maintained externally by the open-source community._
-
 You can install `goto` via Homebrew using a community tap:
 
 ```bash
-brew tap avasilic/goto
-brew install goto-ssh
+brew tap grafviktor/goto
+brew install --cask goto-ssh-manager
 ```
 
-This installs the gg binary (renamed automatically). Run it with:
+This installs the `gg` binary onto your system. Run it with:
 ```bash
 gg
 ```
@@ -82,7 +80,7 @@ Find more demos and uses cases [here](demo/README.md).
 
 ## 3. Configuration ##
 
-* Please see more information about hosts grouping in [this document](docs/GROUPS.md) and ssh_config usage in [this document](docs/SSH_CONFIG.md).
+* Please see more information about hosts grouping in [this document](docs/GROUPS.md) and ssh_config usage in [that document](docs/SSH_CONFIG.md).
 * Also refer [F.A.Q.](docs/FAQ.md) page which provides additional configuration details and usage examples.
 
 ### 3.1. Command line options ###
@@ -97,23 +95,23 @@ Find more demos and uses cases [here](demo/README.md).
   ```
 * `-s` - define an alternative SSH configuration file path for current session;
   ```bash
-  gg -s /mnt/nfs_share/ssh/config # since version 1.4.0
+  gg -s /mnt/nfs_share/ssh/config
   ```
 * `--set-ssh-config-path` - set SSH configuration file path or url;
   ```bash
-  gg --set-ssh-config-path https://company-repo/devops-team/ssh_config # since version 1.5.0
+  gg --set-ssh-config-path https://company-repo/devops-team/ssh_config
   ```
 * `-d` - disable feature, only supported value is ssh_config;
   ```bash
-  gg -d "ssh_config" # since version 1.4.0
+  gg -d "ssh_config"
   ```
 * `-e` - enable feature, only supported value is ssh_config;
   ```bash
-  gg -e "ssh_config" # since version 1.4.0
+  gg -e "ssh_config"
   ```
 * `--set-theme` - set application color theme;
   ```bash
-  gg --set-theme nord # since version 1.5.0
+  gg --set-theme nord
   ```
 * `-h` - display help;
 * `-v` - display version and configuration details.
@@ -155,9 +153,18 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
     identity_file_path: /home/user/.ssh/id_rsa_microsoft
 ```
 
-## 5. Known issues ##
+## 5. Known issues and limitations ##
 
-Application may not start on Windows platform if your terminal is set to use legacy console. Either disable legacy console mode or run terminal session manually and then start the application from the inside. Google "how to disable legacy console on windows" for more details.
+* Application may not start on Windows platform if your terminal is set to use legacy console. Either disable legacy console mode or run terminal session manually and then start the application from the inside. Google "how to disable legacy console on windows" for more details.
+* If your `ssh_config` uses the `Include` directive with a double asterisk, for example:
+  ```
+  Include .../conf.d/**/*.conf
+  ```
+  the application will not be able to locate those files. The current workaround is to specify each folder separately, similar to this:
+  ```
+  Include .../conf.d/fonder1/*.conf
+  Include .../conf.d/fonder2/*.conf
+  ```
 
 ## 6. [F.A.Q.](docs/FAQ.md) ##
 
@@ -182,4 +189,3 @@ Application may not start on Windows platform if your terminal is set to use leg
     >
   </a>
 </div>
-
