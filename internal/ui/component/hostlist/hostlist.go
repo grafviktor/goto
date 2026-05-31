@@ -589,7 +589,7 @@ func (m *ListModel) updateTitle() {
 	case m.mode == modeCloseApp:
 		newTitle = "close app? (y/N)"
 	case isHost:
-		connectCmd := m.CmdSSHConnectPreview(item.Host)
+		connectCmd := cmdSSHConnectPreview(item.Host)
 		newTitle = m.prefixWithGroupName(connectCmd)
 	default:
 		// If it's NOT a host list item, then probably the list is just empty
@@ -618,7 +618,7 @@ var sshConfigPathRe = regexp.MustCompile(`\s-F "([^"]+)"`)
 
 const sshDefaultPort = "22"
 
-func (m *ListModel) CmdSSHConnectPreview(h hostModel.Host) string {
+func cmdSSHConnectPreview(h hostModel.Host) string {
 	if h.StorageType == constant.HostStorageType.SSHConfig && h.SSHHostConfig != nil {
 		// If ssh_config is loaded for the host, then we can build approximate connect command.
 		connectCmd := fmt.Sprintf("ssh %s@%s", h.SSHHostConfig.User, h.SSHHostConfig.Hostname)
