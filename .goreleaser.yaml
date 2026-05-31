@@ -1,0 +1,155 @@
+version: 2
+
+# FAKE RUN:
+# GORELEASER_CURRENT_TAG=v1.6.0 goreleaser release --clean --skip=publish,validate
+#
+# NORMAL RUN:
+# git tag v1.6.0
+# git push origin v1.6.0
+# goreleaser release --clean
+
+# Do not add changelog to the release notes.
+changelog:
+  disable: true
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  # Linux + macOS
+  - id: unix
+    main: ./cmd/goto/
+    binary: gg
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.buildVersion={{ if .IsSnapshot }}{{ .Version }}(dev){{ else }}{{ .Tag }}{{ end }}
+      - -X main.buildDate={{ .Now.Format "2006-01-02" }}
+      - -X main.buildCommit={{ .ShortCommit }}
+      - -X main.buildBranch={{ .Branch }}
+
+  # Windows (embed icon.ico before build)
+  - id: win
+    main: ./cmd/goto/
+    binary: gg
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.buildVersion={{ if .IsSnapshot }}{{ .Version }}(dev){{ else }}{{ .Tag }}{{ end }}
+      - -X main.buildDate={{ .Now.Format "2006-01-02" }}
+      - -X main.buildCommit={{ .ShortCommit }}
+      - -X main.buildBranch={{ .Branch }}
+    hooks:
+      pre:
+        - cmd: bash build/exe/embed-icon.sh {{ .Arch }}
+          output: true
+      post:
+        - cmd: rm -f cmd/goto/icon_windows_{{ .Arch }}.syso
+
+archives:
+  - id: default
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+      - zip
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+      - goos: darwin
+        formats: [tar.gz]
+      - goos: linux
+        formats: [tar.gz]
+    # Omit default README/LICENSE/CHANGELOG globs; archive only contains the binary.
+    files:
+      - none*
+
+nfpms:
+  - id: default
+    ids:
+      - unix
+    package_name: goto
+    file_name_template: >-
+      {{- if eq .Format "deb" -}}
+      {{ .PackageName }}_{{ .Version }}_{{ .Arch }}
+      {{- else -}}
+      {{ .PackageName }}-{{ .Version }}.
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "arm64" }}aarch64
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- end }}
+    maintainer: Roman Leonenkov <r.leonenkov[-at-]gmail.com>
+    description: TUI SSH manager for organizing and quickly accessing SSH servers, with support for structured host lists, search, and interactive navigation.
+    homepage: https://github.com/grafviktor/goto
+    license: MIT
+    bindir: /usr/bin
+    formats:
+      - deb
+      - rpm
+    rpm:
+      group: Applications/System
+      # GoReleaser ignore summary.
+      summary: GOTO - A simple command line SSH manager.
+      buildhost: localhost
+
+homebrew_casks:
+  - name: goto-ssh-manager
+    ids:
+      - default
+    binaries:
+      - gg
+    repository:
+      owner: grafviktor
+      name: homebrew-goto
+      branch: master
+      token: "{{ .Env.HOMEBREW_GOTO_TOKEN }}"
+    commit_author:
+      name: goreleaser bot
+      email: goreleaser@users.noreply.github.com
+    homepage: https://github.com/grafviktor/goto
+    description: TUI SSH manager for organizing and quickly accessing SSH servers, with support for structured host lists, search, and interactive navigation.
+    # Unsigned binary: clear quarantine so `gg` runs after `brew install --cask`.
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/gg"]
+          end
+
+# Nix is not yet supported. This task commits an additional folder with a single nix file
+# right into the repository:
+# repo_root/
+#     pkgs/
+#         goto/
+#             default.nix
+# In my opinion all generated files should be attached to the release artifacts
+# instead of polluting the source tree. Looking for a better solution.
+#
+# nix:
+#   - name: goto
+#     ids:
+#       - default
+#     homepage: https://github.com/grafviktor/goto
+#     description: GoTo SSH manager.
+#     license: mit
+#     commit_author:
+#       name: goreleaser bot
+#       email: goreleaser@users.noreply.github.com
+#     repository:
+#       owner: grafviktor
+#       name: goto
+#       branch: master

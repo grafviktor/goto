@@ -1,0 +1,74 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  verify-master-branch:
+    # This job will fail, if you push the tag, but forget to push master branch.
+    # I.e. you have to `git push origin master --tags`
+    name: Verify tag is on master branch
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure tag is reachable from master
+        run: |
+          BRANCH=master
+          git fetch origin "$BRANCH"
+
+          if git merge-base --is-ancestor "${GITHUB_SHA}" "origin/${BRANCH}"; then
+            echo "Tag commit is on ${BRANCH}. Continue with release."
+          else
+            echo "::error::Tag is NOT on ${BRANCH}. Exit with failure."
+            exit 1
+          fi
+
+  release:
+    name: Create release
+    needs: verify-master-branch
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install rsrc
+        run: go install github.com/akavel/rsrc@v0.10.2
+
+      # Nix is not supported.
+      # - name: Install Nix
+      #   uses: cachix/install-nix-action@v27
+      #   with:
+      #     nix_path: nixpkgs=channel:nixos-unstable
+
+      # HOW-TO create a token for updating Homebrew-tap repository:
+      # Profile -> Developer settings -> Personal access tokens -> Generate new token -> Give it a name and select the scopes:
+      # Choose "Only select repositories" -> grafviktor/homebrew-goto
+      # Set Permissions -> Access: Read and write
+      # Now go to the repository from where you want to push the Homebrew formula
+      # Add the token to Repo -> Settings -> Secrets and variables -> Actions -> New repository secret
+      # Name it HOMEBREW_GOTO_TOKEN and paste the token there.
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: v2.16.0
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # This PAT token with contents:write on grafviktor/homebrew-goto is used to push the Homebrew formula.
+          HOMEBREW_GOTO_TOKEN: ${{ secrets.HOMEBREW_GOTO_TOKEN }}
