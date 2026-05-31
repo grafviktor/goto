@@ -511,6 +511,7 @@ func (m *ListModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoadComplete)
 		if hostListItem, ok := item.(ListItemHost); ok && hostListItem.ID == msg.HostID {
 			hostListItem.SSHHostConfig = &msg.Config
 			m.SetItem(index, hostListItem)
+			m.updateTitle()
 			break
 		}
 	}
@@ -575,8 +576,6 @@ func (m *ListModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 	}
 }
 
-var sshConfigPathRe = regexp.MustCompile(`\s-F "([^"]+)"`)
-
 func (m *ListModel) updateTitle() {
 	var newTitle string
 	item, isHost := m.SelectedItem().(ListItemHost)
@@ -590,10 +589,7 @@ func (m *ListModel) updateTitle() {
 	case m.mode == modeCloseApp:
 		newTitle = "close app? (y/N)"
 	case isHost:
-		// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
-		connectCmd := strings.Replace(item.Host.CmdSSHConnect(), "cmd /c ", "", 1)
-		// Remove ssh config file path (if present)
-		connectCmd = sshConfigPathRe.ReplaceAllString(connectCmd, "")
+		connectCmd := m.CmdSSHConnectPreview(item.Host)
 		newTitle = m.prefixWithGroupName(connectCmd)
 	default:
 		// If it's NOT a host list item, then probably the list is just empty
@@ -615,6 +611,31 @@ func (m *ListModel) prefixWithGroupName(title string) string {
 	}
 
 	return title
+}
+
+// SSH config path regex. Example: "... -F /home/user/.ssh/config ...".
+var sshConfigPathRe = regexp.MustCompile(`\s-F "([^"]+)"`)
+
+const sshDefaultPort = "22"
+
+func (m *ListModel) CmdSSHConnectPreview(h hostModel.Host) string {
+	if h.StorageType == constant.HostStorageType.SSHConfig && h.SSHHostConfig != nil {
+		// If ssh_config is loaded for the host, then we can build approximate connect command.
+		connectCmd := fmt.Sprintf("ssh %s@%s", h.SSHHostConfig.User, h.SSHHostConfig.Hostname)
+		// Display only non-default network port
+		if h.SSHHostConfig.Port != "" && h.SSHHostConfig.Port != sshDefaultPort {
+			connectCmd = fmt.Sprintf("%s -p %s", connectCmd, h.SSHHostConfig.Port)
+		}
+
+		return connectCmd
+	}
+
+	// Replace Windows ssh prefix "cmd /c ssh" with "ssh"
+	connectCmd := strings.Replace(h.CmdSSHConnect(), "cmd /c ", "", 1)
+	// Remove ssh config file path (if present)
+	connectCmd = sshConfigPathRe.ReplaceAllString(connectCmd, "")
+
+	return connectCmd
 }
 
 func (m *ListModel) updateKeyMap() {
