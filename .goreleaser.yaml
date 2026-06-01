@@ -35,7 +35,7 @@ builds:
       - -X main.buildVersion={{ if .IsSnapshot }}{{ .Version }}(dev){{ else }}{{ .Tag }}{{ end }}
       - -X main.buildDate={{ .Now.Format "2006-01-02" }}
       - -X main.buildCommit={{ .ShortCommit }}
-      - -X main.buildBranch={{ .Branch }} # Bug - displays: 'HEAD'
+      - -X main.buildBranch={{ .Branch }} # Bug - shows "HEAD" instead of the branch name.
 
   # Windows (embed icon.ico before build)
   - id: win
