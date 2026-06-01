@@ -162,8 +162,8 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
   ```
   the application will not be able to locate those files. The current workaround is to specify each folder separately, similar to this:
   ```
-  Include .../conf.d/fonder1/*.conf
-  Include .../conf.d/fonder2/*.conf
+  Include .../conf.d/folder1/*.conf
+  Include .../conf.d/folder2/*.conf
   ```
 
 ## 6. [F.A.Q.](docs/FAQ.md) ##
