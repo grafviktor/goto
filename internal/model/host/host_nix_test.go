@@ -15,29 +15,16 @@ import (
 var osCmdPrefix = ""
 
 func TestCmdSSHCopyID(t *testing.T) {
-	tests := []struct {
-		name     string
-		host     Host
-		expected string
-	}{
-		{
-			name: "NOT user defined ssh command",
-			host: Host{
-				SSHHostConfig: &sshconfig.Config{
-					Hostname:     "localhost",
-					IdentityFile: "/tmp",
-					Port:         "2222",
-					User:         "root",
-				},
-			},
-			expected: "ssh-copy-id -p 2222 -i /tmp root@localhost",
+	t.Setenv("HOME", "/home/username")
+	host := Host{
+		SSHHostConfig: &sshconfig.Config{
+			Hostname:     "localhost",
+			IdentityFile: "~/.ssh/test",
+			Port:         "2222",
+			User:         "root",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			actual := tt.host.CmdSSHCopyID()
-			require.Equal(t, tt.expected, actual)
-		})
-	}
+	actual := host.CmdSSHCopyID()
+	require.Equal(t, "ssh-copy-id -p 2222 -i /home/username/.ssh/test root@localhost", actual)
 }
