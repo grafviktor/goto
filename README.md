@@ -156,6 +156,7 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
 ## 5. Known issues and limitations ##
 
 * Application may not start on Windows platform if your terminal is set to use legacy console. Either disable legacy console mode or run terminal session manually and then start the application from the inside. Google "how to disable legacy console on windows" for more details.
+* On Windows, copying your SSH public key to a remote host using the `t` shortcut may fail if the remote host does not already have a `~/.ssh` directory. In that case, log in to the remote host, create the directory manually, and set the correct permissions (`chmod 700 ~/.ssh`). Once the directory is in place, retry the key-copy operation.
 * If your `ssh_config` uses the `Include` directive with a double asterisk, for example:
   ```
   Include .../conf.d/**/*.conf
