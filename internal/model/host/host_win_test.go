@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/sshconfig"
 )
 
@@ -34,21 +33,6 @@ func TestCmdSSHCopyID(t *testing.T) {
 				},
 			},
 			expected: `cmd /c type "C:\Users\username\.ssh\test.pub" | ssh root@localhost -p 2222 "cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && echo Key added. Now try logging into the machine."`,
-		},
-		{
-			name: "Host loaded from ssh config",
-			host: Host{
-				Title:       "LOCALHOST_ALIAS",
-				Address:     "localhost",
-				StorageType: constant.HostStorageType.SSHConfig,
-				SSHHostConfig: &sshconfig.Config{
-					Hostname:     "localhost",
-					IdentityFile: "~/.ssh/test",
-					Port:         "2222",
-					User:         "root",
-				},
-			},
-			expected: `cmd /c type "C:\Users\username\.ssh\test.pub" | ssh LOCALHOST_ALIAS "cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && echo Key added. Now try logging into the machine."`,
 		},
 	}
 

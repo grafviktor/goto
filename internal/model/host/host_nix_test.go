@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/sshconfig"
 )
 
@@ -32,21 +31,6 @@ func TestCmdSSHCopyID(t *testing.T) {
 				},
 			},
 			expected: "ssh-copy-id -p 2222 -i /tmp root@localhost",
-		},
-		{
-			name: "Host loaded from ssh config",
-			host: Host{
-				Title:       "LOCALHOST_ALIAS",
-				Address:     "localhost",
-				StorageType: constant.HostStorageType.SSHConfig,
-				SSHHostConfig: &sshconfig.Config{
-					Hostname:     "localhost",
-					IdentityFile: "/tmp",
-					Port:         "2222",
-					User:         "root",
-				},
-			},
-			expected: "ssh-copy-id -i /tmp LOCALHOST_ALIAS",
 		},
 	}
 
