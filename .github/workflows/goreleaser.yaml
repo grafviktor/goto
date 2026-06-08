@@ -72,3 +72,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # This PAT token with contents:write on grafviktor/homebrew-goto is used to push the Homebrew formula.
           HOMEBREW_GOTO_TOKEN: ${{ secrets.HOMEBREW_GOTO_TOKEN }}
+          # Explicitly set the branch to master, otherwise 'HEAD' will be injected. That's happening because
+          # checkout action fetches the tag, which is detached (looks like 'HEAD detached at v1.2.3'). It's
+          # safe to hardcode master because the workflow verifies the branch, see 'verify-master-branch' job.
+          BRANCH: master

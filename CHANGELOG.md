@@ -1,5 +1,9 @@
 # Changelog
 
+**[v1.6.1](https://github.com/grafviktor/goto/compare/v1.6.0...v1.6.1) - 2026-06-08**
+
+* Fix ssh-copy-id (`t` shortcut) command for hosts loaded from a custom ssh_config location [[details](https://github.com/grafviktor/goto/issues/149)].
+
 **[v1.6.0](https://github.com/grafviktor/goto/compare/v1.5.1...v1.6.0) - 2026-05-31**
 
 * Fix a crash when parsing malformed SSH config files
