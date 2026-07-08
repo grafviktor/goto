@@ -54,6 +54,7 @@ type MainModel struct {
 	modelHostList      tea.Model
 	modelGroupList     tea.Model
 	modelHostEdit      tea.Model
+	modelSSHSession    tea.Model
 	appState           *state.State
 	viewMessageContent string
 	logger             iLogger
@@ -102,6 +103,7 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.appState.Selected = msg.HostID
 	case message.RunProcessSSHConnect:
 		m.logger.Debug("[UI] Connect to focused SSH host")
+		m.appState.CurrentView = state.ViewSSHSession
 		return m, m.dispatchProcessSSHConnect(msg)
 	case message.RunProcessSSHLoadConfig:
 		m.logger.Debug("[UI] Load SSH config for focused host id: %d, title: %q", msg.Host.ID, msg.Host.Title)
@@ -148,6 +150,8 @@ func (m *MainModel) View() tea.View {
 		content = tea.NewView(m.viewMessageContent)
 	case state.ViewEditItem:
 		content = m.modelHostEdit.View()
+	case state.ViewSSHSession:
+		content = m.modelSSHSession.View()
 	}
 
 	// Wrap UI into the ViewPort
@@ -264,6 +268,14 @@ func (m *MainModel) dispatchProcess(
 }
 
 func (m *MainModel) dispatchProcessSSHConnect(msg message.RunProcessSSHConnect) tea.Cmd {
+	m.logger.Debug("[EXEC] Build ssh connect command for hostname: %v, title: %v", msg.Host.Address, msg.Host.Title)
+	process := utils.BuildProcessInterceptStdErr(msg.Host.CmdSSHConnect())
+	m.logger.Info("[EXEC] Run process: '%s'", process.String())
+
+	return m.dispatchProcess(constant.ProcessTypeSSHConnect, process, false, false)
+}
+
+func (m *MainModel) dispatchProcessSSHConnect2(msg message.RunProcessSSHConnect) tea.Cmd {
 	m.logger.Debug("[EXEC] Build ssh connect command for hostname: %v, title: %v", msg.Host.Address, msg.Host.Title)
 	process := utils.BuildProcessInterceptStdErr(msg.Host.CmdSSHConnect())
 	m.logger.Info("[EXEC] Run process: '%s'", process.String())

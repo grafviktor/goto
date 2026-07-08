@@ -33,6 +33,8 @@ const (
 	ViewEditItem
 	// ViewMessage mode is active when there was an error when attempted to connect to a remote host.
 	ViewMessage
+	// ViewSSHSession mode is active when we are in the SSH session.
+	ViewSSHSession
 )
 
 // Once - this interface is used to avoid sync.Once restrictions in unit-tests.
