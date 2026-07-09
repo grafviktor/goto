@@ -17,6 +17,7 @@ import (
 	"github.com/grafviktor/goto/internal/ui/component/grouplist"
 	"github.com/grafviktor/goto/internal/ui/component/hostedit"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
+	"github.com/grafviktor/goto/internal/ui/component/sshsession"
 	"github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
 )
@@ -104,7 +105,7 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case message.RunProcessSSHConnect:
 		m.logger.Debug("[UI] Connect to focused SSH host")
 		m.appState.CurrentView = state.ViewSSHSession
-		return m, m.dispatchProcessSSHConnect(msg)
+		return m, m.dispatchProcessSSHConnect2(msg)
 	case message.RunProcessSSHLoadConfig:
 		m.logger.Debug("[UI] Load SSH config for focused host id: %d, title: %q", msg.Host.ID, msg.Host.Title)
 		return m, m.dispatchProcessSSHLoadConfig(msg)
@@ -132,6 +133,11 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.appState.CurrentView == state.ViewEditItem {
 		// Edit host receives messages only if it's active. We re-create this component every time we go to edit mode
 		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+
+	if m.appState.CurrentView == state.ViewSSHSession {
+		m.modelSSHSession, cmd = m.modelSSHSession.Update(msg)
 		cmds = append(cmds, cmd)
 	}
 
@@ -185,6 +191,8 @@ func (m *MainModel) handleKeyEvent(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.modelGroupList, cmd = m.modelGroupList.Update(msg)
 	case state.ViewEditItem:
 		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
+	case state.ViewSSHSession:
+		m.modelSSHSession, cmd = m.modelSSHSession.Update(msg)
 	}
 
 	return m, cmd
@@ -276,11 +284,17 @@ func (m *MainModel) dispatchProcessSSHConnect(msg message.RunProcessSSHConnect) 
 }
 
 func (m *MainModel) dispatchProcessSSHConnect2(msg message.RunProcessSSHConnect) tea.Cmd {
-	m.logger.Debug("[EXEC] Build ssh connect command for hostname: %v, title: %v", msg.Host.Address, msg.Host.Title)
-	process := utils.BuildProcessInterceptStdErr(msg.Host.CmdSSHConnect())
-	m.logger.Info("[EXEC] Run process: '%s'", process.String())
+	// cmd := msg.Host.CmdSSHConnect()
+	// if utils.StringEmpty(&cmd) {
+	// 	return nil
+	// }
 
-	return m.dispatchProcess(constant.ProcessTypeSSHConnect, process, false, false)
+	// command := cmd[0]
+	// arguments := cmd[1:]
+	cmd := utils.BuildProcess(msg.Host.CmdSSHConnect())
+	m.modelSSHSession = sshsession.New(cmd.Path, cmd.Args[1:]...)
+
+	return m.modelSSHSession.Init()
 }
 
 func (m *MainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadConfig) tea.Cmd {
@@ -322,6 +336,11 @@ func (m *MainModel) handleProcessSuccess(msg message.RunProcessSuccess) tea.Cmd 
 		}
 
 		m.appState.CurrentView = state.ViewMessage
+	}
+
+	if msg.ProcessType == constant.ProcessTypeSSHConnect {
+		m.logger.Debug("[EXEC] SSH connect process finished. Details:\n%s\n%s", msg.StdOut, msg.StdErr)
+		m.appState.CurrentView = state.ViewHostList
 	}
 
 	return nil
