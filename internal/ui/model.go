@@ -78,7 +78,6 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		m.logger.Debug("[UI] Keyboard event: '%v'", msg)
 		return m.handleKeyEvent(msg)
 	case tea.WindowSizeMsg:
 		m.logger.Debug("[UI] Set terminal window size: %d %d", msg.Width, msg.Height)
@@ -170,9 +169,13 @@ func (m *MainModel) View() tea.View {
 }
 
 func (m *MainModel) handleKeyEvent(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	if msg.String() == "ctrl+c" {
-		m.logger.Debug("[UI] Receive Ctrl+C. Quit the application")
-		return m, tea.Quit
+	if m.appState.CurrentView != state.ViewSSHSession {
+		m.logger.Debug("[UI] Keyboard event: '%v'", msg)
+
+		if msg.String() == "ctrl+c" {
+			m.logger.Debug("[UI] Receive Ctrl+C. Quit the application")
+			return m, tea.Quit
+		}
 	}
 
 	var cmd tea.Cmd
