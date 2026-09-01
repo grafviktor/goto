@@ -1,24 +1,33 @@
 package sshsession
 
 import (
+	"io"
+	"strings"
+
 	tea "charm.land/bubbletea/v2"
 	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/ui/message"
+	"github.com/grafviktor/goto/internal/utils"
 	"github.com/grafviktor/termview"
 )
 
 type Model struct {
 	term    termview.Model
 	command string
+	stdErr  io.Writer
 }
 
-func New(command string, args ...string) Model {
-	term, err := termview.New(termview.WithCommand(command, args...))
+func New(command string, args ...string) (Model, error) {
+	stdErr := &utils.ProcessBufferWriter{}
+	term, err := termview.New(
+		termview.WithCommand(command, args...),
+		termview.WithStdErr(stdErr),
+	)
 	if err != nil {
-		// dispatch run process error message to main model
+		return Model{}, err
 	}
 
-	return Model{term: term.Focus(), command: command}
+	return Model{term: term.Focus(), command: command, stdErr: stdErr}, nil
 }
 
 func (m Model) Init() tea.Cmd {
@@ -28,13 +37,8 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case termview.ClosedMsg:
-		return m, func() tea.Msg {
-			return message.RunProcessSuccess{
-				ProcessType: constant.ProcessTypeSSHConnect,
-				StdOut:      "exited",
-				StdErr:      "",
-			}
-		}
+		cmd := m.handleSessionClose(msg)
+		return m, cmd
 	default:
 		updated, cmd := m.term.Update(msg)
 		m.term = updated
@@ -47,4 +51,25 @@ func (m Model) View() tea.View {
 	v := tea.NewView(m.term.View())
 	v.Cursor = m.term.Cursor()
 	return v
+}
+
+func (m Model) handleSessionClose(msg termview.ClosedMsg) tea.Cmd {
+	if msg.ProcessError == nil && msg.ProcessExitCode == 0 {
+		return message.TeaCmd(message.RunProcessSuccess{
+			ProcessType: constant.ProcessTypeSSHConnect,
+			StdOut:      "",
+			StdErr:      "",
+		})
+	}
+
+	var readableStdErr string
+	if readableErrOutput, ok := m.stdErr.(*utils.ProcessBufferWriter); ok {
+		readableStdErr = strings.TrimSpace(string(readableErrOutput.Output))
+	}
+
+	return message.TeaCmd(message.RunProcessErrorOccurred{
+		ProcessType: constant.ProcessTypeSSHConnect,
+		StdOut:      "",
+		StdErr:      readableStdErr,
+	})
 }
