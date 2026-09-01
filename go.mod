@@ -7,14 +7,14 @@ require (
 	charm.land/bubbletea/v2 v2.0.7
 	charm.land/lipgloss/v2 v2.0.3
 	github.com/caarlos0/env/v10 v10.0.0
-	github.com/grafviktor/termview v0.1.0
+	github.com/grafviktor/termview v0.2.0
 	github.com/samber/lo v1.53.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/sys v0.46.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-replace github.com/grafviktor/termview => ../termview
+// replace github.com/grafviktor/termview => ../termview
 
 require (
 	github.com/atotto/clipboard v0.1.4 // indirect

@@ -5,10 +5,11 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/grafviktor/termview"
+
 	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
-	"github.com/grafviktor/termview"
 )
 
 type Model struct {
