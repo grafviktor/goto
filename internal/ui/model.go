@@ -103,7 +103,8 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.appState.Selected = msg.HostID
 	case message.RunProcessSSHConnect:
 		m.logger.Debug("[UI] Connect to focused SSH host")
-		cmd, err := m.dispatchProcessSSHConnect(msg)
+		var err error
+		cmd, err = m.dispatchProcessSSHConnect(msg)
 		if err == nil {
 			// We only switch to SSH session, if we manage to construct TermView component successfully.
 			m.appState.CurrentView = state.ViewSSHSession
@@ -288,7 +289,7 @@ func (m *MainModel) dispatchProcessSSHConnect(msg message.RunProcessSSHConnect) 
 	m.logger.Info("[EXEC] Run process: '%s'", cmd.String())
 
 	var err error
-	var commandAndArgs = append([]string{cmd.Path}, cmd.Args[1:]...)
+	commandAndArgs := append([]string{cmd.Path}, cmd.Args[1:]...)
 	m.modelSSHSession, err = sshsession.New(m.appState.Width, m.appState.Height, commandAndArgs...)
 	if err != nil {
 		return message.TeaCmd(err), err
