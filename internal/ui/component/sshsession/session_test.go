@@ -9,6 +9,7 @@ import (
 
 	testutils "github.com/grafviktor/goto/internal/testutils"
 	"github.com/grafviktor/goto/internal/ui/message"
+	"github.com/grafviktor/goto/internal/utils"
 )
 
 func TestNew(t *testing.T) {
@@ -22,8 +23,6 @@ func TestNew_ExecutableNotFoundErr(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	genericMsg := struct{}{}
-
 	tests := []struct {
 		name            string
 		sentMessage     tea.Msg
@@ -34,13 +33,13 @@ func TestUpdate(t *testing.T) {
 		expectedMessage: message.RunProcessSuccess{},
 	}, {
 		name:            "Other case",
-		sentMessage:     message.TeaCmd(genericMsg),
+		sentMessage:     struct{}{},
 		expectedMessage: nil,
 	}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, _ := New(80, 24, "echo", "test")
+			m := Model{stdErr: &utils.ProcessBufferWriter{}}
 			_, cmd := m.Update(tt.sentMessage)
 			var msgs []tea.Msg
 			testutils.CmdToMessage(cmd, &msgs)
