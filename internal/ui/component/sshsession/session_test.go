@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	testutils "github.com/grafviktor/goto/internal/testutils"
+	"github.com/grafviktor/goto/internal/ui/message"
 )
 
 func TestNew(t *testing.T) {
@@ -21,15 +22,20 @@ func TestNew_ExecutableNotFoundErr(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	t.Skip()
+	genericMsg := struct{}{}
 
 	tests := []struct {
 		name            string
 		sentMessage     tea.Msg
 		expectedMessage tea.Msg
 	}{{
-		name:        "Handle termview.ClosedMsg",
-		sentMessage: termview.ClosedMsg{},
+		name:            "Handle termview.ClosedMsg",
+		sentMessage:     termview.ClosedMsg{},
+		expectedMessage: message.RunProcessSuccess{},
+	}, {
+		name:            "Other case",
+		sentMessage:     message.TeaCmd(genericMsg),
+		expectedMessage: nil,
 	}}
 
 	for _, tt := range tests {
@@ -39,7 +45,11 @@ func TestUpdate(t *testing.T) {
 			var msgs []tea.Msg
 			testutils.CmdToMessage(cmd, &msgs)
 
-			require.IsType(t, tt.expectedMessage, msgs[0])
+			if tt.expectedMessage == nil {
+				require.Nil(t, msgs)
+			} else {
+				require.IsType(t, tt.expectedMessage, msgs[0])
+			}
 		})
 	}
 }

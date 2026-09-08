@@ -26,7 +26,6 @@ func New(initialWidth, initialHeight int, commandAndArgs ...string) (Model, erro
 		termview.WithInitialWidth(initialWidth),
 		termview.WithInitialHeight(initialHeight),
 	)
-
 	if err != nil {
 		return Model{}, err
 	}
