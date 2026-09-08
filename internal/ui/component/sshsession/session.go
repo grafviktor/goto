@@ -26,11 +26,18 @@ func New(initialWidth, initialHeight int, commandAndArgs ...string) (Model, erro
 		termview.WithInitialWidth(initialWidth),
 		termview.WithInitialHeight(initialHeight),
 	)
+
 	if err != nil {
 		return Model{}, err
 	}
 
-	return Model{term: term.Focus(), command: commandAndArgs[0], stdErr: stdErr}, nil
+	m := Model{
+		term:    term.Focus(),
+		command: commandAndArgs[0],
+		stdErr:  stdErr,
+	}
+
+	return m, nil
 }
 
 func (m Model) Init() tea.Cmd {
