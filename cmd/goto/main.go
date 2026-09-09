@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/samber/lo"
+
 	"github.com/grafviktor/goto/internal/app"
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/logger"
 	"github.com/grafviktor/goto/internal/state"
+	"github.com/grafviktor/goto/internal/ui/theme"
 	"github.com/grafviktor/goto/internal/utils"
 	"github.com/grafviktor/goto/internal/version"
 )
@@ -45,6 +48,14 @@ func main() {
 	if err != nil {
 		fmt.Printf("[MAIN] Error: %v\n", err)
 		os.Exit(1)
+	}
+
+	if cfg.SetTheme != "" {
+		themes := theme.ListInstalled(cfg.AppHome, lgr)
+		if !lo.Contains(themes, cfg.SetTheme) {
+			msg := fmt.Sprintf("[CONFIG] Error: cannot find theme %q, installed themes: %v", cfg.SetTheme, themes)
+			utils.LogAndCloseApp(lgr, constant.AppExitCodeError, msg)
+		}
 	}
 
 	// Create state

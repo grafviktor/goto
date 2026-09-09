@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strings"
 	"sync"
 
 	"github.com/samber/lo"
@@ -17,7 +16,6 @@ import (
 
 	"github.com/grafviktor/goto/internal/config"
 	"github.com/grafviktor/goto/internal/constant"
-	"github.com/grafviktor/goto/internal/ui/theme"
 	"github.com/grafviktor/goto/internal/utils"
 	"github.com/grafviktor/goto/internal/version"
 )
@@ -159,7 +157,7 @@ func (s *State) readFromFile() {
 	s.Selected = loadedState.Selected
 
 	if loadedState.Theme == nil {
-		s.Theme = theme.DefaultTheme().Name
+		s.Theme = "default"
 	} else {
 		s.Theme = *loadedState.Theme
 	}
@@ -251,11 +249,6 @@ func (s *State) applyConfig(cfg *config.Configuration) error {
 	}
 
 	if !utils.StringEmpty(&cfg.SetTheme) {
-		installedThemes := theme.ListInstalled(cfg.AppHome, s.Logger)
-		if !lo.Contains(installedThemes, cfg.SetTheme) {
-			installedThemesStr := strings.Join(installedThemes, ", ")
-			return fmt.Errorf("cannot find theme %q, installed themes: %v", cfg.SetTheme, installedThemesStr)
-		}
 		s.Theme = cfg.SetTheme
 	}
 
