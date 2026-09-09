@@ -11,6 +11,7 @@ jobs:
       group: unit-${{ github.ref }}-${{ matrix.os }}-${{ matrix.go-version }}
       cancel-in-progress: true
     strategy:
+      fail-fast: false
       matrix:
         go-version: [1.25.x, 1.26.x]
         os: [windows]
@@ -28,18 +29,38 @@ jobs:
           cache: true
       - name: Test (non-UI packages)
         # First prove the Windows runner is healthy without termview/ConPTY.
-        # Package-by-package so the log shows exactly where it stops.
+        # Emit ::error:: with the failing package so it appears in job annotations
+        # (readable without downloading private logs).
         shell: bash
         run: |
-          set -o pipefail
-          pkgs=$(go list ./internal/config ./internal/logger ./internal/model/... ./internal/state ./internal/storage/... ./internal/utils ./internal/version)
-          echo "Packages:" 
+          set -euo pipefail
+          pkgs=$(go list ./internal/config ./internal/logger ./internal/model/... ./internal/state ./internal/storage/... ./internal/utils ./internal/version | tr -d '\r')
+          {
+            echo "## Non-UI packages"
+            echo '```'
+            echo "$pkgs"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Packages:"
           echo "$pkgs"
           failed=0
           for pkg in $pkgs; do
             echo "======== START $pkg ========"
-            if ! go test -v -count=1 -timeout 45s -vet=off "$pkg" 2>&1 | tee -a test-output.txt; then
-              echo "======== FAIL $pkg ========"
+            set +e
+            go test -v -count=1 -timeout 45s -vet=off "$pkg" > pkg-out.txt 2>&1
+            status=$?
+            set -e
+            cat pkg-out.txt
+            cat pkg-out.txt >> test-output.txt
+            if [ "$status" -ne 0 ]; then
+              echo "======== FAIL $pkg (exit $status) ========"
+              echo "::error title=Windows test failure::Package ${pkg} failed with exit code ${status}"
+              {
+                echo "### FAILED: \`$pkg\` (exit $status)"
+                echo '```'
+                tail -n 80 pkg-out.txt
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
               failed=1
               break
             fi
@@ -50,15 +71,34 @@ jobs:
         if: success()
         shell: bash
         run: |
-          set -o pipefail
-          pkgs=$(go list ./internal/app ./internal/ui/... )
+          set -euo pipefail
+          pkgs=$(go list ./internal/app ./internal/ui/... | tr -d '\r')
+          {
+            echo "## UI packages"
+            echo '```'
+            echo "$pkgs"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
           echo "Packages:"
           echo "$pkgs"
           failed=0
           for pkg in $pkgs; do
             echo "======== START $pkg ========"
-            if ! go test -v -count=1 -timeout 45s -vet=off "$pkg" 2>&1 | tee -a test-output.txt; then
-              echo "======== FAIL $pkg ========"
+            set +e
+            go test -v -count=1 -timeout 45s -vet=off "$pkg" > pkg-out.txt 2>&1
+            status=$?
+            set -e
+            cat pkg-out.txt
+            cat pkg-out.txt >> test-output.txt
+            if [ "$status" -ne 0 ]; then
+              echo "======== FAIL $pkg (exit $status) ========"
+              echo "::error title=Windows test failure::Package ${pkg} failed with exit code ${status}"
+              {
+                echo "### FAILED: \`$pkg\` (exit $status)"
+                echo '```'
+                tail -n 80 pkg-out.txt
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
               failed=1
               break
             fi
