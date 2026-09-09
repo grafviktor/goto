@@ -26,17 +26,49 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
-      - name: Test
-        # Windows GHA notes:
-        # - -race hangs with this project's deps
-        # - -coverpkg=./internal/... pulls sshsession/termview (ConPTY) into every
-        #   test binary and also hangs / stalls on Windows runners
-        # Use per-package coverage, verbose output, and fail fast for diagnosis.
-        run: go test -v -p 1 -failfast -vet=off -count=1 -timeout 2m -coverprofile unit.txt -covermode atomic ./...
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+      - name: Test (non-UI packages)
+        # First prove the Windows runner is healthy without termview/ConPTY.
+        # Package-by-package so the log shows exactly where it stops.
+        shell: bash
+        run: |
+          set -o pipefail
+          pkgs=$(go list ./internal/config ./internal/logger ./internal/model/... ./internal/state ./internal/storage/... ./internal/utils ./internal/version)
+          echo "Packages:" 
+          echo "$pkgs"
+          failed=0
+          for pkg in $pkgs; do
+            echo "======== START $pkg ========"
+            if ! go test -v -count=1 -timeout 45s -vet=off "$pkg" 2>&1 | tee -a test-output.txt; then
+              echo "======== FAIL $pkg ========"
+              failed=1
+              break
+            fi
+            echo "======== OK $pkg ========"
+          done
+          exit $failed
+      - name: Test (UI packages)
+        if: success()
+        shell: bash
+        run: |
+          set -o pipefail
+          pkgs=$(go list ./internal/app ./internal/ui/... )
+          echo "Packages:"
+          echo "$pkgs"
+          failed=0
+          for pkg in $pkgs; do
+            echo "======== START $pkg ========"
+            if ! go test -v -count=1 -timeout 45s -vet=off "$pkg" 2>&1 | tee -a test-output.txt; then
+              echo "======== FAIL $pkg ========"
+              failed=1
+              break
+            fi
+            echo "======== OK $pkg ========"
+          done
+          exit $failed
+      - name: Upload test output
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          file: ./unit.txt
-          flags: unit,${{ matrix.os }},go-${{ matrix.go-version }}
-          name: unit
-          token: ${{ secrets.CODECOV_TOKEN }}
+          name: windows-test-output-${{ matrix.go-version }}
+          path: test-output.txt
+          if-no-files-found: warn
