@@ -1,6 +1,7 @@
 package sshsession
 
 import (
+	"runtime"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -13,11 +14,22 @@ import (
 )
 
 func TestNew(t *testing.T) {
+	// termview.New opens a real ConPTY on Windows. On GitHub Actions Windows
+	// runners that call can hang indefinitely (same class of issue as ConPTY
+	// read loops never returning EOF). Skip until we have a mocked PTY path.
+	if runtime.GOOS == "windows" {
+		t.Skip("termview.New/ConPTY hangs on GitHub Actions Windows runners")
+	}
+
 	_, err := New(80, 24, "echo", "test")
 	require.NoError(t, err)
 }
 
 func TestNew_ExecutableNotFoundErr(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("termview.New/ConPTY hangs on GitHub Actions Windows runners")
+	}
+
 	_, err := New(80, 24, "no_such_binary", "test")
 	require.Error(t, err)
 }

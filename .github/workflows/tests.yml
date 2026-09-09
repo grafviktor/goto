@@ -27,9 +27,12 @@ jobs:
           go-version: ${{ matrix.go-version }}
           cache: true
       - name: Test
-        # -race hangs on GitHub Windows runners with this project's deps.
-        # Run without race; keep coverage.
-        run: go test -coverpkg=./internal/... -vet=off -count=1 -timeout 5m -coverprofile unit.txt -covermode atomic ./...
+        # Windows GHA notes:
+        # - -race hangs with this project's deps
+        # - -coverpkg=./internal/... pulls sshsession/termview (ConPTY) into every
+        #   test binary and also hangs / stalls on Windows runners
+        # Use per-package coverage, verbose output, and fail fast for diagnosis.
+        run: go test -v -p 1 -failfast -vet=off -count=1 -timeout 2m -coverprofile unit.txt -covermode atomic ./...
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
