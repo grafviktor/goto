@@ -35,6 +35,10 @@ func TestNew_ExecutableNotFoundErr(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("termview.New/ConPTY hangs on GitHub Actions Windows runners")
+	}
+
 	tests := []struct {
 		name            string
 		sentMessage     tea.Msg
