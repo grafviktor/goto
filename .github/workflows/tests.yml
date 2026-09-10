@@ -11,10 +11,9 @@ jobs:
       group: unit-${{ github.ref }}-${{ matrix.os }}-${{ matrix.go-version }}
       cancel-in-progress: true
     strategy:
-      fail-fast: false
       matrix:
         go-version: [1.25.x, 1.26.x]
-        os: [windows]
+        os: [ubuntu, windows, macOS]
     env:
       OS: ${{ matrix.os }}-latest
       GO: ${{ matrix.go-version }}
@@ -27,89 +26,12 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
-      - name: Test (non-UI packages)
-        # First prove the Windows runner is healthy without termview/ConPTY.
-        # Emit ::error:: with the failing package so it appears in job annotations
-        # (readable without downloading private logs).
-        shell: bash
-        run: |
-          set -euo pipefail
-          pkgs=$(go list ./internal/config ./internal/logger ./internal/model/... ./internal/state ./internal/storage/... ./internal/utils ./internal/version | tr -d '\r')
-          {
-            echo "## Non-UI packages"
-            echo '```'
-            echo "$pkgs"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          echo "Packages:"
-          echo "$pkgs"
-          failed=0
-          for pkg in $pkgs; do
-            echo "======== START $pkg ========"
-            set +e
-            go test -v -count=1 -timeout 45s -vet=off "$pkg" > pkg-out.txt 2>&1
-            status=$?
-            set -e
-            cat pkg-out.txt
-            cat pkg-out.txt >> test-output.txt
-            if [ "$status" -ne 0 ]; then
-              echo "======== FAIL $pkg (exit $status) ========"
-              echo "::error title=Windows test failure::Package ${pkg} failed with exit code ${status}"
-              {
-                echo "### FAILED: \`$pkg\` (exit $status)"
-                echo '```'
-                tail -n 80 pkg-out.txt
-                echo '```'
-              } >> "$GITHUB_STEP_SUMMARY"
-              failed=1
-              break
-            fi
-            echo "======== OK $pkg ========"
-          done
-          exit $failed
-      - name: Test (UI packages)
-        if: success()
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Light packages first; app/sshsession pull termview last.
-          pkgs=$(go list ./internal/ui/message ./internal/ui/theme ./internal/ui/component/input ./internal/ui/component/grouplist ./internal/ui/component/hostedit ./internal/ui/component/hostlist ./internal/ui/component/sshsession ./internal/ui ./internal/app | tr -d '\r')
-          {
-            echo "## UI packages"
-            echo '```'
-            echo "$pkgs"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          echo "Packages:"
-          echo "$pkgs"
-          failed=0
-          for pkg in $pkgs; do
-            echo "======== START $pkg ========"
-            set +e
-            go test -v -count=1 -timeout 45s -vet=off "$pkg" > pkg-out.txt 2>&1
-            status=$?
-            set -e
-            cat pkg-out.txt
-            cat pkg-out.txt >> test-output.txt
-            if [ "$status" -ne 0 ]; then
-              echo "======== FAIL $pkg (exit $status) ========"
-              echo "::error title=Windows test failure::Package ${pkg} failed with exit code ${status}"
-              {
-                echo "### FAILED: \`$pkg\` (exit $status)"
-                echo '```'
-                tail -n 80 pkg-out.txt
-                echo '```'
-              } >> "$GITHUB_STEP_SUMMARY"
-              failed=1
-              break
-            fi
-            echo "======== OK $pkg ========"
-          done
-          exit $failed
-      - name: Upload test output
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Test
+        run: go test -coverpkg=./internal/... -race -vet=off -count=1 -timeout 3m -coverprofile unit.txt -covermode atomic ./...
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
         with:
-          name: windows-test-output-${{ matrix.go-version }}
-          path: test-output.txt
-          if-no-files-found: warn
+          file: ./unit.txt
+          flags: unit,${{ matrix.os }},go-${{ matrix.go-version }}
+          name: unit
+          token: ${{ secrets.CODECOV_TOKEN }}
