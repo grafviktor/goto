@@ -342,7 +342,7 @@ func Test_applyConfig(t *testing.T) {
 			},
 			wantErr: false,
 		}, {
-			name:    "Persist theme '--set-theme' parameter",
+			name:    "Persist valid theme '--set-theme' parameter",
 			testCfg: config.Configuration{SetTheme: "nord"},
 			expected: State{
 				AppMode:  constant.AppModeType.StartUI,
@@ -350,6 +350,11 @@ func Test_applyConfig(t *testing.T) {
 				Theme:    "nord",
 			},
 			wantErr: false,
+		}, {
+			name:     "Persist invalid theme '--set-theme' parameter",
+			testCfg:  config.Configuration{SetTheme: "no_such_theme"},
+			expected: State{},
+			wantErr:  true,
 		},
 	}
 
