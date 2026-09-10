@@ -4,10 +4,11 @@
 package theme
 
 import (
+	"image/color"
+
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/list"
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/compat"
 )
 
 // AdaptiveColor supports both light and dark theme variants.
@@ -16,9 +17,16 @@ type AdaptiveColor struct {
 	Dark  string `json:"dark"`
 }
 
-// toLipgloss converts AdaptiveColor to lipgloss.AdaptiveColor.
-func (c AdaptiveColor) toLipgloss() compat.AdaptiveColor {
-	return compat.AdaptiveColor{Light: lipgloss.Color(c.Light), Dark: lipgloss.Color(c.Dark)}
+// lightDark picks light/dark theme colors without importing lipgloss/compat.
+// compat runs HasDarkBackground(os.Stdin, os.Stdout) at package init, which
+// opens CONIN$ and hangs forever on Windows CI with redirected stdio
+// (https://github.com/charmbracelet/lipgloss/issues/635).
+// Default to dark; Bubble Tea can drive LightDark via BackgroundColorMsg later.
+var lightDark = lipgloss.LightDark(true)
+
+// toLipgloss converts AdaptiveColor to a lipgloss color.
+func (c AdaptiveColor) toLipgloss() color.Color {
+	return lightDark(lipgloss.Color(c.Light), lipgloss.Color(c.Dark))
 }
 
 // ColorsList defines all colors which can be overridden in the application.

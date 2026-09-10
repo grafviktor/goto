@@ -18,9 +18,13 @@ type Model struct {
 	stdErr  io.Writer
 }
 
+// newTermView opens a PTY-backed terminal. Overridden in tests to avoid ConPTY
+// on Windows CI (real termview.New can hang there indefinitely).
+var newTermView = termview.New
+
 func New(initialWidth, initialHeight int, commandAndArgs ...string) (Model, error) {
 	stdErr := &utils.ProcessBufferWriter{}
-	term, err := termview.New(
+	term, err := newTermView(
 		termview.WithCommand(commandAndArgs[0], commandAndArgs[1:]...),
 		termview.WithStdErr(stdErr),
 		termview.WithInitialWidth(initialWidth),

@@ -72,7 +72,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          pkgs=$(go list ./internal/app ./internal/ui/... | tr -d '\r')
+          # Light packages first; app/sshsession pull termview last.
+          pkgs=$(go list ./internal/ui/message ./internal/ui/theme ./internal/ui/component/input ./internal/ui/component/grouplist ./internal/ui/component/hostedit ./internal/ui/component/hostlist ./internal/ui/component/sshsession ./internal/ui ./internal/app | tr -d '\r')
           {
             echo "## UI packages"
             echo '```'
