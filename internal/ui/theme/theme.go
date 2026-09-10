@@ -4,10 +4,11 @@
 package theme
 
 import (
+	"image/color"
+
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/list"
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/compat"
 )
 
 // AdaptiveColor supports both light and dark theme variants.
@@ -16,9 +17,11 @@ type AdaptiveColor struct {
 	Dark  string `json:"dark"`
 }
 
+var lightDark = lipgloss.LightDark(true)
+
 // toLipgloss converts AdaptiveColor to lipgloss.AdaptiveColor.
-func (c AdaptiveColor) toLipgloss() compat.AdaptiveColor {
-	return compat.AdaptiveColor{Light: lipgloss.Color(c.Light), Dark: lipgloss.Color(c.Dark)}
+func (c AdaptiveColor) toLipgloss() color.Color {
+	return lightDark(lipgloss.Color(c.Light), lipgloss.Color(c.Dark))
 }
 
 // ColorsList defines all colors which can be overridden in the application.

@@ -9,11 +9,10 @@ import (
 
 	testutils "github.com/grafviktor/goto/internal/testutils"
 	"github.com/grafviktor/goto/internal/ui/message"
-	"github.com/grafviktor/goto/internal/utils"
 )
 
 func TestNew(t *testing.T) {
-	_, err := New(80, 24, "echo", "test")
+	_, err := New(80, 24, "hostname")
 	require.NoError(t, err)
 }
 
@@ -39,7 +38,7 @@ func TestUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := Model{stdErr: &utils.ProcessBufferWriter{}}
+			m, _ := New(80, 24, "hostname")
 			_, cmd := m.Update(tt.sentMessage)
 			var msgs []tea.Msg
 			testutils.CmdToMessage(cmd, &msgs)
