@@ -5,6 +5,7 @@ package theme
 
 import (
 	"image/color"
+	"os"
 
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/list"
@@ -17,7 +18,10 @@ type AdaptiveColor struct {
 	Dark  string `json:"dark"`
 }
 
-var lightDark = lipgloss.LightDark(true)
+// Also see tea.BackgroundColorMsg, to change color dynamically at runtime.
+// For now, for simplicity, we determine the background on application startup.
+var hasDarkBG = lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
+var lightDark = lipgloss.LightDark(hasDarkBG)
 
 // toLipgloss converts AdaptiveColor to lipgloss.AdaptiveColor.
 func (c AdaptiveColor) toLipgloss() color.Color {
