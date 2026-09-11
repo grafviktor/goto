@@ -7,6 +7,7 @@ require (
 	charm.land/bubbletea/v2 v2.0.7
 	charm.land/lipgloss/v2 v2.0.3
 	github.com/caarlos0/env/v10 v10.0.0
+	github.com/charmbracelet/x/term v0.2.2
 	github.com/grafviktor/termview v0.3.0
 	github.com/samber/lo v1.53.0
 	github.com/stretchr/testify v1.8.4
@@ -24,7 +25,6 @@ require (
 	github.com/charmbracelet/x/conpty v0.1.1 // indirect
 	github.com/charmbracelet/x/errors v0.0.0-20240508181413-e8d8b6e2de86 // indirect
 	github.com/charmbracelet/x/exp/ordered v0.1.0 // indirect
-	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/vt v0.0.0-20260615092313-b57e5e6d29bb // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
