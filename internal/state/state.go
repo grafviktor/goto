@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"slices"
 	"strings"
 	"sync"
 
@@ -66,6 +67,7 @@ type State struct {
 	AppMode                    constant.AppMode      `yaml:"-"`
 	Context                    context.Context       `yaml:"-"`
 	CurrentView                View                  `yaml:"-"`
+	EmbeddedTerminalEnabled    bool                  `yaml:"enable_embedded_terminal"`
 	Group                      string                `yaml:"group,omitempty"`
 	Height                     int                   `yaml:"-"`
 	IsUserDefinedSSHConfigPath bool                  `yaml:"-"`
@@ -136,10 +138,11 @@ func (s *State) readFromFile() {
 		Selected int    `yaml:"selected"`
 		Group    string `yaml:"group"`
 		// Using pointers to distinguish between null and zero values.
-		Theme            *string `yaml:"theme"`
-		ScreenLayout     *string `yaml:"screen_layout"`
-		SSHConfigEnabled *bool   `yaml:"enable_ssh_config"`
-		SSHConfigPath    *string `yaml:"ssh_config_path"`
+		EmbeddedTerminalEnabled *bool   `yaml:"enable_embedded_terminal"`
+		Theme                   *string `yaml:"theme"`
+		ScreenLayout            *string `yaml:"screen_layout"`
+		SSHConfigEnabled        *bool   `yaml:"enable_ssh_config"`
+		SSHConfigPath           *string `yaml:"ssh_config_path"`
 	}
 
 	appStateFilePath := path.Join(s.AppHome, stateFile)
@@ -177,6 +180,13 @@ func (s *State) readFromFile() {
 		s.SSHConfigEnabled = *loadedState.SSHConfigEnabled
 	}
 
+	if loadedState.EmbeddedTerminalEnabled == nil {
+		// If there is no value for embedded terminal, then we enable it by default
+		s.EmbeddedTerminalEnabled = true
+	} else {
+		s.EmbeddedTerminalEnabled = *loadedState.EmbeddedTerminalEnabled
+	}
+
 	if loadedState.SSHConfigPath != nil {
 		var sshConfigPath string
 		sshConfigPath, err = utils.SSHConfigPath(*loadedState.SSHConfigPath)
@@ -209,18 +219,28 @@ func (s *State) applyConfig(cfg *config.Configuration) error {
 	}
 
 	if cfg.DisableFeature != "" {
-		if cfg.DisableFeature == config.FeatureSSHConfig {
-			s.SSHConfigEnabled = false
-		} else {
+		if !slices.Contains(config.SupportedFeatures, cfg.DisableFeature) {
 			return fmt.Errorf("feature %q is not supported", cfg.DisableFeature)
+		}
+
+		switch cfg.DisableFeature {
+		case config.FeatureSSHConfig:
+			s.SSHConfigEnabled = false
+		case config.FeatureEmbeddedTerminal:
+			s.EmbeddedTerminalEnabled = false
 		}
 	}
 
 	if cfg.EnableFeature != "" {
-		if cfg.EnableFeature == config.FeatureSSHConfig {
-			s.SSHConfigEnabled = true
-		} else {
+		if !slices.Contains(config.SupportedFeatures, cfg.EnableFeature) {
 			return fmt.Errorf("feature %q is not supported", cfg.EnableFeature)
+		}
+
+		switch cfg.EnableFeature {
+		case config.FeatureSSHConfig:
+			s.SSHConfigEnabled = true
+		case config.FeatureEmbeddedTerminal:
+			s.EmbeddedTerminalEnabled = true
 		}
 	}
 

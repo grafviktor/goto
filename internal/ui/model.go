@@ -103,7 +103,6 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.appState.Selected = msg.HostID
 	case message.RunProcessSSHConnect:
 		m.logger.Debug("[UI] Connect to focused SSH host")
-		m.appState.CurrentView = state.ViewSSHSession
 		return m, m.dispatchProcessSSHConnect(msg)
 	case message.RunProcessSSHLoadConfig:
 		m.logger.Debug("[UI] Load SSH config for focused host id: %d, title: %q", msg.Host.ID, msg.Host.Title)
@@ -281,10 +280,20 @@ func (m *MainModel) dispatchProcess(
 
 func (m *MainModel) dispatchProcessSSHConnect(msg message.RunProcessSSHConnect) tea.Cmd {
 	m.logger.Debug("[EXEC] Build ssh connect command for hostname: %v, title: %v", msg.Host.Address, msg.Host.Title)
-	cmd := utils.BuildProcess(msg.Host.CmdSSHConnect())
-	m.logger.Info("[EXEC] Run process: '%s'", cmd.String())
+	if m.appState.EmbeddedTerminalEnabled {
+		m.logger.Debug("[EXEC] Use embedded terminal for SSH connection")
+		return m.dispatchProcessSSHConnectWithEmbeddedTerminal(msg)
+	}
 
-	commandAndArgs := append([]string{cmd.Path}, cmd.Args[1:]...)
+	m.logger.Debug("[EXEC] Use OS terminal for SSH connection")
+	return m.dispatchProcessSSHConnectWithOsTerminal(msg)
+}
+
+func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.RunProcessSSHConnect) tea.Cmd {
+	process := utils.BuildProcess(msg.Host.CmdSSHConnect())
+	m.logger.Info("[EXEC] Run process: '%s'", process.String())
+	commandAndArgs := append([]string{process.Path}, process.Args[1:]...)
+
 	var err error
 	m.modelSSHSession, err = sshsession.New(m.appState.Width, m.appState.Height, commandAndArgs...)
 	if err != nil {
@@ -295,7 +304,15 @@ func (m *MainModel) dispatchProcessSSHConnect(msg message.RunProcessSSHConnect) 
 		})
 	}
 
+	m.appState.CurrentView = state.ViewSSHSession
 	return m.modelSSHSession.Init()
+}
+
+func (m *MainModel) dispatchProcessSSHConnectWithOsTerminal(msg message.RunProcessSSHConnect) tea.Cmd {
+	process := utils.BuildProcessInterceptStdErr(msg.Host.CmdSSHConnect())
+	m.logger.Info("[EXEC] Run process: '%s'", process.String())
+
+	return m.dispatchProcess(constant.ProcessTypeSSHConnect, process, false, false)
 }
 
 func (m *MainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadConfig) tea.Cmd {
