@@ -6,10 +6,12 @@ package theme
 import (
 	"image/color"
 	"os"
+	"sync"
 
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/list"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/term"
 )
 
 // AdaptiveColor supports both light and dark theme variants.
@@ -18,13 +20,26 @@ type AdaptiveColor struct {
 	Dark  string `json:"dark"`
 }
 
-// Also see tea.BackgroundColorMsg, to change color dynamically at runtime.
-// For now, for simplicity, we determine the background on application startup.
-var hasDarkBG = lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
-var lightDark = lipgloss.LightDark(hasDarkBG)
+var (
+	lightDark lipgloss.LightDarkFunc
+	once      sync.Once
+)
 
 // toLipgloss converts AdaptiveColor to lipgloss.AdaptiveColor.
 func (c AdaptiveColor) toLipgloss() color.Color {
+	once.Do(func() {
+		// Inside github actions, unit tests block forever because
+		// the terminal is not attached. Here we check if the terminal is real.
+		// If not, we simply fallback to dark background.
+		isDarkBackground := true
+		if term.IsTerminal(os.Stdin.Fd()) && term.IsTerminal(os.Stdout.Fd()) {
+			// Also see tea.BackgroundColorMsg, to change color dynamically at runtime.
+			// For now, for simplicity, we determine the background on application startup only.
+			isDarkBackground = lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
+		}
+
+		lightDark = lipgloss.LightDark(isDarkBackground)
+	})
 	return lightDark(lipgloss.Color(c.Light), lipgloss.Color(c.Dark))
 }
 
