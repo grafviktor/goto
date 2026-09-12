@@ -160,8 +160,8 @@ func TestBuildProcess(t *testing.T) {
 		},
 		{
 			name:        "Command with Arguments",
-			cmd:         "echo hello",
-			expectedCmd: exec.Command("echo", "hello"),
+			cmd:         "hostname",
+			expectedCmd: exec.Command("hostname"),
 		},
 		{
 			name:        "Empty Command",
@@ -424,13 +424,13 @@ func Test_CheckAppRequirements(t *testing.T) {
 	}{
 		{
 			name:               "All good test",
-			requiredBinaryName: "echo",
+			requiredBinaryName: "hostname",
 			appHome:            appHomeOk,
 			wantErr:            false,
 		},
 		{
 			name:               "Bad app home path",
-			requiredBinaryName: "echo",
+			requiredBinaryName: "hostname",
 			appHome:            appHomeBad,
 			wantErr:            true,
 		},

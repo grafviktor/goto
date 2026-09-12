@@ -17,6 +17,7 @@ import (
 	"github.com/grafviktor/goto/internal/ui/component/grouplist"
 	"github.com/grafviktor/goto/internal/ui/component/hostedit"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
+	"github.com/grafviktor/goto/internal/ui/component/sshsession"
 	"github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
 )
@@ -54,6 +55,7 @@ type MainModel struct {
 	modelHostList      tea.Model
 	modelGroupList     tea.Model
 	modelHostEdit      tea.Model
+	modelSSHSession    tea.Model
 	appState           *state.State
 	viewMessageContent string
 	logger             iLogger
@@ -76,7 +78,6 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		m.logger.Debug("[UI] Keyboard event: '%v'", msg)
 		return m.handleKeyEvent(msg)
 	case tea.WindowSizeMsg:
 		m.logger.Debug("[UI] Set terminal window size: %d %d", msg.Width, msg.Height)
@@ -133,6 +134,11 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	}
 
+	if m.appState.CurrentView == state.ViewSSHSession {
+		m.modelSSHSession, cmd = m.modelSSHSession.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+
 	return m, tea.Batch(cmds...)
 }
 
@@ -148,6 +154,8 @@ func (m *MainModel) View() tea.View {
 		content = tea.NewView(m.viewMessageContent)
 	case state.ViewEditItem:
 		content = m.modelHostEdit.View()
+	case state.ViewSSHSession:
+		content = m.modelSSHSession.View()
 	}
 
 	// Wrap UI into the ViewPort
@@ -156,13 +164,18 @@ func (m *MainModel) View() tea.View {
 
 	view := tea.NewView(viewPortContent)
 	view.AltScreen = true
+	view.Cursor = content.Cursor
 	return view
 }
 
 func (m *MainModel) handleKeyEvent(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	if msg.String() == "ctrl+c" {
-		m.logger.Debug("[UI] Receive Ctrl+C. Quit the application")
-		return m, tea.Quit
+	if m.appState.CurrentView != state.ViewSSHSession {
+		m.logger.Debug("[UI] Keyboard event: '%v'", msg)
+
+		if msg.String() == "ctrl+c" {
+			m.logger.Debug("[UI] Receive Ctrl+C. Quit the application")
+			return m, tea.Quit
+		}
 	}
 
 	var cmd tea.Cmd
@@ -181,6 +194,8 @@ func (m *MainModel) handleKeyEvent(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.modelGroupList, cmd = m.modelGroupList.Update(msg)
 	case state.ViewEditItem:
 		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
+	case state.ViewSSHSession:
+		m.modelSSHSession, cmd = m.modelSSHSession.Update(msg)
 	}
 
 	return m, cmd
@@ -265,6 +280,35 @@ func (m *MainModel) dispatchProcess(
 
 func (m *MainModel) dispatchProcessSSHConnect(msg message.RunProcessSSHConnect) tea.Cmd {
 	m.logger.Debug("[EXEC] Build ssh connect command for hostname: %v, title: %v", msg.Host.Address, msg.Host.Title)
+	if m.appState.EmbeddedTerminalEnabled {
+		m.logger.Debug("[EXEC] Use embedded terminal for SSH connection")
+		return m.dispatchProcessSSHConnectWithEmbeddedTerminal(msg)
+	}
+
+	m.logger.Debug("[EXEC] Use OS terminal for SSH connection")
+	return m.dispatchProcessSSHConnectWithOsTerminal(msg)
+}
+
+func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.RunProcessSSHConnect) tea.Cmd {
+	process := utils.BuildProcess(msg.Host.CmdSSHConnect())
+	m.logger.Info("[EXEC] Run process: '%s'", process.String())
+	commandAndArgs := append([]string{process.Path}, process.Args[1:]...)
+
+	var err error
+	m.modelSSHSession, err = sshsession.New(m.appState.Width, m.appState.Height, commandAndArgs...)
+	if err != nil {
+		return message.TeaCmd(message.RunProcessErrorOccurred{
+			ProcessType: constant.ProcessTypeSSHConnect,
+			StdOut:      "",
+			StdErr:      err.Error(),
+		})
+	}
+
+	m.appState.CurrentView = state.ViewSSHSession
+	return m.modelSSHSession.Init()
+}
+
+func (m *MainModel) dispatchProcessSSHConnectWithOsTerminal(msg message.RunProcessSSHConnect) tea.Cmd {
 	process := utils.BuildProcessInterceptStdErr(msg.Host.CmdSSHConnect())
 	m.logger.Info("[EXEC] Run process: '%s'", process.String())
 
@@ -310,6 +354,11 @@ func (m *MainModel) handleProcessSuccess(msg message.RunProcessSuccess) tea.Cmd 
 		}
 
 		m.appState.CurrentView = state.ViewMessage
+	}
+
+	if msg.ProcessType == constant.ProcessTypeSSHConnect {
+		m.logger.Debug("[EXEC] SSH connect process finished. Details:\n%s\n%s", msg.StdOut, msg.StdErr)
+		m.appState.CurrentView = state.ViewHostList
 	}
 
 	return nil

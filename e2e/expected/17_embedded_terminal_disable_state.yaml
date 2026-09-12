@@ -1,5 +1,5 @@
-enable_embedded_terminal: true
+enable_embedded_terminal: false
 screen_layout: description
-selected: 6
+selected: 0
 enable_ssh_config: true
 theme: default
