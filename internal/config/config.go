@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	appName          = "goto"
-	FeatureSSHConfig = "ssh_config"
+	appName                 = "goto"
+	FeatureSSHConfig        = "ssh_config"
+	FeatureEmbeddedTerminal = "embedded_terminal"
 )
 
 // Configuration structs contains user-definable parameters.
@@ -68,6 +69,11 @@ func parseEnvironmentVariables() (*Configuration, error) {
 func parseCommandLineFlags(envConfig *Configuration, args []string, exitOnError bool) (*Configuration, error) {
 	var cmdConfig Configuration
 	var shouldDisplayVersionAndExit bool
+	var supportedFeatures []string
+
+	for _, f := range SupportedFeatures {
+		supportedFeatures = append(supportedFeatures, f.String())
+	}
 
 	// flag.ExitOnError - means exit the program if an error occurs while parsing flags
 	// flag.ContinueOnError - means return error and let developer to decide how to handle this error,
@@ -93,12 +99,12 @@ func parseCommandLineFlags(envConfig *Configuration, args []string, exitOnError 
 	fs.Var(
 		&cmdConfig.EnableFeature,
 		"e",
-		fmt.Sprintf("Enable feature. Supported values: %s", strings.Join(SupportedFeatures, "|")),
+		fmt.Sprintf("Enable feature. Supported values: %s", strings.Join(supportedFeatures, "|")),
 	)
 	fs.Var(
 		&cmdConfig.DisableFeature,
 		"d",
-		fmt.Sprintf("Disable feature. Supported values: %s", strings.Join(SupportedFeatures, "|")),
+		fmt.Sprintf("Disable feature. Supported values: %s", strings.Join(supportedFeatures, "|")),
 	)
 	fs.StringVar(&cmdConfig.SetTheme, "set-theme", "", "Set application theme")
 	fs.StringVar(&cmdConfig.SetSSHConfigPath, "set-ssh-config-path", "", "Set SSH configuration file path or URL.")

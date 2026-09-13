@@ -1,3 +1,4 @@
+enable_embedded_terminal: true
 screen_layout: description
 selected: 0
 enable_ssh_config: true

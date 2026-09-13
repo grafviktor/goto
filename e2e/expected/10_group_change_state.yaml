@@ -1,3 +1,4 @@
+enable_embedded_terminal: true
 group: yaml_config
 screen_layout: description
 selected: 6
