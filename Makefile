@@ -49,6 +49,7 @@ audit:
 test:
 	@echo 'Run unit tests'
 	go test -coverpkg=./internal/... -race -vet=off -count=1 -coverprofile unit.txt -covermode atomic ./...
+	@printf '\nRun "go tool cover -html=unit.txt" to view the unit test coverage report in your browser\n\n'
 
 # unit-test-report: display unit coverage report in html format. This option is hidden from make help menu.
 .PHONY: unit-test-report
