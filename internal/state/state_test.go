@@ -110,45 +110,54 @@ enable_ssh_config: true
 group: default
 theme: dark
 screen_layout: compact
+enable_embedded_terminal: true
 `,
 			expected: State{
-				Selected:         999,
-				SSHConfigEnabled: true,
-				ScreenLayout:     constant.ScreenLayoutCompact,
-				Theme:            "dark",
-				Group:            "default",
+				Selected:                999,
+				SSHConfigEnabled:        true,
+				ScreenLayout:            constant.ScreenLayoutCompact,
+				Theme:                   "dark",
+				Group:                   "default",
+				EmbeddedTerminalEnabled: true,
 			},
-		}, {
+		},
+		{
 			name: "State file without screen layout",
 			stateFileContent: `
 selected: 999
 enable_ssh_config: true
 group: default
 theme: dark
+enable_embedded_terminal: true
 `,
 			expected: State{
-				Selected:         999,
-				SSHConfigEnabled: true,
-				ScreenLayout:     constant.ScreenLayoutDescription,
-				Theme:            "dark",
-				Group:            "default",
+				Selected:                999,
+				SSHConfigEnabled:        true,
+				ScreenLayout:            constant.ScreenLayoutDescription,
+				Theme:                   "dark",
+				Group:                   "default",
+				EmbeddedTerminalEnabled: true,
 			},
-		}, {
+		},
+		{
 			name: "State file without theme",
 			stateFileContent: `
 selected: 999
 enable_ssh_config: true
 group: default
 screen_layout: compact
+enable_embedded_terminal: true
 `,
 			expected: State{
-				Selected:         999,
-				SSHConfigEnabled: true,
-				ScreenLayout:     constant.ScreenLayoutCompact,
-				Theme:            "default",
-				Group:            "default",
+				Selected:                999,
+				SSHConfigEnabled:        true,
+				ScreenLayout:            constant.ScreenLayoutCompact,
+				Theme:                   "default",
+				Group:                   "default",
+				EmbeddedTerminalEnabled: true,
 			},
-		}, {
+		},
+		{
 			name: "State file SSH config option disabled",
 			stateFileContent: `
 selected: 999
@@ -156,15 +165,18 @@ enable_ssh_config: false
 group: default
 theme: dark
 screen_layout: compact
+enable_embedded_terminal: true
 `,
 			expected: State{
-				Selected:         999,
-				SSHConfigEnabled: false,
-				ScreenLayout:     constant.ScreenLayoutCompact,
-				Theme:            "dark",
-				Group:            "default",
+				Selected:                999,
+				SSHConfigEnabled:        false,
+				ScreenLayout:            constant.ScreenLayoutCompact,
+				Theme:                   "dark",
+				Group:                   "default",
+				EmbeddedTerminalEnabled: true,
 			},
-		}, {
+		},
+		{
 			name: "State file SSH config option not set, should default to enabled",
 			stateFileContent: `
 selected: 999
@@ -173,13 +185,15 @@ theme: dark
 screen_layout: compact
 `,
 			expected: State{
-				Selected:         999,
-				SSHConfigEnabled: true,
-				ScreenLayout:     constant.ScreenLayoutCompact,
-				Theme:            "dark",
-				Group:            "default",
+				Selected:                999,
+				SSHConfigEnabled:        true,
+				ScreenLayout:            constant.ScreenLayoutCompact,
+				Theme:                   "dark",
+				Group:                   "default",
+				EmbeddedTerminalEnabled: true,
 			},
-		}, {
+		},
+		{
 			name: "Valid SSH config path should be picked up by state",
 			stateFileContent: `
 selected: 999
@@ -198,8 +212,10 @@ ssh_config_path: /tmp/some_path
 				SSHConfigPath:              "/tmp/some_path",
 				SetSSHConfigPath:           "/tmp/some_path",
 				IsUserDefinedSSHConfigPath: true,
+				EmbeddedTerminalEnabled:    true,
 			},
-		}, {
+		},
+		{
 			name: "Valid remote SSH config path should be picked up by state",
 			stateFileContent: `
 selected: 999
@@ -208,6 +224,7 @@ group: default
 theme: dark
 screen_layout: compact
 ssh_config_path: http://example.com/ssh_config
+enable_embedded_terminal: true
 `,
 			expected: State{
 				Selected:                   999,
@@ -218,6 +235,57 @@ ssh_config_path: http://example.com/ssh_config
 				SSHConfigPath:              "http://example.com/ssh_config",
 				SetSSHConfigPath:           "http://example.com/ssh_config",
 				IsUserDefinedSSHConfigPath: true,
+				EmbeddedTerminalEnabled:    true,
+			},
+		}, {
+			name: "State file Embedded Terminal option not set, should default to enabled",
+			stateFileContent: `
+selected: 999
+group: default
+theme: dark
+screen_layout: compact
+`,
+			expected: State{
+				Selected:                999,
+				SSHConfigEnabled:        true,
+				EmbeddedTerminalEnabled: true,
+				ScreenLayout:            constant.ScreenLayoutCompact,
+				Theme:                   "dark",
+				Group:                   "default",
+			},
+		}, {
+			name: "State file Embedded Terminal option disabled",
+			stateFileContent: `
+selected: 999
+group: default
+theme: dark
+screen_layout: compact
+enable_embedded_terminal: false
+`,
+			expected: State{
+				Selected:                999,
+				SSHConfigEnabled:        true,
+				EmbeddedTerminalEnabled: false,
+				ScreenLayout:            constant.ScreenLayoutCompact,
+				Theme:                   "dark",
+				Group:                   "default",
+			},
+		}, {
+			name: "State file Embedded Terminal option enabled",
+			stateFileContent: `
+selected: 999
+group: default
+theme: dark
+screen_layout: compact
+enable_embedded_terminal: true
+`,
+			expected: State{
+				Selected:                999,
+				SSHConfigEnabled:        true,
+				EmbeddedTerminalEnabled: true,
+				ScreenLayout:            constant.ScreenLayoutCompact,
+				Theme:                   "dark",
+				Group:                   "default",
 			},
 		},
 	}
@@ -246,14 +314,15 @@ ssh_config_path: http://example.com/ssh_config
 				expectedSetSSHConfigPath, _ = utils.SSHConfigPath(tt.expected.SetSSHConfigPath)
 			}
 
-			assert.Equal(t, tt.expected.Theme, test.Theme, "state.Theme value mismatch")
-			assert.Equal(t, tt.expected.Group, test.Group, "state.Group value mismatch")
-			assert.Equal(t, tt.expected.Selected, test.Selected, "state.Selected value mismatch")
-			assert.Equal(t, expectedSSHConfigPath, test.SSHConfigPath, "state.SSHConfigPath value mismatch")
-			assert.Equal(t, tt.expected.ScreenLayout, test.ScreenLayout, "state.ScreenLayout value mismatch")
-			assert.Equal(t, expectedSetSSHConfigPath, test.SetSSHConfigPath, "state.SetSSHConfigPath value mismatch")
-			assert.Equal(t, tt.expected.SSHConfigEnabled, test.SSHConfigEnabled, "state.SSHConfigEnabled value mismatch")
-			assert.Equal(t, tt.expected.IsUserDefinedSSHConfigPath, test.IsUserDefinedSSHConfigPath, "state.IsUserDefinedSSHConfigPath value mismatch")
+			require.Equal(t, tt.expected.Theme, test.Theme, "state.Theme value mismatch")
+			require.Equal(t, tt.expected.Group, test.Group, "state.Group value mismatch")
+			require.Equal(t, tt.expected.Selected, test.Selected, "state.Selected value mismatch")
+			require.Equal(t, expectedSSHConfigPath, test.SSHConfigPath, "state.SSHConfigPath value mismatch")
+			require.Equal(t, tt.expected.ScreenLayout, test.ScreenLayout, "state.ScreenLayout value mismatch")
+			require.Equal(t, expectedSetSSHConfigPath, test.SetSSHConfigPath, "state.SetSSHConfigPath value mismatch")
+			require.Equal(t, tt.expected.SSHConfigEnabled, test.SSHConfigEnabled, "state.SSHConfigEnabled value mismatch")
+			require.Equal(t, tt.expected.EmbeddedTerminalEnabled, test.EmbeddedTerminalEnabled, "state.EmbeddedTerminalEnabled value mismatch")
+			require.Equal(t, tt.expected.IsUserDefinedSSHConfigPath, test.IsUserDefinedSSHConfigPath, "state.IsUserDefinedSSHConfigPath value mismatch")
 		})
 	}
 }
@@ -285,7 +354,7 @@ func Test_applyConfig(t *testing.T) {
 			},
 			wantErr: false,
 		}, {
-			name:    "Supported feature enabled",
+			name:    "Supported SSH enabled",
 			testCfg: config.Configuration{EnableFeature: "ssh_config"},
 			expected: State{
 				AppMode:          constant.AppModeType.StartUI,
@@ -294,12 +363,30 @@ func Test_applyConfig(t *testing.T) {
 			},
 			wantErr: false,
 		}, {
-			name:    "Supported feature disabled",
+			name:    "Supported SSH disabled",
 			testCfg: config.Configuration{DisableFeature: "ssh_config"},
 			expected: State{
 				AppMode:          constant.AppModeType.StartUI,
 				LogLevel:         constant.LogLevelType.INFO,
 				SSHConfigEnabled: false,
+			},
+			wantErr: false,
+		}, {
+			name:    "Supported Embedded Terminal enabled",
+			testCfg: config.Configuration{EnableFeature: "embedded_terminal"},
+			expected: State{
+				AppMode:                 constant.AppModeType.StartUI,
+				LogLevel:                constant.LogLevelType.INFO,
+				EmbeddedTerminalEnabled: true,
+			},
+			wantErr: false,
+		}, {
+			name:    "Supported Embedded Terminal disabled",
+			testCfg: config.Configuration{DisableFeature: "embedded_terminal"},
+			expected: State{
+				AppMode:                 constant.AppModeType.StartUI,
+				LogLevel:                constant.LogLevelType.INFO,
+				EmbeddedTerminalEnabled: false,
 			},
 			wantErr: false,
 		}, {
@@ -378,6 +465,7 @@ func Test_applyConfig(t *testing.T) {
 				assert.Equal(t, tt.expected.SSHConfigPath, actual.SSHConfigPath, "SSHConfigPath mismatch")
 				assert.Equal(t, tt.expected.SetSSHConfigPath, actual.SetSSHConfigPath, "SetSSHConfigPath mismatch")
 				assert.Equal(t, tt.expected.SSHConfigEnabled, actual.SSHConfigEnabled, "SSHConfigEnabled mismatch")
+				assert.Equal(t, tt.expected.EmbeddedTerminalEnabled, actual.EmbeddedTerminalEnabled, "EmbeddedTerminalEnabled mismatch")
 				assert.Equal(t, tt.expected.IsUserDefinedSSHConfigPath, actual.IsUserDefinedSSHConfigPath, "IsUserDefinedSSHConfigPath mismatch")
 			}
 		})
