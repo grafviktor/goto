@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/grafviktor/goto/internal/constant"
+	"github.com/grafviktor/goto/internal/model/host"
 	hostModel "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
@@ -45,6 +46,35 @@ func TestUpdate_KeyMsg(t *testing.T) {
 
 	assert.NotNil(t, model)
 	require.IsType(t, tea.QuitMsg{}, cmd(), "Wrong message type")
+}
+
+func TestDispatchProcess_SSH_connect(t *testing.T) {
+	tests := []struct {
+		name             string
+		embeddedTerminal bool
+		expectedMsgName  string
+	}{
+		{
+			name:             "Process SSH connect message with embedded terminal",
+			embeddedTerminal: true,
+			expectedMsgName:  "ClosedMsg",
+		},
+		{
+			name:             "Process SSH connect message with OS terminal",
+			embeddedTerminal: false,
+			expectedMsgName:  "execMsg",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			state := MockAppState()
+			state.EmbeddedTerminalEnabled = tt.embeddedTerminal
+			model := New(context.TODO(), testutils.NewMockStorage(true), state, &mocklogger.Logger{})
+			cmd := model.dispatchProcessSSHConnect(message.RunProcessSSHConnect{Host: host.Host{}})
+			require.Equal(t, tt.expectedMsgName, reflect.TypeOf(cmd()).Name())
+		})
+	}
 }
 
 func TestDispatchProcess_Foreground(t *testing.T) {
@@ -79,8 +109,6 @@ func TestDispatchProcess_Foreground(t *testing.T) {
 	// callbackFn.Call(argVals)
 }
 
-// This test is failing in a real Windows environment with error 'exec: "echo": executable file not found in %PATH%'.
-// Low priority though as it works in gitlab tests for Windows platform. Requires investigation.
 func TestDispatchProcess_Background_OK(t *testing.T) {
 	// Create a model
 	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
