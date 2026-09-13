@@ -255,7 +255,7 @@ func (m *MainModel) dispatchProcess(
 			}
 		}
 
-		m.logger.Info("[EXEC] Terminate process gracefully: %s", process.String())
+		m.logger.Info("[EXEC] Terminate process gracefully: %q", process.String())
 
 		return message.RunProcessSuccess{
 			ProcessType: processType,
@@ -291,7 +291,7 @@ func (m *MainModel) dispatchProcessSSHConnect(msg message.RunProcessSSHConnect) 
 
 func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.RunProcessSSHConnect) tea.Cmd {
 	process := utils.BuildProcess(msg.Host.CmdSSHConnect())
-	m.logger.Info("[EXEC] Run process: '%s'", process.String())
+	m.logger.Info("[EXEC] Run process: %q", process.String())
 	commandAndArgs := append([]string{process.Path}, process.Args[1:]...)
 
 	var err error
@@ -310,7 +310,7 @@ func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.Ru
 
 func (m *MainModel) dispatchProcessSSHConnectWithOsTerminal(msg message.RunProcessSSHConnect) tea.Cmd {
 	process := utils.BuildProcessInterceptStdErr(msg.Host.CmdSSHConnect())
-	m.logger.Info("[EXEC] Run process: '%s'", process.String())
+	m.logger.Info("[EXEC] Run process: %q", process.String())
 
 	return m.dispatchProcess(constant.ProcessTypeSSHConnect, process, false, false)
 }
@@ -318,7 +318,7 @@ func (m *MainModel) dispatchProcessSSHConnectWithOsTerminal(msg message.RunProce
 func (m *MainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadConfig) tea.Cmd {
 	m.logger.Debug("[EXEC] Read ssh configuration for host: '%+v'", msg.Host)
 	process := utils.BuildProcessInterceptStdAll(msg.Host.CmdSSHConfig())
-	m.logger.Info("[EXEC] Run process: '%s'", process.String())
+	m.logger.Info("[EXEC] Run process: %q", process.String())
 
 	// Should run in non-blocking fashion for ssh load config
 	return m.dispatchProcess(constant.ProcessTypeSSHLoadConfig, process, true, true)
@@ -326,9 +326,9 @@ func (m *MainModel) dispatchProcessSSHLoadConfig(msg message.RunProcessSSHLoadCo
 
 func (m *MainModel) dispatchProcessSSHCopyID(msg message.RunProcessSSHCopyID) tea.Cmd {
 	identityFile, hostname := msg.Host.SSHHostConfig.IdentityFile, msg.Host.SSHHostConfig.Hostname
-	m.logger.Debug("[EXEC] Copy ssh-key '%s.pub' to host '%s'", identityFile, hostname)
+	m.logger.Debug("[EXEC] Copy ssh-key '%s.pub' to host %q", identityFile, hostname)
 	process := utils.BuildProcessInterceptStdAll(msg.Host.CmdSSHCopyID())
-	m.logger.Info("[EXEC] Run process: '%s'", process.String())
+	m.logger.Info("[EXEC] Run process: %q", process.String())
 
 	// Should run in non-blocking fashion for ssh copy id
 	return m.dispatchProcess(constant.ProcessTypeSSHCopyID, process, false, false)

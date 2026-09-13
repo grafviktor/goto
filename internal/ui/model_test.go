@@ -10,12 +10,12 @@ import (
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
+	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/grafviktor/goto/internal/constant"
-	"github.com/grafviktor/goto/internal/model/host"
 	hostModel "github.com/grafviktor/goto/internal/model/host"
 	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
@@ -57,7 +57,7 @@ func TestDispatchProcess_SSH_connect(t *testing.T) {
 		{
 			name:             "Process SSH connect message with embedded terminal",
 			embeddedTerminal: true,
-			expectedMsgName:  "ClosedMsg",
+			expectedMsgName:  "OutputMsg",
 		},
 		{
 			name:             "Process SSH connect message with OS terminal",
@@ -71,10 +71,18 @@ func TestDispatchProcess_SSH_connect(t *testing.T) {
 			state := MockAppState()
 			state.EmbeddedTerminalEnabled = tt.embeddedTerminal
 			model := New(context.TODO(), testutils.NewMockStorage(true), state, &mocklogger.Logger{})
-			cmd := model.dispatchProcessSSHConnect(message.RunProcessSSHConnect{Host: host.Host{}})
+			host := hostModel.Host{Address: "localhost"}
+			cmd := model.dispatchProcessSSHConnect(message.RunProcessSSHConnect{Host: host})
 			require.Equal(t, tt.expectedMsgName, reflect.TypeOf(cmd()).Name())
 		})
 	}
+}
+
+func TestDispatchProcess_dispatchProcessSSHLoadConfig(t *testing.T) {
+	model := New(context.TODO(), testutils.NewMockStorage(true), MockAppState(), &mocklogger.Logger{})
+	host := hostModel.Host{Address: "localhost"}
+	cmd := model.dispatchProcessSSHLoadConfig(message.RunProcessSSHLoadConfig{Host: host})
+	require.IsType(t, message.RunProcessSuccess{}, cmd())
 }
 
 func TestDispatchProcess_Foreground(t *testing.T) {
@@ -325,6 +333,62 @@ func TestUpdate_ExitWithError(t *testing.T) {
 	require.Equal(t, "mock error message", m.(*MainModel).exitError.Error())
 }
 
+func Test_handleKeyEvent(t *testing.T) {
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	model.viewMessageContent = "some output of the process which just has finished"
+	model.appState.CurrentView = state.ViewMessage
+	model.Update(tea.KeyPressMsg{})
+
+	// When user is facing a message from the process which has just finished and presses any key,
+	// the view should switch to the host list and the message content should be cleared.
+	require.Equal(t, state.ViewHostList, model.appState.CurrentView)
+	require.Empty(t, model.viewMessageContent)
+}
+
+func Test_handleKeyEvent_CtrlC(t *testing.T) {
+	// Check that CTRL+C is not passed to bubbletea when we're in SSH session.
+	// This signal should be processed by the SSH session itself.
+	tests := []struct {
+		name        string
+		currentView state.View
+		sessionView tea.Model
+		wantCmd     tea.Cmd
+	}{{
+		name:        "Ctrl+C should be ignored when current view is ViewSSHSession",
+		currentView: state.ViewSSHSession,
+		wantCmd:     nil,
+	}, {
+		name:        "Ctrl+C should quit the application when current view is not ViewSSHSession",
+		currentView: state.ViewHostList,
+		wantCmd:     tea.Quit,
+	}}
+
+	ctrlC := tea.KeyPressMsg{
+		Mod:  uv.ModCtrl,
+		Code: 'c',
+	}
+
+	var childModel tea.Model = modelFunc{
+		init:   func() tea.Cmd { return nil },
+		update: func(_ tea.Msg) (tea.Model, tea.Cmd) { return nil, nil },
+		view:   func() tea.View { return tea.NewView("") },
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+			model.appState.CurrentView = tt.currentView
+			model.modelSSHSession = childModel
+			_, cmd := model.Update(ctrlC)
+			if tt.wantCmd == nil {
+				require.Nil(t, cmd)
+			} else {
+				require.Equal(t, tt.wantCmd(), cmd())
+			}
+		})
+	}
+}
+
 func Test_view(t *testing.T) {
 	fakeModelFactory := func(modelViewContent string) tea.Model {
 		return modelFunc{
@@ -343,6 +407,7 @@ func Test_view(t *testing.T) {
 	m.modelHostList = fakeModelFactory("mock host list")
 	m.viewMessageContent = "mock message content"
 	m.modelHostEdit = fakeModelFactory("mock host edit")
+	m.modelSSHSession = fakeModelFactory("mock ssh session")
 
 	tests := []struct {
 		name     string
@@ -368,6 +433,11 @@ func Test_view(t *testing.T) {
 			name:     "View should return host edit when app state is ViewEditItem",
 			appState: state.ViewEditItem,
 			expected: "mock host edit",
+		},
+		{
+			name:     "View should return ssh session when app state is ViewSSHSession",
+			appState: state.ViewSSHSession,
+			expected: "mock ssh session",
 		},
 	}
 
