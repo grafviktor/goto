@@ -48,6 +48,24 @@ func TestUpdate_KeyMsg(t *testing.T) {
 	require.IsType(t, tea.QuitMsg{}, cmd(), "Wrong message type")
 }
 
+func TestUpdate_WindowSizeMsg(t *testing.T) {
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	require.Zero(t, model.appState.Width)
+	require.Zero(t, model.appState.Height)
+	require.False(t, model.ready)
+
+	model.Update(tea.WindowSizeMsg{
+		Width:  100,
+		Height: 50,
+	})
+
+	require.Equal(t, 100, model.appState.Width)
+	require.Equal(t, 50, model.appState.Height)
+	require.Equal(t, 100, model.viewport.Width())
+	require.Equal(t, 50, model.viewport.Height())
+	require.True(t, model.ready)
+}
+
 func TestDispatchProcess_SSH_connect(t *testing.T) {
 	tests := []struct {
 		name             string

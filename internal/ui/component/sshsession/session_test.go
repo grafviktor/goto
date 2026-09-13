@@ -1,6 +1,7 @@
 package sshsession
 
 import (
+	"errors"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -50,4 +51,15 @@ func TestUpdate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHandleSessionClose(t *testing.T) {
+	m, _ := New(80, 24, "hostname")
+	cmd := m.handleSessionClose(termview.ClosedMsg{})
+	require.IsType(t, message.RunProcessSuccess{}, cmd())
+
+	cmd = m.handleSessionClose(termview.ClosedMsg{ProcessError: errors.New("mock error"), ProcessExitCode: 1})
+	errorDetails := cmd()
+	require.IsType(t, message.RunProcessErrorOccurred{}, errorDetails)
+	require.Equal(t, "mock error", errorDetails.(message.RunProcessErrorOccurred).StdErr)
 }
