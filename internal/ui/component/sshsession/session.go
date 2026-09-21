@@ -3,6 +3,7 @@ package sshsession
 import (
 	"io"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -13,11 +14,18 @@ import (
 	"github.com/grafviktor/goto/internal/utils"
 )
 
+// Only used in `New`. Need to find a way to calculate this dynamically, as it may change.
+const headerHeight = 2
+
+type clearStatusMsg struct{}
+
 type Model struct {
 	term    termview.Model
 	command string
 	stdErr  io.Writer
 	styles  styles
+	header  string
+	status  string
 }
 
 func New(initialWidth, initialHeight int, commandAndArgs ...string) (Model, error) {
@@ -26,7 +34,7 @@ func New(initialWidth, initialHeight int, commandAndArgs ...string) (Model, erro
 		termview.WithCommand(commandAndArgs[0], commandAndArgs[1:]...),
 		termview.WithStdErr(stdErr),
 		termview.WithInitialWidth(initialWidth),
-		termview.WithInitialHeight(initialHeight-2),
+		termview.WithInitialHeight(initialHeight-headerHeight),
 	)
 	if err != nil {
 		return Model{}, err
@@ -52,10 +60,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd := m.handleSessionClose(msg)
 		return m, cmd
 	case tea.WindowSizeMsg:
-		msg.Height = msg.Height - 2
+		msg.Height = msg.Height - lipgloss.Height(m.headerView())
 		updated, cmd := m.term.Update(msg)
 		m.term = updated
 		return m, cmd
+	case tea.MouseMsg:
+		return m.handleMouseMsg(msg)
+	case termview.TextSelectedMsg:
+		return m.handleTextSelectedMsg(msg)
 	default:
 		updated, cmd := m.term.Update(msg)
 		m.term = updated
@@ -63,30 +75,58 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-// func (m Model) View() tea.View {
-// 	v := tea.NewView(m.term.View())
-// 	v.Cursor = m.term.Cursor()
-// 	return v
-// }
+func (m Model) handleMouseMsg(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	// The alternative way would be to add another option to TermView called WithMouseYOffset(n)
+	// Note: sometimes mouse events stopped working normally if console in a broken state.
+	// Closing and reopening the terminal fixes it.
+
+	h := lipgloss.Height(m.headerView())
+	var adjusted tea.Msg
+	switch msg := msg.(type) {
+	case tea.MouseClickMsg:
+		msg.Y -= h
+		adjusted = msg
+	case tea.MouseMotionMsg:
+		msg.Y -= h
+		adjusted = msg
+	case tea.MouseReleaseMsg:
+		msg.Y -= h
+		adjusted = msg
+	case tea.MouseWheelMsg:
+		msg.Y -= h
+		adjusted = msg
+	}
+
+	updated, cmd := m.term.Update(adjusted)
+	m.term = updated
+	return m, cmd
+}
+
+func (m *Model) handleTextSelectedMsg(msg termview.TextSelectedMsg) (tea.Model, tea.Cmd) {
+	if msg.ID != m.term.ID() {
+		return m, nil
+	}
+
+	m.status = "Copied to clipboard"
+	return m, tea.Batch(
+		tea.SetClipboard(msg.Text),
+		tea.Tick(2*time.Second, func(time.Time) tea.Msg { return clearStatusMsg{} }),
+	)
+}
 
 func (m Model) View() tea.View {
-	// func (m *ListModel) prefixWithGroupName(title string) string {
-	// 	if !utils.StringEmpty(&m.appState.Group) {
-	// 		shortGroupName := utils.StringAbbreviation(m.appState.Group)
-	// 		title = m.Styles.Title.Render(title)
-	// 		m.Styles.Title = m.Styles.Title.Padding(0)
-	// 		return fmt.Sprintf("%s%s", m.styles.groupAbbreviation.Render(shortGroupName), title)
-	// 	}
-
-	// 	return title
-	// }
-
 	termView := m.term.View()
-	statusLine := "Group: test • Host: localhost"
-	joinedView := lipgloss.JoinVertical(lipgloss.Top, termView+"\n", m.styles.hostColor.Render(statusLine))
+	headerView := m.headerView()
+	joinedView := lipgloss.JoinVertical(lipgloss.Top, headerView, termView)
+
+	cursor := m.term.Cursor()
+	if cursor != nil {
+		height := lipgloss.Height(headerView)
+		cursor.Y += height // Adjust cursor position for the status line
+	}
 
 	v := tea.NewView(joinedView)
-	v.Cursor = m.term.Cursor()
+	v.Cursor = cursor
 	return v
 }
 
@@ -115,4 +155,15 @@ func (m Model) handleSessionClose(msg termview.ClosedMsg) tea.Cmd {
 		StdOut:      "",
 		StdErr:      errorMessage,
 	})
+}
+
+func (m *Model) SetHeader(header string) {
+	m.header = header
+}
+
+func (m Model) headerView() string {
+	gapSize := m.term.Width() - lipgloss.Width(m.header) - lipgloss.Width("SSH")
+	gapSize = max(gapSize, 1)
+	header := lipgloss.JoinHorizontal(lipgloss.Top, m.header, strings.Repeat(" ", gapSize), "SSH")
+	return m.styles.header.Render(header)
 }

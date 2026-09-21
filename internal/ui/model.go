@@ -165,6 +165,7 @@ func (m *MainModel) View() tea.View {
 	view := tea.NewView(viewPortContent)
 	view.AltScreen = true
 	view.Cursor = content.Cursor
+	view.MouseMode = tea.MouseModeAllMotion
 	return view
 }
 
@@ -294,8 +295,7 @@ func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.Ru
 	m.logger.Info("[EXEC] Run process: %q", process.String())
 	commandAndArgs := append([]string{process.Path}, process.Args[1:]...)
 
-	var err error
-	m.modelSSHSession, err = sshsession.New(m.appState.Width, m.appState.Height, commandAndArgs...)
+	sshSession, err := sshsession.New(m.appState.Width, m.appState.Height, commandAndArgs...)
 	if err != nil {
 		return message.TeaCmd(message.RunProcessErrorOccurred{
 			ProcessType: constant.ProcessTypeSSHConnect,
@@ -304,8 +304,22 @@ func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.Ru
 		})
 	}
 
+	header := m.formatSessionHeader(msg.Host.Group, msg.Host.Title)
+	sshSession.SetHeader(header)
+	m.modelSSHSession = sshSession
 	m.appState.CurrentView = state.ViewSSHSession
 	return m.modelSSHSession.Init()
+}
+
+func (m *MainModel) formatSessionHeader(group, host string) string {
+	var hostInfo string
+	if utils.StringEmpty(&group) {
+		hostInfo = fmt.Sprintf("Host: %s", host)
+	} else {
+		hostInfo = fmt.Sprintf("Group: %s • Host: %s", group, host)
+	}
+
+	return hostInfo
 }
 
 func (m *MainModel) dispatchProcessSSHConnectWithOsTerminal(msg message.RunProcessSSHConnect) tea.Cmd {

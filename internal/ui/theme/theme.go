@@ -256,19 +256,14 @@ func (t *Theme) editFormStyles() EditForm {
 }
 
 type SSHSessionStyles struct {
-	GroupColor lipgloss.Style
-	HostColor  lipgloss.Style
+	Header lipgloss.Style
 }
 
 func (t *Theme) sshSessionStyles() SSHSessionStyles {
 	return SSHSessionStyles{
-		GroupColor: lipgloss.NewStyle().
-			Background(t.Colors.TextColorTitle.toLipgloss()).
+		Header: lipgloss.NewStyle().
 			Foreground(t.Colors.BackgroundColorTitle.toLipgloss()).
-			Padding(0, 1),
-		HostColor: lipgloss.NewStyle().
-			Background(t.Colors.BackgroundColorTitle.toLipgloss()).
-			Foreground(t.Colors.TextColorTitle.toLipgloss()).
-			Padding(0, 1),
+			Border(lipgloss.NormalBorder(), false, false, true, false).
+			BorderForeground(t.Colors.BackgroundColorTitle.toLipgloss()),
 	}
 }

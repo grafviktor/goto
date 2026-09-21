@@ -7,8 +7,9 @@ require (
 	charm.land/bubbletea/v2 v2.0.7
 	charm.land/lipgloss/v2 v2.0.3
 	github.com/caarlos0/env/v10 v10.0.0
+	github.com/charmbracelet/ultraviolet v0.0.0-20260615092913-2399af76d5b1
 	github.com/charmbracelet/x/term v0.2.2
-	github.com/grafviktor/termview v0.3.0
+	github.com/grafviktor/termview v0.4.0
 	github.com/samber/lo v1.53.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/sys v0.46.0
@@ -20,7 +21,6 @@ require (
 require (
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
-	github.com/charmbracelet/ultraviolet v0.0.0-20260615092913-2399af76d5b1 // indirect
 	github.com/charmbracelet/x/ansi v0.11.7 // indirect
 	github.com/charmbracelet/x/conpty v0.1.1 // indirect
 	github.com/charmbracelet/x/errors v0.0.0-20240508181413-e8d8b6e2de86 // indirect
