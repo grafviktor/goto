@@ -314,9 +314,9 @@ func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.Ru
 func (m *MainModel) formatSessionHeader(group, host string) string {
 	var hostInfo string
 	if utils.StringEmpty(&group) {
-		hostInfo = fmt.Sprintf("Host: %s", host)
+		hostInfo = fmt.Sprintf("HOST: %s", host)
 	} else {
-		hostInfo = fmt.Sprintf("Group: %s • Host: %s", group, host)
+		hostInfo = fmt.Sprintf("GROUP: %s • HOST: %s", group, host)
 	}
 
 	return hostInfo

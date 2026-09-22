@@ -90,7 +90,7 @@ func (m Model) handleMouseMsg(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// Closing and reopening the terminal fixes it.
 
 	h := lipgloss.Height(m.headerView())
-	var adjusted tea.Msg
+	var adjusted tea.MouseMsg
 	switch msg := msg.(type) {
 	case tea.MouseClickMsg:
 		msg.Y -= h
@@ -104,6 +104,11 @@ func (m Model) handleMouseMsg(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	case tea.MouseWheelMsg:
 		msg.Y -= h
 		adjusted = msg
+	}
+
+	if adjusted.Mouse().Y < 0 {
+		// Skip mouse events in the header area.
+		return m, nil
 	}
 
 	updated, cmd := m.term.Update(adjusted)
@@ -169,7 +174,7 @@ func (m Model) View() tea.View {
 }
 
 func (m Model) headerView() string {
-	statusText := m.styles.statusText.Render(m.currentStatusText)
+	statusText := m.currentStatusText
 	gapSize := m.term.Width() - lipgloss.Width(m.header) - lipgloss.Width(statusText)
 	gapSize = max(gapSize, 1)
 	header := lipgloss.JoinHorizontal(lipgloss.Top, m.header, strings.Repeat(" ", gapSize), statusText)
