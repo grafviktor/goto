@@ -16,16 +16,18 @@ import (
 
 // Only used in `New`. Need to find a way to calculate this dynamically, as it may change.
 const headerHeight = 2
+const messageDisplayTime = 2 * time.Second
 
 type clearStatusMsg struct{}
 
 type Model struct {
-	term    termview.Model
-	command string
-	stdErr  io.Writer
-	styles  styles
-	header  string
-	status  string
+	term              termview.Model
+	command           string
+	stdErr            io.Writer
+	styles            styles
+	header            string
+	defaultStatusText string
+	currentStatusText string
 }
 
 func New(initialWidth, initialHeight int, commandAndArgs ...string) (Model, error) {
@@ -40,11 +42,15 @@ func New(initialWidth, initialHeight int, commandAndArgs ...string) (Model, erro
 		return Model{}, err
 	}
 
+	statusText := strings.Join(commandAndArgs, " ")
+
 	m := Model{
-		term:    term.Focus(),
-		command: commandAndArgs[0],
-		stdErr:  stdErr,
-		styles:  defaultStyles(),
+		term:              term.Focus(),
+		command:           commandAndArgs[0],
+		stdErr:            stdErr,
+		styles:            defaultStyles(),
+		defaultStatusText: statusText,
+		currentStatusText: statusText,
 	}
 
 	return m, nil
@@ -68,6 +74,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleMouseMsg(msg)
 	case termview.TextSelectedMsg:
 		return m.handleTextSelectedMsg(msg)
+	case clearStatusMsg:
+		m.currentStatusText = m.defaultStatusText
+		return m, nil
 	default:
 		updated, cmd := m.term.Update(msg)
 		m.term = updated
@@ -107,27 +116,13 @@ func (m *Model) handleTextSelectedMsg(msg termview.TextSelectedMsg) (tea.Model, 
 		return m, nil
 	}
 
-	m.status = "Copied to clipboard"
+	m.currentStatusText = "Text copied to clipboard"
 	return m, tea.Batch(
 		tea.SetClipboard(msg.Text),
-		tea.Tick(2*time.Second, func(time.Time) tea.Msg { return clearStatusMsg{} }),
+		tea.Tick(messageDisplayTime, func(time.Time) tea.Msg {
+			return clearStatusMsg{}
+		}),
 	)
-}
-
-func (m Model) View() tea.View {
-	termView := m.term.View()
-	headerView := m.headerView()
-	joinedView := lipgloss.JoinVertical(lipgloss.Top, headerView, termView)
-
-	cursor := m.term.Cursor()
-	if cursor != nil {
-		height := lipgloss.Height(headerView)
-		cursor.Y += height // Adjust cursor position for the status line
-	}
-
-	v := tea.NewView(joinedView)
-	v.Cursor = cursor
-	return v
 }
 
 func (m Model) handleSessionClose(msg termview.ClosedMsg) tea.Cmd {
@@ -157,13 +152,30 @@ func (m Model) handleSessionClose(msg termview.ClosedMsg) tea.Cmd {
 	})
 }
 
-func (m *Model) SetHeader(header string) {
-	m.header = header
+func (m Model) View() tea.View {
+	termView := m.term.View()
+	headerView := m.headerView()
+	joinedView := lipgloss.JoinVertical(lipgloss.Top, headerView, termView)
+
+	cursor := m.term.Cursor()
+	if cursor != nil {
+		height := lipgloss.Height(headerView)
+		cursor.Y += height // Adjust cursor position for the header line
+	}
+
+	v := tea.NewView(joinedView)
+	v.Cursor = cursor
+	return v
 }
 
 func (m Model) headerView() string {
-	gapSize := m.term.Width() - lipgloss.Width(m.header) - lipgloss.Width("SSH")
+	statusText := m.styles.statusText.Render(m.currentStatusText)
+	gapSize := m.term.Width() - lipgloss.Width(m.header) - lipgloss.Width(statusText)
 	gapSize = max(gapSize, 1)
-	header := lipgloss.JoinHorizontal(lipgloss.Top, m.header, strings.Repeat(" ", gapSize), "SSH")
+	header := lipgloss.JoinHorizontal(lipgloss.Top, m.header, strings.Repeat(" ", gapSize), statusText)
 	return m.styles.header.Render(header)
+}
+
+func (m *Model) SetHeader(header string) {
+	m.header = header
 }

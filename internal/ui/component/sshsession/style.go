@@ -7,13 +7,15 @@ import (
 )
 
 type styles struct {
-	header lipgloss.Style
+	header     lipgloss.Style
+	statusText lipgloss.Style
 }
 
 func defaultStyles() styles {
 	themeSettings := theme.Get().Styles.SSHSession
 
 	return styles{
-		header: themeSettings.Header,
+		header:     themeSettings.Header,
+		statusText: themeSettings.StatusText,
 	}
 }

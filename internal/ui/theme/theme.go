@@ -256,8 +256,11 @@ func (t *Theme) editFormStyles() EditForm {
 }
 
 type SSHSessionStyles struct {
-	Header lipgloss.Style
+	Header     lipgloss.Style
+	StatusText lipgloss.Style
 }
+
+const headerStatusTextMaxWidth = 25
 
 func (t *Theme) sshSessionStyles() SSHSessionStyles {
 	return SSHSessionStyles{
@@ -265,5 +268,6 @@ func (t *Theme) sshSessionStyles() SSHSessionStyles {
 			Foreground(t.Colors.BackgroundColorTitle.toLipgloss()).
 			Border(lipgloss.NormalBorder(), false, false, true, false).
 			BorderForeground(t.Colors.BackgroundColorTitle.toLipgloss()),
+		StatusText: lipgloss.NewStyle().MaxWidth(headerStatusTextMaxWidth),
 	}
 }
