@@ -17,6 +17,7 @@ import (
 // Only used in `New`. Need to find a way to calculate this dynamically, as it may change.
 const headerHeight = 2
 const messageDisplayTime = 2 * time.Second
+const defaultStatusText = "SSH"
 
 type clearStatusMsg struct{}
 
@@ -42,15 +43,13 @@ func New(initialWidth, initialHeight int, commandAndArgs ...string) (Model, erro
 		return Model{}, err
 	}
 
-	statusText := strings.Join(commandAndArgs, " ")
-
 	m := Model{
 		term:              term.Focus(),
 		command:           commandAndArgs[0],
 		stdErr:            stdErr,
 		styles:            defaultStyles(),
-		defaultStatusText: statusText,
-		currentStatusText: statusText,
+		defaultStatusText: defaultStatusText,
+		currentStatusText: defaultStatusText,
 	}
 
 	return m, nil

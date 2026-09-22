@@ -304,7 +304,7 @@ func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.Ru
 		})
 	}
 
-	header := m.formatSessionHeader(msg.Host.Group, msg.Host.Title)
+	header := m.formatSessionHeader(msg.Host.Group, msg.Host.Address)
 	sshSession.SetHeader(header)
 	m.modelSSHSession = sshSession
 	m.appState.CurrentView = state.ViewSSHSession
