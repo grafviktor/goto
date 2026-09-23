@@ -57,11 +57,11 @@ func New(initialWidth, initialHeight int, commandAndArgs ...string) (Model, erro
 	return m, nil
 }
 
-func (m Model) Init() tea.Cmd {
+func (m *Model) Init() tea.Cmd {
 	return m.term.Init()
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case termview.ClosedMsg:
 		cmd := m.handleSessionClose(msg)
@@ -85,7 +85,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m Model) handleMouseMsg(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+func (m *Model) handleMouseMsg(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	if msg.Mouse().Y > m.term.Height() {
 		// Skip mouse events in the status area.
 		return m, nil
@@ -96,7 +96,7 @@ func (m Model) handleMouseMsg(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) handleTextSelectedMsg(msg termview.TextSelectedMsg) (tea.Model, tea.Cmd) {
+func (m *Model) handleTextSelectedMsg(msg termview.TextSelectedMsg) (tea.Model, tea.Cmd) {
 	if msg.ID != m.term.ID() {
 		return m, nil
 	}
@@ -110,7 +110,7 @@ func (m Model) handleTextSelectedMsg(msg termview.TextSelectedMsg) (tea.Model, t
 	)
 }
 
-func (m Model) handleSessionClose(msg termview.ClosedMsg) tea.Cmd {
+func (m *Model) handleSessionClose(msg termview.ClosedMsg) tea.Cmd {
 	if msg.ProcessError == nil && msg.ProcessExitCode == 0 {
 		return message.TeaCmd(message.RunProcessSuccess{
 			ProcessType: constant.ProcessTypeSSHConnect,
@@ -137,7 +137,7 @@ func (m Model) handleSessionClose(msg termview.ClosedMsg) tea.Cmd {
 	})
 }
 
-func (m Model) View() tea.View {
+func (m *Model) View() tea.View {
 	termView := m.term.View()
 	statusView := m.statusView()
 	joinedView := lipgloss.JoinVertical(lipgloss.Top, termView, statusView)
@@ -146,7 +146,7 @@ func (m Model) View() tea.View {
 	return v
 }
 
-func (m Model) statusView() string {
+func (m *Model) statusView() string {
 	gapSize := m.term.Width() - lipgloss.Width(m.statusLineText) - lipgloss.Width(m.currentNotificationAreaText)
 	gapSize = max(gapSize, 1)
 	status := lipgloss.JoinHorizontal(lipgloss.Top, m.statusLineText, strings.Repeat(" ", gapSize),

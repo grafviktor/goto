@@ -306,7 +306,7 @@ func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.Ru
 
 	statusText := m.formatSessionStatus(msg.Host.Group, msg.Host.SSHHostConfig.Hostname, msg.Host.Title)
 	sshSession.SetStatus(statusText)
-	m.modelSSHSession = sshSession
+	m.modelSSHSession = &sshSession
 	m.appState.CurrentView = state.ViewSSHSession
 	return m.modelSSHSession.Init()
 }
