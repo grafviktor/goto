@@ -256,14 +256,14 @@ func (t *Theme) editFormStyles() EditForm {
 }
 
 type SSHSessionStyles struct {
-	Header lipgloss.Style
+	StatusLine lipgloss.Style
 }
 
 func (t *Theme) sshSessionStyles() SSHSessionStyles {
 	return SSHSessionStyles{
-		Header: lipgloss.NewStyle().
+		StatusLine: lipgloss.NewStyle().
 			Foreground(t.Colors.BackgroundColorTitle.toLipgloss()).
-			Border(lipgloss.NormalBorder(), false, false, true, false).
+			Border(lipgloss.NormalBorder(), true, false, false, false).
 			BorderForeground(t.Colors.BackgroundColorTitle.toLipgloss()),
 	}
 }

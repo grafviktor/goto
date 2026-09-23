@@ -304,22 +304,26 @@ func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.Ru
 		})
 	}
 
-	header := m.formatSessionHeader(msg.Host.Group, msg.Host.SSHHostConfig.Hostname)
-	sshSession.SetHeader(header)
+	statusText := m.formatSessionStatus(msg.Host.Group, msg.Host.SSHHostConfig.Hostname, msg.Host.Title)
+	sshSession.SetStatus(statusText)
 	m.modelSSHSession = sshSession
 	m.appState.CurrentView = state.ViewSSHSession
 	return m.modelSSHSession.Init()
 }
 
-func (m *MainModel) formatSessionHeader(group, host string) string {
-	var hostInfo string
-	if utils.StringEmpty(&group) {
-		hostInfo = fmt.Sprintf("HOST: %s", host)
-	} else {
-		hostInfo = fmt.Sprintf("GROUP: %s • HOST: %s", group, host)
+func (m *MainModel) formatSessionStatus(group, host, alias string) string {
+	var sb strings.Builder
+	if !utils.StringEmpty(&group) {
+		fmt.Fprintf(&sb, "group: %s • ", group)
 	}
 
-	return hostInfo
+	fmt.Fprintf(&sb, "host: %s", host)
+
+	if host != alias {
+		fmt.Fprintf(&sb, " • alias: %s", alias)
+	}
+
+	return sb.String()
 }
 
 func (m *MainModel) dispatchProcessSSHConnectWithOsTerminal(msg message.RunProcessSSHConnect) tea.Cmd {

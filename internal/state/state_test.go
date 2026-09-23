@@ -237,7 +237,8 @@ enable_embedded_terminal: true
 				IsUserDefinedSSHConfigPath: true,
 				EmbeddedTerminalEnabled:    true,
 			},
-		}, {
+		},
+		{
 			name: "State file Embedded Terminal option not set, should default to enabled",
 			stateFileContent: `
 selected: 999
@@ -253,7 +254,8 @@ screen_layout: compact
 				Theme:                   "dark",
 				Group:                   "default",
 			},
-		}, {
+		},
+		{
 			name: "State file Embedded Terminal option disabled",
 			stateFileContent: `
 selected: 999
@@ -270,7 +272,8 @@ enable_embedded_terminal: false
 				Theme:                   "dark",
 				Group:                   "default",
 			},
-		}, {
+		},
+		{
 			name: "State file Embedded Terminal option enabled",
 			stateFileContent: `
 selected: 999
