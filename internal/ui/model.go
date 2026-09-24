@@ -165,6 +165,13 @@ func (m *MainModel) View() tea.View {
 	view := tea.NewView(viewPortContent)
 	view.AltScreen = true
 	view.Cursor = content.Cursor
+
+	if m.appState.CurrentView == state.ViewSSHSession {
+		// The app processes mouse events only in the SSH session view.
+		// In all other cases, mouse events are processed by the system (i.e. ignored).
+		view.MouseMode = tea.MouseModeAllMotion
+	}
+
 	return view
 }
 
@@ -294,8 +301,7 @@ func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.Ru
 	m.logger.Info("[EXEC] Run process: %q", process.String())
 	commandAndArgs := append([]string{process.Path}, process.Args[1:]...)
 
-	var err error
-	m.modelSSHSession, err = sshsession.New(m.appState.Width, m.appState.Height, commandAndArgs...)
+	sshSession, err := sshsession.New(m.appState.Width, m.appState.Height, commandAndArgs...)
 	if err != nil {
 		return message.TeaCmd(message.RunProcessErrorOccurred{
 			ProcessType: constant.ProcessTypeSSHConnect,
@@ -304,8 +310,26 @@ func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.Ru
 		})
 	}
 
+	statusText := m.formatSessionStatus(msg.Host.Group, msg.Host.SSHHostConfig.Hostname, msg.Host.Title)
+	sshSession.SetStatus(statusText)
+	m.modelSSHSession = &sshSession
 	m.appState.CurrentView = state.ViewSSHSession
 	return m.modelSSHSession.Init()
+}
+
+func (m *MainModel) formatSessionStatus(group, host, alias string) string {
+	var sb strings.Builder
+	if !utils.StringEmpty(&group) {
+		fmt.Fprintf(&sb, "group: %s • ", group)
+	}
+
+	fmt.Fprintf(&sb, "host: %s", host)
+
+	if host != alias {
+		fmt.Fprintf(&sb, " • alias: %s", alias)
+	}
+
+	return sb.String()
 }
 
 func (m *MainModel) dispatchProcessSSHConnectWithOsTerminal(msg message.RunProcessSSHConnect) tea.Cmd {

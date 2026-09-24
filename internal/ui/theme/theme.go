@@ -70,6 +70,7 @@ type AppStyles struct {
 	ListHelp     help.Styles
 	EditForm     EditForm
 	ListExtra    ListExtraStyles
+	SSHSession   SSHSessionStyles
 }
 
 func (t *Theme) computeStyles() {
@@ -80,6 +81,7 @@ func (t *Theme) computeStyles() {
 		ListDelegate: t.listDelegateStyles(),
 		ListHelp:     t.listHelpStyles(),
 		EditForm:     t.editFormStyles(),
+		SSHSession:   t.sshSessionStyles(),
 	}
 }
 
@@ -251,4 +253,17 @@ func (t *Theme) editFormStyles() EditForm {
 	s.TextReadonly = lipgloss.NewStyle().
 		Foreground(t.Colors.TextColorReadonly.toLipgloss())
 	return s
+}
+
+type SSHSessionStyles struct {
+	StatusLine lipgloss.Style
+}
+
+func (t *Theme) sshSessionStyles() SSHSessionStyles {
+	return SSHSessionStyles{
+		StatusLine: lipgloss.NewStyle().
+			Foreground(t.Colors.BackgroundColorTitle.toLipgloss()).
+			Border(lipgloss.NormalBorder(), true, false, false, false).
+			BorderForeground(t.Colors.BackgroundColorTitle.toLipgloss()),
+	}
 }
