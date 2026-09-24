@@ -18,7 +18,7 @@ import (
 const (
 	statusHeight                = 2
 	messageDisplayTime          = 2 * time.Second
-	defaultNotificationAreaText = "ssh"
+	defaultNotificationAreaText = "SSH"
 )
 
 type clearStatusMsg struct{}

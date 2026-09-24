@@ -165,7 +165,13 @@ func (m *MainModel) View() tea.View {
 	view := tea.NewView(viewPortContent)
 	view.AltScreen = true
 	view.Cursor = content.Cursor
-	view.MouseMode = tea.MouseModeAllMotion
+
+	if m.appState.CurrentView == state.ViewSSHSession {
+		// The app processes mouse events only in the SSH session view.
+		// In all other cases, mouse events are processed by the system (i.e. ignored).
+		view.MouseMode = tea.MouseModeAllMotion
+	}
+
 	return view
 }
 
