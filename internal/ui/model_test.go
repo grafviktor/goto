@@ -88,8 +88,11 @@ func TestDispatchProcess_SSH_connect(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			state := MockAppState()
 			state.EmbeddedTerminalEnabled = tt.embeddedTerminal
-			model := New(context.TODO(), testutils.NewMockStorage(true), state, &mocklogger.Logger{})
-			host := hostModel.Host{Address: "localhost"}
+			model := New(context.TODO(), testutils.NewMockStorage(false), state, &mocklogger.Logger{})
+			host := hostModel.Host{
+				Address:       "localhost",
+				SSHHostConfig: &sshconfig.Config{Hostname: "localhost"},
+			}
 			cmd := model.dispatchProcessSSHConnect(message.RunProcessSSHConnect{Host: host})
 			require.Equal(t, tt.expectedMsgName, reflect.TypeOf(cmd()).Name())
 		})
