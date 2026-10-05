@@ -1,6 +1,7 @@
 package sshsession
 
 import (
+	"fmt"
 	"io"
 	"strings"
 	"time"
@@ -101,7 +102,8 @@ func (m *Model) handleTextSelectedMsg(msg termview.TextSelectedMsg) (tea.Model, 
 		return m, nil
 	}
 
-	m.currentNotificationAreaText = "Text copied to clipboard"
+	lines := strings.Split(msg.Text, "\n")
+	m.currentNotificationAreaText = fmt.Sprintf("%d line(s) copied to clipboard", len(lines))
 	return m, tea.Batch(
 		tea.SetClipboard(msg.Text),
 		tea.Tick(messageDisplayTime, func(time.Time) tea.Msg {
