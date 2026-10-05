@@ -9,7 +9,7 @@ require (
 	github.com/caarlos0/env/v10 v10.0.0
 	github.com/charmbracelet/ultraviolet v0.0.0-20260615092913-2399af76d5b1
 	github.com/charmbracelet/x/term v0.2.2
-	github.com/grafviktor/termview v0.5.0
+	github.com/grafviktor/termview v0.6.0
 	github.com/samber/lo v1.53.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/sys v0.46.0
