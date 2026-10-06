@@ -89,38 +89,47 @@ func TestUpdate_MouseMsg(t *testing.T) {
 }
 
 func TestUpdate_HandleTextSelectedMsg(t *testing.T) {
-	// Test that if message has a different ID it is ignored and the notification area text is not changed.
-	text := `
-A long time ago, in a galaxy far, far, away...
+	text := `A long time ago, in a galaxy far, far, away...
 
 A vast sea of stars serves as the backdrop for the main title.
 War drums echo through the heavens as a rollup slowly crawls into infinity.
 It is a period of civil war. Rebel spaceships, striking from a
 hidden base, have won their first victory against the evil Galactic Empire.
 During the battle, Rebel spies managed to steal secret plans to the Empire's
-ultimate weapon, the DEATH STAR...
-`
+ultimate weapon, the DEATH STAR...`
 
 	var cmd tea.Cmd
 	m, _ := New(80, 24, "hostname")
-	_, cmd = m.Update(termview.TextSelectedMsg{
-		ID:   m.term.ID() + 1, // Not the same ID, so it should be ignored.
-		Text: text,
-	})
-	require.Equal(t, m.defaultNotificationAreaText, m.currentNotificationAreaText)
-	require.Nil(t, cmd)
 
-	// Now use the same terminal ID, this time the text should be handled.
-	_, cmd = m.Update(termview.TextSelectedMsg{
-		ID:   m.term.ID(),
-		Text: text,
+	t.Run("Update status line on text selection", func(t *testing.T) {
+		_, cmd = m.Update(termview.TextSelectedMsg{
+			ID:   m.term.ID() + 1, // Not the same ID, so it should be ignored.
+			Text: text,
+		})
+
+		// Test that if message has a different ID it is ignored and the notification area text is not changed.
+		require.Equal(t, m.defaultNotificationAreaText, m.currentNotificationAreaText)
+		require.Nil(t, cmd)
+
+		// Now use the same terminal ID, this time the text should be handled.
+		_, cmd = m.Update(termview.TextSelectedMsg{
+			ID:   m.term.ID(),
+			Text: text,
+		})
+		require.Equal(t, "8 line(s) copied to clipboard", m.currentNotificationAreaText)
+		var msgs []tea.Msg
+		testutils.CmdToMessage(cmd, &msgs)
+		require.Len(t, msgs, 2)
+		require.Equal(t, "setClipboardMsg", reflect.TypeOf(msgs[0]).Name())
+		require.Equal(t, "clearStatusMsg", reflect.TypeOf(msgs[1]).Name())
 	})
-	require.Equal(t, "10 line(s) copied to clipboard", m.currentNotificationAreaText)
-	var msgs []tea.Msg
-	testutils.CmdToMessage(cmd, &msgs)
-	require.Len(t, msgs, 2)
-	require.Equal(t, "setClipboardMsg", reflect.TypeOf(msgs[0]).Name())
-	require.Equal(t, "clearStatusMsg", reflect.TypeOf(msgs[1]).Name())
+
+	t.Run("Clear status line after messageDisplayTime", func(t *testing.T) {
+		require.Equal(t, "8 line(s) copied to clipboard", m.currentNotificationAreaText)
+		_, cmd = m.Update(clearStatusMsg{})
+		require.Equal(t, m.defaultNotificationAreaText, m.currentNotificationAreaText)
+		require.Nil(t, cmd)
+	})
 }
 
 func TestHandleSessionClose(t *testing.T) {
