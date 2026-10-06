@@ -304,6 +304,7 @@ func (s *State) Persist() error {
 func (s *State) print() {
 	fmt.Printf("App home:          %s\n", s.AppHome)
 	fmt.Printf("Log level:         %s\n", s.LogLevel)
+	fmt.Printf("Embedded terminal: %s\n", lo.Ternary(s.EmbeddedTerminalEnabled, "enabled", "disabled"))
 	fmt.Printf("SSH config status: %s\n", lo.Ternary(s.SSHConfigEnabled, "enabled", "disabled"))
 	if s.SSHConfigEnabled {
 		fmt.Printf("SSH config path:   %s\n", s.SSHConfigPath)
