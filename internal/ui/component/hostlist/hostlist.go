@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
@@ -42,12 +43,13 @@ type msgToggleLayout struct{ layout constant.ScreenLayout }
 type ListModel struct {
 	list.Model
 
-	repo     storage.HostStorage
-	keyMap   *keyMap
-	appState *state.State
-	logger   iLogger
-	mode     string
-	styles   styles
+	repo       storage.HostStorage
+	keyMap     *keyMap
+	appState   *state.State
+	logger     iLogger
+	mode       string
+	styles     styles
+	clickArmed bool
 }
 
 // New - creates new host list model.
@@ -137,6 +139,8 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		return m, m.handleKeyboardEvent(msg)
+	case tea.MouseMsg:
+		return m, m.handleMouseEvent(msg)
 	case tea.WindowSizeMsg:
 		// Triggers immediately after app start because we render this component by default
 		h, v := m.styles.componentMargins.GetFrameSize()
@@ -223,6 +227,62 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 		cmd := m.updateChildModel(msg)
 		return tea.Sequence(cmd, m.onFocusChanged())
 	}
+}
+
+func (m *ListModel) handleMouseEvent(msg tea.MouseMsg) tea.Cmd {
+	switch msg := msg.(type) {
+	case tea.MouseClickMsg:
+		if msg.Mouse().Button == tea.MouseLeft {
+			return m.focusHost(msg)
+		}
+	}
+
+	return nil
+}
+
+func (m *ListModel) focusHost(msg tea.MouseClickMsg) tea.Cmd {
+	index := m.itemAt(msg.Mouse().Y)
+	if index < 0 {
+		return nil
+	}
+
+	if index == m.Index() && m.clickArmed {
+		m.clickArmed = false
+		return m.constructProcessCmd(constant.ProcessTypeSSHConnect)
+	}
+
+	m.Select(index)
+	m.clickArmed = true
+	return tea.Batch(m.onFocusChanged(), tea.Tick(time.Millisecond*500, func(t time.Time) tea.Msg {
+		m.clickArmed = false
+		return nil
+	}))
+}
+
+func (m *ListModel) itemAt(positionY int) int {
+	// Find top panel height
+	listTop := 1 + 2 // margin + title
+	if m.FilterState() != list.Unfiltered {
+		listTop += 2
+	}
+
+	terminalRow := positionY - listTop
+	if terminalRow < 0 {
+		return -1
+	}
+
+	listItemHeight := 3
+	if m.appState.ScreenLayout == constant.ScreenLayoutCompact {
+		listItemHeight = 1
+	}
+
+	local := terminalRow / listItemHeight
+	start, end := m.Paginator.GetSliceBounds(len(m.VisibleItems()))
+	index := start + local
+	if index >= end {
+		return -1
+	}
+	return index
 }
 
 func (m *ListModel) View() tea.View {
