@@ -35,6 +35,7 @@ var (
 type iLogger interface {
 	Debug(format string, args ...any)
 	Info(format string, args ...any)
+	Warn(format string, args ...any)
 	Error(format string, args ...any)
 }
 
@@ -140,7 +141,7 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		return m, m.handleKeyboardEvent(msg)
 	case tea.MouseMsg:
-		return m, m.handleMouseEvent(msg)
+		return m, m.handleMouseMsg(msg)
 	case tea.WindowSizeMsg:
 		// Triggers immediately after app start because we render this component by default
 		h, v := m.styles.componentMargins.GetFrameSize()
@@ -229,7 +230,7 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 	}
 }
 
-func (m *ListModel) handleMouseEvent(msg tea.MouseMsg) tea.Cmd {
+func (m *ListModel) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
 	switch msg := msg.(type) {
 	case tea.MouseClickMsg:
 		if msg.Mouse().Button == tea.MouseLeft {
@@ -621,9 +622,18 @@ func (m *ListModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 	}
 
 	if host.SSHHostConfig == nil {
-		errorText := fmt.Sprintf("[UI] SSH config is not set for host ID='%d', Title='%s'", host.ID, host.Title)
-		m.logger.Error(errorText)
-		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(errorText)})
+		errorText := fmt.Sprintf("[UI] SSH config is empty for host ID='%d', Title=%q. Waiting...", host.ID, host.Title)
+		m.logger.Warn(errorText)
+		maxRetries := 5
+		for host.SSHHostConfig == nil {
+			maxRetries--
+			if maxRetries <= 0 {
+				errorText := fmt.Sprintf("[UI] SSH config is not set for host ID='%d', Title=%q", host.ID, host.Title)
+				m.logger.Error(errorText)
+				return message.TeaCmd(message.ErrorOccurred{Err: errors.New(errorText)})
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
 	}
 
 	switch processType { //nolint:exhaustive // allow missing cases
