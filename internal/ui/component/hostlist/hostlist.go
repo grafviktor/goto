@@ -41,6 +41,12 @@ type iLogger interface {
 
 type msgToggleLayout struct{ layout constant.ScreenLayout }
 
+type msgHostSSHConfigLoadWait struct {
+	host         *hostModel.Host
+	attemptsLeft int
+	processType  constant.ProcessType
+}
+
 type ListModel struct {
 	list.Model
 
@@ -51,7 +57,8 @@ type ListModel struct {
 	mode                string
 	showingNotification bool
 	styles              styles
-	clickArmed          bool
+	// For handling double click
+	waitForSecondClick bool
 }
 
 // New - creates new host list model.
@@ -149,6 +156,9 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.SetSize(msg.Width-h, msg.Height-v)
 		m.logger.Debug("[UI] Set host list size: %d %d", m.Width(), m.Height())
 		return m, nil
+	case msgHostSSHConfigLoadWait:
+		cmd := m.onHostSSHConfigLoadWait(msg)
+		return m, cmd
 	case message.HostSSHConfigLoadComplete:
 		m.onHostSSHConfigLoaded(msg)
 		return m, nil
@@ -251,15 +261,15 @@ func (m *ListModel) focusHost(msg tea.MouseClickMsg) tea.Cmd {
 		return nil
 	}
 
-	if index == m.Index() && m.clickArmed {
-		m.clickArmed = false
+	if index == m.Index() && m.waitForSecondClick {
+		m.waitForSecondClick = false
 		return m.constructProcessCmd(constant.ProcessTypeSSHConnect)
 	}
 
 	m.Select(index)
-	m.clickArmed = true
+	m.waitForSecondClick = true
 	return tea.Batch(m.onFocusChanged(), tea.Tick(time.Millisecond*500, func(t time.Time) tea.Msg {
-		m.clickArmed = false
+		m.waitForSecondClick = false
 		return nil
 	}))
 }
@@ -571,6 +581,24 @@ func (m *ListModel) onFocusChanged() tea.Cmd {
 	return nil
 }
 
+func (m *ListModel) onHostSSHConfigLoadWait(msg msgHostSSHConfigLoadWait) tea.Cmd {
+	if msg.host.SSHHostConfig != nil {
+		return m.constructProcessCmd(msg.processType)
+	}
+
+	if msg.attemptsLeft <= 0 {
+		errorText := fmt.Sprintf("[UI] SSH config is not set for host ID='%d', Title=%q", msg.host.ID, msg.host.Title)
+		m.logger.Error(errorText)
+		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(errorText)})
+	}
+
+	return message.TeaCmd(msgHostSSHConfigLoadWait{
+		host:         msg.host,
+		attemptsLeft: msg.attemptsLeft - 1,
+		processType:  msg.processType,
+	})
+}
+
 func (m *ListModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoadComplete) {
 	for index, item := range m.Items() {
 		if hostListItem, ok := item.(ListItemHost); ok && hostListItem.ID == msg.HostID {
@@ -626,18 +654,11 @@ func (m *ListModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 	}
 
 	if host.SSHHostConfig == nil {
-		errorText := fmt.Sprintf("[UI] SSH config is empty for host ID='%d', Title=%q. Waiting...", host.ID, host.Title)
-		m.logger.Warn(errorText)
-		maxRetries := 5
-		for host.SSHHostConfig == nil {
-			maxRetries--
-			if maxRetries <= 0 {
-				errorText := fmt.Sprintf("[UI] SSH config is not set for host ID='%d', Title=%q", host.ID, host.Title)
-				m.logger.Error(errorText)
-				return message.TeaCmd(message.ErrorOccurred{Err: errors.New(errorText)})
-			}
-			time.Sleep(100 * time.Millisecond)
-		}
+		return message.TeaCmd(msgHostSSHConfigLoadWait{
+			host:         host,
+			attemptsLeft: 5,
+			processType:  processType,
+		})
 	}
 
 	switch processType { //nolint:exhaustive // allow missing cases
