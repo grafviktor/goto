@@ -123,23 +123,53 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	m.modelHostList, cmd = m.modelHostList.Update(msg)
-	cmds = append(cmds, cmd)
-	m.modelGroupList, cmd = m.modelGroupList.Update(msg)
-	cmds = append(cmds, cmd)
+	viewCmds := m.updateViews(msg)
+	cmds = append(cmds, viewCmds)
+	return m, tea.Batch(cmds...)
+}
 
-	if m.appState.CurrentView == state.ViewEditItem {
+func (m *MainModel) updateViews(msg tea.Msg) tea.Cmd {
+	var cmd tea.Cmd
+	var cmds []tea.Cmd
+
+	if m.appState.CurrentView == state.ViewHostList && isInputEvent(msg) {
+		m.modelHostList, cmd = m.modelHostList.Update(msg)
+		cmds = append(cmds, cmd)
+	} else if m.appState.CurrentView == state.ViewGroupList && isInputEvent(msg) {
+		m.modelGroupList, cmd = m.modelGroupList.Update(msg)
+		cmds = append(cmds, cmd)
+	} else if m.appState.CurrentView == state.ViewEditItem {
 		// Edit host receives messages only if it's active. We re-create this component every time we go to edit mode
 		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
 		cmds = append(cmds, cmd)
-	}
-
-	if m.appState.CurrentView == state.ViewSSHSession {
+	} else if m.appState.CurrentView == state.ViewSSHSession {
 		m.modelSSHSession, cmd = m.modelSSHSession.Update(msg)
 		cmds = append(cmds, cmd)
 	}
 
-	return m, tea.Batch(cmds...)
+	if !isInputEvent(msg) {
+		// Why does the app unconditionally forwards messages to these 2 components?
+		// At first, because this is an example bad design. Other arguments are:
+		// * Both components need to track window size messages, so when we switch between them, they already have the correct size.
+		// * GroupSelect message comes from groupList component and updates hosts hostList component in the background.
+		// * The same is true for HostCreate and HostUpdate messages which comes from hostEdit.
+		// * HostSSHConfigLoadComplete message comes from external process and updates hostList item in the background.
+		m.modelHostList, cmd = m.modelHostList.Update(msg)
+		cmds = append(cmds, cmd)
+		m.modelGroupList, cmd = m.modelGroupList.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+
+	return tea.Batch(cmds...)
+}
+
+func isInputEvent(msg tea.Msg) bool {
+	switch msg.(type) {
+	case tea.KeyPressMsg, tea.MouseMsg:
+		return true
+	default:
+		return false
+	}
 }
 
 func (m *MainModel) View() tea.View {
@@ -165,12 +195,12 @@ func (m *MainModel) View() tea.View {
 	view := tea.NewView(viewPortContent)
 	view.AltScreen = true
 	view.Cursor = content.Cursor
-
-	if m.appState.CurrentView == state.ViewSSHSession {
-		// The app processes mouse events only in the SSH session view.
-		// In all other cases, mouse events are processed by the system (i.e. ignored).
-		view.MouseMode = tea.MouseModeAllMotion
-	}
+	// Do not use MouseModeCellMotion, as it's buggy. For instance,
+	// If you press right mouse button, you will not be able to select
+	// text in ssh session until you restart the app. According to
+	// bubbletea, cell motion is better supported. See here:
+	// https://github.com/charmbracelet/bubbletea/blob/a23da80847e6fc928febc62114f761403ac5d2f1/tea.go#L290-L297
+	view.MouseMode = tea.MouseModeCellMotion
 
 	return view
 }
@@ -320,13 +350,13 @@ func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.Ru
 func (m *MainModel) formatSessionStatus(group, host, alias string) string {
 	var sb strings.Builder
 	if !utils.StringEmpty(&group) {
-		fmt.Fprintf(&sb, "group: %s • ", group)
+		fmt.Fprintf(&sb, "Group: %s • ", group)
 	}
 
-	fmt.Fprintf(&sb, "host: %s", host)
+	fmt.Fprintf(&sb, "Host: %s", host)
 
 	if host != alias {
-		fmt.Fprintf(&sb, " • alias: %s", alias)
+		fmt.Fprintf(&sb, " • Alias: %s", alias)
 	}
 
 	return sb.String()
