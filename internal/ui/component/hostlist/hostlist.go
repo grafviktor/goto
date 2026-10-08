@@ -42,9 +42,20 @@ type iLogger interface {
 type msgToggleLayout struct{ layout constant.ScreenLayout }
 
 type msgHostSSHConfigLoadWait struct {
-	host         *hostModel.Host
+	hostID       int
 	attemptsLeft int
 	processType  constant.ProcessType
+}
+
+func buildHostSSHConfigLoadWaitCmd(host hostModel.Host, processType constant.ProcessType, attemptsLeft int) tea.Cmd {
+	return func() tea.Msg {
+		time.Sleep(100 * time.Millisecond)
+		return msgHostSSHConfigLoadWait{
+			hostID:       host.ID,
+			attemptsLeft: attemptsLeft,
+			processType:  processType,
+		}
+	}
 }
 
 type ListModel struct {
@@ -578,21 +589,18 @@ func (m *ListModel) onFocusChanged() tea.Cmd {
 }
 
 func (m *ListModel) onHostSSHConfigLoadWait(msg msgHostSSHConfigLoadWait) tea.Cmd {
-	if msg.host.SSHHostConfig != nil {
+	host, _ := m.findHost(msg.hostID)
+	if host.SSHHostConfig != nil {
 		return m.constructProcessCmd(msg.processType)
 	}
 
 	if msg.attemptsLeft <= 0 {
-		errorText := fmt.Sprintf("[UI] SSH config is not set for host ID='%d', Title=%q", msg.host.ID, msg.host.Title)
+		errorText := fmt.Sprintf("[UI] SSH config is not set for host ID='%d', Title=%q", host.ID, host.Title)
 		m.logger.Error(errorText)
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(errorText)})
 	}
 
-	return message.TeaCmd(msgHostSSHConfigLoadWait{
-		host:         msg.host,
-		attemptsLeft: msg.attemptsLeft - 1,
-		processType:  msg.processType,
-	})
+	return buildHostSSHConfigLoadWaitCmd(host, msg.processType, msg.attemptsLeft-1)
 }
 
 func (m *ListModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoadComplete) {
@@ -633,38 +641,39 @@ func (m *ListModel) onToggleLayout() tea.Cmd {
  */
 
 func (m *ListModel) constructProcessCmd(processType constant.ProcessType) tea.Cmd {
-	// Do not use m.SelectedItem() here!
-	// list.Model keeps 2 collections - m.items and m.filteredItems, which can be inconsistent
-	// as a result in some hosts taken from m.filteredItems ssh config is nil.
-	var host *hostModel.Host
-	for _, item := range m.Items() {
-		if listItemHost, ok := item.(ListItemHost); ok && listItemHost.ID == m.appState.Selected {
-			host = &listItemHost.Host
-			break
-		}
-	}
-
-	if host == nil {
+	host, ok := m.findHost(m.appState.Selected)
+	if !ok {
 		m.logger.Error("[UI] Could not find host with ID='%d'", m.appState.Selected)
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedErrMsg)})
 	}
 
+	// If ssh config is not yet loaded, let't give it some time. It's probably an overkill,
+	// but we assume that user either moves focus and hit Enter really fast or double-clicks.
 	if host.SSHHostConfig == nil {
-		return message.TeaCmd(msgHostSSHConfigLoadWait{
-			host:         host,
-			attemptsLeft: 5,
-			processType:  processType,
-		})
+		m.logger.Warn("[UI] SSH config is not yet loaded for host with ID='%d'", m.appState.Selected)
+		return buildHostSSHConfigLoadWaitCmd(host, processType, 5)
 	}
 
 	switch processType { //nolint:exhaustive // allow missing cases
 	case constant.ProcessTypeSSHConnect:
-		return message.TeaCmd(message.RunProcessSSHConnect{Host: *host})
+		return message.TeaCmd(message.RunProcessSSHConnect{Host: host})
 	case constant.ProcessTypeSSHCopyID:
-		return message.TeaCmd(message.RunProcessSSHCopyID{Host: *host})
+		return message.TeaCmd(message.RunProcessSSHCopyID{Host: host})
 	default:
 		return nil
 	}
+}
+
+func (m *ListModel) findHost(id int) (hostModel.Host, bool) {
+	// Do not use m.SelectedItem() here!
+	// list.Model keeps 2 collections - m.items and m.filteredItems, which can be inconsistent
+	// as a result in some hosts taken from m.filteredItems ssh config is nil.
+	for _, item := range m.Items() {
+		if listItemHost, ok := item.(ListItemHost); ok && listItemHost.ID == id {
+			return listItemHost.Host, true
+		}
+	}
+	return hostModel.Host{}, false
 }
 
 func (m *ListModel) updateTitle() {
