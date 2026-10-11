@@ -42,12 +42,13 @@ type msgToggleLayout struct{ layout constant.ScreenLayout }
 type ListModel struct {
 	list.Model
 
-	repo     storage.HostStorage
-	keyMap   *keyMap
-	appState *state.State
-	logger   iLogger
-	mode     string
-	styles   styles
+	repo                storage.HostStorage
+	keyMap              *keyMap
+	appState            *state.State
+	logger              iLogger
+	mode                string
+	showingNotification bool
+	styles              styles
 }
 
 // New - creates new host list model.
@@ -158,6 +159,7 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case message.HideUINotification:
 		if msg.ComponentName == "hostlist" {
 			m.logger.Debug("[UI] Hide notification message")
+			m.showingNotification = false
 			m.updateTitle()
 		}
 
@@ -577,6 +579,11 @@ func (m *ListModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 }
 
 func (m *ListModel) updateTitle() {
+	if m.showingNotification {
+		// If notification is displayed, then we should not update the title.
+		return
+	}
+
 	var newTitle string
 	item, isHost := m.SelectedItem().(ListItemHost)
 	m.resetTitleStyle()
@@ -766,5 +773,6 @@ func (m *ListModel) displayNotificationMsg(msg string) tea.Cmd {
 	}
 
 	m.logger.Debug("[UI] Notification message: %s", msg)
+	m.showingNotification = true
 	return message.DisplayNotification("hostlist", msg, m)
 }
