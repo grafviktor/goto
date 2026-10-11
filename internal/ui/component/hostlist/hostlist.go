@@ -381,6 +381,7 @@ func (m *ListModel) copyItem() tea.Cmd {
 
 	slices.Sort(titles)
 	index := lo.IndexOf(titles, clonedHost.Title)
+	m.showingNotification = false // Reset notification, when copy an item.
 	// We should NOT call onFocusChanged here, because we do not change focus when copying an item.
 	return tea.Sequence(
 		m.Model.InsertItem(index, ListItemHost{Host: clonedHost}),
@@ -689,6 +690,7 @@ func (m *ListModel) enterSSHCopyIDMode() tea.Cmd {
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedErrMsg)})
 	}
 
+	m.showingNotification = false // Reset notification, when entering copy id mode.
 	m.mode = modeSSHCopyID
 	m.logger.Debug("[UI] Enter %s mode. Ask user for confirmation.", m.mode)
 	m.updateTitle()
@@ -704,6 +706,7 @@ func (m *ListModel) enterRemoveItemMode() tea.Cmd {
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedErrMsg)})
 	}
 
+	m.showingNotification = false // Reset notification, when entering remove mode.
 	m.mode = modeRemoveItem
 	m.logger.Debug("[UI] Enter %s mode. Ask user for confirmation.", m.mode)
 	m.updateTitle()
@@ -712,6 +715,7 @@ func (m *ListModel) enterRemoveItemMode() tea.Cmd {
 }
 
 func (m *ListModel) enterCloseAppMode() {
+	m.showingNotification = false // Reset notification, when closing the app.
 	m.mode = modeCloseApp
 	m.logger.Debug("[UI] Enter %s mode. Ask user for confirmation.", m.mode)
 	m.updateTitle()

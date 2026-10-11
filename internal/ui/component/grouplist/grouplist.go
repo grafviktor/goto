@@ -73,7 +73,9 @@ func New(_ context.Context, repo storage.HostStorage, appState *state.State, log
 	return &m
 }
 
-func (m *Model) Init() tea.Cmd { return nil }
+func (m *Model) Init() tea.Cmd {
+	return m.loadItems()
+}
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
@@ -106,6 +108,10 @@ func (m *Model) View() tea.View {
 func (m *Model) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 	//exhaustive:ignore // Handle only specific keys, other events are handled by the list model.
 	switch msg.Code {
+	// case key.Matches(msg, m.KeyMap.Quit):
+	// 	return tea.Quit
+	case 'q':
+		return tea.Quit
 	case tea.KeyEscape:
 		return m.handleEscapeKey()
 	case tea.KeyEnter:
@@ -181,7 +187,8 @@ func (m *Model) loadItems() tea.Cmd {
 		}
 	})
 
-	m.logger.Debug("[UI] Load complete. Found '%d' groups", len(groupList))
+	groupCount := len(groupList)
+	m.logger.Debug("[UI] Load complete. Found '%d' groups", groupCount)
 	slices.Sort(groupList)
 	// noGroupSelected always comes first
 	groupList = append([]string{noGroupSelected}, groupList...)
@@ -191,5 +198,8 @@ func (m *Model) loadItems() tea.Cmd {
 		items = append(items, ListItemHostGroup{group})
 	}
 
-	return m.SetItems(items)
+	return tea.Sequence(
+		m.SetItems(items),
+		message.TeaCmd(message.GroupListLoadComplete{GroupCount: groupCount}),
+	)
 }

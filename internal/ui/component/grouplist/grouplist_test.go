@@ -24,8 +24,11 @@ func TestNew(t *testing.T) {
 
 func TestInit(t *testing.T) {
 	model := NewMockGroupModel(false)
-	cmd := model.Init()
-	require.IsType(t, tea.Cmd(nil), cmd)
+	var msgs []tea.Msg
+	testutils.CmdToMessage(model.Init(), &msgs)
+
+	require.Equal(t, message.GroupListLoadComplete{GroupCount: 3}, msgs[len(msgs)-1])
+	require.Len(t, model.Items(), 4)
 }
 
 func TestUpdate(t *testing.T) {

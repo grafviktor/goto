@@ -34,6 +34,26 @@ func TestNew(t *testing.T) {
 
 	require.IsType(t, message.HostSelect{}, msgs[0])
 	require.IsType(t, message.RunProcessSSHLoadConfig{}, msgs[1])
+	require.Equal(t, state.ViewHostList, model.appState.CurrentView)
+
+	var loaded message.GroupListLoadComplete
+	require.True(t, lo.ContainsBy(msgs, func(msg tea.Msg) bool {
+		loaded, _ = msg.(message.GroupListLoadComplete)
+		return loaded.GroupCount > 0
+	}))
+
+	updated, _ := model.Update(loaded)
+	require.Equal(t, state.ViewGroupList, updated.(*MainModel).appState.CurrentView)
+}
+
+func TestUpdate_GroupListLoadComplete(t *testing.T) {
+	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+
+	updated, _ := model.Update(message.GroupListLoadComplete{GroupCount: 0})
+	require.Equal(t, state.ViewHostList, updated.(*MainModel).appState.CurrentView)
+
+	updated, _ = model.Update(message.GroupListLoadComplete{GroupCount: 1})
+	require.Equal(t, state.ViewGroupList, updated.(*MainModel).appState.CurrentView)
 }
 
 func TestUpdate_KeyMsg(t *testing.T) {
