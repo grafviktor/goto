@@ -226,6 +226,7 @@ func (m *Model) selectSavedGroup() {
 		group, ok := item.(ListItemHostGroup)
 		return ok && strings.EqualFold(group.Title(), saved)
 	})
+
 	if !found {
 		m.Select(0)
 		return
