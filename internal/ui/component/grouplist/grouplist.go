@@ -111,7 +111,9 @@ func (m *Model) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 	// case key.Matches(msg, m.KeyMap.Quit):
 	// 	return tea.Quit
 	case 'q':
-		return tea.Quit
+		if m.FilterState() != list.Filtering {
+			return tea.Quit
+		}
 	case tea.KeyEscape:
 		return m.handleEscapeKey()
 	case tea.KeyEnter:
