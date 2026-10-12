@@ -88,7 +88,7 @@ func Test_handleKeyboardEvent(t *testing.T) {
 	}
 }
 
-func Test_handleEnterKey(t *testing.T) {
+func Test_handleSelectGroup(t *testing.T) {
 	tests := []struct {
 		name         string
 		group        string
@@ -127,7 +127,7 @@ func Test_handleEnterKey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			listModel.Select(tt.itemIndex)
-			cmd := listModel.handleEnterKey()
+			cmd := listModel.handleSelectGroup()
 
 			var actualMsgs []tea.Msg
 			testutils.CmdToMessage(cmd, &actualMsgs)
