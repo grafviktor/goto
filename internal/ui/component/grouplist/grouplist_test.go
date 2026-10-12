@@ -180,6 +180,17 @@ func TestLoadItems(t *testing.T) {
 	model.loadItems()
 	require.Equal(t, noGroupSelected, model.Items()[0].(ListItemHostGroup).Title())
 	require.Len(t, model.Items(), 4) // 1 "No Group" item + 3 items from database
+	require.Equal(t, noGroupSelected, model.SelectedItem().(ListItemHostGroup).Title())
+
+	// Previously selected group is focused after reload.
+	model.appState.Group = "group 2"
+	model.loadItems()
+	require.Equal(t, "Group 2", model.SelectedItem().(ListItemHostGroup).Title())
+
+	// A group that no longer exists falls back to "~ all ~".
+	model.appState.Group = "missing"
+	model.loadItems()
+	require.Equal(t, noGroupSelected, model.SelectedItem().(ListItemHostGroup).Title())
 
 	// Storage fails
 	model = NewMockGroupModel(true)

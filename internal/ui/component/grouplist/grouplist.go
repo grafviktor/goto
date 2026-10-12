@@ -114,14 +114,14 @@ func (m *Model) View() tea.View {
 func (m *Model) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 	//exhaustive:ignore // Handle only specific keys, other events are handled by the list model.
 	switch {
-	case key.Matches(msg, m.additionalKeyMap.quitApp):
-		if m.FilterState() != list.Filtering {
-			return tea.Quit
-		}
 	case key.Matches(msg, m.additionalKeyMap.selectGroup):
 		return m.handleSelectGroup()
 	case key.Matches(msg, m.additionalKeyMap.deselectGroup):
 		return m.handleDeselectGroup()
+	case key.Matches(msg, m.additionalKeyMap.quitApp):
+		if m.FilterState() != list.Filtering {
+			return tea.Quit
+		}
 	}
 
 	return nil
@@ -204,8 +204,32 @@ func (m *Model) loadItems() tea.Cmd {
 		items = append(items, ListItemHostGroup{group})
 	}
 
+	setItemsCmd := m.SetItems(items)
+	m.selectSavedGroup()
+
 	return tea.Sequence(
-		m.SetItems(items),
+		setItemsCmd,
 		message.TeaCmd(message.GroupListLoadComplete{GroupCount: groupCount}),
 	)
+}
+
+// selectSavedGroup focuses the group stored in application state.
+// An empty saved group, or one that is no longer present, stays on "~ all ~".
+func (m *Model) selectSavedGroup() {
+	saved := strings.TrimSpace(m.appState.Group)
+	if saved == "" {
+		m.Select(0)
+		return
+	}
+
+	_, index, found := lo.FindIndexOf(m.Items(), func(item list.Item) bool {
+		group, ok := item.(ListItemHostGroup)
+		return ok && strings.EqualFold(group.Title(), saved)
+	})
+	if !found {
+		m.Select(0)
+		return
+	}
+
+	m.Select(index)
 }
