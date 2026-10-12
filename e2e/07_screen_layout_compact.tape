@@ -2,6 +2,9 @@ Set Shell bash
 Type "gg -f temp -s mock_ssh_config"
 Enter
 Sleep 100ms
+# Select group "~ all ~"
+Enter
+Sleep 100ms
 Type "n"
 Sleep 100ms
 Type "network host"

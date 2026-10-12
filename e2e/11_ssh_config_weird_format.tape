@@ -1,5 +1,5 @@
 Set Shell bash
-Type "gg -f temp -s 11_ssh_config_weird_format.config"
+Type "gg -f temp -s temp/ssh_config"
 Enter
 Sleep 100ms
 
@@ -7,6 +7,7 @@ Sleep 100ms
 Type z
 Down
 Enter
+Sleep 100ms
 
 # Go to the very end of the list and exit the application.
 # After that we check that all hosts were read from the config file

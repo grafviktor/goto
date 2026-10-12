@@ -46,8 +46,8 @@ function before_each() {
     mkdir -p "${TMP_HOME}"
 
     # If ssh_config file exists, copy it to the expected directory.
-    if [ -f "${filename_without_extension}_ssh_config.yaml" ]; then
-        cp "${filename_without_extension}_ssh_config.yaml" "${TMP_HOME}"/ssh_config
+    if [ -f "${filename_without_extension}_ssh_config" ]; then
+        cp "${filename_without_extension}_ssh_config" "${TMP_HOME}"/ssh_config
     fi
 
     # If state file exists, copy it to the expected directory.
@@ -115,6 +115,10 @@ function print_app_log() {
     cat "${TMP_HOME}"/app.log
     printf "\n  ${RED_COLOR}-===== Application state =====-${NO_COLOR}\n"
     cat "${TMP_HOME}"/state.yaml
+    printf "\n  ${RED_COLOR}-===== Application state diff =====-${NO_COLOR}\n"
+    diff "${TMP_HOME}"/state.yaml "expected/${filename_without_extension}_state.yaml"
+    printf "\n  ${RED_COLOR}-===== Application hosts diff =====-${NO_COLOR}\n"
+    diff "${TMP_HOME}"/hosts.yaml "expected/${filename_without_extension}_hosts.yaml"
 }
 
 function cleanup() {

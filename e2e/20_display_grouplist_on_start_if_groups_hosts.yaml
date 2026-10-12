@@ -1,0 +1,15 @@
+- host:
+    address: 127.0.0.1
+    description: network host description
+    title: network host
+    group: group 1
+- host:
+    address: 127.0.0.2
+    description: network host description 2
+    title: network host 2
+    group: group 2
+- host:
+    address: 127.0.0.3
+    description: network host description 3
+    title: network host 3
+    group: production

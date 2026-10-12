@@ -1,6 +1,6 @@
 enable_embedded_terminal: true
-group: ssh_config
+selected_group_name: ssh_config
 screen_layout: description
-selected: 11
+selected_host_index: 11
 enable_ssh_config: true
 theme: default
