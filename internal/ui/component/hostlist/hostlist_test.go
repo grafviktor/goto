@@ -749,6 +749,7 @@ func TestUpdate_msgHideNotification(t *testing.T) {
 		&mocklogger.Logger{},
 	)
 	model.loadHosts()
+	model.showingNotification = true
 	model.Title = "Mock notification message"
 
 	model.Update(message.HideUINotification{ComponentName: "hostlist"})

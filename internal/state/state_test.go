@@ -105,9 +105,9 @@ func Test_readFromFile(t *testing.T) {
 		{
 			name: "State file with all fields set",
 			stateFileContent: `
-selected: 999
+selected_host_index: 999
 enable_ssh_config: true
-group: default
+selected_group_name: default
 theme: dark
 screen_layout: compact
 enable_embedded_terminal: true
@@ -124,9 +124,9 @@ enable_embedded_terminal: true
 		{
 			name: "State file without screen layout",
 			stateFileContent: `
-selected: 999
+selected_host_index: 999
 enable_ssh_config: true
-group: default
+selected_group_name: default
 theme: dark
 enable_embedded_terminal: true
 `,
@@ -142,9 +142,9 @@ enable_embedded_terminal: true
 		{
 			name: "State file without theme",
 			stateFileContent: `
-selected: 999
+selected_host_index: 999
 enable_ssh_config: true
-group: default
+selected_group_name: default
 screen_layout: compact
 enable_embedded_terminal: true
 `,
@@ -160,9 +160,9 @@ enable_embedded_terminal: true
 		{
 			name: "State file SSH config option disabled",
 			stateFileContent: `
-selected: 999
+selected_host_index: 999
 enable_ssh_config: false
-group: default
+selected_group_name: default
 theme: dark
 screen_layout: compact
 enable_embedded_terminal: true
@@ -179,8 +179,8 @@ enable_embedded_terminal: true
 		{
 			name: "State file SSH config option not set, should default to enabled",
 			stateFileContent: `
-selected: 999
-group: default
+selected_host_index: 999
+selected_group_name: default
 theme: dark
 screen_layout: compact
 `,
@@ -196,9 +196,9 @@ screen_layout: compact
 		{
 			name: "Valid SSH config path should be picked up by state",
 			stateFileContent: `
-selected: 999
+selected_host_index: 999
 enable_ssh_config: true
-group: default
+selected_group_name: default
 theme: dark
 screen_layout: compact
 ssh_config_path: /tmp/some_path
@@ -218,9 +218,9 @@ ssh_config_path: /tmp/some_path
 		{
 			name: "Valid remote SSH config path should be picked up by state",
 			stateFileContent: `
-selected: 999
+selected_host_index: 999
 enable_ssh_config: true
-group: default
+selected_group_name: default
 theme: dark
 screen_layout: compact
 ssh_config_path: http://example.com/ssh_config
@@ -241,8 +241,8 @@ enable_embedded_terminal: true
 		{
 			name: "State file Embedded Terminal option not set, should default to enabled",
 			stateFileContent: `
-selected: 999
-group: default
+selected_host_index: 999
+selected_group_name: default
 theme: dark
 screen_layout: compact
 `,
@@ -258,8 +258,8 @@ screen_layout: compact
 		{
 			name: "State file Embedded Terminal option disabled",
 			stateFileContent: `
-selected: 999
-group: default
+selected_host_index: 999
+selected_group_name: default
 theme: dark
 screen_layout: compact
 enable_embedded_terminal: false
@@ -276,8 +276,8 @@ enable_embedded_terminal: false
 		{
 			name: "State file Embedded Terminal option enabled",
 			stateFileContent: `
-selected: 999
-group: default
+selected_host_index: 999
+selected_group_name: default
 theme: dark
 screen_layout: compact
 enable_embedded_terminal: true
