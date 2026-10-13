@@ -3,6 +3,7 @@ package hostlist
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 
 	"charm.land/bubbles/v2/list"
@@ -1082,6 +1083,44 @@ func TestUpdate_HostFocusPreservedAfterClearFilterMessage(t *testing.T) {
 	}
 
 	assert.Len(t, model.VisibleItems(), 1)
+}
+
+func Test_displayNotificationMsg(t *testing.T) {
+	modelInitialtitle := "ssh -i id_rsa -p 2222 -l root localhost"
+	notificationMessageText := "Mock notification message"
+
+	model := newMockListModel(false)
+	model.updateTitle()
+	require.Equal(t, modelInitialtitle, model.Title)
+
+	t.Run("Display notification message", func(t *testing.T) {
+		cmd := model.displayNotificationMsg(notificationMessageText)
+		require.True(t, model.showingNotification)
+		require.Equal(t, model.Title, notificationMessageText)
+
+		// Just to note - when we call cmd() , there is a timeout in this function, which we wait.
+		// See displayNotificationMsg() implementation details.
+		teaMsg := cmd()
+		require.Equal(t, "HideUINotification", reflect.TypeOf(teaMsg).Name())
+		model.Update(teaMsg)
+		require.Equal(t, modelInitialtitle, model.Title)
+	})
+
+	t.Run("Display notification message and interrupt it by pressing on a keyboard", func(t *testing.T) {
+		cmd := model.displayNotificationMsg(notificationMessageText)
+		require.True(t, model.showingNotification)
+		require.Equal(t, model.Title, notificationMessageText)
+
+		// Now let's press a random keyboard button
+		model.Update(tea.KeyPressMsg{Code: tea.KeySpace})
+		// Immediatelly after that, the model should reset it's title to default
+		require.Equal(t, modelInitialtitle, model.Title)
+
+		teaMsg := cmd()
+		require.Equal(t, "HideUINotification", reflect.TypeOf(teaMsg).Name())
+		model.Update(teaMsg)
+		require.Equal(t, modelInitialtitle, model.Title)
+	})
 }
 
 // ==============================================
