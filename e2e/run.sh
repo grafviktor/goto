@@ -50,9 +50,14 @@ function before_each() {
         cp "${filename_without_extension}_ssh_config" "${TMP_HOME}"/ssh_config
     fi
 
-    # If state file exists, copy it to the expected directory.
+    # If hosts file exists, copy it to the expected directory.
     if [ -f "${filename_without_extension}_hosts.yaml" ]; then
         cp "${filename_without_extension}_hosts.yaml" "${TMP_HOME}"/hosts.yaml
+    fi
+
+    # If state file exists, copy it to the expected directory.
+    if [ -f "${filename_without_extension}_state.yaml" ]; then
+        cp "${filename_without_extension}_state.yaml" "${TMP_HOME}"/state.yaml
     fi
 }
 

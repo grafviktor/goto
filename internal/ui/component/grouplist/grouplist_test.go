@@ -52,75 +52,80 @@ func TestUpdate(t *testing.T) {
 }
 
 func Test_handleKeyboardEvent(t *testing.T) {
-	listModel := NewMockGroupModel(false)
-	listModel.loadItems()
+	t.Run("General keyboard event test", func(t *testing.T) {
+		listModel := NewMockGroupModel(false)
+		listModel.loadItems()
 
-	tests := []struct {
-		name      string
-		keyMsg    tea.KeyPressMsg
-		expectCmd bool
-	}{
-		{
-			name:      "Can handle Enter key",
-			keyMsg:    tea.KeyPressMsg{Code: tea.KeyEnter},
-			expectCmd: true,
-		},
-		{
-			name:      "Can handle Esc key",
-			keyMsg:    tea.KeyPressMsg{Code: tea.KeyEsc},
-			expectCmd: true,
-		},
-		{
-			name:      "Unhandled key returns nil cmd",
-			keyMsg:    tea.KeyPressMsg{Code: tea.KeyDown},
-			expectCmd: false,
-		},
-	}
+		tests := []struct {
+			name      string
+			keyMsg    tea.KeyPressMsg
+			expectCmd bool
+		}{
+			{
+				name:      "Can handle Enter key",
+				keyMsg:    tea.KeyPressMsg{Code: tea.KeyEnter},
+				expectCmd: true,
+			},
+			{
+				name:      "Can handle Esc key",
+				keyMsg:    tea.KeyPressMsg{Code: tea.KeyEsc},
+				expectCmd: true,
+			},
+			{
+				name:      "Unhandled key returns nil cmd",
+				keyMsg:    tea.KeyPressMsg{Code: tea.KeyDown},
+				expectCmd: false,
+			},
+		}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cmd := listModel.handleKeyboardEvent(tt.keyMsg)
-			if tt.expectCmd {
-				require.NotNil(t, cmd)
-			} else {
-				require.Nil(t, cmd)
-			}
-		})
-	}
-}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				cmd := listModel.handleKeyboardEvent(tt.keyMsg)
+				if tt.expectCmd {
+					require.NotNil(t, cmd)
+				} else {
+					require.Nil(t, cmd)
+				}
+			})
+		}
+	})
 
-func Test_handleKeyboardEvent_Quit(t *testing.T) {
-	t.Fail() // This test does not work
+	t.Run("Quit app keyboard event test", func(t *testing.T) {
+		tests := map[string]struct {
+			keyMsg          tea.KeyPressMsg
+			isFilterEnabled bool
+			expectCmd       tea.Cmd
+		}{
+			"Type 'q'": {
+				keyMsg:          tea.KeyPressMsg{Code: 'q'},
+				isFilterEnabled: false,
+				expectCmd:       tea.Quit,
+			},
+			"Type 'q' when filtering groups": {
+				keyMsg:          tea.KeyPressMsg{Code: 'q'},
+				isFilterEnabled: true,
+				expectCmd:       nil,
+			},
+		}
 
-	listModel := NewMockGroupModel(false)
-	listModel.loadItems()
+		for testName, tt := range tests {
+			t.Run(testName, func(t *testing.T) {
+				// We mutate model state, so let's re-create it in every test.
+				listModel := NewMockGroupModel(false)
+				listModel.loadItems()
 
-	tests := map[string]struct {
-		keyMsg          tea.KeyPressMsg
-		isFilterEnabled bool
-		expectCmd       tea.Cmd
-	}{
-		"Type 'q'": {
-			keyMsg:          tea.KeyPressMsg{Code: 'q'},
-			isFilterEnabled: false,
-			expectCmd:       tea.Quit,
-		},
-		"Type 'q' when filtering groups": {
-			keyMsg:          tea.KeyPressMsg{Code: 'q'},
-			isFilterEnabled: true,
-			expectCmd:       nil,
-		},
-	}
-
-	for testName, tt := range tests {
-		t.Run(testName, func(t *testing.T) {
-			if tt.isFilterEnabled {
-				listModel.SetFilterState(list.Filtering)
-			}
-			cmd := listModel.handleKeyboardEvent(tt.keyMsg)
-			require.IsType(t, tt.expectCmd, cmd)
-		})
-	}
+				if tt.isFilterEnabled {
+					listModel.SetFilterState(list.Filtering)
+				}
+				cmd := listModel.handleKeyboardEvent(tt.keyMsg)
+				if tt.expectCmd == nil {
+					require.Nil(t, cmd)
+				} else {
+					require.Equal(t, tt.expectCmd(), cmd())
+				}
+			})
+		}
+	})
 }
 
 func Test_handleSelectGroup(t *testing.T) {

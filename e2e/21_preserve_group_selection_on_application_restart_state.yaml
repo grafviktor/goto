@@ -1,0 +1,6 @@
+enable_embedded_terminal: false
+selected_group_name: group 3
+screen_layout: description
+selected_host_index: 1
+enable_ssh_config: false
+theme: default
