@@ -2,6 +2,9 @@ Set Shell bash
 Type "gg -f temp -s mock_ssh_config"
 Enter
 Sleep 100ms
+# Select group "~ all ~"
+Enter
+Sleep 100ms
 
 # Create a new host
 Type "n"
@@ -29,13 +32,13 @@ Sleep 100ms
 Type "z"
 Sleep 100ms
 Down
+Down
 Enter
 
 # Change group to "ssh_config"
 Type "z"
 Sleep 100ms
-Down
-Down
+Up
 Enter
 
 # Change group to "yaml_config"

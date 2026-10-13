@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/require"
 
@@ -24,8 +25,11 @@ func TestNew(t *testing.T) {
 
 func TestInit(t *testing.T) {
 	model := NewMockGroupModel(false)
-	cmd := model.Init()
-	require.IsType(t, tea.Cmd(nil), cmd)
+	var msgs []tea.Msg
+	testutils.CmdToMessage(model.Init(), &msgs)
+
+	require.Equal(t, message.GroupListLoadComplete{GroupCount: 3}, msgs[len(msgs)-1])
+	require.Len(t, model.Items(), 4)
 }
 
 func TestUpdate(t *testing.T) {
@@ -48,44 +52,83 @@ func TestUpdate(t *testing.T) {
 }
 
 func Test_handleKeyboardEvent(t *testing.T) {
-	listModel := NewMockGroupModel(false)
-	listModel.loadItems()
+	t.Run("General keyboard event test", func(t *testing.T) {
+		listModel := NewMockGroupModel(false)
+		listModel.loadItems()
 
-	tests := []struct {
-		name      string
-		keyMsg    tea.KeyPressMsg
-		expectCmd bool
-	}{
-		{
-			name:      "Can handle Enter key",
-			keyMsg:    tea.KeyPressMsg{Code: tea.KeyEnter},
-			expectCmd: true,
-		},
-		{
-			name:      "Can handle Esc key",
-			keyMsg:    tea.KeyPressMsg{Code: tea.KeyEsc},
-			expectCmd: true,
-		},
-		{
-			name:      "Unhandled key returns nil cmd",
-			keyMsg:    tea.KeyPressMsg{Code: tea.KeyDown},
-			expectCmd: false,
-		},
-	}
+		tests := []struct {
+			name      string
+			keyMsg    tea.KeyPressMsg
+			expectCmd bool
+		}{
+			{
+				name:      "Can handle Enter key",
+				keyMsg:    tea.KeyPressMsg{Code: tea.KeyEnter},
+				expectCmd: true,
+			},
+			{
+				name:      "Can handle Esc key",
+				keyMsg:    tea.KeyPressMsg{Code: tea.KeyEsc},
+				expectCmd: true,
+			},
+			{
+				name:      "Unhandled key returns nil cmd",
+				keyMsg:    tea.KeyPressMsg{Code: tea.KeyDown},
+				expectCmd: false,
+			},
+		}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cmd := listModel.handleKeyboardEvent(tt.keyMsg)
-			if tt.expectCmd {
-				require.NotNil(t, cmd)
-			} else {
-				require.Nil(t, cmd)
-			}
-		})
-	}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				cmd := listModel.handleKeyboardEvent(tt.keyMsg)
+				if tt.expectCmd {
+					require.NotNil(t, cmd)
+				} else {
+					require.Nil(t, cmd)
+				}
+			})
+		}
+	})
+
+	t.Run("Quit app keyboard event test", func(t *testing.T) {
+		tests := map[string]struct {
+			keyMsg          tea.KeyPressMsg
+			isFilterEnabled bool
+			expectCmd       tea.Cmd
+		}{
+			"Type 'q'": {
+				keyMsg:          tea.KeyPressMsg{Code: 'q'},
+				isFilterEnabled: false,
+				expectCmd:       tea.Quit,
+			},
+			"Type 'q' when filtering groups": {
+				keyMsg:          tea.KeyPressMsg{Code: 'q'},
+				isFilterEnabled: true,
+				expectCmd:       nil,
+			},
+		}
+
+		for testName, tt := range tests {
+			t.Run(testName, func(t *testing.T) {
+				// We mutate model state, so let's re-create it in every test.
+				listModel := NewMockGroupModel(false)
+				listModel.loadItems()
+
+				if tt.isFilterEnabled {
+					listModel.SetFilterState(list.Filtering)
+				}
+				cmd := listModel.handleKeyboardEvent(tt.keyMsg)
+				if tt.expectCmd == nil {
+					require.Nil(t, cmd)
+				} else {
+					require.Equal(t, tt.expectCmd(), cmd())
+				}
+			})
+		}
+	})
 }
 
-func Test_handleEnterKey(t *testing.T) {
+func Test_handleSelectGroup(t *testing.T) {
 	tests := []struct {
 		name         string
 		group        string
@@ -124,7 +167,7 @@ func Test_handleEnterKey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			listModel.Select(tt.itemIndex)
-			cmd := listModel.handleEnterKey()
+			cmd := listModel.handleSelectGroup()
 
 			var actualMsgs []tea.Msg
 			testutils.CmdToMessage(cmd, &actualMsgs)
@@ -177,6 +220,17 @@ func TestLoadItems(t *testing.T) {
 	model.loadItems()
 	require.Equal(t, noGroupSelected, model.Items()[0].(ListItemHostGroup).Title())
 	require.Len(t, model.Items(), 4) // 1 "No Group" item + 3 items from database
+	require.Equal(t, noGroupSelected, model.SelectedItem().(ListItemHostGroup).Title())
+
+	// Previously selected group is focused after reload.
+	model.appState.Group = "group 2"
+	model.loadItems()
+	require.Equal(t, "Group 2", model.SelectedItem().(ListItemHostGroup).Title())
+
+	// A group that no longer exists falls back to "~ all ~".
+	model.appState.Group = "missing"
+	model.loadItems()
+	require.Equal(t, noGroupSelected, model.SelectedItem().(ListItemHostGroup).Title())
 
 	// Storage fails
 	model = NewMockGroupModel(true)

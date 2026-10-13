@@ -68,14 +68,14 @@ type State struct {
 	Context                    context.Context       `yaml:"-"`
 	CurrentView                View                  `yaml:"-"`
 	EmbeddedTerminalEnabled    bool                  `yaml:"enable_embedded_terminal"`
-	Group                      string                `yaml:"group,omitempty"`
+	Group                      string                `yaml:"selected_group_name,omitempty"`
 	Height                     int                   `yaml:"-"`
 	IsUserDefinedSSHConfigPath bool                  `yaml:"-"`
 	Logger                     loggerInterface       `yaml:"-"`
 	LogLevel                   constant.LogLevel     `yaml:"-"`
 	ScreenLayout               constant.ScreenLayout `yaml:"screen_layout,omitempty"`
 	SetSSHConfigPath           string                `yaml:"ssh_config_path,omitempty"`
-	Selected                   int                   `yaml:"selected"`
+	Selected                   int                   `yaml:"selected_host_index"`
 	SSHConfigEnabled           bool                  `yaml:"enable_ssh_config"`
 	SSHConfigPath              string                `yaml:"-"`
 	Theme                      string                `yaml:"theme,omitempty"`
@@ -135,8 +135,8 @@ func (s *State) readFromFile() {
 	// Why not unmarshal directly to State? Because we want to distinguish between null values
 	// and zero values especially for boolean parameters. Using pointers for that.
 	var loadedState struct {
-		Selected int    `yaml:"selected"`
-		Group    string `yaml:"group"`
+		Selected int    `yaml:"selected_host_index"`
+		Group    string `yaml:"selected_group_name"`
 		// Using pointers to distinguish between null and zero values.
 		EmbeddedTerminalEnabled *bool   `yaml:"enable_embedded_terminal"`
 		Theme                   *string `yaml:"theme"`

@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"github.com/samber/lo"
@@ -28,10 +29,11 @@ var noGroupSelected = "~ all ~"
 type Model struct {
 	list.Model
 
-	repo     storage.HostStorage
-	appState *state.State
-	logger   iLogger
-	styles   styles
+	repo             storage.HostStorage
+	appState         *state.State
+	logger           iLogger
+	styles           styles
+	additionalKeyMap *keyMap
 }
 
 // New - creates a new UI component which is used to select a host group from a list,
@@ -70,10 +72,16 @@ func New(_ context.Context, repo storage.HostStorage, appState *state.State, log
 
 	m.Title = "select group"
 
+	m.additionalKeyMap = newKeyMap()
+	m.AdditionalShortHelpKeys = m.additionalKeyMap.ShortHelp
+	m.AdditionalFullHelpKeys = m.additionalKeyMap.FullHelp
+
 	return &m
 }
 
-func (m *Model) Init() tea.Cmd { return nil }
+func (m *Model) Init() tea.Cmd {
+	return m.loadItems()
+}
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
@@ -105,33 +113,21 @@ func (m *Model) View() tea.View {
 
 func (m *Model) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 	//exhaustive:ignore // Handle only specific keys, other events are handled by the list model.
-	switch msg.Code {
-	case tea.KeyEscape:
-		return m.handleEscapeKey()
-	case tea.KeyEnter:
-		return m.handleEnterKey()
+	switch {
+	case key.Matches(msg, m.additionalKeyMap.selectGroup):
+		return m.handleSelectGroup()
+	case key.Matches(msg, m.additionalKeyMap.deselectGroup):
+		return m.handleDeselectGroup()
+	case key.Matches(msg, m.additionalKeyMap.quitApp):
+		if m.FilterState() != list.Filtering {
+			return tea.Quit
+		}
 	}
 
 	return nil
 }
 
-func (m *Model) handleEscapeKey() tea.Cmd {
-	// If model is in filter mode and press ESC, just disable filtering.
-	if m.FilterState() == list.Filtering || m.FilterState() == list.FilterApplied {
-		m.logger.Debug("[UI] Escape key. Deactivate filter in group list view.")
-		return nil
-	}
-
-	// If group view is shown and user presses ESC, we should
-	// deselect the group view and then show the full host list.
-	m.logger.Debug("[UI] Escape key. Deselect group and exit from group list view.")
-	return tea.Sequence(
-		message.TeaCmd(message.GroupSelect{Name: ""}),
-		message.TeaCmd(message.ViewGroupListClose{}),
-	)
-}
-
-func (m *Model) handleEnterKey() tea.Cmd {
+func (m *Model) handleSelectGroup() tea.Cmd {
 	// If filter is active, by default pressing Enter just selects
 	// the first item from the list of filtered items. Prevent that.
 	if m.FilterState() == list.Filtering {
@@ -154,6 +150,22 @@ func (m *Model) handleEnterKey() tea.Cmd {
 	m.logger.Debug("[UI] Enter key. Select group '%s' and exit from group list view.", selected)
 	return tea.Sequence(
 		message.TeaCmd(message.GroupSelect{Name: selected}),
+		message.TeaCmd(message.ViewGroupListClose{}),
+	)
+}
+
+func (m *Model) handleDeselectGroup() tea.Cmd {
+	// If model is in filter mode and press ESC, just disable filtering.
+	if m.FilterState() == list.Filtering || m.FilterState() == list.FilterApplied {
+		m.logger.Debug("[UI] Escape key. Deactivate filter in group list view.")
+		return nil
+	}
+
+	// If group view is shown and user presses ESC, we should
+	// deselect the group view and then show the full host list.
+	m.logger.Debug("[UI] Escape key. Deselect group and exit from group list view.")
+	return tea.Sequence(
+		message.TeaCmd(message.GroupSelect{Name: ""}),
 		message.TeaCmd(message.ViewGroupListClose{}),
 	)
 }
@@ -181,7 +193,8 @@ func (m *Model) loadItems() tea.Cmd {
 		}
 	})
 
-	m.logger.Debug("[UI] Load complete. Found '%d' groups", len(groupList))
+	groupCount := len(groupList)
+	m.logger.Debug("[UI] Load complete. Found '%d' groups", groupCount)
 	slices.Sort(groupList)
 	// noGroupSelected always comes first
 	groupList = append([]string{noGroupSelected}, groupList...)
@@ -191,5 +204,33 @@ func (m *Model) loadItems() tea.Cmd {
 		items = append(items, ListItemHostGroup{group})
 	}
 
-	return m.SetItems(items)
+	setItemsCmd := m.SetItems(items)
+	m.selectSavedGroup()
+
+	return tea.Sequence(
+		setItemsCmd,
+		message.TeaCmd(message.GroupListLoadComplete{GroupCount: groupCount}),
+	)
+}
+
+// selectSavedGroup focuses the group stored in application state.
+// An empty saved group, or one that is no longer present, stays on "~ all ~".
+func (m *Model) selectSavedGroup() {
+	saved := strings.TrimSpace(m.appState.Group)
+	if saved == "" {
+		m.Select(0)
+		return
+	}
+
+	_, index, found := lo.FindIndexOf(m.Items(), func(item list.Item) bool {
+		group, ok := item.(ListItemHostGroup)
+		return ok && strings.EqualFold(group.Title(), saved)
+	})
+
+	if !found {
+		m.Select(0)
+		return
+	}
+
+	m.Select(index)
 }

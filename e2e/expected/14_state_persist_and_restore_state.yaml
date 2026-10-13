@@ -1,7 +1,7 @@
 enable_embedded_terminal: true
-group: manual hosts
+selected_group_name: manual hosts
 screen_layout: compact
 ssh_config_path: /tmp/no_such_config_file
-selected: 2
+selected_host_index: 2
 enable_ssh_config: false
 theme: nord

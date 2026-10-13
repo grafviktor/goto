@@ -46,13 +46,18 @@ function before_each() {
     mkdir -p "${TMP_HOME}"
 
     # If ssh_config file exists, copy it to the expected directory.
-    if [ -f "${filename_without_extension}_ssh_config.yaml" ]; then
-        cp "${filename_without_extension}_ssh_config.yaml" "${TMP_HOME}"/ssh_config
+    if [ -f "${filename_without_extension}_ssh_config" ]; then
+        cp "${filename_without_extension}_ssh_config" "${TMP_HOME}"/ssh_config
+    fi
+
+    # If hosts file exists, copy it to the expected directory.
+    if [ -f "${filename_without_extension}_hosts.yaml" ]; then
+        cp "${filename_without_extension}_hosts.yaml" "${TMP_HOME}"/hosts.yaml
     fi
 
     # If state file exists, copy it to the expected directory.
-    if [ -f "${filename_without_extension}_hosts.yaml" ]; then
-        cp "${filename_without_extension}_hosts.yaml" "${TMP_HOME}"/hosts.yaml
+    if [ -f "${filename_without_extension}_state.yaml" ]; then
+        cp "${filename_without_extension}_state.yaml" "${TMP_HOME}"/state.yaml
     fi
 }
 
@@ -71,9 +76,9 @@ function check_expected() {
         return 1
     fi
 
+    local hosts_file_expected="expected/${filename_without_extension}_hosts.yaml"
     # Check if hosts file exists in "expected" folder, the run diff.
-    if [ -f "${hosts_file}" ]; then
-        local hosts_file_expected="expected/${filename_without_extension}_hosts.yaml"
+    if [ -f "${hosts_file_expected}" ]; then
         diff "${hosts_file}" "${hosts_file_expected}"
         if [ "$?" -eq 0 ]; then
             printf "${MSG_OK} %s\n" "${hosts_file_expected}"
@@ -115,6 +120,16 @@ function print_app_log() {
     cat "${TMP_HOME}"/app.log
     printf "\n  ${RED_COLOR}-===== Application state =====-${NO_COLOR}\n"
     cat "${TMP_HOME}"/state.yaml
+
+    if [ -f "expected/${filename_without_extension}_state.yaml" ]; then
+        printf "\n  ${RED_COLOR}-===== Application state diff =====-${NO_COLOR}\n"
+        diff "${TMP_HOME}"/state.yaml "expected/${filename_without_extension}_state.yaml"
+    fi
+
+    if [ -f "expected/${filename_without_extension}_hosts.yaml" ]; then
+        printf "\n  ${RED_COLOR}-===== Application hosts diff =====-${NO_COLOR}\n"
+        diff "${TMP_HOME}"/hosts.yaml "expected/${filename_without_extension}_hosts.yaml"
+    fi
 }
 
 function cleanup() {

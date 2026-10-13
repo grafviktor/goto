@@ -1,6 +1,6 @@
 enable_embedded_terminal: true
-group: yaml_config
+selected_group_name: yaml_config
 screen_layout: description
-selected: 6
+selected_host_index: 6
 enable_ssh_config: true
 theme: default

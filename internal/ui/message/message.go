@@ -28,6 +28,8 @@ type (
 		HostID int
 		Config sshconfig.Config
 	}
+	// GroupListLoadComplete triggers when the group list loaded. GroupCount contains the number of user-defined groups.
+	GroupListLoadComplete struct{ GroupCount int }
 	// ViewGroupListOpen - dispatched when it's required to open group list view.
 	ViewGroupListOpen struct{}
 	// ViewGroupListClose - dispatched when it's required to close group list view.

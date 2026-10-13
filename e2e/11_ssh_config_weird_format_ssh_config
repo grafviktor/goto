@@ -53,4 +53,4 @@ Host "quoted-host"
     HostName "host\"name.local"
 
 # Include directive (should be handled externally)
-Include ./mock_ssh_config
+Include ../mock_ssh_config

@@ -66,9 +66,12 @@ type MainModel struct {
 
 func (m *MainModel) Init() tea.Cmd {
 	m.logger.Debug("[UI] Render main view")
-
-	// Loads hosts from DB
-	return m.modelHostList.Init()
+	return tea.Batch(
+		// Loads hosts from DB
+		m.modelHostList.Init(),
+		// Loads groups from DB
+		m.modelGroupList.Init(),
+	)
 }
 
 //nolint:funlen
@@ -92,6 +95,12 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case message.ViewHostEditClose:
 		m.logger.Debug("[UI] Close host edit form")
 		m.appState.CurrentView = state.ViewHostList
+	case message.GroupListLoadComplete:
+		m.logger.Debug("[UI] Group list loaded. Group count: %d", msg.GroupCount)
+		// "~ all ~" is always present, but it's not included into the group count message.
+		if msg.GroupCount > 0 {
+			m.appState.CurrentView = state.ViewGroupList
+		}
 	case message.ViewGroupListOpen:
 		m.logger.Debug("[UI] Open select group form")
 		m.appState.CurrentView = state.ViewGroupList
