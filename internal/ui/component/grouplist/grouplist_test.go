@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/require"
 
@@ -84,6 +85,40 @@ func Test_handleKeyboardEvent(t *testing.T) {
 			} else {
 				require.Nil(t, cmd)
 			}
+		})
+	}
+}
+
+func Test_handleKeyboardEvent_Quit(t *testing.T) {
+	t.Fail() // This test does not work
+
+	listModel := NewMockGroupModel(false)
+	listModel.loadItems()
+
+	tests := map[string]struct {
+		keyMsg          tea.KeyPressMsg
+		isFilterEnabled bool
+		expectCmd       tea.Cmd
+	}{
+		"Type 'q'": {
+			keyMsg:          tea.KeyPressMsg{Code: 'q'},
+			isFilterEnabled: false,
+			expectCmd:       tea.Quit,
+		},
+		"Type 'q' when filtering groups": {
+			keyMsg:          tea.KeyPressMsg{Code: 'q'},
+			isFilterEnabled: true,
+			expectCmd:       nil,
+		},
+	}
+
+	for testName, tt := range tests {
+		t.Run(testName, func(t *testing.T) {
+			if tt.isFilterEnabled {
+				listModel.SetFilterState(list.Filtering)
+			}
+			cmd := listModel.handleKeyboardEvent(tt.keyMsg)
+			require.IsType(t, tt.expectCmd, cmd)
 		})
 	}
 }
