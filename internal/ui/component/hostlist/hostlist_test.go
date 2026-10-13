@@ -940,14 +940,6 @@ func Test_handleKeyboardEvent_remove(t *testing.T) {
 	require.Equal(t, modeRemoveItem, model.mode)
 }
 
-func Test_handleKeyboardEvent_edit(t *testing.T) {
-	t.Skip("In progress")
-}
-
-func Test_handleKeyboardEvent_append(t *testing.T) {
-	t.Skip("In progress")
-}
-
 func Test_constructProcessCmd(t *testing.T) {
 	// Test that we receive expected messages when invoke constructProcessCmd function
 	lm := *newMockListModel(false)
