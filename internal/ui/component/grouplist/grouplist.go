@@ -96,6 +96,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		cmd = m.handleKeyboardEvent(msg)
 		cmds = append(cmds, cmd)
+	case tea.MouseMsg:
+		return m, m.handleMouseEvent(msg)
 	case message.ViewGroupListOpen:
 		return m, m.loadItems()
 	}
@@ -140,6 +142,10 @@ func (m *Model) handleSelectGroup() tea.Cmd {
 		return nil
 	}
 
+	return m.selectGroupAndCloseView()
+}
+
+func (m *Model) selectGroupAndCloseView() tea.Cmd {
 	selected := m.SelectedItem().(ListItemHostGroup).Title() //nolint:errcheck // SelectedItem always returns ListItemHostGroup
 	selected = strings.TrimSpace(selected)
 
@@ -168,6 +174,50 @@ func (m *Model) handleDeselectGroup() tea.Cmd {
 		message.TeaCmd(message.GroupSelect{Name: ""}),
 		message.TeaCmd(message.ViewGroupListClose{}),
 	)
+}
+
+func (m *Model) handleMouseEvent(msg tea.MouseMsg) tea.Cmd {
+	if msg, ok := msg.(tea.MouseClickMsg); ok {
+		if msg.Mouse().Button == tea.MouseLeft {
+			return m.focusItem(msg)
+		}
+	}
+
+	return nil
+}
+
+func (m *Model) focusItem(msg tea.MouseClickMsg) tea.Cmd {
+	index := m.itemAt(msg.Mouse().Y)
+	if index < 0 {
+		return nil
+	}
+
+	if index == m.Index() {
+		return m.selectGroupAndCloseView()
+	}
+
+	m.Select(index)
+	return nil
+}
+
+func (m *Model) itemAt(positionY int) int {
+	// Find top panel height
+	listTop := 1 + 2 // margin + title
+	if m.FilterState() != list.Unfiltered {
+		listTop += 2
+	}
+
+	terminalRow := positionY - listTop
+	if terminalRow < 0 {
+		return -1
+	}
+
+	start, end := m.Paginator.GetSliceBounds(len(m.VisibleItems()))
+	index := start + terminalRow
+	if index >= end {
+		return -1
+	}
+	return index
 }
 
 func (m *Model) loadItems() tea.Cmd {

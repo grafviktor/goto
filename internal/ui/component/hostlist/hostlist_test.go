@@ -255,7 +255,7 @@ func TestConfirmAction(t *testing.T) {
 	// Imagine that user triggers confirm action
 	cmd := model.confirmAction()
 	// When cancel action, we reset mode and return back to normal state
-	require.Equal(t, model.mode, modeDefault)
+	require.Equal(t, modeDefault, model.mode)
 	// Because there is no active mode, model should ignore the event
 	require.Nil(t, cmd)
 
@@ -266,7 +266,7 @@ func TestConfirmAction(t *testing.T) {
 	// Imagine that user triggers confirm action
 	cmd = model.confirmAction()
 	// When confirm action is triggered, we reset mode and return back to normal state
-	require.Equal(t, model.mode, modeDefault)
+	require.Equal(t, modeDefault, model.mode)
 	// cmd should not be nil because when we modify storage, some Cmds will be dispatched
 	require.IsType(t, tea.Cmd(nil), cmd)
 
@@ -277,7 +277,7 @@ func TestConfirmAction(t *testing.T) {
 	// Imagine that user triggers confirm action
 	cmd = model.confirmAction()
 	// When confirm action is triggered, we reset mode and return back to normal state
-	require.Equal(t, model.mode, modeDefault)
+	require.Equal(t, modeDefault, model.mode)
 	// cmd should not be nil because when we modify storage, some Cmds will be dispatched
 	require.IsType(t, tea.Cmd(nil), cmd)
 
@@ -288,7 +288,7 @@ func TestConfirmAction(t *testing.T) {
 	// Imagine that user triggers confirm action
 	cmd = model.confirmAction()
 	// When confirm action is triggered, we reset mode and return back to normal state
-	require.Equal(t, model.mode, modeDefault)
+	require.Equal(t, modeDefault, model.mode)
 	// If this mode is confirm the model should dispatch QuitMsg
 	require.IsType(t, tea.QuitMsg{}, cmd())
 }
