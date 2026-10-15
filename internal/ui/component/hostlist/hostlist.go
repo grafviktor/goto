@@ -23,13 +23,16 @@ import (
 	"github.com/grafviktor/goto/internal/utils"
 )
 
-var (
-	itemNotSelectedErrMsg = "you must select an item"
-	modeCloseApp          = "closeApp"
-	modeDefault           = ""
-	modeRemoveItem        = "removeItem"
-	modeSSHCopyID         = "sshCopyID"
-	defaultListTitle      = "press 'n' to add a new host"
+const (
+	itemNotSelectedErrMsg      = "you must select an item"
+	modeCloseApp               = "closeApp"
+	modeDefault                = ""
+	modeRemoveItem             = "removeItem"
+	modeSSHCopyID              = "sshCopyID"
+	defaultListTitle           = "press 'n' to add a new host"
+	timeToWaitForSecondClick   = 500 * time.Millisecond
+	timeToWaitForSSHConfigLoad = 100 * time.Millisecond
+	sshConfigLoadRetryCount    = 5
 )
 
 type iLogger interface {
@@ -41,6 +44,8 @@ type iLogger interface {
 
 type msgToggleLayout struct{ layout constant.ScreenLayout }
 
+type msgSecondClickTimeOut struct{}
+
 type msgHostSSHConfigLoadWait struct {
 	hostID       int
 	attemptsLeft int
@@ -49,7 +54,7 @@ type msgHostSSHConfigLoadWait struct {
 
 func buildHostSSHConfigLoadWaitCmd(host hostModel.Host, processType constant.ProcessType, attemptsLeft int) tea.Cmd {
 	return func() tea.Msg {
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(timeToWaitForSSHConfigLoad)
 		return msgHostSSHConfigLoadWait{
 			hostID:       host.ID,
 			attemptsLeft: attemptsLeft,
@@ -161,6 +166,9 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleKeyboardEvent(msg)
 	case tea.MouseMsg:
 		return m, m.handleMouseMsg(msg)
+	case msgSecondClickTimeOut:
+		m.waitForSecondClick = false
+		return m, nil
 	case tea.WindowSizeMsg:
 		// Triggers immediately after app start because we render this component by default
 		h, v := m.styles.componentMargins.GetFrameSize()
@@ -256,6 +264,10 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 }
 
 func (m *ListModel) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
+	if m.mode != modeDefault {
+		return nil
+	}
+
 	if msg, ok := msg.(tea.MouseClickMsg); ok {
 		if msg.Mouse().Button == tea.MouseLeft {
 			return m.focusItem(msg)
@@ -278,9 +290,8 @@ func (m *ListModel) focusItem(msg tea.MouseClickMsg) tea.Cmd {
 
 	m.Select(index)
 	m.waitForSecondClick = true
-	return tea.Batch(m.onFocusChanged(), tea.Tick(time.Millisecond*500, func(t time.Time) tea.Msg {
-		m.waitForSecondClick = false
-		return nil
+	return tea.Batch(m.onFocusChanged(), tea.Tick(timeToWaitForSecondClick, func(_ time.Time) tea.Msg {
+		return msgSecondClickTimeOut{}
 	}))
 }
 
@@ -654,7 +665,7 @@ func (m *ListModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 	// but we assume that user either moves focus and hit Enter really fast or double-clicks.
 	if host.SSHHostConfig == nil {
 		m.logger.Warn("[UI] SSH config is not yet loaded for host with ID='%d'", m.appState.Selected)
-		return buildHostSSHConfigLoadWaitCmd(host, processType, 5)
+		return buildHostSSHConfigLoadWaitCmd(host, processType, sshConfigLoadRetryCount)
 	}
 
 	switch processType { //nolint:exhaustive // allow missing cases

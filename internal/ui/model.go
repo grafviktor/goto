@@ -141,6 +141,7 @@ func (m *MainModel) updateViews(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
+	// TODO: Create a dedicated test for updateViews.
 	switch {
 	case m.appState.CurrentView == state.ViewHostList && isInputEvent(msg):
 		m.modelHostList, cmd = m.modelHostList.Update(msg)
@@ -148,17 +149,17 @@ func (m *MainModel) updateViews(msg tea.Msg) tea.Cmd {
 	case m.appState.CurrentView == state.ViewGroupList && isInputEvent(msg):
 		m.modelGroupList, cmd = m.modelGroupList.Update(msg)
 		cmds = append(cmds, cmd)
-	case m.appState.CurrentView == state.ViewEditItem && isInputEvent(msg):
+	case m.appState.CurrentView == state.ViewEditItem:
 		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
 		cmds = append(cmds, cmd)
-	case m.appState.CurrentView == state.ViewSSHSession && isInputEvent(msg):
+	case m.appState.CurrentView == state.ViewSSHSession:
 		m.modelSSHSession, cmd = m.modelSSHSession.Update(msg)
 		cmds = append(cmds, cmd)
 	}
 
 	if !isInputEvent(msg) {
 		// Why does the app unconditionally forwards messages to these 2 components?
-		// At first, because this is an example bad design. Other arguments are:
+		// At first, because this is an example of a bad design. Other arguments are:
 		// * Both components need to track window size messages, so when we switch between them, they already have the correct size.
 		// * GroupSelect message comes from groupList component and updates hosts hostList component in the background.
 		// * The same is true for HostCreate and HostUpdate messages which comes from hostEdit.
