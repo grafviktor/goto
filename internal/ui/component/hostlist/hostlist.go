@@ -256,17 +256,16 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 }
 
 func (m *ListModel) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
-	switch msg := msg.(type) {
-	case tea.MouseClickMsg:
+	if msg, ok := msg.(tea.MouseClickMsg); ok {
 		if msg.Mouse().Button == tea.MouseLeft {
-			return m.focusHost(msg)
+			return m.focusItem(msg)
 		}
 	}
 
 	return nil
 }
 
-func (m *ListModel) focusHost(msg tea.MouseClickMsg) tea.Cmd {
+func (m *ListModel) focusItem(msg tea.MouseClickMsg) tea.Cmd {
 	index := m.itemAt(msg.Mouse().Y)
 	if index < 0 {
 		return nil

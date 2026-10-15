@@ -141,17 +141,17 @@ func (m *MainModel) updateViews(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
-	if m.appState.CurrentView == state.ViewHostList && isInputEvent(msg) {
+	switch {
+	case m.appState.CurrentView == state.ViewHostList && isInputEvent(msg):
 		m.modelHostList, cmd = m.modelHostList.Update(msg)
 		cmds = append(cmds, cmd)
-	} else if m.appState.CurrentView == state.ViewGroupList && isInputEvent(msg) {
+	case m.appState.CurrentView == state.ViewGroupList && isInputEvent(msg):
 		m.modelGroupList, cmd = m.modelGroupList.Update(msg)
 		cmds = append(cmds, cmd)
-	} else if m.appState.CurrentView == state.ViewEditItem {
-		// Edit host receives messages only if it's active. We re-create this component every time we go to edit mode
+	case m.appState.CurrentView == state.ViewEditItem && isInputEvent(msg):
 		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
 		cmds = append(cmds, cmd)
-	} else if m.appState.CurrentView == state.ViewSSHSession {
+	case m.appState.CurrentView == state.ViewSSHSession && isInputEvent(msg):
 		m.modelSSHSession, cmd = m.modelSSHSession.Update(msg)
 		cmds = append(cmds, cmd)
 	}

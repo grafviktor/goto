@@ -177,17 +177,16 @@ func (m *Model) handleDeselectGroup() tea.Cmd {
 }
 
 func (m *Model) handleMouseEvent(msg tea.MouseMsg) tea.Cmd {
-	switch msg := msg.(type) {
-	case tea.MouseClickMsg:
+	if msg, ok := msg.(tea.MouseClickMsg); ok {
 		if msg.Mouse().Button == tea.MouseLeft {
-			return m.focusGroup(msg)
+			return m.focusItem(msg)
 		}
 	}
 
 	return nil
 }
 
-func (m *Model) focusGroup(msg tea.MouseClickMsg) tea.Cmd {
+func (m *Model) focusItem(msg tea.MouseClickMsg) tea.Cmd {
 	index := m.itemAt(msg.Mouse().Y)
 	if index < 0 {
 		return nil
