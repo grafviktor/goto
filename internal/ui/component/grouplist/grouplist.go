@@ -10,6 +10,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/model/host"
@@ -201,10 +202,14 @@ func (m *Model) focusItem(msg tea.MouseClickMsg) tea.Cmd {
 }
 
 func (m *Model) itemAt(positionY int) int {
-	// Find top panel height
-	listTop := 1 + 2 // margin + title
-	if m.FilterState() != list.Unfiltered {
-		listTop += 2
+	// Find top panel height.
+	listTop := m.styles.componentMargins.GetMarginTop()
+	// There is no direct way to get height of the title, that's why we
+	// simulate what render does and calculate its height manually.
+	listTop += lipgloss.Height(m.Styles.TitleBar.Render(m.Styles.Title.Render(m.Title)))
+	if m.ShowStatusBar() {
+		// Need to render at least one letter to get real height.
+		listTop += lipgloss.Height(m.Styles.StatusBar.Render("x"))
 	}
 
 	terminalRow := positionY - listTop
