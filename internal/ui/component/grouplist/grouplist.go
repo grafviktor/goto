@@ -6,6 +6,7 @@ import (
 	"context"
 	"slices"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
@@ -25,7 +26,12 @@ type iLogger interface {
 	Error(format string, args ...any)
 }
 
-var noGroupSelected = "~ all ~"
+const (
+	noGroupSelected          = "~ all ~"
+	timeToWaitForSecondClick = 300 * time.Millisecond
+)
+
+type msgSecondClickTimeOut struct{}
 
 type Model struct {
 	list.Model
@@ -35,6 +41,8 @@ type Model struct {
 	logger           iLogger
 	styles           styles
 	additionalKeyMap *keyMap
+	// For handling double click
+	waitForSecondClick bool
 }
 
 // New - creates a new UI component which is used to select a host group from a list,
@@ -99,6 +107,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	case tea.MouseMsg:
 		return m, m.handleMouseEvent(msg)
+	case msgSecondClickTimeOut:
+		m.waitForSecondClick = false
+		return m, nil
 	case message.ViewGroupListOpen:
 		return m, m.loadItems()
 	}
@@ -193,12 +204,16 @@ func (m *Model) focusItem(msg tea.MouseClickMsg) tea.Cmd {
 		return nil
 	}
 
-	if index == m.Index() {
+	if index == m.Index() && m.waitForSecondClick {
+		m.waitForSecondClick = false
 		return m.selectGroupAndCloseView()
 	}
 
 	m.Select(index)
-	return nil
+	m.waitForSecondClick = true
+	return tea.Tick(timeToWaitForSecondClick, func(_ time.Time) tea.Msg {
+		return msgSecondClickTimeOut{}
+	})
 }
 
 func (m *Model) itemAt(positionY int) int {
