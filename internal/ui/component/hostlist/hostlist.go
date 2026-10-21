@@ -269,6 +269,10 @@ func (m *ListModel) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
 		return nil
 	}
 
+	if m.FilterState() == list.Filtering {
+		return nil
+	}
+
 	if msg, ok := msg.(tea.MouseClickMsg); ok {
 		if msg.Mouse().Button == tea.MouseLeft {
 			return m.focusItem(msg)

@@ -106,7 +106,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd = m.handleKeyboardEvent(msg)
 		cmds = append(cmds, cmd)
 	case tea.MouseMsg:
-		return m, m.handleMouseEvent(msg)
+		return m, m.handleMouseMsg(msg)
 	case msgSecondClickTimeOut:
 		m.waitForSecondClick = false
 		return m, nil
@@ -188,7 +188,11 @@ func (m *Model) handleDeselectGroup() tea.Cmd {
 	)
 }
 
-func (m *Model) handleMouseEvent(msg tea.MouseMsg) tea.Cmd {
+func (m *Model) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
+	if m.FilterState() == list.Filtering {
+		return nil
+	}
+
 	if msg, ok := msg.(tea.MouseClickMsg); ok {
 		if msg.Mouse().Button == tea.MouseLeft {
 			return m.focusItem(msg)
