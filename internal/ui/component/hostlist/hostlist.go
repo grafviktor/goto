@@ -31,7 +31,7 @@ const (
 	modeRemoveItem             = "removeItem"
 	modeSSHCopyID              = "sshCopyID"
 	defaultListTitle           = "press 'n' to add a new host"
-	timeToWaitForSecondClick   = 500 * time.Millisecond
+	timeToWaitForSecondClick   = 300 * time.Millisecond
 	timeToWaitForSSHConfigLoad = 100 * time.Millisecond
 	sshConfigLoadRetryCount    = 5
 )

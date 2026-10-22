@@ -205,12 +205,7 @@ func (m *MainModel) View() tea.View {
 	view := tea.NewView(viewPortContent)
 	view.AltScreen = true
 	view.Cursor = content.Cursor
-	// Do not use MouseModeCellMotion, as it's buggy. For instance,
-	// If you press right mouse button, you will not be able to select
-	// text in ssh session until you restart the app. According to
-	// bubbletea, cell motion is better supported. See here:
-	// https://github.com/charmbracelet/bubbletea/blob/a23da80847e6fc928febc62114f761403ac5d2f1/tea.go#L290-L297
-	view.MouseMode = tea.MouseModeCellMotion
+	view.MouseMode = m.mouseMode()
 
 	return view
 }
@@ -441,4 +436,21 @@ func (m *MainModel) handleProcessError(msg message.RunProcessErrorOccurred) {
 	m.logger.Debug("[EXEC] External process error. %v", errMsg)
 	m.viewMessageContent = errMsg
 	m.appState.CurrentView = state.ViewMessage
+}
+
+func (m *MainModel) mouseMode() tea.MouseMode {
+	if m.appState.MouseEnabled {
+		// Do not use MouseModeCellMotion, as it's buggy. For instance,
+		// If you press right mouse button, you will not be able to select
+		// text in ssh session until you restart the app. According to
+		// bubbletea, cell motion is better supported. See here:
+		// https://github.com/charmbracelet/bubbletea/blob/a23da80847e6fc928febc62114f761403ac5d2f1/tea.go#L290-L297
+		return tea.MouseModeCellMotion
+	}
+
+	if m.appState.CurrentView == state.ViewSSHSession {
+		return tea.MouseModeCellMotion
+	}
+
+	return tea.MouseModeNone
 }
