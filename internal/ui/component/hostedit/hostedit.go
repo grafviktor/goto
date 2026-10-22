@@ -224,6 +224,9 @@ func (m *EditModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		cmd = m.handleKeyboardEvent(msg)
 		m.viewport.SetContent(m.inputsView())
+	case tea.MouseMsg:
+		cmd = m.handleMouseMsg(msg)
+		m.viewport.SetContent(m.inputsView())
 	case debouncedMessage:
 		cmd = m.handleDebouncedMessage(msg)
 	case message.HostSSHConfigLoadComplete:
@@ -445,8 +448,52 @@ func (m *EditModel) updateViewPort(msg tea.Msg) {
 	}
 }
 
+func (m *EditModel) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
+	if msg, ok := msg.(tea.MouseClickMsg); ok {
+		if msg.Mouse().Button == tea.MouseLeft {
+			return m.focusItem(msg)
+		}
+	}
+
+	return nil
+}
+
+func (m *EditModel) focusItem(msg tea.MouseClickMsg) tea.Cmd {
+	index := m.itemAt(msg.Mouse().Y)
+	if index < 0 || index == m.focusedInput {
+		return nil
+	}
+
+	m.focusedInput = index
+	return m.applyFocus()
+}
+
+func (m *EditModel) itemAt(positionY int) int {
+	if len(m.inputs) == 0 {
+		return -1
+	}
+
+	headerHeight := lipgloss.Height(m.headerView())
+	// View layout is: header + "\n" + viewport + "\n" + help
+	rowInViewport := positionY - headerHeight - 1
+	if rowInViewport < 0 || rowInViewport >= m.viewport.Height() {
+		return -1
+	}
+
+	inputHeight := lipgloss.Height(m.inputsView()) / len(m.inputs)
+	if inputHeight <= 0 {
+		return -1
+	}
+
+	index := (rowInViewport + m.viewport.YOffset()) / inputHeight
+	if index < 0 || index >= len(m.inputs) || !m.inputs[index].Enabled() {
+		return -1
+	}
+
+	return index
+}
+
 func (m *EditModel) inputFocusChange(msg tea.Msg) tea.Cmd {
-	var cmds []tea.Cmd
 	keyMsg, _ := msg.(tea.KeyPressMsg)
 
 	enabledInputs := lo.Filter(m.inputs, func(i input.Input, _ int) bool {
@@ -479,6 +526,12 @@ func (m *EditModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 		m.logger.Debug("[UI] Reached first or last selectable input field: %d", m.focusedInput)
 		return nil
 	}
+
+	return m.applyFocus()
+}
+
+func (m *EditModel) applyFocus() tea.Cmd {
+	var cmds []tea.Cmd
 
 	// Should be extracted to "Validate" function
 	for i := range m.inputs {

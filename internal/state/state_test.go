@@ -561,17 +561,22 @@ func captureOutput(f func()) string {
 func Test_LogDetails(t *testing.T) {
 	logger := MockLogger{}
 	state := &State{
-		AppHome:          "/tmp/goto",
-		LogLevel:         "debug",
-		SSHConfigEnabled: true,
-		SSHConfigPath:    "/tmp/ssh_config",
-		Logger:           &logger,
+		AppHome:                 "/tmp/goto",
+		LogLevel:                "debug",
+		EmbeddedTerminalEnabled: true,
+		MouseEnabled:            true,
+		SSHConfigEnabled:        true,
+		SSHConfigPath:           "/tmp/ssh_config",
+		Logger:                  &logger,
 	}
 
 	state.LogDetails()
 
-	assert.Contains(t, logger.Logs[0], `Application home folder: "/tmp/goto"`)
-	assert.Contains(t, logger.Logs[1], `Application log level:   "debug"`)
-	assert.Contains(t, logger.Logs[2], `SSH config status:       "enabled"`)
-	assert.Contains(t, logger.Logs[3], `SSH config path:         "/tmp/ssh_config"`)
+	require.Len(t, logger.Logs, 6)
+	require.Contains(t, logger.Logs[0], `Application home folder: "/tmp/goto"`)
+	require.Contains(t, logger.Logs[1], `Application log level:   "debug"`)
+	require.Contains(t, logger.Logs[2], `Embedded terminal:       "enabled"`)
+	require.Contains(t, logger.Logs[3], `Mouse:                   "enabled"`)
+	require.Contains(t, logger.Logs[4], `SSH config status:       "enabled"`)
+	require.Contains(t, logger.Logs[5], `SSH config path:         "/tmp/ssh_config"`)
 }
