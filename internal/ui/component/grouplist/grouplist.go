@@ -28,7 +28,7 @@ type iLogger interface {
 
 const (
 	noGroupSelected          = "~ all ~"
-	timeToWaitForSecondClick = 300 * time.Millisecond
+	timeToWaitForSecondClick = 500 * time.Millisecond
 )
 
 type msgSecondClickTimeOut struct{}
