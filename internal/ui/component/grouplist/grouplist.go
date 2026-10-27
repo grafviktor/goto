@@ -203,6 +203,11 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
 }
 
 func (m *Model) focusItem(msg tea.MouseClickMsg) tea.Cmd {
+	if m.isPaginatorClick(msg.Mouse().Y) {
+		m.handlePaginatorClick()
+		return nil
+	}
+
 	index := m.itemAt(msg.Mouse().Y)
 	if index < 0 {
 		return nil
@@ -220,17 +225,27 @@ func (m *Model) focusItem(msg tea.MouseClickMsg) tea.Cmd {
 	})
 }
 
-func (m *Model) itemAt(positionY int) int {
-	// Find top panel height.
-	listTop := m.styles.componentMargins.GetMarginTop()
-	// There is no direct way to get height of the title, that's why we
-	// simulate what render does and calculate its height manually.
-	listTop += lipgloss.Height(m.Styles.TitleBar.Render(m.Styles.Title.Render(m.Title)))
-	if m.ShowStatusBar() {
-		// Need to render at least one letter to get real height.
-		listTop += lipgloss.Height(m.Styles.StatusBar.Render("x"))
+func (m *Model) isPaginatorClick(positionY int) bool {
+	listTop := m.listHeaderHeight()
+	terminalRow := positionY - listTop
+	start, end := m.Paginator.GetSliceBounds(len(m.VisibleItems()))
+	index := start + terminalRow
+
+	return index > end && index < end+2
+}
+
+func (m *Model) handlePaginatorClick() {
+	if m.Paginator.TotalPages > 1 && m.Paginator.OnLastPage() {
+		for i := m.Paginator.TotalPages; i >= m.Paginator.TotalPages; i-- {
+			m.Paginator.PrevPage()
+		}
 	}
 
+	m.Paginator.NextPage()
+}
+
+func (m *Model) itemAt(positionY int) int {
+	listTop := m.listHeaderHeight()
 	terminalRow := positionY - listTop
 	if terminalRow < 0 {
 		return -1
@@ -242,6 +257,20 @@ func (m *Model) itemAt(positionY int) int {
 		return -1
 	}
 	return index
+}
+
+func (m *Model) listHeaderHeight() int {
+	// Find top panel height.
+	listTop := m.styles.componentMargins.GetMarginTop()
+	// There is no direct way to get height of the title, that's why we
+	// simulate what render does and calculate its height manually.
+	listTop += lipgloss.Height(m.Styles.TitleBar.Render(m.Styles.Title.Render(m.Title)))
+	if m.ShowStatusBar() {
+		// Need to render at least one letter to get real height.
+		listTop += lipgloss.Height(m.Styles.StatusBar.Render("x"))
+	}
+
+	return listTop
 }
 
 func (m *Model) loadItems() tea.Cmd {
