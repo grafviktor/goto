@@ -203,7 +203,7 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
 }
 
 func (m *Model) focusItem(msg tea.MouseClickMsg) tea.Cmd {
-	if m.isPaginatorClick(msg.Mouse().Y) {
+	if m.paginatorRowPosition() == msg.Mouse().Y {
 		m.handlePaginatorClick()
 		return nil
 	}
@@ -225,27 +225,47 @@ func (m *Model) focusItem(msg tea.MouseClickMsg) tea.Cmd {
 	})
 }
 
-func (m *Model) isPaginatorClick(positionY int) bool {
-	listTop := m.listHeaderHeight()
-	terminalRow := positionY - listTop
-	start, end := m.Paginator.GetSliceBounds(len(m.VisibleItems()))
-	index := start + terminalRow
+func (m *Model) paginatorRowPosition() int {
+	if m.Paginator.TotalPages < 2 {
+		return -1
+	}
 
-	return index > end && index < end+2
+	paginationStyle := m.Styles.PaginationStyle
+	// This tweak is taken from charm.land/bubbles/v2@v2.1.0/list/list.go lines 1195-1200
+	if paginationStyle.GetMarginTop() == 0 {
+		paginationStyle = paginationStyle.MarginTop(1)
+	}
+
+	paginationHeight := lipgloss.Height(paginationStyle.Render(m.Paginator.View()))
+	helpHeight := lipgloss.Height(m.Styles.HelpStyle.Render(m.Help.View(m.Model)))
+	// Take the full height plus top margin and subtract help and pagination heights
+	topSectionsHeight := m.styles.componentMargins.GetMarginTop() + m.Height() - helpHeight - paginationHeight
+	// Height of the top sections plus paginator margin is becoming your paginator index.
+	return topSectionsHeight + paginationStyle.GetMarginTop()
 }
 
 func (m *Model) handlePaginatorClick() {
 	if m.Paginator.TotalPages > 1 && m.Paginator.OnLastPage() {
-		for i := m.Paginator.TotalPages; i >= m.Paginator.TotalPages; i-- {
+		for !m.Paginator.OnFirstPage() {
 			m.Paginator.PrevPage()
 		}
+	} else {
+		m.Paginator.NextPage()
 	}
-
-	m.Paginator.NextPage()
 }
 
 func (m *Model) itemAt(positionY int) int {
-	listTop := m.listHeaderHeight()
+	// Find top panel height.
+	listTop := m.styles.componentMargins.GetMarginTop()
+	// There is no direct way to get height of the title, that's why we
+	// simulate what render does and calculate its height manually.
+	listTop += lipgloss.Height(m.Styles.TitleBar.Render(m.Styles.Title.Render(m.Title)))
+	if m.ShowStatusBar() {
+		// Need to render at least one letter to get real height.
+		listTop += lipgloss.Height(m.Styles.StatusBar.Render("x"))
+	}
+
+	// terminalRow is just the position relative to the list start, excluding top sections.
 	terminalRow := positionY - listTop
 	if terminalRow < 0 {
 		return -1
@@ -257,20 +277,6 @@ func (m *Model) itemAt(positionY int) int {
 		return -1
 	}
 	return index
-}
-
-func (m *Model) listHeaderHeight() int {
-	// Find top panel height.
-	listTop := m.styles.componentMargins.GetMarginTop()
-	// There is no direct way to get height of the title, that's why we
-	// simulate what render does and calculate its height manually.
-	listTop += lipgloss.Height(m.Styles.TitleBar.Render(m.Styles.Title.Render(m.Title)))
-	if m.ShowStatusBar() {
-		// Need to render at least one letter to get real height.
-		listTop += lipgloss.Height(m.Styles.StatusBar.Render("x"))
-	}
-
-	return listTop
 }
 
 func (m *Model) loadItems() tea.Cmd {

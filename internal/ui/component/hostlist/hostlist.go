@@ -283,6 +283,10 @@ func (m *ListModel) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
 }
 
 func (m *ListModel) focusItem(msg tea.MouseClickMsg) tea.Cmd {
+	if m.paginatorRowPosition() == msg.Mouse().Y {
+		return m.handlePaginatorClick()
+	}
+
 	index := m.itemAt(msg.Mouse().Y)
 	if index < 0 {
 		return nil
@@ -300,6 +304,36 @@ func (m *ListModel) focusItem(msg tea.MouseClickMsg) tea.Cmd {
 	}))
 }
 
+func (m *ListModel) paginatorRowPosition() int {
+	if m.Paginator.TotalPages < 2 {
+		return -1
+	}
+
+	paginationStyle := m.Styles.PaginationStyle
+	// This tweak is taken from charm.land/bubbles/v2@v2.1.0/list/list.go lines 1195-1200
+	if paginationStyle.GetMarginTop() == 0 {
+		paginationStyle = paginationStyle.MarginTop(1)
+	}
+
+	paginationHeight := lipgloss.Height(paginationStyle.Render(m.Paginator.View()))
+	helpHeight := lipgloss.Height(m.Styles.HelpStyle.Render(m.Help.View(m.Model)))
+	// Take the full height plus top margin and subtract help and pagination heights
+	topSectionsHeight := m.styles.componentMargins.GetMarginTop() + m.Height() - helpHeight - paginationHeight
+	// Height of the top sections plus paginator margin is becoming your paginator index.
+	return topSectionsHeight + paginationStyle.GetMarginTop()
+}
+
+func (m *ListModel) handlePaginatorClick() tea.Cmd {
+	if m.Paginator.TotalPages > 1 && m.Paginator.OnLastPage() {
+		for !m.Paginator.OnFirstPage() {
+			m.Paginator.PrevPage()
+		}
+	} else {
+		m.Paginator.NextPage()
+	}
+	return m.onFocusChanged()
+}
+
 func (m *ListModel) itemAt(positionY int) int {
 	// Find top panel height.
 	listTop := m.styles.componentMargins.GetMarginTop()
@@ -311,11 +345,13 @@ func (m *ListModel) itemAt(positionY int) int {
 		listTop += lipgloss.Height(m.Styles.StatusBar.Render("x"))
 	}
 
+	// terminalRow is just the position relative to the list start, excluding top sections.
 	terminalRow := positionY - listTop
 	if terminalRow < 0 {
 		return -1
 	}
 
+	// List item height depends on the current screen layout.
 	listItemHeight := 3
 	if m.appState.ScreenLayout == constant.ScreenLayoutCompact {
 		listItemHeight = 1
