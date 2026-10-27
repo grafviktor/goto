@@ -305,7 +305,7 @@ func (m *ListModel) focusItem(msg tea.MouseClickMsg) tea.Cmd {
 }
 
 func (m *ListModel) paginatorRowPosition() int {
-	if m.Paginator.TotalPages < 2 {
+	if m.Paginator.TotalPages <= 1 {
 		return -1
 	}
 
