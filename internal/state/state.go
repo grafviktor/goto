@@ -73,7 +73,7 @@ type State struct {
 	IsUserDefinedSSHConfigPath bool                  `yaml:"-"`
 	Logger                     loggerInterface       `yaml:"-"`
 	LogLevel                   constant.LogLevel     `yaml:"-"`
-	MouseEnabled               bool                  `yaml:"enable_mouse,omitempty"`
+	MouseEnabled               bool                  `yaml:"enable_mouse"`
 	ScreenLayout               constant.ScreenLayout `yaml:"screen_layout,omitempty"`
 	SetSSHConfigPath           string                `yaml:"ssh_config_path,omitempty"`
 	Selected                   int                   `yaml:"selected_host_index"`
