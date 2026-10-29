@@ -1115,6 +1115,13 @@ func Test_displayNotificationMsg(t *testing.T) {
 	})
 }
 
+func Test_buildHostSSHConfigLoadWaitCmd(t *testing.T) {
+	storage := testutils.NewMockStorage(false)
+	cmd := buildHostSSHConfigLoadWaitCmd(storage.Hosts[0], constant.ProcessTypeSSHLoadConfig, 1)
+	msg := cmd()
+	require.IsType(t, msgHostSSHConfigLoadWait{}, msg)
+}
+
 // ==============================================
 // ============== utility methods ===============
 // ==============================================
