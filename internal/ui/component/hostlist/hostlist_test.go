@@ -1126,41 +1126,39 @@ func Test_buildHostSSHConfigLoadWaitCmd(t *testing.T) {
 	require.Equal(t, 1, msg.attemptsLeft)
 }
 
-// + func (m *ListModel) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
-// + 	if m.mode != modeDefault {
-// + 		return nil
-// + 	}
-// +
-// + 	if m.FilterState() == list.Filtering {
-// + 		return nil
-// + 	}
-// +
-// + 	if msg, ok := msg.(tea.MouseClickMsg); ok {
-// + 		if msg.Mouse().Button == tea.MouseLeft {
-// + 			return m.focusItem(msg)
-// + 		}
-// + 	}
-// +
-// + 	return nil
-// + }
-
 func Test_handleMouseMsg(t *testing.T) {
-	mouseMsg := tea.MouseClickMsg{Button: tea.MouseLeft}
+	mouseMsg := tea.MouseClickMsg{
+		Button: tea.MouseLeft,
+		// Why 6 ? We must simulate a click below hostlist header. I just know that header's height is 5.
+		Y: 6,
+	}
 
-	t.Run("Hostlist is waiting for user action, mouse mssage should be ignored", func(t *testing.T) {
+	t.Run("Hostlist is waiting for user action, mouse message should be ignored", func(t *testing.T) {
 		m := newMockListModel(false)
 		m.mode = modeSSHCopyID
 		cmd := m.handleMouseMsg(mouseMsg)
 		require.Nil(t, cmd)
 	})
 
-	t.Skip()
-
-	t.Run("Hostlist is waiting for user action, mouse mssage should be ignored", func(t *testing.T) {
+	t.Run("Hostlist is in filter mode, mouse message should be ignored", func(t *testing.T) {
 		m := newMockListModel(false)
-		m.mode = modeSSHCopyID
+		m.SetFilterState(list.Filtering)
 		cmd := m.handleMouseMsg(mouseMsg)
 		require.Nil(t, cmd)
+	})
+
+	t.Run("Hostlist receives right mouse click, the message should be ignored", func(t *testing.T) {
+		m := newMockListModel(false)
+		rightMouseMsg := mouseMsg
+		rightMouseMsg.Button = tea.MouseRight
+		cmd := m.handleMouseMsg(rightMouseMsg)
+		require.Nil(t, cmd)
+	})
+
+	t.Run("Finally hostlist receives left mouse click and returns some tea.Cmd", func(t *testing.T) {
+		m := newMockListModel(false)
+		cmd := m.handleMouseMsg(mouseMsg)
+		require.NotNil(t, cmd)
 	})
 }
 
