@@ -1118,8 +1118,50 @@ func Test_displayNotificationMsg(t *testing.T) {
 func Test_buildHostSSHConfigLoadWaitCmd(t *testing.T) {
 	storage := testutils.NewMockStorage(false)
 	cmd := buildHostSSHConfigLoadWaitCmd(storage.Hosts[0], constant.ProcessTypeSSHLoadConfig, 1)
-	msg := cmd()
-	require.IsType(t, msgHostSSHConfigLoadWait{}, msg)
+	msg, ok := cmd().(msgHostSSHConfigLoadWait)
+
+	require.True(t, ok)
+	require.Equal(t, storage.Hosts[0].ID, msg.hostID)
+	require.Equal(t, constant.ProcessTypeSSHLoadConfig, msg.processType)
+	require.Equal(t, 1, msg.attemptsLeft)
+}
+
+// + func (m *ListModel) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
+// + 	if m.mode != modeDefault {
+// + 		return nil
+// + 	}
+// +
+// + 	if m.FilterState() == list.Filtering {
+// + 		return nil
+// + 	}
+// +
+// + 	if msg, ok := msg.(tea.MouseClickMsg); ok {
+// + 		if msg.Mouse().Button == tea.MouseLeft {
+// + 			return m.focusItem(msg)
+// + 		}
+// + 	}
+// +
+// + 	return nil
+// + }
+
+func Test_handleMouseMsg(t *testing.T) {
+	mouseMsg := tea.MouseClickMsg{Button: tea.MouseLeft}
+
+	t.Run("Hostlist is waiting for user action, mouse mssage should be ignored", func(t *testing.T) {
+		m := newMockListModel(false)
+		m.mode = modeSSHCopyID
+		cmd := m.handleMouseMsg(mouseMsg)
+		require.Nil(t, cmd)
+	})
+
+	t.Skip()
+
+	t.Run("Hostlist is waiting for user action, mouse mssage should be ignored", func(t *testing.T) {
+		m := newMockListModel(false)
+		m.mode = modeSSHCopyID
+		cmd := m.handleMouseMsg(mouseMsg)
+		require.Nil(t, cmd)
+	})
 }
 
 // ==============================================
