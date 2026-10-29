@@ -255,7 +255,7 @@ func TestConfirmAction(t *testing.T) {
 	// Imagine that user triggers confirm action
 	cmd := model.confirmAction()
 	// When cancel action, we reset mode and return back to normal state
-	require.Equal(t, model.mode, modeDefault)
+	require.Equal(t, modeDefault, model.mode)
 	// Because there is no active mode, model should ignore the event
 	require.Nil(t, cmd)
 
@@ -266,7 +266,7 @@ func TestConfirmAction(t *testing.T) {
 	// Imagine that user triggers confirm action
 	cmd = model.confirmAction()
 	// When confirm action is triggered, we reset mode and return back to normal state
-	require.Equal(t, model.mode, modeDefault)
+	require.Equal(t, modeDefault, model.mode)
 	// cmd should not be nil because when we modify storage, some Cmds will be dispatched
 	require.IsType(t, tea.Cmd(nil), cmd)
 
@@ -277,7 +277,7 @@ func TestConfirmAction(t *testing.T) {
 	// Imagine that user triggers confirm action
 	cmd = model.confirmAction()
 	// When confirm action is triggered, we reset mode and return back to normal state
-	require.Equal(t, model.mode, modeDefault)
+	require.Equal(t, modeDefault, model.mode)
 	// cmd should not be nil because when we modify storage, some Cmds will be dispatched
 	require.IsType(t, tea.Cmd(nil), cmd)
 
@@ -288,7 +288,7 @@ func TestConfirmAction(t *testing.T) {
 	// Imagine that user triggers confirm action
 	cmd = model.confirmAction()
 	// When confirm action is triggered, we reset mode and return back to normal state
-	require.Equal(t, model.mode, modeDefault)
+	require.Equal(t, modeDefault, model.mode)
 	// If this mode is confirm the model should dispatch QuitMsg
 	require.IsType(t, tea.QuitMsg{}, cmd())
 }
@@ -1112,6 +1112,53 @@ func Test_displayNotificationMsg(t *testing.T) {
 		require.Equal(t, "HideUINotification", reflect.TypeOf(teaMsg).Name())
 		model.Update(teaMsg)
 		require.Equal(t, modelInitialtitle, model.Title)
+	})
+}
+
+func Test_buildHostSSHConfigLoadWaitCmd(t *testing.T) {
+	storage := testutils.NewMockStorage(false)
+	cmd := buildHostSSHConfigLoadWaitCmd(storage.Hosts[0], constant.ProcessTypeSSHLoadConfig, 1)
+	msg, ok := cmd().(msgHostSSHConfigLoadWait)
+
+	require.True(t, ok)
+	require.Equal(t, storage.Hosts[0].ID, msg.hostID)
+	require.Equal(t, constant.ProcessTypeSSHLoadConfig, msg.processType)
+	require.Equal(t, 1, msg.attemptsLeft)
+}
+
+func Test_handleMouseMsg(t *testing.T) {
+	mouseMsg := tea.MouseClickMsg{
+		Button: tea.MouseLeft,
+		// Why 6 ? We must simulate a click below hostlist header. I just know that header's height is 5.
+		Y: 6,
+	}
+
+	t.Run("Hostlist is waiting for user action, mouse message should be ignored", func(t *testing.T) {
+		m := newMockListModel(false)
+		m.mode = modeSSHCopyID
+		cmd := m.handleMouseMsg(mouseMsg)
+		require.Nil(t, cmd)
+	})
+
+	t.Run("Hostlist is in filter mode, mouse message should be ignored", func(t *testing.T) {
+		m := newMockListModel(false)
+		m.SetFilterState(list.Filtering)
+		cmd := m.handleMouseMsg(mouseMsg)
+		require.Nil(t, cmd)
+	})
+
+	t.Run("Hostlist receives right mouse click, the message should be ignored", func(t *testing.T) {
+		m := newMockListModel(false)
+		rightMouseMsg := mouseMsg
+		rightMouseMsg.Button = tea.MouseRight
+		cmd := m.handleMouseMsg(rightMouseMsg)
+		require.Nil(t, cmd)
+	})
+
+	t.Run("Finally hostlist receives left mouse click and returns some tea.Cmd", func(t *testing.T) {
+		m := newMockListModel(false)
+		cmd := m.handleMouseMsg(mouseMsg)
+		require.NotNil(t, cmd)
 	})
 }
 

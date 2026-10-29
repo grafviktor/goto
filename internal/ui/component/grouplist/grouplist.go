@@ -6,10 +6,12 @@ import (
 	"context"
 	"slices"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/model/host"
@@ -24,7 +26,12 @@ type iLogger interface {
 	Error(format string, args ...any)
 }
 
-var noGroupSelected = "~ all ~"
+const (
+	noGroupSelected          = "~ all ~"
+	timeToWaitForSecondClick = 500 * time.Millisecond
+)
+
+type msgSecondClickTimeOut struct{}
 
 type Model struct {
 	list.Model
@@ -34,6 +41,8 @@ type Model struct {
 	logger           iLogger
 	styles           styles
 	additionalKeyMap *keyMap
+	// For handling double click
+	waitForSecondClick bool
 }
 
 // New - creates a new UI component which is used to select a host group from a list,
@@ -96,6 +105,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		cmd = m.handleKeyboardEvent(msg)
 		cmds = append(cmds, cmd)
+	case tea.MouseMsg:
+		return m, m.handleMouseMsg(msg)
+	case msgSecondClickTimeOut:
+		m.waitForSecondClick = false
+		return m, nil
 	case message.ViewGroupListOpen:
 		return m, m.loadItems()
 	}
@@ -140,6 +154,10 @@ func (m *Model) handleSelectGroup() tea.Cmd {
 		return nil
 	}
 
+	return m.selectGroupAndCloseView()
+}
+
+func (m *Model) selectGroupAndCloseView() tea.Cmd {
 	selected := m.SelectedItem().(ListItemHostGroup).Title() //nolint:errcheck // SelectedItem always returns ListItemHostGroup
 	selected = strings.TrimSpace(selected)
 
@@ -168,6 +186,97 @@ func (m *Model) handleDeselectGroup() tea.Cmd {
 		message.TeaCmd(message.GroupSelect{Name: ""}),
 		message.TeaCmd(message.ViewGroupListClose{}),
 	)
+}
+
+func (m *Model) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
+	if m.FilterState() == list.Filtering {
+		return nil
+	}
+
+	if msg, ok := msg.(tea.MouseClickMsg); ok {
+		if msg.Mouse().Button == tea.MouseLeft {
+			return m.focusItem(msg)
+		}
+	}
+
+	return nil
+}
+
+func (m *Model) focusItem(msg tea.MouseClickMsg) tea.Cmd {
+	if m.paginatorRowPosition() == msg.Mouse().Y {
+		m.handlePaginatorClick()
+		return nil
+	}
+
+	index := m.itemAt(msg.Mouse().Y)
+	if index < 0 {
+		return nil
+	}
+
+	if index == m.Index() && m.waitForSecondClick {
+		m.waitForSecondClick = false
+		return m.selectGroupAndCloseView()
+	}
+
+	m.Select(index)
+	m.waitForSecondClick = true
+	return tea.Tick(timeToWaitForSecondClick, func(_ time.Time) tea.Msg {
+		return msgSecondClickTimeOut{}
+	})
+}
+
+func (m *Model) paginatorRowPosition() int {
+	if m.Paginator.TotalPages <= 1 {
+		return -1
+	}
+
+	paginationStyle := m.Styles.PaginationStyle
+	// This tweak is taken from charm.land/bubbles/v2@v2.1.0/list/list.go lines 1195-1200
+	if paginationStyle.GetMarginTop() == 0 {
+		paginationStyle = paginationStyle.MarginTop(1)
+	}
+
+	paginationHeight := lipgloss.Height(paginationStyle.Render(m.Paginator.View()))
+	helpHeight := lipgloss.Height(m.Styles.HelpStyle.Render(m.Help.View(m.Model)))
+	// Take the full height plus top margin and subtract help and pagination heights
+	topSectionsHeight := m.styles.componentMargins.GetMarginTop() + m.Height() - helpHeight - paginationHeight
+	// Height of the top sections plus paginator margin is becoming your paginator index.
+	return topSectionsHeight + paginationStyle.GetMarginTop()
+}
+
+func (m *Model) handlePaginatorClick() {
+	if m.Paginator.TotalPages > 1 && m.Paginator.OnLastPage() {
+		for !m.Paginator.OnFirstPage() {
+			m.Paginator.PrevPage()
+		}
+	} else {
+		m.Paginator.NextPage()
+	}
+}
+
+func (m *Model) itemAt(positionY int) int {
+	// Find top panel height.
+	listTop := m.styles.componentMargins.GetMarginTop()
+	// There is no direct way to get height of the title, that's why we
+	// simulate what render does and calculate its height manually.
+	listTop += lipgloss.Height(m.Styles.TitleBar.Render(m.Styles.Title.Render(m.Title)))
+	if m.ShowStatusBar() {
+		// Need to render at least one letter to get real height.
+		listTop += lipgloss.Height(m.Styles.StatusBar.Render("x"))
+	}
+
+	// terminalRow is just the position relative to the list start, excluding top sections.
+	terminalRow := positionY - listTop
+	if terminalRow < 0 {
+		return -1
+	}
+
+	start, end := m.Paginator.GetSliceBounds(len(m.VisibleItems()))
+	index := start + terminalRow
+	if index >= end {
+		return -1
+	}
+	return index
 }
 
 func (m *Model) loadItems() tea.Cmd {
