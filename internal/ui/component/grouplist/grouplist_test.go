@@ -2,10 +2,12 @@ package grouplist
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/grafviktor/goto/internal/state"
@@ -246,26 +248,87 @@ func Test_handleMouseMsg(t *testing.T) {
 		Y: 5,
 	}
 
+	var model *Model
+	beforeEach := func() {
+		model = newMockGroupModel(false)
+		model.loadItems()
+	}
+
 	t.Run("Grouplist is in filter mode, mouse message should be ignored", func(t *testing.T) {
-		m := newMockGroupModel(false)
-		m.SetFilterState(list.Filtering)
-		cmd := m.handleMouseMsg(mouseMsg)
+		beforeEach()
+		model.SetFilterState(list.Filtering)
+		cmd := model.handleMouseMsg(mouseMsg)
 		require.Nil(t, cmd)
 	})
 
 	t.Run("Grouplist receives right mouse click, the message should be ignored", func(t *testing.T) {
-		m := newMockGroupModel(false)
+		beforeEach()
 		rightMouseMsg := mouseMsg
 		rightMouseMsg.Button = tea.MouseRight
-		cmd := m.handleMouseMsg(rightMouseMsg)
+		cmd := model.handleMouseMsg(rightMouseMsg)
 		require.Nil(t, cmd)
 	})
 
 	t.Run("Finally grouplist receives left mouse click and returns some tea.Cmd", func(t *testing.T) {
-		t.Skip()
-		m := newMockGroupModel(false)
-		cmd := m.handleMouseMsg(mouseMsg)
+		beforeEach()
+		cmd := model.handleMouseMsg(mouseMsg)
 		require.NotNil(t, cmd) // Failing because there is no visible items in the list. Requires debugging.
+	})
+}
+
+// + func (m *Model) focusItem(msg tea.MouseClickMsg) tea.Cmd {
+// + 	if m.paginatorRowPosition() == msg.Mouse().Y {
+// + 		m.handlePaginatorClick()
+// + 		return nil
+// + 	}
+// +
+// + 	index := m.itemAt(msg.Mouse().Y)
+// + 	if index < 0 {
+// + 		return nil
+// + 	}
+// +
+// + 	if index == m.Index() && m.waitForSecondClick {
+// + 		m.waitForSecondClick = false
+// + 		return m.selectGroupAndCloseView()
+// + 	}
+// +
+// + 	m.Select(index)
+// + 	m.waitForSecondClick = true
+// + 	return tea.Tick(timeToWaitForSecondClick, func(_ time.Time) tea.Msg {
+// + 		return msgSecondClickTimeOut{}
+// + 	})
+// + }
+
+func Test_focusItem(t *testing.T) {
+	var model *Model
+	beforeEach := func() {
+		model = newMockGroupModel(false)
+		model.SetHeight(10) // Required to display more than one item on the first page
+		model.loadItems()
+	}
+
+	t.Run("Click above the first item must be ignored", func(t *testing.T) {
+		beforeEach()
+		cmd := model.focusItem(4) // Click above the first item, assuming header height is 4.
+		require.Nil(t, cmd)
+	})
+
+	t.Run("First click on an item must focus it and start timer for second click", func(t *testing.T) {
+		beforeEach()
+		assert.Equal(t, 0, model.Index())
+
+		// Assuming header height is 4. Click on the second item (index=1).
+		cmd := model.focusItem(6)
+		require.True(t, model.waitForSecondClick)
+		require.NotNil(t, cmd)
+		require.Equal(t, 1, model.Index()) // The first item should be selected.
+		require.Equal(t, "msgSecondClickTimeOut", reflect.TypeOf(cmd()).Name())
+	})
+
+	t.Run("Second click on an item must open it and close group list", func(t *testing.T) {
+		beforeEach()
+
+		t.Skip("In progress")
 	})
 }
 

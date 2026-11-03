@@ -275,19 +275,19 @@ func (m *ListModel) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
 
 	if msg, ok := msg.(tea.MouseClickMsg); ok {
 		if msg.Mouse().Button == tea.MouseLeft {
-			return m.focusItem(msg)
+			return m.focusItem(msg.Mouse().Y)
 		}
 	}
 
 	return nil
 }
 
-func (m *ListModel) focusItem(msg tea.MouseClickMsg) tea.Cmd {
-	if m.paginatorRowPosition() == msg.Mouse().Y {
+func (m *ListModel) focusItem(atPosition int) tea.Cmd {
+	if m.paginatorRowPosition() == atPosition {
 		return m.handlePaginatorClick()
 	}
 
-	index := m.itemAt(msg.Mouse().Y)
+	index := m.itemAt(atPosition)
 	if index < 0 {
 		return nil
 	}
