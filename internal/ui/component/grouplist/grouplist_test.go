@@ -276,29 +276,6 @@ func Test_handleMouseMsg(t *testing.T) {
 	})
 }
 
-// + func (m *Model) focusItem(msg tea.MouseClickMsg) tea.Cmd {
-// + 	if m.paginatorRowPosition() == msg.Mouse().Y {
-// + 		m.handlePaginatorClick()
-// + 		return nil
-// + 	}
-// +
-// + 	index := m.itemAt(msg.Mouse().Y)
-// + 	if index < 0 {
-// + 		return nil
-// + 	}
-// +
-// + 	if index == m.Index() && m.waitForSecondClick {
-// + 		m.waitForSecondClick = false
-// + 		return m.selectGroupAndCloseView()
-// + 	}
-// +
-// + 	m.Select(index)
-// + 	m.waitForSecondClick = true
-// + 	return tea.Tick(timeToWaitForSecondClick, func(_ time.Time) tea.Msg {
-// + 		return msgSecondClickTimeOut{}
-// + 	})
-// + }
-
 func Test_focusItem(t *testing.T) {
 	var model *Model
 	beforeEach := func() {
@@ -310,7 +287,7 @@ func Test_focusItem(t *testing.T) {
 	t.Run("Click above the first item must be ignored", func(t *testing.T) {
 		beforeEach()
 		cmd := model.focusItem(4) // Click above the first item, assuming header height is 4.
-		require.Nil(t, cmd)
+		require.NotNil(t, cmd)
 	})
 
 	t.Run("First click on an item must focus it and start timer for second click", func(t *testing.T) {
@@ -320,15 +297,23 @@ func Test_focusItem(t *testing.T) {
 		// Assuming header height is 4. Click on the second item (index=1).
 		cmd := model.focusItem(6)
 		require.True(t, model.waitForSecondClick)
-		require.NotNil(t, cmd)
-		require.Equal(t, 1, model.Index()) // The first item should be selected.
+		require.Equal(t, 1, model.Index()) // The second item should be selected.
 		require.Equal(t, "msgSecondClickTimeOut", reflect.TypeOf(cmd()).Name())
 	})
 
 	t.Run("Second click on an item must open it and close group list", func(t *testing.T) {
 		beforeEach()
+		model.waitForSecondClick = true
 
-		t.Skip("In progress")
+		cmd := model.focusItem(5)
+		var msgs []tea.Msg
+		testutils.CmdToMessage(cmd, &msgs)
+		var msgNames []string
+		for _, msg := range msgs {
+			msgNames = append(msgNames, reflect.TypeOf(msg).Name())
+		}
+		require.Contains(t, msgNames, "GroupSelect")
+		require.Contains(t, msgNames, "ViewGroupListClose")
 	})
 }
 

@@ -1162,6 +1162,85 @@ func Test_handleMouseMsg(t *testing.T) {
 	})
 }
 
+// func (m *ListModel) focusItem(atPosition int) tea.Cmd {
+// 	if m.paginatorRowPosition() == atPosition {
+// 		return m.handlePaginatorClick()
+// 	}
+
+// 	index := m.itemAt(atPosition)
+// 	if index < 0 {
+// 		return nil
+// 	}
+
+// 	if index == m.Index() && m.waitForSecondClick {
+// 		m.waitForSecondClick = false
+// 		return m.constructProcessCmd(constant.ProcessTypeSSHConnect)
+// 	}
+
+// 	m.Select(index)
+// 	m.waitForSecondClick = true
+// 	return tea.Batch(m.onFocusChanged(), tea.Tick(timeToWaitForSecondClick, func(_ time.Time) tea.Msg {
+// 		return msgSecondClickTimeOut{}
+// 	}))
+// }
+
+func Test_focusItem(t *testing.T) {
+	t.Skip("In progress")
+	var model *ListModel
+	// modelHeight := 5
+	beforeEach := func() {
+		model = newMockListModel(false)
+		model.SetHeight(5) // Required to display more than one item on the first page
+	}
+
+	t.Run("Click on paginator", func(t *testing.T) {
+		beforeEach()
+		paginatorPosition := model.paginatorRowPosition()
+
+		cmd := model.focusItem(paginatorPosition)
+		var msgs []tea.Msg
+		testutils.CmdToMessage(cmd, &msgs)
+		var msgNames []string
+		for _, msg := range msgs {
+			msgNames = append(msgNames, reflect.TypeOf(msg).Name())
+		}
+		require.Contains(t, msgNames, "HostSelect")
+		require.Contains(t, msgNames, "RunProcessSSHLoadConfig")
+	})
+
+	t.Run("Click above the first item must be ignored", func(t *testing.T) {
+		beforeEach()
+		cmd := model.focusItem(4) // Click above the first item, assuming header height is 4.
+		require.NotNil(t, cmd)
+	})
+
+	t.Run("First click on an item must focus it and start timer for second click", func(t *testing.T) {
+		beforeEach()
+		assert.Equal(t, 0, model.Index())
+
+		// Assuming header height is 4. Click on the second item (index=1).
+		cmd := model.focusItem(6)
+		require.True(t, model.waitForSecondClick)
+		require.Equal(t, 1, model.Index()) // The second item should be selected.
+		require.Equal(t, "msgSecondClickTimeOut", reflect.TypeOf(cmd()).Name())
+	})
+
+	t.Run("Second click on an item must open it and close group list", func(t *testing.T) {
+		beforeEach()
+		model.waitForSecondClick = true
+
+		cmd := model.focusItem(5)
+		var msgs []tea.Msg
+		testutils.CmdToMessage(cmd, &msgs)
+		var msgNames []string
+		for _, msg := range msgs {
+			msgNames = append(msgNames, reflect.TypeOf(msg).Name())
+		}
+		require.Contains(t, msgNames, "GroupSelect")
+		require.Contains(t, msgNames, "ViewGroupListClose")
+	})
+}
+
 // ==============================================
 // ============== utility methods ===============
 // ==============================================
