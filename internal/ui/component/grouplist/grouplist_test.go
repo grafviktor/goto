@@ -317,6 +317,42 @@ func Test_focusItem(t *testing.T) {
 	})
 }
 
+// func (m *ListModel) itemAt(positionY int) int {
+//         // Find top panel height.
+//         listTop := m.styles.componentMargins.GetMarginTop()
+//         // There is no direct way to get height of the title, that's why we
+//         // simulate what render does and calculate its height manually.
+//         listTop += lipgloss.Height(m.Styles.TitleBar.Render(m.Styles.Title.Render(m.Title)))
+//         if m.ShowStatusBar() {
+//                 // Need to render at least one letter to get real height.
+//                 listTop += lipgloss.Height(m.Styles.StatusBar.Render("x"))
+//         }
+
+//         // terminalRow is just the position relative to the list start, excluding top sections.
+//         terminalRow := positionY - listTop
+//         if terminalRow < 0 {
+//                 return -1
+//         }
+
+//         // List item height depends on the current screen layout.
+//         listItemHeight := 3
+//         if m.appState.ScreenLayout == constant.ScreenLayoutCompact {
+//                 listItemHeight = 1
+//         }
+
+//         local := terminalRow / listItemHeight
+//         start, end := m.Paginator.GetSliceBounds(len(m.VisibleItems()))
+//         index := start + local
+//         if index >= end {
+//                 return -1
+//         }
+//         return index
+// }
+
+func Test_itemAt(t *testing.T) {
+	t.Skip("In progress")
+}
+
 // ==============================================
 // ============== utility methods ===============
 // ==============================================

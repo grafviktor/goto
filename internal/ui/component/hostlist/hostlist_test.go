@@ -1185,7 +1185,6 @@ func Test_handleMouseMsg(t *testing.T) {
 // }
 
 func Test_focusItem(t *testing.T) {
-	t.Skip("In progress")
 	var model *ListModel
 	// modelHeight := 5
 	beforeEach := func() {
@@ -1211,10 +1210,11 @@ func Test_focusItem(t *testing.T) {
 	t.Run("Click above the first item must be ignored", func(t *testing.T) {
 		beforeEach()
 		cmd := model.focusItem(4) // Click above the first item, assuming header height is 4.
-		require.NotNil(t, cmd)
+		require.Nil(t, cmd)
 	})
 
 	t.Run("First click on an item must focus it and start timer for second click", func(t *testing.T) {
+		t.Skip("In progress")
 		beforeEach()
 		assert.Equal(t, 0, model.Index())
 
@@ -1226,6 +1226,7 @@ func Test_focusItem(t *testing.T) {
 	})
 
 	t.Run("Second click on an item must open it and close group list", func(t *testing.T) {
+		t.Skip("In progress")
 		beforeEach()
 		model.waitForSecondClick = true
 
