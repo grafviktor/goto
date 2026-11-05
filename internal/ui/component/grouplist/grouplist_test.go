@@ -287,7 +287,7 @@ func Test_focusItem(t *testing.T) {
 	t.Run("Click above the first item must be ignored", func(t *testing.T) {
 		beforeEach()
 		cmd := model.focusItem(4) // Click above the first item, assuming header height is 4.
-		require.NotNil(t, cmd)
+		require.Nil(t, cmd)
 	})
 
 	t.Run("First click on an item must focus it and start timer for second click", func(t *testing.T) {
