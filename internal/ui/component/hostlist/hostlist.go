@@ -324,13 +324,26 @@ func (m *ListModel) paginatorRowPosition() int {
 }
 
 func (m *ListModel) handlePaginatorClick() tea.Cmd {
-	if m.Paginator.TotalPages > 1 && m.Paginator.OnLastPage() {
+	if m.Paginator.TotalPages <= 1 {
+		return nil
+	}
+
+	if m.Paginator.OnLastPage() {
 		for !m.Paginator.OnFirstPage() {
 			m.Paginator.PrevPage()
 		}
 	} else {
 		m.Paginator.NextPage()
+
+		// When go to a next page, the list focuses an item which is located at the same
+		// index as on the current page. What will happen if current page contains
+		// 10 items and 10th item is selected and we move to the next page where only 5 items?
+		// Nothing will be focused! Here we explicitly focus the last item in the list.
+		if m.Paginator.OnLastPage() && m.SelectedItem() == nil {
+			m.Select(len(m.Items()) - 1)
+		}
 	}
+
 	return m.onFocusChanged()
 }
 
@@ -648,6 +661,12 @@ func (m *ListModel) onFocusChanged() tea.Cmd {
 }
 
 func (m *ListModel) onHostSSHConfigLoadWait(msg msgHostSSHConfigLoadWait) tea.Cmd {
+	// If for some reason we switch to another host while still were waiting for ssh config load, we must ignore this message.
+	// However, it looks like a completely synthetic situation, as there is not enough time for user to focus another host.
+	if msg.hostID != m.appState.Selected {
+		return nil
+	}
+
 	host, _ := m.findHost(msg.hostID)
 	if host.SSHHostConfig != nil {
 		return m.constructProcessCmd(msg.processType)
