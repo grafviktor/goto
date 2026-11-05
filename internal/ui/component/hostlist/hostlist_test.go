@@ -255,7 +255,7 @@ func TestConfirmAction(t *testing.T) {
 	// Imagine that user triggers confirm action
 	cmd := model.confirmAction()
 	// When cancel action, we reset mode and return back to normal state
-	require.Equal(t, model.mode, modeDefault)
+	require.Equal(t, modeDefault, model.mode)
 	// Because there is no active mode, model should ignore the event
 	require.Nil(t, cmd)
 
@@ -266,7 +266,7 @@ func TestConfirmAction(t *testing.T) {
 	// Imagine that user triggers confirm action
 	cmd = model.confirmAction()
 	// When confirm action is triggered, we reset mode and return back to normal state
-	require.Equal(t, model.mode, modeDefault)
+	require.Equal(t, modeDefault, model.mode)
 	// cmd should not be nil because when we modify storage, some Cmds will be dispatched
 	require.IsType(t, tea.Cmd(nil), cmd)
 
@@ -277,7 +277,7 @@ func TestConfirmAction(t *testing.T) {
 	// Imagine that user triggers confirm action
 	cmd = model.confirmAction()
 	// When confirm action is triggered, we reset mode and return back to normal state
-	require.Equal(t, model.mode, modeDefault)
+	require.Equal(t, modeDefault, model.mode)
 	// cmd should not be nil because when we modify storage, some Cmds will be dispatched
 	require.IsType(t, tea.Cmd(nil), cmd)
 
@@ -288,7 +288,7 @@ func TestConfirmAction(t *testing.T) {
 	// Imagine that user triggers confirm action
 	cmd = model.confirmAction()
 	// When confirm action is triggered, we reset mode and return back to normal state
-	require.Equal(t, model.mode, modeDefault)
+	require.Equal(t, modeDefault, model.mode)
 	// If this mode is confirm the model should dispatch QuitMsg
 	require.IsType(t, tea.QuitMsg{}, cmd())
 }
@@ -1112,6 +1112,136 @@ func Test_displayNotificationMsg(t *testing.T) {
 		require.Equal(t, "HideUINotification", reflect.TypeOf(teaMsg).Name())
 		model.Update(teaMsg)
 		require.Equal(t, modelInitialtitle, model.Title)
+	})
+}
+
+func Test_buildHostSSHConfigLoadWaitCmd(t *testing.T) {
+	storage := testutils.NewMockStorage(false)
+	cmd := buildHostSSHConfigLoadWaitCmd(storage.Hosts[0], constant.ProcessTypeSSHLoadConfig, 1)
+	msg, ok := cmd().(msgHostSSHConfigLoadWait)
+
+	require.True(t, ok)
+	require.Equal(t, storage.Hosts[0].ID, msg.hostID)
+	require.Equal(t, constant.ProcessTypeSSHLoadConfig, msg.processType)
+	require.Equal(t, 1, msg.attemptsLeft)
+}
+
+func Test_handleMouseMsg(t *testing.T) {
+	mouseMsg := tea.MouseClickMsg{
+		Button: tea.MouseLeft,
+		// Why 6 ? We must simulate a click below hostlist header. I just know that header's height is 5.
+		Y: 6,
+	}
+
+	t.Run("Hostlist is waiting for user action, mouse message should be ignored", func(t *testing.T) {
+		m := newMockListModel(false)
+		m.mode = modeSSHCopyID
+		cmd := m.handleMouseMsg(mouseMsg)
+		require.Nil(t, cmd)
+	})
+
+	t.Run("Hostlist is in filter mode, mouse message should be ignored", func(t *testing.T) {
+		m := newMockListModel(false)
+		m.SetFilterState(list.Filtering)
+		cmd := m.handleMouseMsg(mouseMsg)
+		require.Nil(t, cmd)
+	})
+
+	t.Run("Hostlist receives right mouse click, the message should be ignored", func(t *testing.T) {
+		m := newMockListModel(false)
+		rightMouseMsg := mouseMsg
+		rightMouseMsg.Button = tea.MouseRight
+		cmd := m.handleMouseMsg(rightMouseMsg)
+		require.Nil(t, cmd)
+	})
+
+	t.Run("Finally hostlist receives left mouse click and returns some tea.Cmd", func(t *testing.T) {
+		m := newMockListModel(false)
+		cmd := m.handleMouseMsg(mouseMsg)
+		require.NotNil(t, cmd)
+	})
+}
+
+// func (m *ListModel) focusItem(atPosition int) tea.Cmd {
+// 	if m.paginatorRowPosition() == atPosition {
+// 		return m.handlePaginatorClick()
+// 	}
+
+// 	index := m.itemAt(atPosition)
+// 	if index < 0 {
+// 		return nil
+// 	}
+
+// 	if index == m.Index() && m.waitForSecondClick {
+// 		m.waitForSecondClick = false
+// 		return m.constructProcessCmd(constant.ProcessTypeSSHConnect)
+// 	}
+
+// 	m.Select(index)
+// 	m.waitForSecondClick = true
+// 	return tea.Batch(m.onFocusChanged(), tea.Tick(timeToWaitForSecondClick, func(_ time.Time) tea.Msg {
+// 		return msgSecondClickTimeOut{}
+// 	}))
+// }
+
+func Test_focusItem(t *testing.T) {
+	var model *ListModel
+	itemHeight := 3
+	headerHeight := 5
+	beforeEach := func() {
+		model = newMockListModel(false)
+		model.SetHeight(15) // Required to display more than one item on the first page
+	}
+
+	t.Run("Click on paginator", func(t *testing.T) {
+		t.Skip("In progress")
+		beforeEach()
+		paginatorPosition := model.paginatorRowPosition()
+
+		cmd := model.focusItem(paginatorPosition)
+		var msgs []tea.Msg
+		testutils.CmdToMessage(cmd, &msgs)
+		var msgNames []string
+		for _, msg := range msgs {
+			msgNames = append(msgNames, reflect.TypeOf(msg).Name())
+		}
+		require.Contains(t, msgNames, "HostSelect")
+		require.Contains(t, msgNames, "RunProcessSSHLoadConfig")
+	})
+
+	t.Run("Click above the first item must be ignored", func(t *testing.T) {
+		beforeEach()
+		cmd := model.focusItem(4) // Click above the first item, assuming header height is 4.
+		require.Nil(t, cmd)
+	})
+
+	t.Run("First click on an item must focus it and start timer for second click", func(t *testing.T) {
+		beforeEach()
+		assert.Equal(t, 0, model.Index())
+
+		// Assuming header height is 5. Item height is 3, therefore headerHeight + 0 or 1 or 2, will point to item with index 0;
+		// But headerHeight + 3 or 4 or 5 will point to item with index 1.
+		cmd := model.focusItem(headerHeight + itemHeight)
+		require.True(t, model.waitForSecondClick)
+		require.Equal(t, 1, model.Index()) // The second item should be selected.
+
+		var msgs []tea.Msg
+		testutils.CmdToMessage(cmd, &msgs)
+		var msgNames []string
+		for _, msg := range msgs {
+			msgNames = append(msgNames, reflect.TypeOf(msg).Name())
+		}
+
+		require.Contains(t, msgNames, "HostSelect")
+		require.Contains(t, msgNames, "RunProcessSSHLoadConfig")
+	})
+
+	t.Run("Second click on an item must trigger SSH connection", func(t *testing.T) {
+		beforeEach()
+		model.waitForSecondClick = true
+
+		cmd := model.focusItem(5)
+		require.IsType(t, message.RunProcessSSHConnect{}, cmd())
 	})
 }
 

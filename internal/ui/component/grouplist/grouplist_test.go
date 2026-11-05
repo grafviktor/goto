@@ -2,10 +2,12 @@ package grouplist
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/grafviktor/goto/internal/state"
@@ -15,7 +17,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	model := NewMockGroupModel(false)
+	model := newMockGroupModel(false)
 	require.True(t, model.FilteringEnabled())
 	// Quit app keys is disabled
 	require.False(t, model.KeyMap.Quit.Enabled())
@@ -24,7 +26,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestInit(t *testing.T) {
-	model := NewMockGroupModel(false)
+	model := newMockGroupModel(false)
 	var msgs []tea.Msg
 	testutils.CmdToMessage(model.Init(), &msgs)
 
@@ -33,7 +35,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	listModel := NewMockGroupModel(false)
+	listModel := newMockGroupModel(false)
 
 	// Can handle tea.WindowSizeMsg
 	require.Equal(t, 0, listModel.Height())
@@ -44,7 +46,7 @@ func TestUpdate(t *testing.T) {
 	require.Positive(t, listModel.Width())
 
 	// Loads hosts when the form is shown
-	listModel = NewMockGroupModel(false)
+	listModel = newMockGroupModel(false)
 	listModel.Update(message.ViewGroupListOpen{})
 
 	// Selected group is "no group"
@@ -53,7 +55,7 @@ func TestUpdate(t *testing.T) {
 
 func Test_handleKeyboardEvent(t *testing.T) {
 	t.Run("General keyboard event test", func(t *testing.T) {
-		listModel := NewMockGroupModel(false)
+		listModel := newMockGroupModel(false)
 		listModel.loadItems()
 
 		tests := []struct {
@@ -111,7 +113,7 @@ func Test_handleKeyboardEvent(t *testing.T) {
 		for testName, tt := range tests {
 			t.Run(testName, func(t *testing.T) {
 				// We mutate model state, so let's re-create it in every test.
-				listModel := NewMockGroupModel(false)
+				listModel := newMockGroupModel(false)
 				listModel.loadItems()
 
 				if tt.isFilterEnabled {
@@ -161,7 +163,7 @@ func Test_handleSelectGroup(t *testing.T) {
 		},
 	}
 
-	listModel := NewMockGroupModel(false)
+	listModel := newMockGroupModel(false)
 	listModel.loadItems()
 
 	for _, tt := range tests {
@@ -182,7 +184,7 @@ func Test_handleSelectGroup(t *testing.T) {
 func Test_handleEnterKey_WhenFiltering(t *testing.T) {
 	// When pressing Enter key while filtering, it should return nil cmd, as we do not want to select
 	// the first item in the list, but instead let user to select an item using Up/Down keys.
-	listModel := NewMockGroupModel(false)
+	listModel := newMockGroupModel(false)
 	listModel.loadItems()
 	// Put the list in filter mode
 	listModel.Update(tea.KeyPressMsg{Code: '/'})
@@ -195,7 +197,7 @@ func Test_handleEnterKey_WhenFiltering(t *testing.T) {
 func Test_handleEscapeKey(t *testing.T) {
 	// Test case 1: Press escape in filter mode
 	// Can handle Esc key
-	listModel := NewMockGroupModel(false)
+	listModel := newMockGroupModel(false)
 	listModel.loadItems()
 	// Put the list in filter mode
 	listModel.Update(tea.KeyPressMsg{Code: '/'})
@@ -216,7 +218,7 @@ func Test_handleEscapeKey(t *testing.T) {
 
 func TestLoadItems(t *testing.T) {
 	// Storage works fine
-	model := NewMockGroupModel(false)
+	model := newMockGroupModel(false)
 	model.loadItems()
 	require.Equal(t, noGroupSelected, model.Items()[0].(ListItemHostGroup).Title())
 	require.Len(t, model.Items(), 4) // 1 "No Group" item + 3 items from database
@@ -233,17 +235,129 @@ func TestLoadItems(t *testing.T) {
 	require.Equal(t, noGroupSelected, model.SelectedItem().(ListItemHostGroup).Title())
 
 	// Storage fails
-	model = NewMockGroupModel(true)
+	model = newMockGroupModel(true)
 	cmd := model.loadItems()
 	require.IsType(t, message.ErrorOccurred{}, cmd())
 	require.Empty(t, model.Items())
+}
+
+func Test_handleMouseMsg(t *testing.T) {
+	mouseMsg := tea.MouseClickMsg{
+		Button: tea.MouseLeft,
+		// A hack - we must simulate a click below hostlist header. I just know that header's height is 4.
+		Y: 5,
+	}
+
+	var model *Model
+	beforeEach := func() {
+		model = newMockGroupModel(false)
+		model.loadItems()
+	}
+
+	t.Run("Grouplist is in filter mode, mouse message should be ignored", func(t *testing.T) {
+		beforeEach()
+		model.SetFilterState(list.Filtering)
+		cmd := model.handleMouseMsg(mouseMsg)
+		require.Nil(t, cmd)
+	})
+
+	t.Run("Grouplist receives right mouse click, the message should be ignored", func(t *testing.T) {
+		beforeEach()
+		rightMouseMsg := mouseMsg
+		rightMouseMsg.Button = tea.MouseRight
+		cmd := model.handleMouseMsg(rightMouseMsg)
+		require.Nil(t, cmd)
+	})
+
+	t.Run("Finally grouplist receives left mouse click and returns some tea.Cmd", func(t *testing.T) {
+		beforeEach()
+		cmd := model.handleMouseMsg(mouseMsg)
+		require.NotNil(t, cmd) // Failing because there is no visible items in the list. Requires debugging.
+	})
+}
+
+func Test_focusItem(t *testing.T) {
+	var model *Model
+	beforeEach := func() {
+		model = newMockGroupModel(false)
+		model.SetHeight(10) // Required to display more than one item on the first page
+		model.loadItems()
+	}
+
+	t.Run("Click above the first item must be ignored", func(t *testing.T) {
+		beforeEach()
+		cmd := model.focusItem(4) // Click above the first item, assuming header height is 4.
+		require.Nil(t, cmd)
+	})
+
+	t.Run("First click on an item must focus it and start timer for second click", func(t *testing.T) {
+		beforeEach()
+		assert.Equal(t, 0, model.Index())
+
+		// Assuming header height is 4. Click on the second item (index=1).
+		cmd := model.focusItem(6)
+		require.True(t, model.waitForSecondClick)
+		require.Equal(t, 1, model.Index()) // The second item should be selected.
+		require.Equal(t, "msgSecondClickTimeOut", reflect.TypeOf(cmd()).Name())
+	})
+
+	t.Run("Second click on an item must open it and close group list", func(t *testing.T) {
+		beforeEach()
+		model.waitForSecondClick = true
+
+		cmd := model.focusItem(5)
+		var msgs []tea.Msg
+		testutils.CmdToMessage(cmd, &msgs)
+		var msgNames []string
+		for _, msg := range msgs {
+			msgNames = append(msgNames, reflect.TypeOf(msg).Name())
+		}
+		require.Contains(t, msgNames, "GroupSelect")
+		require.Contains(t, msgNames, "ViewGroupListClose")
+	})
+}
+
+// func (m *ListModel) itemAt(positionY int) int {
+//         // Find top panel height.
+//         listTop := m.styles.componentMargins.GetMarginTop()
+//         // There is no direct way to get height of the title, that's why we
+//         // simulate what render does and calculate its height manually.
+//         listTop += lipgloss.Height(m.Styles.TitleBar.Render(m.Styles.Title.Render(m.Title)))
+//         if m.ShowStatusBar() {
+//                 // Need to render at least one letter to get real height.
+//                 listTop += lipgloss.Height(m.Styles.StatusBar.Render("x"))
+//         }
+
+//         // terminalRow is just the position relative to the list start, excluding top sections.
+//         terminalRow := positionY - listTop
+//         if terminalRow < 0 {
+//                 return -1
+//         }
+
+//         // List item height depends on the current screen layout.
+//         listItemHeight := 3
+//         if m.appState.ScreenLayout == constant.ScreenLayoutCompact {
+//                 listItemHeight = 1
+//         }
+
+//         local := terminalRow / listItemHeight
+//         start, end := m.Paginator.GetSliceBounds(len(m.VisibleItems()))
+//         index := start + local
+//         if index >= end {
+//                 return -1
+//         }
+//         return index
+// }
+
+func Test_itemAt(t *testing.T) {
+	t.Skip("In progress")
 }
 
 // ==============================================
 // ============== utility methods ===============
 // ==============================================
 
-func NewMockGroupModel(storageShouldFail bool) *Model {
+func newMockGroupModel(storageShouldFail bool) *Model {
 	mockState := state.State{Selected: 1}
 	storage := testutils.NewMockStorage(storageShouldFail)
 	return New(context.TODO(), storage, &mockState, &mocklogger.Logger{})

@@ -1,4 +1,5 @@
 enable_embedded_terminal: false
+enable_mouse: false
 screen_layout: description
 selected_host_index: 0
 enable_ssh_config: true
