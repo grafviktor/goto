@@ -328,6 +328,10 @@ func (m *ListModel) handlePaginatorClick() tea.Cmd {
 		return nil
 	}
 
+	// Paginator must reset the second click wait flag as we're
+	// changing pages and user cannot click to the same host.
+	m.waitForSecondClick = false
+
 	if m.Paginator.OnLastPage() {
 		for !m.Paginator.OnFirstPage() {
 			m.Paginator.PrevPage()
@@ -340,7 +344,7 @@ func (m *ListModel) handlePaginatorClick() tea.Cmd {
 		// 10 items and 10th item is selected and we move to the next page where only 5 items?
 		// Nothing will be focused! Here we explicitly focus the last item in the list.
 		if m.Paginator.OnLastPage() && m.SelectedItem() == nil {
-			m.Select(len(m.Items()) - 1)
+			m.Select(len(m.VisibleItems()) - 1)
 		}
 	}
 
