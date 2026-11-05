@@ -254,29 +254,30 @@ func (m *Model) handlePaginatorClick() {
 	}
 }
 
-func (m *Model) itemAt(positionY int) int {
-	// Find top panel height.
-	listTop := m.styles.componentMargins.GetMarginTop()
+func (m *Model) itemAt(mousePositionY int) int {
+	topSectionsHeight := m.styles.componentMargins.GetMarginTop()
 	// There is no direct way to get height of the title, that's why we
 	// simulate what render does and calculate its height manually.
-	listTop += lipgloss.Height(m.Styles.TitleBar.Render(m.Styles.Title.Render(m.Title)))
+	topSectionsHeight += lipgloss.Height(m.Styles.TitleBar.Render(m.Styles.Title.Render(m.Title)))
 	if m.ShowStatusBar() {
 		// Need to render at least one letter to get real height.
-		listTop += lipgloss.Height(m.Styles.StatusBar.Render("x"))
+		topSectionsHeight += lipgloss.Height(m.Styles.StatusBar.Render("x"))
 	}
 
-	// terminalRow is just the position relative to the list start, excluding top sections.
-	terminalRow := positionY - listTop
-	if terminalRow < 0 {
+	// mousePositionInList is the position relative to the list start, excluding top sections.
+	// Group rows are one line tall, so this offset is also the index on the page.
+	mousePositionInList := mousePositionY - topSectionsHeight
+	if mousePositionInList < 0 {
 		return -1
 	}
 
-	start, end := m.Paginator.GetSliceBounds(len(m.VisibleItems()))
-	index := start + terminalRow
-	if index >= end {
+	pageStart, pageEnd := m.Paginator.GetSliceBounds(len(m.VisibleItems()))
+	visibleItemIndex := pageStart + mousePositionInList
+	if visibleItemIndex >= pageEnd {
+		// We're beyond the bottom of the list
 		return -1
 	}
-	return index
+	return visibleItemIndex
 }
 
 func (m *Model) loadItems() tea.Cmd {

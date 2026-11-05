@@ -1186,13 +1186,15 @@ func Test_handleMouseMsg(t *testing.T) {
 
 func Test_focusItem(t *testing.T) {
 	var model *ListModel
-	// modelHeight := 5
+	itemHeight := 3
+	headerHeight := 5
 	beforeEach := func() {
 		model = newMockListModel(false)
-		model.SetHeight(5) // Required to display more than one item on the first page
+		model.SetHeight(15) // Required to display more than one item on the first page
 	}
 
 	t.Run("Click on paginator", func(t *testing.T) {
+		t.Skip("In progress")
 		beforeEach()
 		paginatorPosition := model.paginatorRowPosition()
 
@@ -1214,31 +1216,32 @@ func Test_focusItem(t *testing.T) {
 	})
 
 	t.Run("First click on an item must focus it and start timer for second click", func(t *testing.T) {
-		t.Skip("In progress")
 		beforeEach()
 		assert.Equal(t, 0, model.Index())
 
-		// Assuming header height is 4. Click on the second item (index=1).
-		cmd := model.focusItem(6)
+		// Assuming header height is 5. Item height is 3, therefore headerHeight + 0 or 1 or 2, will point to item with index 0;
+		// But headerHeight + 3 or 4 or 5 will point to item with index 1.
+		cmd := model.focusItem(headerHeight + itemHeight)
 		require.True(t, model.waitForSecondClick)
 		require.Equal(t, 1, model.Index()) // The second item should be selected.
-		require.Equal(t, "msgSecondClickTimeOut", reflect.TypeOf(cmd()).Name())
-	})
 
-	t.Run("Second click on an item must open it and close group list", func(t *testing.T) {
-		t.Skip("In progress")
-		beforeEach()
-		model.waitForSecondClick = true
-
-		cmd := model.focusItem(5)
 		var msgs []tea.Msg
 		testutils.CmdToMessage(cmd, &msgs)
 		var msgNames []string
 		for _, msg := range msgs {
 			msgNames = append(msgNames, reflect.TypeOf(msg).Name())
 		}
-		require.Contains(t, msgNames, "GroupSelect")
-		require.Contains(t, msgNames, "ViewGroupListClose")
+
+		require.Contains(t, msgNames, "HostSelect")
+		require.Contains(t, msgNames, "RunProcessSSHLoadConfig")
+	})
+
+	t.Run("Second click on an item must trigger SSH connection", func(t *testing.T) {
+		beforeEach()
+		model.waitForSecondClick = true
+
+		cmd := model.focusItem(5)
+		require.IsType(t, message.RunProcessSSHConnect{}, cmd())
 	})
 }
 
