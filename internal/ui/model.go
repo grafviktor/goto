@@ -99,6 +99,7 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Group list loaded. Group count: %d", msg.GroupCount)
 		// "~ all ~" is always present, but it's not included into the group count message.
 		if msg.GroupCount > 0 {
+			m.logger.Debug("[UI] Open the group list.")
 			m.appState.CurrentView = state.ViewGroupList
 		}
 	case message.ViewGroupListOpen:
@@ -211,6 +212,7 @@ func (m *MainModel) View() tea.View {
 }
 
 func (m *MainModel) handleKeyEvent(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	// Never log keystrokes while an SSH session is open.
 	if m.appState.CurrentView != state.ViewSSHSession {
 		m.logger.Debug("[UI] Keyboard event: '%v'", msg)
 
@@ -228,6 +230,7 @@ func (m *MainModel) handleKeyEvent(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		// When display external process's output and receive any keyboard event, we:
 		// 1. Reset the error message
 		// 2. Switch to HostList view
+		m.logger.Info("[UI] Close the message view and return to the host list.")
 		m.viewMessageContent = ""
 		m.appState.CurrentView = state.ViewHostList
 	case state.ViewHostList:
@@ -237,6 +240,7 @@ func (m *MainModel) handleKeyEvent(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case state.ViewEditItem:
 		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
 	case state.ViewSSHSession:
+		// Do not log msg. The key is forwarded to the session unchanged.
 		m.modelSSHSession, cmd = m.modelSSHSession.Update(msg)
 	}
 
@@ -338,6 +342,7 @@ func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.Ru
 
 	sshSession, err := sshsession.New(m.appState.Width, m.appState.Height, commandAndArgs...)
 	if err != nil {
+		m.logger.Info("[EXEC] Cannot open the embedded terminal: %v", err)
 		return message.TeaCmd(message.RunProcessErrorOccurred{
 			ProcessType: constant.ProcessTypeSSHConnect,
 			StdOut:      "",
@@ -349,6 +354,7 @@ func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.Ru
 	sshSession.SetStatus(statusText)
 	m.modelSSHSession = &sshSession
 	m.appState.CurrentView = state.ViewSSHSession
+	m.logger.Info("[EXEC] Open the embedded SSH session.")
 	return m.modelSSHSession.Init()
 }
 

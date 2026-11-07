@@ -273,12 +273,15 @@ func (m *EditModel) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 		m.logger.Info("[UI] Save changes for host id: %v", m.host.ID)
 		return m.save(msg)
 	case key.Matches(msg, m.keyMap.CopyInputValue):
+		m.logger.Debug("[UI] Copy the focused input value.")
 		m.handleCopyInputValueShortcut()
 		return nil
 	case key.Matches(msg, m.keyMap.Down) || key.Matches(msg, m.keyMap.Up):
+		m.logger.Debug("[UI] Move focus between inputs.")
 		return m.inputFocusChange(msg)
 	default:
-		// Handle all other key events
+		// Handle all other key events. Do not log the key: it is text the user types into a field.
+		m.logger.Debug("[UI] Update the focused input.")
 		cmd := m.focusedInputProcessKeyEvent(msg)
 		if m.focusedInput == inputAddress || m.focusedInput == inputTitle {
 			// This statement is required as user may want to copy title to address,
@@ -453,6 +456,8 @@ func (m *EditModel) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
 		if msg.Mouse().Button == tea.MouseLeft {
 			return m.focusItem(msg)
 		}
+
+		m.logger.Debug("[UI] Ignore the %s mouse button.", msg.Mouse().Button)
 	}
 
 	return nil
@@ -461,10 +466,12 @@ func (m *EditModel) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
 func (m *EditModel) focusItem(msg tea.MouseClickMsg) tea.Cmd {
 	index := m.itemAt(msg.Mouse().Y)
 	if index < 0 || index == m.focusedInput {
+		m.logger.Debug("[UI] Mouse click keeps the current input focused.")
 		return nil
 	}
 
 	m.focusedInput = index
+	m.logger.Debug("[UI] Mouse click moves focus to input %d.", index)
 	return m.applyFocus()
 }
 

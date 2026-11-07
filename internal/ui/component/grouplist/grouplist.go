@@ -108,6 +108,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseMsg:
 		return m, m.handleMouseMsg(msg)
 	case msgSecondClickTimeOut:
+		m.logger.Debug("[UI] Second click timeout. Stay on the focused group.")
 		m.waitForSecondClick = false
 		return m, nil
 	case message.ViewGroupListOpen:
@@ -134,6 +135,7 @@ func (m *Model) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 		return m.handleDeselectGroup()
 	case key.Matches(msg, m.additionalKeyMap.quitApp):
 		if m.FilterState() != list.Filtering {
+			m.logger.Info("[UI] Quit key. Exit the application.")
 			return tea.Quit
 		}
 	}
@@ -165,7 +167,7 @@ func (m *Model) selectGroupAndCloseView() tea.Cmd {
 		selected = ""
 	}
 
-	m.logger.Debug("[UI] Enter key. Select group '%s' and exit from group list view.", selected)
+	m.logger.Info("[UI] Select group %q and exit from group list view.", selected)
 	return tea.Sequence(
 		message.TeaCmd(message.GroupSelect{Name: selected}),
 		message.TeaCmd(message.ViewGroupListClose{}),
@@ -190,6 +192,7 @@ func (m *Model) handleDeselectGroup() tea.Cmd {
 
 func (m *Model) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
 	if m.FilterState() == list.Filtering {
+		m.logger.Debug("[UI] Ignore the mouse event while filtering groups.")
 		return nil
 	}
 
@@ -197,6 +200,8 @@ func (m *Model) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
 		if msg.Mouse().Button == tea.MouseLeft {
 			return m.focusItem(msg.Mouse().Y)
 		}
+
+		m.logger.Debug("[UI] Ignore the %s mouse button.", msg.Mouse().Button)
 	}
 
 	return nil
@@ -210,16 +215,19 @@ func (m *Model) focusItem(atPosition int) tea.Cmd {
 
 	index := m.itemAt(atPosition)
 	if index < 0 {
+		m.logger.Debug("[UI] Mouse click misses the group list at row %d.", atPosition)
 		return nil
 	}
 
 	if index == m.Index() && m.waitForSecondClick {
 		m.waitForSecondClick = false
+		m.logger.Debug("[UI] Mouse double click. Select the focused group.")
 		return m.selectGroupAndCloseView()
 	}
 
 	m.Select(index)
 	m.waitForSecondClick = true
+	m.logger.Debug("[UI] Mouse click. Focus group at index %d and wait for a second click.", index)
 	return tea.Tick(timeToWaitForSecondClick, func(_ time.Time) tea.Msg {
 		return msgSecondClickTimeOut{}
 	})
@@ -331,6 +339,7 @@ func (m *Model) selectSavedGroup() {
 	saved := strings.TrimSpace(m.appState.Group)
 	if saved == "" {
 		m.Select(0)
+		m.logger.Debug("[UI] No saved group. Focus %q.", noGroupSelected)
 		return
 	}
 
@@ -341,8 +350,10 @@ func (m *Model) selectSavedGroup() {
 
 	if !found {
 		m.Select(0)
+		m.logger.Debug("[UI] Saved group %q is absent. Focus %q.", saved, noGroupSelected)
 		return
 	}
 
 	m.Select(index)
+	m.logger.Debug("[UI] Focus saved group %q.", saved)
 }

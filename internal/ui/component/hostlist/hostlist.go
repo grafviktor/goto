@@ -168,6 +168,7 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseMsg:
 		return m, m.handleMouseMsg(msg)
 	case msgSecondClickTimeOut:
+		m.logger.Debug("[UI] Second click timeout. Stay on the focused host.")
 		m.waitForSecondClick = false
 		return m, nil
 	case tea.WindowSizeMsg:
@@ -230,29 +231,40 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 				return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
 			}
 		}
+		m.logger.Debug("[UI] The host filter handles key %q.", msg.String())
 		return m.updateChildModel(msg)
 	case key.Matches(msg, m.Model.KeyMap.ClearFilter):
 		// When user clears the host filter, child model resets the focus. Explicitly set focus on previously selected item.
 		selectedID := m.SelectedItem().(ListItemHost).ID //nolint:errcheck // SelectedItem always returns ListItemHost
+		m.logger.Debug("[UI] Clear the filter and restore focus to host id %d.", selectedID)
 		return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
 	case m.mode != modeDefault:
 		// Handle key event when some mode is enabled. For instance "removeMode".
+		m.logger.Debug("[UI] Handle key %q in %s mode.", msg.String(), m.mode)
 		return m.handleKeyEventWhenModeEnabled(msg)
 	case key.Matches(msg, m.keyMap.selectGroup):
+		m.logger.Debug("[UI] Open the group list.")
 		return message.TeaCmd(message.ViewGroupListOpen{})
 	case key.Matches(msg, m.keyMap.connect):
+		m.logger.Debug("[UI] Connect to the focused host.")
 		return m.constructProcessCmd(constant.ProcessTypeSSHConnect)
 	case key.Matches(msg, m.keyMap.copyID):
+		m.logger.Debug("[UI] Ask to copy the SSH key to the focused host.")
 		return m.enterSSHCopyIDMode()
 	case key.Matches(msg, m.keyMap.remove):
+		m.logger.Debug("[UI] Ask to remove the focused host.")
 		return m.enterRemoveItemMode()
 	case key.Matches(msg, m.keyMap.edit):
+		m.logger.Debug("[UI] Edit the focused host.")
 		return m.editItem()
 	case key.Matches(msg, m.keyMap.append):
+		m.logger.Debug("[UI] Open the host editor for a new host.")
 		return message.TeaCmd(message.ViewHostEditOpen{}) // When create a new item, jump to edit mode.
 	case key.Matches(msg, m.keyMap.clone):
+		m.logger.Debug("[UI] Clone the focused host.")
 		return m.copyItem()
 	case key.Matches(msg, m.keyMap.toggleLayout):
+		m.logger.Debug("[UI] Toggle the host list layout.")
 		return m.onToggleLayout()
 	case msg.Key().Code == tea.KeyEsc:
 		m.logger.Debug("[UI] Receive Escape key. Ask user for confirmation to close the app.")
@@ -266,10 +278,12 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 
 func (m *ListModel) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
 	if m.mode != modeDefault {
+		m.logger.Debug("[UI] Ignore the mouse event while in %s mode.", m.mode)
 		return nil
 	}
 
 	if m.FilterState() == list.Filtering {
+		m.logger.Debug("[UI] Ignore the mouse event while filtering hosts.")
 		return nil
 	}
 
@@ -277,6 +291,8 @@ func (m *ListModel) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
 		if msg.Mouse().Button == tea.MouseLeft {
 			return m.focusItem(msg.Mouse().Y)
 		}
+
+		m.logger.Debug("[UI] Ignore the %s mouse button.", msg.Mouse().Button)
 	}
 
 	return nil
@@ -289,16 +305,19 @@ func (m *ListModel) focusItem(atPosition int) tea.Cmd {
 
 	index := m.itemAt(atPosition)
 	if index < 0 {
+		m.logger.Debug("[UI] Mouse click misses the host list at row %d.", atPosition)
 		return nil
 	}
 
 	if index == m.Index() && m.waitForSecondClick {
 		m.waitForSecondClick = false
+		m.logger.Debug("[UI] Mouse double click. Connect to the focused host.")
 		return m.constructProcessCmd(constant.ProcessTypeSSHConnect)
 	}
 
 	m.Select(index)
 	m.waitForSecondClick = true
+	m.logger.Debug("[UI] Mouse click. Focus host at index %d and wait for a second click.", index)
 	return tea.Batch(m.onFocusChanged(), tea.Tick(timeToWaitForSecondClick, func(_ time.Time) tea.Msg {
 		return msgSecondClickTimeOut{}
 	}))
@@ -325,6 +344,7 @@ func (m *ListModel) paginatorRowPosition() int {
 
 func (m *ListModel) handlePaginatorClick() tea.Cmd {
 	if m.Paginator.TotalPages <= 1 {
+		m.logger.Debug("[UI] Click on the paginator. There is only one page. Ignore.")
 		return nil
 	}
 
@@ -345,6 +365,7 @@ func (m *ListModel) handlePaginatorClick() tea.Cmd {
 		// Nothing will be focused! Here we explicitly focus the last item in the list.
 		if m.Paginator.OnLastPage() && m.SelectedItem() == nil {
 			m.Select(len(m.VisibleItems()) - 1)
+			m.logger.Debug("[UI] Select the last host on the page.")
 		}
 	}
 
@@ -491,6 +512,7 @@ func (m *ListModel) removeItem() tea.Cmd {
 func (m *ListModel) editItem() tea.Cmd {
 	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
+		m.logger.Debug("[UI] Cannot edit. No host is selected.")
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedErrMsg)})
 	}
 
@@ -671,11 +693,14 @@ func (m *ListModel) onHostSSHConfigLoadWait(msg msgHostSSHConfigLoadWait) tea.Cm
 	// If for some reason we switch to another host while still were waiting for ssh config load, we must ignore this message.
 	// However, it looks like a completely synthetic situation, as there is not enough time for user to focus another host.
 	if msg.hostID != m.appState.Selected {
+		m.logger.Debug("[UI] Ignore SSH config wait for host id %d. Focus stays on host id %d.",
+			msg.hostID, m.appState.Selected)
 		return nil
 	}
 
 	host, _ := m.findHost(msg.hostID)
 	if host.SSHHostConfig != nil {
+		m.logger.Debug("[UI] SSH config for host id %d is ready. Continue %q.", host.ID, msg.processType)
 		return m.constructProcessCmd(msg.processType)
 	}
 
@@ -685,6 +710,8 @@ func (m *ListModel) onHostSSHConfigLoadWait(msg msgHostSSHConfigLoadWait) tea.Cm
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(errorText)})
 	}
 
+	m.logger.Debug("[UI] SSH config for host id %d is still missing. Retry with %d attempt(s) left.",
+		host.ID, msg.attemptsLeft-1)
 	return buildHostSSHConfigLoadWaitCmd(host, msg.processType, msg.attemptsLeft-1)
 }
 
@@ -694,6 +721,7 @@ func (m *ListModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoadComplete)
 			hostListItem.SSHHostConfig = &msg.Config
 			m.SetItem(index, hostListItem)
 			m.updateTitle()
+			m.logger.Debug("[UI] Store SSH config for host id %d, title %q.", hostListItem.ID, hostListItem.Title())
 			break
 		}
 	}
@@ -741,10 +769,13 @@ func (m *ListModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 
 	switch processType { //nolint:exhaustive // allow missing cases
 	case constant.ProcessTypeSSHConnect:
+		m.logger.Debug("[UI] Start SSH connect for host id %d, title %q.", host.ID, host.Title)
 		return message.TeaCmd(message.RunProcessSSHConnect{Host: host})
 	case constant.ProcessTypeSSHCopyID:
+		m.logger.Debug("[UI] Start SSH key copy for host id %d, title %q.", host.ID, host.Title)
 		return message.TeaCmd(message.RunProcessSSHCopyID{Host: host})
 	default:
+		m.logger.Debug("[UI] Ignore unknown process type %q.", processType)
 		return nil
 	}
 }
