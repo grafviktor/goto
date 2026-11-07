@@ -253,7 +253,12 @@ func (m *Model) paginatorRowPosition() int {
 }
 
 func (m *Model) handlePaginatorClick() {
-	if m.Paginator.TotalPages > 1 && m.Paginator.OnLastPage() {
+	if m.Paginator.TotalPages <= 1 {
+		return
+	}
+
+	m.waitForSecondClick = false
+	if m.Paginator.OnLastPage() {
 		for !m.Paginator.OnFirstPage() {
 			m.Paginator.PrevPage()
 		}

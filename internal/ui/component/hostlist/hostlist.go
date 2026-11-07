@@ -64,7 +64,7 @@ func buildHostSSHConfigLoadWaitCmd(host hostModel.Host, processType constant.Pro
 	}
 }
 
-type ListModel struct {
+type Model struct {
 	list.Model
 
 	repo                storage.HostStorage
@@ -84,7 +84,7 @@ type ListModel struct {
 // appState - is the application state, usually we want to restore previous state when application restarts,
 // for instance focus previously selected host.
 // log - application logger.
-func New(_ context.Context, storage storage.HostStorage, appState *state.State, log iLogger) *ListModel {
+func New(_ context.Context, storage storage.HostStorage, appState *state.State, log iLogger) *Model {
 	delegate := NewHostDelegate(&appState.ScreenLayout, &appState.Group, log)
 	delegateKeys := newDelegateKeyMap()
 
@@ -104,7 +104,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.State, 
 	model.Paginator.InactiveDot = styles.paginatorInactiveDot
 	model.Help.Styles = styles.help
 
-	m := ListModel{
+	m := Model{
 		Model:    model,
 		keyMap:   delegateKeys,
 		repo:     storage,
@@ -129,12 +129,12 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.State, 
 	return &m
 }
 
-func (m *ListModel) Init() tea.Cmd {
+func (m *Model) Init() tea.Cmd {
 	// This function is called from model.go#init() file
 	return m.loadHosts()
 }
 
-func (m *ListModel) loadHosts() tea.Cmd {
+func (m *Model) loadHosts() tea.Cmd {
 	m.logger.Debug("[UI] Load hostnames from the database")
 	hosts, err := m.repo.GetAll()
 	if err != nil {
@@ -161,7 +161,7 @@ func (m *ListModel) loadHosts() tea.Cmd {
 	return tea.Sequence(setItemsCmd, selectHostByIDCmd)
 }
 
-func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		return m, m.handleKeyboardEvent(msg)
@@ -208,7 +208,7 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m *ListModel) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
+func (m *Model) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 	m.showingNotification = false // Reset notification, when user presses any key.
 
 	switch {
@@ -276,7 +276,7 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 	}
 }
 
-func (m *ListModel) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
+func (m *Model) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
 	if m.mode != modeDefault {
 		m.logger.Debug("[UI] Ignore the mouse event while in %s mode.", m.mode)
 		return nil
@@ -298,7 +298,7 @@ func (m *ListModel) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
 	return nil
 }
 
-func (m *ListModel) focusItem(atPosition int) tea.Cmd {
+func (m *Model) focusItem(atPosition int) tea.Cmd {
 	if m.paginatorRowPosition() == atPosition {
 		return m.handlePaginatorClick()
 	}
@@ -323,7 +323,7 @@ func (m *ListModel) focusItem(atPosition int) tea.Cmd {
 	}))
 }
 
-func (m *ListModel) paginatorRowPosition() int {
+func (m *Model) paginatorRowPosition() int {
 	if m.Paginator.TotalPages <= 1 {
 		return -1
 	}
@@ -342,7 +342,7 @@ func (m *ListModel) paginatorRowPosition() int {
 	return topSectionsHeight + paginationStyle.GetMarginTop()
 }
 
-func (m *ListModel) handlePaginatorClick() tea.Cmd {
+func (m *Model) handlePaginatorClick() tea.Cmd {
 	if m.Paginator.TotalPages <= 1 {
 		m.logger.Debug("[UI] Click on the paginator. There is only one page. Ignore.")
 		return nil
@@ -374,7 +374,7 @@ func (m *ListModel) handlePaginatorClick() tea.Cmd {
 	return m.onFocusChanged()
 }
 
-func (m *ListModel) itemAt(mousePositionY int) int {
+func (m *Model) itemAt(mousePositionY int) int {
 	topOffset := m.styles.componentMargins.GetMarginTop()
 	// There is no direct way to get height of the title, that's why we
 	// simulate what render does and calculate its height manually.
@@ -407,11 +407,11 @@ func (m *ListModel) itemAt(mousePositionY int) int {
 	return visibleItemIndex
 }
 
-func (m *ListModel) View() tea.View {
+func (m *Model) View() tea.View {
 	return tea.NewView(m.styles.componentMargins.Render(m.Model.View()))
 }
 
-func (m *ListModel) updateChildModel(msg tea.Msg) tea.Cmd {
+func (m *Model) updateChildModel(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	m.Model, cmd = m.Model.Update(msg)
 
@@ -422,7 +422,7 @@ func (m *ListModel) updateChildModel(msg tea.Msg) tea.Cmd {
  * Actions.
  */
 
-func (m *ListModel) removeItem() tea.Cmd {
+func (m *Model) removeItem() tea.Cmd {
 	m.logger.Debug("[UI] Remove host from the database")
 	// Potential bug when filter is enabled as selected item reads from collection duplicate!
 	// Consider taking "item" from m.Items()
@@ -509,7 +509,7 @@ func (m *ListModel) removeItem() tea.Cmd {
 	)
 }
 
-func (m *ListModel) editItem() tea.Cmd {
+func (m *Model) editItem() tea.Cmd {
 	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Debug("[UI] Cannot edit. No host is selected.")
@@ -525,7 +525,7 @@ func (m *ListModel) editItem() tea.Cmd {
 	)
 }
 
-func (m *ListModel) copyItem() tea.Cmd {
+func (m *Model) copyItem() tea.Cmd {
 	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Error("[UI] Cannot cast selected item to host model")
@@ -575,7 +575,7 @@ func (m *ListModel) copyItem() tea.Cmd {
 
 // onHostUpdated - not only updates a host, it also re-inserts the host into
 // a correct position of the host list, to keep it sorted.
-func (m *ListModel) onHostUpdated(msg message.HostUpdate) tea.Cmd {
+func (m *Model) onHostUpdated(msg message.HostUpdate) tea.Cmd {
 	updatedHost := ListItemHost{Host: msg.Host}
 	// Get all item titles, replacing the updated host's title
 	allItems := lo.Map(m.Items(), func(item list.Item, _ int) list.Item {
@@ -607,7 +607,7 @@ func (m *ListModel) onHostUpdated(msg message.HostUpdate) tea.Cmd {
 	)
 }
 
-func (m *ListModel) setItemAndReorder(newIndex, currentIndex int, updatedHost ListItemHost) tea.Cmd {
+func (m *Model) setItemAndReorder(newIndex, currentIndex int, updatedHost ListItemHost) tea.Cmd {
 	m.Model.RemoveItem(currentIndex)
 	cmd := m.Model.InsertItem(newIndex, updatedHost)
 
@@ -627,7 +627,7 @@ func (m *ListModel) setItemAndReorder(newIndex, currentIndex int, updatedHost Li
 	return cmd
 }
 
-func (m *ListModel) onHostCreated(msg message.HostCreate) tea.Cmd {
+func (m *Model) onHostCreated(msg message.HostCreate) tea.Cmd {
 	// ResetFilter is required here because, user can create a new Item which will be filtered out,
 	// therefore the user will not see any changes in the UI which is confusing.
 	// ResetFilter must be done before calculating index of the new item.
@@ -655,7 +655,7 @@ func (m *ListModel) onHostCreated(msg message.HostCreate) tea.Cmd {
 	)
 }
 
-func (m *ListModel) onGroupSelect(msg message.GroupSelect) tea.Cmd {
+func (m *Model) onGroupSelect(msg message.GroupSelect) tea.Cmd {
 	var cmds []tea.Cmd
 	m.logger.Debug("[UI] Update app state. Active group: %q", msg.Name)
 	m.appState.Group = msg.Name
@@ -672,7 +672,7 @@ func (m *ListModel) onGroupSelect(msg message.GroupSelect) tea.Cmd {
 	return tea.Sequence(cmds...)
 }
 
-func (m *ListModel) onFocusChanged() tea.Cmd {
+func (m *Model) onFocusChanged() tea.Cmd {
 	m.updateTitle()
 	m.updateKeyMap()
 
@@ -689,7 +689,7 @@ func (m *ListModel) onFocusChanged() tea.Cmd {
 	return nil
 }
 
-func (m *ListModel) onHostSSHConfigLoadWait(msg msgHostSSHConfigLoadWait) tea.Cmd {
+func (m *Model) onHostSSHConfigLoadWait(msg msgHostSSHConfigLoadWait) tea.Cmd {
 	// If for some reason we switch to another host while still were waiting for ssh config load, we must ignore this message.
 	// However, it looks like a completely synthetic situation, as there is not enough time for user to focus another host.
 	if msg.hostID != m.appState.Selected {
@@ -715,7 +715,7 @@ func (m *ListModel) onHostSSHConfigLoadWait(msg msgHostSSHConfigLoadWait) tea.Cm
 	return buildHostSSHConfigLoadWaitCmd(host, msg.processType, msg.attemptsLeft-1)
 }
 
-func (m *ListModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoadComplete) {
+func (m *Model) onHostSSHConfigLoaded(msg message.HostSSHConfigLoadComplete) {
 	for index, item := range m.Items() {
 		if hostListItem, ok := item.(ListItemHost); ok && hostListItem.ID == msg.HostID {
 			hostListItem.SSHHostConfig = &msg.Config
@@ -727,10 +727,10 @@ func (m *ListModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoadComplete)
 	}
 }
 
-func (m *ListModel) onToggleLayout() tea.Cmd {
+func (m *Model) onToggleLayout() tea.Cmd {
 	m.updateChildModel(msgToggleLayout{m.appState.ScreenLayout})
 	// When switch between screen layouts, it's required to update pagination.
-	// ListModel's updatePagination method is private and cannot be called from
+	// Model's updatePagination method is private and cannot be called from
 	// here. One of the ways to trigger it is to invoke model.SetSize method.
 	m.Model.SetSize(m.Width(), m.Height())
 	// Another hack - need to invoke inner model's private updateKeyBindings method
@@ -753,7 +753,7 @@ func (m *ListModel) onToggleLayout() tea.Cmd {
  * Helper methods.
  */
 
-func (m *ListModel) constructProcessCmd(processType constant.ProcessType) tea.Cmd {
+func (m *Model) constructProcessCmd(processType constant.ProcessType) tea.Cmd {
 	host, ok := m.findHost(m.appState.Selected)
 	if !ok {
 		m.logger.Error("[UI] Could not find host with ID='%d'", m.appState.Selected)
@@ -780,7 +780,7 @@ func (m *ListModel) constructProcessCmd(processType constant.ProcessType) tea.Cm
 	}
 }
 
-func (m *ListModel) findHost(id int) (hostModel.Host, bool) {
+func (m *Model) findHost(id int) (hostModel.Host, bool) {
 	// Do not use m.SelectedItem() here!
 	// list.Model keeps 2 collections - m.items and m.filteredItems, which can be inconsistent
 	// as a result in some hosts taken from m.filteredItems ssh config is nil.
@@ -792,7 +792,7 @@ func (m *ListModel) findHost(id int) (hostModel.Host, bool) {
 	return hostModel.Host{}, false
 }
 
-func (m *ListModel) updateTitle() {
+func (m *Model) updateTitle() {
 	if m.showingNotification {
 		// If notification is displayed, then we should not update the title.
 		return
@@ -823,7 +823,7 @@ func (m *ListModel) updateTitle() {
 	}
 }
 
-func (m *ListModel) prefixWithGroupName(title string) string {
+func (m *Model) prefixWithGroupName(title string) string {
 	if !utils.StringEmpty(&m.appState.Group) {
 		shortGroupName := utils.StringAbbreviation(m.appState.Group)
 		title = m.Styles.Title.Render(title)
@@ -859,12 +859,12 @@ func cmdSSHConnectPreview(h hostModel.Host) string {
 	return connectCmd
 }
 
-func (m *ListModel) updateKeyMap() {
+func (m *Model) updateKeyMap() {
 	keyMapState := m.keyMap.UpdateKeyVisibility(m.SelectedItem())
 	m.logger.Debug("[UI] Edit keyboard shortcuts: %v", keyMapState)
 }
 
-func (m *ListModel) selectHostByID(id int) tea.Cmd {
+func (m *Model) selectHostByID(id int) tea.Cmd {
 	// Use VisibleItems() instead of Items() because we need to find the correct index when deleting an item
 	// while in filter mode where part of the collection is hidden. You can replicate a wrong behavior when using Items():
 	// Enter filter mode, enter remove mode and then cancel it. The focus will be lost.
@@ -895,7 +895,7 @@ func hostComparator(a, b list.Item) int {
  * Deal with actions which require confirmation from the user.
  */
 
-func (m *ListModel) enterSSHCopyIDMode() tea.Cmd {
+func (m *Model) enterSSHCopyIDMode() tea.Cmd {
 	// Check if item is selected.
 	_, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
@@ -910,7 +910,7 @@ func (m *ListModel) enterSSHCopyIDMode() tea.Cmd {
 	return nil
 }
 
-func (m *ListModel) enterRemoveItemMode() tea.Cmd {
+func (m *Model) enterRemoveItemMode() tea.Cmd {
 	// Check if item is selected.
 	_, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
@@ -925,13 +925,13 @@ func (m *ListModel) enterRemoveItemMode() tea.Cmd {
 	return nil
 }
 
-func (m *ListModel) enterCloseAppMode() {
+func (m *Model) enterCloseAppMode() {
 	m.mode = modeCloseApp
 	m.logger.Debug("[UI] Enter %s mode. Ask user for confirmation.", m.mode)
 	m.updateTitle()
 }
 
-func (m *ListModel) handleKeyEventWhenModeEnabled(msg tea.KeyPressMsg) tea.Cmd {
+func (m *Model) handleKeyEventWhenModeEnabled(msg tea.KeyPressMsg) tea.Cmd {
 	if key.Matches(msg, m.keyMap.confirm) {
 		return m.confirmAction()
 	}
@@ -951,7 +951,7 @@ func (m *ListModel) handleKeyEventWhenModeEnabled(msg tea.KeyPressMsg) tea.Cmd {
 	return nil
 }
 
-func (m *ListModel) confirmAction() tea.Cmd {
+func (m *Model) confirmAction() tea.Cmd {
 	m.logger.Debug("[UI] Exit %s mode. Confirm action.", m.mode)
 
 	var cmd tea.Cmd
@@ -972,16 +972,16 @@ func (m *ListModel) confirmAction() tea.Cmd {
 	return cmd
 }
 
-func (m *ListModel) SetTitle(title string) {
+func (m *Model) SetTitle(title string) {
 	m.resetTitleStyle()
 	m.Title = title
 }
 
-func (m *ListModel) resetTitleStyle() {
+func (m *Model) resetTitleStyle() {
 	m.Styles.Title = m.styles.list.Title
 }
 
-func (m *ListModel) displayNotificationMsg(msg string) tea.Cmd {
+func (m *Model) displayNotificationMsg(msg string) tea.Cmd {
 	if utils.StringEmpty(&msg) {
 		return nil
 	}

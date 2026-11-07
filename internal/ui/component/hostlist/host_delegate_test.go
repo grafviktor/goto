@@ -103,7 +103,7 @@ func TestHostDelegate_Render(t *testing.T) {
 
 	for _, tc := range tests {
 		var buf bytes.Buffer
-		mockModel := newMockListModel(false)
+		mockModel := newMockModel(false)
 		// resize required, otherwise the model does not render anything
 		mockModel.Update(tea.WindowSizeMsg{Width: 100, Height: 100})
 		hostDelegate := NewHostDelegate(&tc.layout, &tc.appStateGroup, &mocklogger.Logger{})

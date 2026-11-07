@@ -17,7 +17,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	model := newMockGroupModel(false)
+	model := newMockModel(false)
 	require.True(t, model.FilteringEnabled())
 	// Quit app keys is disabled
 	require.False(t, model.KeyMap.Quit.Enabled())
@@ -26,7 +26,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestInit(t *testing.T) {
-	model := newMockGroupModel(false)
+	model := newMockModel(false)
 	var msgs []tea.Msg
 	testutils.CmdToMessage(model.Init(), &msgs)
 
@@ -35,7 +35,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	listModel := newMockGroupModel(false)
+	listModel := newMockModel(false)
 
 	// Can handle tea.WindowSizeMsg
 	require.Equal(t, 0, listModel.Height())
@@ -46,7 +46,7 @@ func TestUpdate(t *testing.T) {
 	require.Positive(t, listModel.Width())
 
 	// Loads hosts when the form is shown
-	listModel = newMockGroupModel(false)
+	listModel = newMockModel(false)
 	listModel.Update(message.ViewGroupListOpen{})
 
 	// Selected group is "no group"
@@ -55,7 +55,7 @@ func TestUpdate(t *testing.T) {
 
 func Test_handleKeyboardEvent(t *testing.T) {
 	t.Run("General keyboard event test", func(t *testing.T) {
-		listModel := newMockGroupModel(false)
+		listModel := newMockModel(false)
 		listModel.loadItems()
 
 		tests := []struct {
@@ -113,7 +113,7 @@ func Test_handleKeyboardEvent(t *testing.T) {
 		for testName, tt := range tests {
 			t.Run(testName, func(t *testing.T) {
 				// We mutate model state, so let's re-create it in every test.
-				listModel := newMockGroupModel(false)
+				listModel := newMockModel(false)
 				listModel.loadItems()
 
 				if tt.isFilterEnabled {
@@ -163,7 +163,7 @@ func Test_handleSelectGroup(t *testing.T) {
 		},
 	}
 
-	listModel := newMockGroupModel(false)
+	listModel := newMockModel(false)
 	listModel.loadItems()
 
 	for _, tt := range tests {
@@ -184,7 +184,7 @@ func Test_handleSelectGroup(t *testing.T) {
 func Test_handleEnterKey_WhenFiltering(t *testing.T) {
 	// When pressing Enter key while filtering, it should return nil cmd, as we do not want to select
 	// the first item in the list, but instead let user to select an item using Up/Down keys.
-	listModel := newMockGroupModel(false)
+	listModel := newMockModel(false)
 	listModel.loadItems()
 	// Put the list in filter mode
 	listModel.Update(tea.KeyPressMsg{Code: '/'})
@@ -197,7 +197,7 @@ func Test_handleEnterKey_WhenFiltering(t *testing.T) {
 func Test_handleEscapeKey(t *testing.T) {
 	// Test case 1: Press escape in filter mode
 	// Can handle Esc key
-	listModel := newMockGroupModel(false)
+	listModel := newMockModel(false)
 	listModel.loadItems()
 	// Put the list in filter mode
 	listModel.Update(tea.KeyPressMsg{Code: '/'})
@@ -218,7 +218,7 @@ func Test_handleEscapeKey(t *testing.T) {
 
 func TestLoadItems(t *testing.T) {
 	// Storage works fine
-	model := newMockGroupModel(false)
+	model := newMockModel(false)
 	model.loadItems()
 	require.Equal(t, noGroupSelected, model.Items()[0].(ListItemHostGroup).Title())
 	require.Len(t, model.Items(), 4) // 1 "No Group" item + 3 items from database
@@ -235,7 +235,7 @@ func TestLoadItems(t *testing.T) {
 	require.Equal(t, noGroupSelected, model.SelectedItem().(ListItemHostGroup).Title())
 
 	// Storage fails
-	model = newMockGroupModel(true)
+	model = newMockModel(true)
 	cmd := model.loadItems()
 	require.IsType(t, message.ErrorOccurred{}, cmd())
 	require.Empty(t, model.Items())
@@ -250,7 +250,7 @@ func Test_handleMouseMsg(t *testing.T) {
 
 	var model *Model
 	beforeEach := func() {
-		model = newMockGroupModel(false)
+		model = newMockModel(false)
 		model.loadItems()
 	}
 
@@ -279,7 +279,7 @@ func Test_handleMouseMsg(t *testing.T) {
 func Test_focusItem(t *testing.T) {
 	var model *Model
 	beforeEach := func() {
-		model = newMockGroupModel(false)
+		model = newMockModel(false)
 		model.SetHeight(10) // Required to display more than one item on the first page
 		model.loadItems()
 	}
@@ -327,8 +327,63 @@ func Test_focusItem(t *testing.T) {
 	})
 }
 
+// func (m *Model) handlePaginatorClick() {
+// 	if m.Paginator.TotalPages > 1 && m.Paginator.OnLastPage() {
+// 		for !m.Paginator.OnFirstPage() {
+// 			m.Paginator.PrevPage()
+// 		}
+// 	} else {
+// 		m.Paginator.NextPage()
+// 	}
+// 	m.logger.Debug("[UI] Click on paginator. Move to page: %d, total pages: %d.",
+// 		m.Paginator.Page+1, m.Paginator.TotalPages)
+// }
+
+func Test_handlePaginatorClick(t *testing.T) {
+	var model *Model
+	beforeEach := func() {
+		model = newMockModel(false)
+		model.SetHeight(15) // 15 rows is enough to display 4 items (3 from DB +  "~ all ~") on a single page.
+		model.loadItems()
+		model.waitForSecondClick = true
+	}
+
+	t.Run("If there is only a single page, then paginator click must be ignored", func(t *testing.T) {
+		beforeEach()
+		require.Equal(t, 1, model.Paginator.TotalPages)
+		model.handlePaginatorClick()
+		// Model must not reset click flag, when paginator click is ignored.
+		require.True(t, model.waitForSecondClick)
+		// Because there is only a single page, we're on first and last page at the same time.
+		require.True(t, model.Paginator.OnFirstPage())
+	})
+
+	t.Run("Must go to next page if there is more than one page", func(t *testing.T) {
+		beforeEach()
+		model.SetHeight(8) // Decrease model height, it will give us 2 pages
+		require.Equal(t, 2, model.Paginator.TotalPages)
+		model.handlePaginatorClick()
+		// Model must reset click flag, when move to the next page.
+		require.False(t, model.waitForSecondClick)
+		// Because there is only a single page, we're on first and last page at the same time.
+		require.False(t, model.Paginator.OnFirstPage())
+	})
+
+	t.Run("Must go to the first page when on last page and someone clicks on paginator", func(t *testing.T) {
+		beforeEach()
+		model.SetHeight(8) // Decrease model height, it will give us 2 pages
+		require.Equal(t, 2, model.Paginator.TotalPages)
+		model.handlePaginatorClick()
+		require.True(t, model.Paginator.OnLastPage()) // Now we're on the last page.
+
+		model.handlePaginatorClick() // Click one again
+		require.False(t, model.waitForSecondClick)
+		require.True(t, model.Paginator.OnFirstPage()) // And ensure that we're on the first page.
+	})
+}
+
 func Test_itemAt(t *testing.T) {
-	model := newMockGroupModel(false)
+	model := newMockModel(false)
 	model.SetHeight(15) // Required to display more than one item on the first page
 	model.loadItems()
 
@@ -372,7 +427,7 @@ func Test_itemAt(t *testing.T) {
 // ============== utility methods ===============
 // ==============================================
 
-func newMockGroupModel(storageShouldFail bool) *Model {
+func newMockModel(storageShouldFail bool) *Model {
 	mockState := state.State{Selected: 1}
 	storage := testutils.NewMockStorage(storageShouldFail)
 	return New(context.TODO(), storage, &mockState, &mocklogger.Logger{})
