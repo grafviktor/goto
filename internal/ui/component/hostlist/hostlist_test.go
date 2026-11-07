@@ -1162,28 +1162,6 @@ func Test_handleMouseMsg(t *testing.T) {
 	})
 }
 
-// func (m *ListModel) focusItem(atPosition int) tea.Cmd {
-// 	if m.paginatorRowPosition() == atPosition {
-// 		return m.handlePaginatorClick()
-// 	}
-
-// 	index := m.itemAt(atPosition)
-// 	if index < 0 {
-// 		return nil
-// 	}
-
-// 	if index == m.Index() && m.waitForSecondClick {
-// 		m.waitForSecondClick = false
-// 		return m.constructProcessCmd(constant.ProcessTypeSSHConnect)
-// 	}
-
-// 	m.Select(index)
-// 	m.waitForSecondClick = true
-// 	return tea.Batch(m.onFocusChanged(), tea.Tick(timeToWaitForSecondClick, func(_ time.Time) tea.Msg {
-// 		return msgSecondClickTimeOut{}
-// 	}))
-// }
-
 func Test_focusItem(t *testing.T) {
 	var model *ListModel
 	itemHeight := 3
@@ -1194,8 +1172,8 @@ func Test_focusItem(t *testing.T) {
 	}
 
 	t.Run("Click on paginator", func(t *testing.T) {
-		t.Skip("In progress")
 		beforeEach()
+		model.SetHeight(5) // Decrease list height to simulate more than one page.
 		paginatorPosition := model.paginatorRowPosition()
 
 		cmd := model.focusItem(paginatorPosition)
@@ -1242,6 +1220,78 @@ func Test_focusItem(t *testing.T) {
 
 		cmd := model.focusItem(5)
 		require.IsType(t, message.RunProcessSSHConnect{}, cmd())
+	})
+}
+
+func Test_itemAt(t *testing.T) {
+	var model *ListModel
+	beforeEach := func() {
+		model = newMockListModel(false)
+		model.SetHeight(15) // Required to display more than one item on the first page.
+	}
+
+	// Header offset is 4. The list has 3 items loaded from the database. In compact mode, each item has a height of 1.
+	// Therefore, the host range is from 5 to 7. If click is below 5, it should return -1. If click is above 7, it should also return -1.
+	t.Run("In compact mode", func(t *testing.T) {
+		t.Run("Click above the first item must return negative index", func(t *testing.T) {
+			beforeEach()
+			model.onToggleLayout()
+			require.Equal(t, constant.ScreenLayoutCompact, model.appState.ScreenLayout)
+			index := model.itemAt(4)
+			require.Equal(t, -1, index)
+		})
+
+		t.Run("Click on the first item must return index 0", func(t *testing.T) {
+			beforeEach()
+			model.onToggleLayout()
+			require.Equal(t, constant.ScreenLayoutCompact, model.appState.ScreenLayout)
+			index := model.itemAt(5)
+			require.Equal(t, 0, index)
+		})
+
+		t.Run("Click on the second item must return index 1", func(t *testing.T) {
+			beforeEach()
+			model.onToggleLayout()
+			require.Equal(t, constant.ScreenLayoutCompact, model.appState.ScreenLayout)
+			index := model.itemAt(6)
+			require.Equal(t, 1, index)
+		})
+
+		t.Run("Click below the last item must return negative index", func(t *testing.T) {
+			beforeEach()
+			model.onToggleLayout()
+			require.Equal(t, constant.ScreenLayoutCompact, model.appState.ScreenLayout)
+			index := model.itemAt(8)
+			require.Equal(t, -1, index)
+		})
+	})
+
+	// Header offset is 4. The list has 3 items loaded from the database. In default mode, each item has a height of 3.
+	// Therefore, the host range is from 5 to 13. If click is below 5, it should return -1. If click is above 13, it should also return -1.
+	t.Run("In default mode", func(t *testing.T) {
+		t.Run("Click above the first item must return negative index", func(t *testing.T) {
+			beforeEach()
+			index := model.itemAt(4)
+			require.Equal(t, -1, index)
+		})
+
+		t.Run("Click on the first item must return index 0", func(t *testing.T) {
+			beforeEach()
+			index := model.itemAt(5)
+			require.Equal(t, 0, index)
+		})
+
+		t.Run("Click on the second item must return index 1", func(t *testing.T) {
+			beforeEach()
+			index := model.itemAt(8)
+			require.Equal(t, 1, index)
+		})
+
+		t.Run("Click below the last item must return negative index", func(t *testing.T) {
+			beforeEach()
+			index := model.itemAt(14)
+			require.Equal(t, -1, index)
+		})
 	})
 }
 

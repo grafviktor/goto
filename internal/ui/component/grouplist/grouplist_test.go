@@ -284,6 +284,16 @@ func Test_focusItem(t *testing.T) {
 		model.loadItems()
 	}
 
+	t.Run("Click on paginator", func(t *testing.T) {
+		beforeEach()
+		model.SetHeight(5) // Decrease list height to simulate more than one page.
+		paginatorPosition := model.paginatorRowPosition()
+		require.True(t, model.Paginator.OnFirstPage())
+		model.focusItem(paginatorPosition)
+		// We no longer on the first page after clicking on paginator.
+		require.False(t, model.Paginator.OnFirstPage())
+	})
+
 	t.Run("Click above the first item must be ignored", func(t *testing.T) {
 		beforeEach()
 		cmd := model.focusItem(4) // Click above the first item, assuming header height is 4.
@@ -317,40 +327,45 @@ func Test_focusItem(t *testing.T) {
 	})
 }
 
-// func (m *ListModel) itemAt(positionY int) int {
-//         // Find top panel height.
-//         listTop := m.styles.componentMargins.GetMarginTop()
-//         // There is no direct way to get height of the title, that's why we
-//         // simulate what render does and calculate its height manually.
-//         listTop += lipgloss.Height(m.Styles.TitleBar.Render(m.Styles.Title.Render(m.Title)))
-//         if m.ShowStatusBar() {
-//                 // Need to render at least one letter to get real height.
-//                 listTop += lipgloss.Height(m.Styles.StatusBar.Render("x"))
-//         }
-
-//         // terminalRow is just the position relative to the list start, excluding top sections.
-//         terminalRow := positionY - listTop
-//         if terminalRow < 0 {
-//                 return -1
-//         }
-
-//         // List item height depends on the current screen layout.
-//         listItemHeight := 3
-//         if m.appState.ScreenLayout == constant.ScreenLayoutCompact {
-//                 listItemHeight = 1
-//         }
-
-//         local := terminalRow / listItemHeight
-//         start, end := m.Paginator.GetSliceBounds(len(m.VisibleItems()))
-//         index := start + local
-//         if index >= end {
-//                 return -1
-//         }
-//         return index
-// }
-
 func Test_itemAt(t *testing.T) {
-	t.Skip("In progress")
+	model := newMockGroupModel(false)
+	model.SetHeight(15) // Required to display more than one item on the first page
+	model.loadItems()
+
+	// Header offset is 4. The list has FOUR items: "~ all ~" plus 3 from the database,
+	// so a click at Y=9 is the first row below the last item.
+	tests := []struct {
+		name           string
+		mousePositionY int
+		want           int
+	}{
+		{
+			name:           "Click above the first item must return negative index",
+			mousePositionY: 4,
+			want:           -1,
+		},
+		{
+			name:           "Click on the first item must return index 0",
+			mousePositionY: 5,
+			want:           0,
+		},
+		{
+			name:           "Click on the second item must return index 1",
+			mousePositionY: 6,
+			want:           1,
+		},
+		{
+			name:           "Click below the last item must return negative index",
+			mousePositionY: 9,
+			want:           -1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, model.itemAt(tt.mousePositionY))
+		})
+	}
 }
 
 // ==============================================

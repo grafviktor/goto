@@ -348,21 +348,24 @@ func (m *ListModel) handlePaginatorClick() tea.Cmd {
 		}
 	}
 
+	m.logger.Debug("[UI] Click on paginator. Move to page: %d, total pages: %d.",
+		m.Paginator.Page+1, m.Paginator.TotalPages)
 	return m.onFocusChanged()
 }
 
 func (m *ListModel) itemAt(mousePositionY int) int {
-	topSectionsHeight := m.styles.componentMargins.GetMarginTop()
+	topOffset := m.styles.componentMargins.GetMarginTop()
 	// There is no direct way to get height of the title, that's why we
 	// simulate what render does and calculate its height manually.
-	topSectionsHeight += lipgloss.Height(m.Styles.TitleBar.Render(m.Styles.Title.Render(m.Title)))
+	topOffset += lipgloss.Height(m.Styles.TitleBar.Render(m.Styles.Title.Render(m.Title)))
 	if m.ShowStatusBar() {
 		// Need to render at least one letter to get real height.
-		topSectionsHeight += lipgloss.Height(m.Styles.StatusBar.Render("x"))
+		topOffset += lipgloss.Height(m.Styles.StatusBar.Render("x"))
 	}
 
-	// mousePositionInList is just the position relative to the list start, excluding top sections.
-	mousePositionInList := mousePositionY - topSectionsHeight
+	// mousePositionInList is just the position relative to the list start, excluding top offset.
+	// offSet is where the first item starts.
+	mousePositionInList := mousePositionY - topOffset
 	if mousePositionInList < 0 {
 		return -1
 	}
