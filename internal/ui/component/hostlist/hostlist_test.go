@@ -1341,6 +1341,61 @@ func Test_itemAt(t *testing.T) {
 	})
 }
 
+// func (m *Model) onHostSSHConfigLoadWait(msg msgHostSSHConfigLoadWait) tea.Cmd {
+// 	// If for some reason we switch to another host while still were waiting for ssh config load, we must ignore this message.
+// 	// However, it looks like a completely synthetic situation, as there is not enough time for user to focus another host.
+// 	if msg.hostID != m.appState.Selected {
+// 		m.logger.Debug("[UI] Ignore SSH config wait for host id %d. Focus stays on host id %d.",
+// 			msg.hostID, m.appState.Selected)
+// 		return nil
+// 	}
+
+// 	host, _ := m.findHost(msg.hostID)
+// 	if host.SSHHostConfig != nil {
+// 		m.logger.Debug("[UI] SSH config for host id %d is ready. Continue %q.", host.ID, msg.processType)
+// 		return m.constructProcessCmd(msg.processType)
+// 	}
+
+// 	if msg.attemptsLeft <= 0 {
+// 		errorText := fmt.Sprintf("[UI] SSH config is not set for host ID='%d', Title=%q", host.ID, host.Title)
+// 		m.logger.Error(errorText)
+// 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(errorText)})
+// 	}
+
+// 	m.logger.Debug("[UI] SSH config for host id %d is still missing. Retry with %d attempt(s) left.",
+// 		host.ID, msg.attemptsLeft-1)
+// 	return buildHostSSHConfigLoadWaitCmd(host, msg.processType, msg.attemptsLeft-1)
+// }
+
+func Test_onHostSSHConfigLoadWait(t *testing.T) {
+	var model *Model
+	beforeEach := func() {
+		model = newMockModel(false)
+		model.SetHeight(15) // Required to display more than one item on the first page.
+	}
+
+	msg := msgHostSSHConfigLoadWait{
+		hostID:       1,
+		processType:  constant.ProcessTypeSSHLoadConfig,
+		attemptsLeft: 3,
+	}
+
+	t.Run("If host changed since we started to fetch SSH config, then we must ignore this message", func(t *testing.T) {
+		beforeEach()
+		model.appState.Selected = 2 // Change selected host to another one
+		cmd := model.onHostSSHConfigLoadWait(msg)
+		require.Nil(t, cmd)
+	})
+
+	t.Run("If SSH config is ready, then we must continue the process", func(t *testing.T) {
+		t.Skip("In progress")
+		beforeEach()
+		model.appState.Selected = 1 // Keep the same selected host
+		cmd := model.onHostSSHConfigLoadWait(msg)
+		require.IsType(t, "", cmd())
+	})
+}
+
 // ==============================================
 // ============== utility methods ===============
 // ==============================================

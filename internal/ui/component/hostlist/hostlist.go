@@ -756,14 +756,14 @@ func (m *Model) onToggleLayout() tea.Cmd {
 func (m *Model) constructProcessCmd(processType constant.ProcessType) tea.Cmd {
 	host, ok := m.findHost(m.appState.Selected)
 	if !ok {
-		m.logger.Error("[UI] Could not find host with ID='%d'", m.appState.Selected)
+		m.logger.Error("[UI] Could not find host with id %d", m.appState.Selected)
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedErrMsg)})
 	}
 
 	// If ssh config is not yet loaded, let't give it some time. It's probably an overkill,
 	// but we assume that user either moves focus and hit Enter really fast or double-clicks.
 	if host.SSHHostConfig == nil {
-		m.logger.Warn("[UI] SSH config is not yet loaded for host with ID='%d'", m.appState.Selected)
+		m.logger.Warn("[UI] SSH config is not yet loaded for host id %d", m.appState.Selected)
 		return buildHostSSHConfigLoadWaitCmd(host, processType, sshConfigLoadRetryCount)
 	}
 
