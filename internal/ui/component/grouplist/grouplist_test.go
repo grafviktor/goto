@@ -327,18 +327,6 @@ func Test_focusItem(t *testing.T) {
 	})
 }
 
-// func (m *Model) handlePaginatorClick() {
-// 	if m.Paginator.TotalPages > 1 && m.Paginator.OnLastPage() {
-// 		for !m.Paginator.OnFirstPage() {
-// 			m.Paginator.PrevPage()
-// 		}
-// 	} else {
-// 		m.Paginator.NextPage()
-// 	}
-// 	m.logger.Debug("[UI] Click on paginator. Move to page: %d, total pages: %d.",
-// 		m.Paginator.Page+1, m.Paginator.TotalPages)
-// }
-
 func Test_handlePaginatorClick(t *testing.T) {
 	var model *Model
 	beforeEach := func() {

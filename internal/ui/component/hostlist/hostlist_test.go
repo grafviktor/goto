@@ -1369,15 +1369,20 @@ func Test_itemAt(t *testing.T) {
 
 func Test_onHostSSHConfigLoadWait(t *testing.T) {
 	var model *Model
+	var msg msgHostSSHConfigLoadWait
+	var storage *testutils.MockStorage
 	beforeEach := func() {
-		model = newMockModel(false)
-		model.SetHeight(15) // Required to display more than one item on the first page.
-	}
+		storage = testutils.NewMockStorage(false)
 
-	msg := msgHostSSHConfigLoadWait{
-		hostID:       1,
-		processType:  constant.ProcessTypeSSHLoadConfig,
-		attemptsLeft: 3,
+		model = newMockModel(false)
+		model.repo = storage
+		model.SetHeight(15) // Required to display more than one item on the first page.
+
+		msg = msgHostSSHConfigLoadWait{
+			hostID:       1,
+			processType:  constant.ProcessTypeSSHConnect,
+			attemptsLeft: 3,
+		}
 	}
 
 	t.Run("If host changed since we started to fetch SSH config, then we must ignore this message", func(t *testing.T) {
@@ -1388,11 +1393,19 @@ func Test_onHostSSHConfigLoadWait(t *testing.T) {
 	})
 
 	t.Run("If SSH config is ready, then we must continue the process", func(t *testing.T) {
-		t.Skip("In progress")
 		beforeEach()
 		model.appState.Selected = 1 // Keep the same selected host
 		cmd := model.onHostSSHConfigLoadWait(msg)
-		require.IsType(t, "", cmd())
+		require.IsType(t, message.RunProcessSSHConnect{}, cmd())
+	})
+
+	t.Run("If there are no attempts left, must return the error", func(t *testing.T) {
+		t.Skip("In progress")
+		beforeEach()
+		msg.attemptsLeft = 0
+		storage.Hosts[1].SSHHostConfig = nil
+		cmd := model.onHostSSHConfigLoadWait(msg)
+		require.IsType(t, message.ErrorOccurred{}, cmd())
 	})
 }
 
