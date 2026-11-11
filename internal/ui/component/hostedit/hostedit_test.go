@@ -446,17 +446,17 @@ func TestUpdate_handleMouseMsg(t *testing.T) {
 
 	t.Run("Should ignore right mouse button click", func(t *testing.T) {
 		beforeEach()
-		require.True(t, model.viewport.TotalLineCount() == 0)
+		require.Equal(t, 0, model.viewport.TotalLineCount())
 		_, _ = model.Update(tea.MouseClickMsg{Button: tea.MouseRight})
-		require.True(t, model.viewport.TotalLineCount() > 0)
+		require.Positive(t, model.viewport.TotalLineCount())
 		require.Contains(t, logger.Logs, "[UI] Ignore the right mouse button.")
 	})
 
 	t.Run("Should handle left mouse button click", func(t *testing.T) {
 		beforeEach()
-		require.True(t, model.viewport.TotalLineCount() == 0)
+		require.Equal(t, 0, model.viewport.TotalLineCount())
 		_, _ = model.Update(tea.MouseClickMsg{Button: tea.MouseLeft})
-		require.True(t, model.viewport.TotalLineCount() > 0)
+		require.Positive(t, model.viewport.TotalLineCount())
 		require.Contains(t, logger.Logs, "[UI] Mouse click keeps the current input focused.")
 	})
 }
