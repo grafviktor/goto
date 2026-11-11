@@ -480,6 +480,57 @@ func Test_focusItem(t *testing.T) {
 	})
 }
 
+// func (m *EditModel) itemAt(mousePositionY int) int {
+// 	topOffset := lipgloss.Height(m.headerView())
+// 	// View layout is: header + "\n" + viewport + "\n" + help
+// 	mousePositionInList := mousePositionY - topOffset - 1
+// 	if mousePositionInList < 0 || mousePositionInList >= m.viewport.Height() {
+// 		return -1
+// 	}
+
+// 	listItemHeight := lipgloss.Height(m.inputsView()) / len(m.inputs)
+// 	// There is no pager, like in other list components, so we need to calculate the offset.
+// 	// Its't not zero when the window is small and unable to display all input fields at once.
+// 	scrollOffset := m.viewport.YOffset()
+// 	visibleItemIndex := (mousePositionInList + scrollOffset) / listItemHeight
+// 	if visibleItemIndex < 0 || visibleItemIndex >= len(m.inputs) || !m.inputs[visibleItemIndex].Enabled() {
+// 		return -1
+// 	}
+
+// 	return visibleItemIndex
+// }
+
+func Test_itemAt(t *testing.T) {
+	var logger *mocklogger.Logger
+	var model *EditModel
+
+	beforeEach := func() {
+		logger = &mocklogger.Logger{}
+		model = New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), logger)
+		model.viewport.SetHeight(10)
+	}
+
+	t.Run("If mouse click is outside of any of the inputs, should return -1", func(t *testing.T) {
+		beforeEach()
+		index := model.itemAt(0)
+		require.Equal(t, -1, index)
+
+		index = model.itemAt(15)
+		require.Equal(t, -1, index)
+	})
+
+	t.Run("If mouse click lands on a disabled input, should return -1", func(t *testing.T) {
+		beforeEach()
+		index := model.itemAt(10)
+		require.Equal(t, 2, index)
+
+		model.inputs[index].SetEnabled(false)
+
+		index = model.itemAt(10)
+		require.Equal(t, -1, index)
+	})
+}
+
 // ==============================================
 // ============== utility methods ===============
 // ==============================================

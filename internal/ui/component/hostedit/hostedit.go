@@ -474,25 +474,24 @@ func (m *EditModel) focusItem(msg tea.MouseClickMsg) tea.Cmd {
 	return m.applyFocus()
 }
 
-func (m *EditModel) itemAt(positionY int) int {
-	headerHeight := lipgloss.Height(m.headerView())
+func (m *EditModel) itemAt(mousePositionY int) int {
+	topOffset := lipgloss.Height(m.headerView())
 	// View layout is: header + "\n" + viewport + "\n" + help
-	rowInViewport := positionY - headerHeight - 1
-	if rowInViewport < 0 || rowInViewport >= m.viewport.Height() {
+	mousePositionInList := mousePositionY - topOffset - 1
+	if mousePositionInList < 0 || mousePositionInList >= m.viewport.Height() {
 		return -1
 	}
 
-	inputHeight := lipgloss.Height(m.inputsView()) / len(m.inputs)
-	if inputHeight <= 0 {
+	listItemHeight := lipgloss.Height(m.inputsView()) / len(m.inputs)
+	// There is no pager, like in other list components, so we need to calculate the offset.
+	// Its't not zero when the window is small and unable to display all input fields at once.
+	scrollOffset := m.viewport.YOffset()
+	visibleItemIndex := (mousePositionInList + scrollOffset) / listItemHeight
+	if visibleItemIndex < 0 || visibleItemIndex >= len(m.inputs) || !m.inputs[visibleItemIndex].Enabled() {
 		return -1
 	}
 
-	index := (rowInViewport + m.viewport.YOffset()) / inputHeight
-	if index < 0 || index >= len(m.inputs) || !m.inputs[index].Enabled() {
-		return -1
-	}
-
-	return index
+	return visibleItemIndex
 }
 
 func (m *EditModel) inputFocusChange(msg tea.Msg) tea.Cmd {
