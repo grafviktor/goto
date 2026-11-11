@@ -219,7 +219,6 @@ func (m *EditModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		// This message never comes through automatically on Windows OS, we send it from init_win.go.
 		m.updateViewPort(msg)
 	case tea.KeyPressMsg:
 		cmd = m.handleKeyboardEvent(msg)
@@ -476,10 +475,6 @@ func (m *EditModel) focusItem(msg tea.MouseClickMsg) tea.Cmd {
 }
 
 func (m *EditModel) itemAt(positionY int) int {
-	if len(m.inputs) == 0 {
-		return -1
-	}
-
 	headerHeight := lipgloss.Height(m.headerView())
 	// View layout is: header + "\n" + viewport + "\n" + help
 	rowInViewport := positionY - headerHeight - 1
