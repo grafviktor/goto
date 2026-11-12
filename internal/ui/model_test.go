@@ -593,7 +593,7 @@ func Test_updateViews(t *testing.T) {
 			beforeEach()
 
 			model.appState.CurrentView = tt.view
-			model.updateViews(tt.msg)
+			model.handleNonInputEvent(tt.msg)
 
 			require.Equal(t, tt.hostList, model.modelHostList.View().Content)
 			require.Equal(t, tt.groupList, model.modelGroupList.View().Content)

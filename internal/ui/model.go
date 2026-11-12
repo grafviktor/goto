@@ -80,8 +80,8 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
-	case tea.KeyPressMsg:
-		return m.handleKeyEvent(msg)
+	case tea.KeyPressMsg, tea.MouseMsg:
+		return m.handleInputEvent(msg)
 	case tea.WindowSizeMsg:
 		m.logger.Debug("[UI] Set terminal window size: %d %d", msg.Width, msg.Height)
 		m.appState.Width = msg.Width
@@ -133,7 +133,7 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	viewCmds := m.updateViews(msg)
+	viewCmds := m.handleNonInputEvent(msg)
 	cmds = append(cmds, viewCmds)
 	return m, tea.Batch(cmds...)
 }
@@ -166,14 +166,15 @@ func (m *MainModel) View() tea.View {
 	return view
 }
 
-func (m *MainModel) handleKeyEvent(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+func (m *MainModel) handleInputEvent(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Never log keystrokes while an SSH session is open.
 	if m.appState.CurrentView != state.ViewSSHSession {
-		m.logger.Debug("[UI] Keyboard event: '%v'", msg)
-
-		if msg.String() == "ctrl+c" {
-			m.logger.Debug("[UI] Receive Ctrl+C. Quit the application")
-			return m, tea.Quit
+		if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
+			m.logger.Debug("[UI] Keyboard event: '%v'", msg)
+			if keyMsg.String() == "ctrl+c" {
+				m.logger.Debug("[UI] Receive Ctrl+C. Quit the application")
+				return m, tea.Quit
+			}
 		}
 	}
 
@@ -202,21 +203,15 @@ func (m *MainModel) handleKeyEvent(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *MainModel) updateViews(msg tea.Msg) tea.Cmd {
+func (m *MainModel) handleNonInputEvent(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
-	switch {
-	case m.appState.CurrentView == state.ViewHostList && isInputEvent(msg):
-		m.modelHostList, cmd = m.modelHostList.Update(msg)
-		cmds = append(cmds, cmd)
-	case m.appState.CurrentView == state.ViewGroupList && isInputEvent(msg):
-		m.modelGroupList, cmd = m.modelGroupList.Update(msg)
-		cmds = append(cmds, cmd)
-	case m.appState.CurrentView == state.ViewEditItem:
+	switch m.appState.CurrentView {
+	case state.ViewEditItem:
 		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
 		cmds = append(cmds, cmd)
-	case m.appState.CurrentView == state.ViewSSHSession:
+	case state.ViewSSHSession:
 		m.modelSSHSession, cmd = m.modelSSHSession.Update(msg)
 		cmds = append(cmds, cmd)
 	}
