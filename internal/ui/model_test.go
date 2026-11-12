@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"reflect"
 	"runtime"
@@ -26,7 +27,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	model := newMockModel()
 	require.NotNil(t, model)
 	cmd := model.Init()
 	var msgs []tea.Msg
@@ -47,7 +48,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestUpdate_GroupListLoadComplete(t *testing.T) {
-	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	model := newMockModel()
 
 	updated, _ := model.Update(message.GroupListLoadComplete{GroupCount: 0})
 	require.Equal(t, state.ViewHostList, updated.(*MainModel).appState.CurrentView)
@@ -69,7 +70,7 @@ func TestUpdate_KeyMsg(t *testing.T) {
 }
 
 func TestUpdate_WindowSizeMsg(t *testing.T) {
-	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	model := newMockModel()
 	require.Zero(t, model.appState.Width)
 	require.Zero(t, model.appState.Height)
 	require.False(t, model.ready)
@@ -350,7 +351,7 @@ func TestDispatchProcessSSHCopyID(t *testing.T) {
 }
 
 func TestUpdate_RunProcessErrorOccurred(t *testing.T) {
-	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	model := newMockModel()
 	msg := message.RunProcessErrorOccurred{
 		ProcessType: constant.ProcessTypeSSHCopyID,
 		StdOut:      "mock out message",
@@ -363,7 +364,7 @@ func TestUpdate_RunProcessErrorOccurred(t *testing.T) {
 }
 
 func TestUpdate_ExitWithError(t *testing.T) {
-	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	model := newMockModel()
 	msg := message.ExitWithError{
 		Err: errors.New("mock error message"),
 	}
@@ -375,7 +376,7 @@ func TestUpdate_ExitWithError(t *testing.T) {
 }
 
 func Test_handleKeyEvent(t *testing.T) {
-	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	model := newMockModel()
 	model.viewMessageContent = "some output of the process which just has finished"
 	model.appState.CurrentView = state.ViewMessage
 	model.Update(tea.KeyPressMsg{})
@@ -417,7 +418,7 @@ func Test_handleKeyEvent_CtrlC(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+			model := newMockModel()
 			model.appState.CurrentView = tt.currentView
 			model.modelSSHSession = childModel
 			_, cmd := model.Update(ctrlC)
@@ -441,7 +442,7 @@ func Test_view(t *testing.T) {
 		}
 	}
 
-	m := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	m := newMockModel()
 	// There will be no output without setting proper size of the viewport.
 	m.viewport = viewport.New(viewport.WithHeight(1))
 	m.modelGroupList = fakeModelFactory("mock group list")
@@ -491,10 +492,83 @@ func Test_view(t *testing.T) {
 	}
 }
 
-// ---------------------------------
+/*
+func (m *MainModel) updateViews(msg tea.Msg) tea.Cmd {
+	var cmd tea.Cmd
+	var cmds []tea.Cmd
+
+	// TODO: Create a dedicated test for updateViews.
+	switch {
+	case m.appState.CurrentView == state.ViewHostList && isInputEvent(msg):
+		m.modelHostList, cmd = m.modelHostList.Update(msg)
+		cmds = append(cmds, cmd)
+	case m.appState.CurrentView == state.ViewGroupList && isInputEvent(msg):
+		m.modelGroupList, cmd = m.modelGroupList.Update(msg)
+		cmds = append(cmds, cmd)
+	case m.appState.CurrentView == state.ViewEditItem:
+		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
+		cmds = append(cmds, cmd)
+	case m.appState.CurrentView == state.ViewSSHSession:
+		m.modelSSHSession, cmd = m.modelSSHSession.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+
+	if !isInputEvent(msg) {
+		// Why does the app unconditionally forwards messages to these 2 components?
+		// At first, because this is an example of a bad design. Other arguments are:
+		// * Both components need to track window size messages, so when we switch between them, they already have the correct size.
+		// * GroupSelect message comes from groupList component and updates hosts hostList component in the background.
+		// * The same is true for HostCreate and HostUpdate messages which comes from hostEdit.
+		// * HostSSHConfigLoadComplete message comes from external process and updates hostList item in the background.
+		m.modelHostList, cmd = m.modelHostList.Update(msg)
+		cmds = append(cmds, cmd)
+		m.modelGroupList, cmd = m.modelGroupList.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+
+	return tea.Batch(cmds...)
+}
+*/
+
+// Input events: tea.KeyPressMsg, tea.MouseMsg
+
+func Test_updateViews(t *testing.T) {
+	t.Skip("In progress")
+	fakeModelFactory := func(modelName string) tea.Model {
+		var content string
+		return modelFunc{
+			init: func() tea.Cmd { return nil },
+			update: func(_ tea.Msg) (tea.Model, tea.Cmd) {
+				content = modelName
+				return nil, nil
+			},
+			view: func() tea.View {
+				return tea.NewView(fmt.Sprintf("%s %s", modelName, content))
+			},
+		}
+	}
+
+	model := newMockModel()
+	model.modelGroupList = fakeModelFactory("groupList")
+	model.modelHostList = fakeModelFactory("hostList")
+	model.modelHostEdit = fakeModelFactory("hostEdit")
+	model.modelSSHSession = fakeModelFactory("sshSession")
+
+	model.appState.CurrentView = state.ViewGroupList
+	model.updateViews(tea.KeyPressMsg{Text: "groupList"})
+	require.Equal(t, "groupList groupList", model.modelGroupList.View())
+}
+
+// ==============================================
+// ============== utility methods ===============
+// ==============================================
 
 func MockAppState() *state.State {
 	return &state.State{}
+}
+
+func newMockModel() MainModel {
+	return New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
 }
 
 type modelFunc struct {
