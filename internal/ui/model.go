@@ -216,29 +216,18 @@ func (m *MainModel) handleNonInputEvent(msg tea.Msg) tea.Cmd {
 		cmds = append(cmds, cmd)
 	}
 
-	if !isInputEvent(msg) {
-		// Why does the app unconditionally forwards messages to these 2 components?
-		// At first, because this is an example of a bad design. Other arguments are:
-		// * Both components need to track window size messages, so when we switch between them, they already have the correct size.
-		// * GroupSelect message comes from groupList component and updates hosts hostList component in the background.
-		// * The same is true for HostCreate and HostUpdate messages which comes from hostEdit.
-		// * HostSSHConfigLoadComplete message comes from external process and updates hostList item in the background.
-		m.modelHostList, cmd = m.modelHostList.Update(msg)
-		cmds = append(cmds, cmd)
-		m.modelGroupList, cmd = m.modelGroupList.Update(msg)
-		cmds = append(cmds, cmd)
-	}
+	// Why does the app unconditionally forwards messages to these 2 components?
+	// At first, because this is an example of a bad design. Other arguments are:
+	// * Both components need to track window size messages, so when we switch between them, they already have the correct size.
+	// * GroupSelect message comes from groupList component and updates hosts hostList component in the background.
+	// * The same is true for HostCreate and HostUpdate messages which comes from hostEdit.
+	// * HostSSHConfigLoadComplete message comes from external process and updates hostList item in the background.
+	m.modelHostList, cmd = m.modelHostList.Update(msg)
+	cmds = append(cmds, cmd)
+	m.modelGroupList, cmd = m.modelGroupList.Update(msg)
+	cmds = append(cmds, cmd)
 
 	return tea.Batch(cmds...)
-}
-
-func isInputEvent(msg tea.Msg) bool {
-	switch msg.(type) {
-	case tea.KeyPressMsg, tea.MouseMsg:
-		return true
-	default:
-		return false
-	}
 }
 
 func (m *MainModel) updateViewPort(w, h int) tea.Model {
