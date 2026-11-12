@@ -3,7 +3,6 @@ package ui
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"reflect"
 	"runtime"
@@ -492,71 +491,116 @@ func Test_view(t *testing.T) {
 	}
 }
 
-/*
-func (m *MainModel) updateViews(msg tea.Msg) tea.Cmd {
-	var cmd tea.Cmd
-	var cmds []tea.Cmd
-
-	// TODO: Create a dedicated test for updateViews.
-	switch {
-	case m.appState.CurrentView == state.ViewHostList && isInputEvent(msg):
-		m.modelHostList, cmd = m.modelHostList.Update(msg)
-		cmds = append(cmds, cmd)
-	case m.appState.CurrentView == state.ViewGroupList && isInputEvent(msg):
-		m.modelGroupList, cmd = m.modelGroupList.Update(msg)
-		cmds = append(cmds, cmd)
-	case m.appState.CurrentView == state.ViewEditItem:
-		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
-		cmds = append(cmds, cmd)
-	case m.appState.CurrentView == state.ViewSSHSession:
-		m.modelSSHSession, cmd = m.modelSSHSession.Update(msg)
-		cmds = append(cmds, cmd)
-	}
-
-	if !isInputEvent(msg) {
-		// Why does the app unconditionally forwards messages to these 2 components?
-		// At first, because this is an example of a bad design. Other arguments are:
-		// * Both components need to track window size messages, so when we switch between them, they already have the correct size.
-		// * GroupSelect message comes from groupList component and updates hosts hostList component in the background.
-		// * The same is true for HostCreate and HostUpdate messages which comes from hostEdit.
-		// * HostSSHConfigLoadComplete message comes from external process and updates hostList item in the background.
-		m.modelHostList, cmd = m.modelHostList.Update(msg)
-		cmds = append(cmds, cmd)
-		m.modelGroupList, cmd = m.modelGroupList.Update(msg)
-		cmds = append(cmds, cmd)
-	}
-
-	return tea.Batch(cmds...)
-}
-*/
-
-// Input events: tea.KeyPressMsg, tea.MouseMsg
-
 func Test_updateViews(t *testing.T) {
-	t.Skip("In progress")
-	fakeModelFactory := func(modelName string) tea.Model {
+	fakeModelFactory := func(modelName string, model *MainModel) tea.Model {
 		var content string
 		return modelFunc{
 			init: func() tea.Cmd { return nil },
 			update: func(_ tea.Msg) (tea.Model, tea.Cmd) {
 				content = modelName
-				return nil, nil
+				switch modelName {
+				case "HostList":
+					return model.modelHostList, nil
+				case "GroupList":
+					return model.modelGroupList, nil
+				case "HostEdit":
+					return model.modelHostEdit, nil
+				case "SSHSession":
+					return model.modelSSHSession, nil
+				default:
+					t.Fatal("Wrong model name!")
+					return nil, nil
+				}
 			},
 			view: func() tea.View {
-				return tea.NewView(fmt.Sprintf("%s %s", modelName, content))
+				return tea.NewView(content)
 			},
 		}
 	}
 
-	model := newMockModel()
-	model.modelGroupList = fakeModelFactory("groupList")
-	model.modelHostList = fakeModelFactory("hostList")
-	model.modelHostEdit = fakeModelFactory("hostEdit")
-	model.modelSSHSession = fakeModelFactory("sshSession")
+	var model MainModel
+	beforeEach := func() {
+		model = MainModel{appState: MockAppState()}
+		model.modelHostList = fakeModelFactory("HostList", &model)
+		model.modelGroupList = fakeModelFactory("GroupList", &model)
+		model.modelHostEdit = fakeModelFactory("HostEdit", &model)
+		model.modelSSHSession = fakeModelFactory("SSHSession", &model)
+	}
 
-	model.appState.CurrentView = state.ViewGroupList
-	model.updateViews(tea.KeyPressMsg{Text: "groupList"})
-	require.Equal(t, "groupList groupList", model.modelGroupList.View())
+	// Input events: tea.KeyPressMsg, tea.MouseMsg.
+	// Every other message is also forwarded to the host list and the group list.
+	// An empty view means that child did not receive the message.
+	tests := []struct {
+		name      string
+		view      state.View
+		msg       tea.Msg
+		hostList  string
+		groupList string
+		hostEdit  string
+		ssh       string
+	}{
+		{
+			name:     "mouse input on the host list is delivered only to the host list",
+			view:     state.ViewHostList,
+			msg:      tea.MouseClickMsg{},
+			hostList: "HostList",
+		},
+		{
+			name:      "key input on the group list is delivered only to the group list",
+			view:      state.ViewGroupList,
+			msg:       tea.KeyPressMsg{},
+			groupList: "GroupList",
+		},
+		{
+			name:     "the edit view receives input and the lists do not",
+			view:     state.ViewEditItem,
+			msg:      tea.KeyPressMsg{},
+			hostEdit: "HostEdit",
+		},
+		{
+			name: "the ssh session receives input and the lists do not",
+			view: state.ViewSSHSession,
+			msg:  tea.KeyPressMsg{},
+			ssh:  "SSHSession",
+		},
+		{
+			name:      "a non-input message is forwarded to the host list and the group list",
+			view:      state.ViewHostList,
+			msg:       tea.WindowSizeMsg{},
+			hostList:  "HostList",
+			groupList: "GroupList",
+		},
+		{
+			name:      "the edit view receives a non-input message together with both lists",
+			view:      state.ViewEditItem,
+			msg:       tea.WindowSizeMsg{},
+			hostList:  "HostList",
+			groupList: "GroupList",
+			hostEdit:  "HostEdit",
+		},
+		{
+			name:      "the ssh session receives a non-input message together with both lists",
+			view:      state.ViewSSHSession,
+			msg:       tea.WindowSizeMsg{},
+			hostList:  "HostList",
+			groupList: "GroupList",
+			ssh:       "SSHSession",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			beforeEach()
+
+			model.appState.CurrentView = tt.view
+			model.updateViews(tt.msg)
+
+			require.Equal(t, tt.hostList, model.modelHostList.View().Content)
+			require.Equal(t, tt.groupList, model.modelGroupList.View().Content)
+			require.Equal(t, tt.hostEdit, model.modelHostEdit.View().Content)
+			require.Equal(t, tt.ssh, model.modelSSHSession.View().Content)
+		})
+	}
 }
 
 // ==============================================

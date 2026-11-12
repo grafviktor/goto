@@ -142,7 +142,6 @@ func (m *MainModel) updateViews(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
-	// TODO: Create a dedicated test for updateViews.
 	switch {
 	case m.appState.CurrentView == state.ViewHostList && isInputEvent(msg):
 		m.modelHostList, cmd = m.modelHostList.Update(msg)
