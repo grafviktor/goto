@@ -374,62 +374,6 @@ func TestUpdate_ExitWithError(t *testing.T) {
 	require.Equal(t, "mock error message", m.(*MainModel).exitError.Error())
 }
 
-func Test_handleKeyEvent(t *testing.T) {
-	model := newMockModel()
-	model.viewMessageContent = "some output of the process which just has finished"
-	model.appState.CurrentView = state.ViewMessage
-	model.Update(tea.KeyPressMsg{})
-
-	// When user is facing a message from the process which has just finished and presses any key,
-	// the view should switch to the host list and the message content should be cleared.
-	require.Equal(t, state.ViewHostList, model.appState.CurrentView)
-	require.Empty(t, model.viewMessageContent)
-}
-
-func Test_handleKeyEvent_CtrlC(t *testing.T) {
-	// Check that CTRL+C is not passed to bubbletea when we're in SSH session.
-	// This signal should be processed by the SSH session itself.
-	tests := []struct {
-		name        string
-		currentView state.View
-		sessionView tea.Model
-		wantCmd     tea.Cmd
-	}{{
-		name:        "Ctrl+C should be ignored when current view is ViewSSHSession",
-		currentView: state.ViewSSHSession,
-		wantCmd:     nil,
-	}, {
-		name:        "Ctrl+C should quit the application when current view is not ViewSSHSession",
-		currentView: state.ViewHostList,
-		wantCmd:     tea.Quit,
-	}}
-
-	ctrlC := tea.KeyPressMsg{
-		Mod:  uv.ModCtrl,
-		Code: 'c',
-	}
-
-	var childModel tea.Model = modelFunc{
-		init:   func() tea.Cmd { return nil },
-		update: func(_ tea.Msg) (tea.Model, tea.Cmd) { return nil, nil },
-		view:   func() tea.View { return tea.NewView("") },
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			model := newMockModel()
-			model.appState.CurrentView = tt.currentView
-			model.modelSSHSession = childModel
-			_, cmd := model.Update(ctrlC)
-			if tt.wantCmd == nil {
-				require.Nil(t, cmd)
-			} else {
-				require.Equal(t, tt.wantCmd(), cmd())
-			}
-		})
-	}
-}
-
 func Test_view(t *testing.T) {
 	fakeModelFactory := func(modelViewContent string) tea.Model {
 		return modelFunc{
@@ -491,7 +435,165 @@ func Test_view(t *testing.T) {
 	}
 }
 
-func Test_updateViews(t *testing.T) {
+func Test_handleInputEvent(t *testing.T) {
+	fakeModelFactory := func(modelName string, model *MainModel) tea.Model {
+		var content string
+		return modelFunc{
+			init: func() tea.Cmd { return nil },
+			update: func(_ tea.Msg) (tea.Model, tea.Cmd) {
+				content = modelName
+				switch modelName {
+				case "HostList":
+					return model.modelHostList, nil
+				case "GroupList":
+					return model.modelGroupList, nil
+				case "HostEdit":
+					return model.modelHostEdit, nil
+				case "SSHSession":
+					return model.modelSSHSession, nil
+				default:
+					t.Fatal("Wrong model name!")
+					return nil, nil
+				}
+			},
+			view: func() tea.View {
+				return tea.NewView(content)
+			},
+		}
+	}
+
+	const processOutput = "some output of the process which just has finished"
+
+	var model MainModel
+	beforeEach := func() {
+		model = MainModel{
+			appState:           MockAppState(),
+			logger:             &mocklogger.Logger{},
+			viewMessageContent: processOutput,
+		}
+		model.modelHostList = fakeModelFactory("HostList", &model)
+		model.modelGroupList = fakeModelFactory("GroupList", &model)
+		model.modelHostEdit = fakeModelFactory("HostEdit", &model)
+		model.modelSSHSession = fakeModelFactory("SSHSession", &model)
+	}
+
+	// Only the active view receives an input event.
+	// The message view closes and returns to the host list.
+	// An empty view means that child did not receive the message.
+	tests := []struct {
+		name        string
+		view        state.View
+		msg         tea.Msg
+		hostList    string
+		groupList   string
+		hostEdit    string
+		ssh         string
+		wantView    state.View
+		wantMessage string
+	}{
+		{
+			name:        "input on the host list is delivered only to the host list",
+			view:        state.ViewHostList,
+			msg:         tea.KeyPressMsg{},
+			hostList:    "HostList",
+			wantView:    state.ViewHostList,
+			wantMessage: processOutput,
+		},
+		{
+			name:        "input on the group list is delivered only to the group list",
+			view:        state.ViewGroupList,
+			msg:         tea.KeyPressMsg{},
+			groupList:   "GroupList",
+			wantView:    state.ViewGroupList,
+			wantMessage: processOutput,
+		},
+		{
+			name:        "input on the edit view is delivered only to the edit view",
+			view:        state.ViewEditItem,
+			msg:         tea.KeyPressMsg{},
+			hostEdit:    "HostEdit",
+			wantView:    state.ViewEditItem,
+			wantMessage: processOutput,
+		},
+		{
+			name:        "input on the ssh session is delivered only to the ssh session",
+			view:        state.ViewSSHSession,
+			msg:         tea.KeyPressMsg{},
+			ssh:         "SSHSession",
+			wantView:    state.ViewSSHSession,
+			wantMessage: processOutput,
+		},
+		{
+			name:        "input on the message view closes it and returns to the host list",
+			view:        state.ViewMessage,
+			msg:         tea.KeyPressMsg{},
+			wantView:    state.ViewHostList,
+			wantMessage: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			beforeEach()
+
+			model.appState.CurrentView = tt.view
+			model.handleInputEvent(tt.msg)
+
+			require.Equal(t, tt.hostList, model.modelHostList.View().Content)
+			require.Equal(t, tt.groupList, model.modelGroupList.View().Content)
+			require.Equal(t, tt.hostEdit, model.modelHostEdit.View().Content)
+			require.Equal(t, tt.ssh, model.modelSSHSession.View().Content)
+			require.Equal(t, tt.wantView, model.appState.CurrentView)
+			require.Equal(t, tt.wantMessage, model.viewMessageContent)
+		})
+	}
+}
+
+func Test_handleInputEvent_CtrlC(t *testing.T) {
+	// Check that CTRL+C is not passed to bubbletea when we're in SSH session.
+	// This signal should be processed by the SSH session itself.
+	tests := []struct {
+		name        string
+		currentView state.View
+		sessionView tea.Model
+		wantCmd     tea.Cmd
+	}{{
+		name:        "Ctrl+C should be ignored when current view is ViewSSHSession",
+		currentView: state.ViewSSHSession,
+		wantCmd:     nil,
+	}, {
+		name:        "Ctrl+C should quit the application when current view is not ViewSSHSession",
+		currentView: state.ViewHostList,
+		wantCmd:     tea.Quit,
+	}}
+
+	ctrlC := tea.KeyPressMsg{
+		Mod:  uv.ModCtrl,
+		Code: 'c',
+	}
+
+	var childModel tea.Model = modelFunc{
+		init:   func() tea.Cmd { return nil },
+		update: func(_ tea.Msg) (tea.Model, tea.Cmd) { return nil, nil },
+		view:   func() tea.View { return tea.NewView("") },
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			model := newMockModel()
+			model.appState.CurrentView = tt.currentView
+			model.modelSSHSession = childModel
+			_, cmd := model.Update(ctrlC)
+			if tt.wantCmd == nil {
+				require.Nil(t, cmd)
+			} else {
+				require.Equal(t, tt.wantCmd(), cmd())
+			}
+		})
+	}
+}
+
+func Test_handleNonInputEvent(t *testing.T) {
 	fakeModelFactory := func(modelName string, model *MainModel) tea.Model {
 		var content string
 		return modelFunc{
@@ -527,8 +629,8 @@ func Test_updateViews(t *testing.T) {
 		model.modelSSHSession = fakeModelFactory("SSHSession", &model)
 	}
 
-	// Input events: tea.KeyPressMsg, tea.MouseMsg.
-	// Every other message is also forwarded to the host list and the group list.
+	// Every message is forwarded to the host list and the group list.
+	// The edit view and the SSH session receive it only when that view is active.
 	// An empty view means that child did not receive the message.
 	tests := []struct {
 		name      string
@@ -540,38 +642,28 @@ func Test_updateViews(t *testing.T) {
 		ssh       string
 	}{
 		{
-			name:     "mouse input on the host list is delivered only to the host list",
-			view:     state.ViewHostList,
-			msg:      tea.MouseClickMsg{},
-			hostList: "HostList",
-		},
-		{
-			name:      "key input on the group list is delivered only to the group list",
-			view:      state.ViewGroupList,
-			msg:       tea.KeyPressMsg{},
-			groupList: "GroupList",
-		},
-		{
-			name:     "the edit view receives input and the lists do not",
-			view:     state.ViewEditItem,
-			msg:      tea.KeyPressMsg{},
-			hostEdit: "HostEdit",
-		},
-		{
-			name: "the ssh session receives input and the lists do not",
-			view: state.ViewSSHSession,
-			msg:  tea.KeyPressMsg{},
-			ssh:  "SSHSession",
-		},
-		{
-			name:      "a non-input message is forwarded to the host list and the group list",
+			name:      "a message on the host list is forwarded to both lists",
 			view:      state.ViewHostList,
 			msg:       tea.WindowSizeMsg{},
 			hostList:  "HostList",
 			groupList: "GroupList",
 		},
 		{
-			name:      "the edit view receives a non-input message together with both lists",
+			name:      "a message on the group list is forwarded to both lists",
+			view:      state.ViewGroupList,
+			msg:       tea.WindowSizeMsg{},
+			hostList:  "HostList",
+			groupList: "GroupList",
+		},
+		{
+			name:      "the message view forwards the message only to both lists",
+			view:      state.ViewMessage,
+			msg:       tea.WindowSizeMsg{},
+			hostList:  "HostList",
+			groupList: "GroupList",
+		},
+		{
+			name:      "the edit view receives the message together with both lists",
 			view:      state.ViewEditItem,
 			msg:       tea.WindowSizeMsg{},
 			hostList:  "HostList",
@@ -579,7 +671,7 @@ func Test_updateViews(t *testing.T) {
 			hostEdit:  "HostEdit",
 		},
 		{
-			name:      "the ssh session receives a non-input message together with both lists",
+			name:      "the ssh session receives the message together with both lists",
 			view:      state.ViewSSHSession,
 			msg:       tea.WindowSizeMsg{},
 			hostList:  "HostList",

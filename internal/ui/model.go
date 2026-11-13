@@ -207,6 +207,7 @@ func (m *MainModel) handleNonInputEvent(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
+	//exhaustive:ignore // Other views will receive the message unconditionally below.
 	switch m.appState.CurrentView {
 	case state.ViewEditItem:
 		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
