@@ -219,10 +219,12 @@ func (m *EditModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		// This message never comes through automatically on Windows OS, we send it from init_win.go.
 		m.updateViewPort(msg)
 	case tea.KeyPressMsg:
 		cmd = m.handleKeyboardEvent(msg)
+		m.viewport.SetContent(m.inputsView())
+	case tea.MouseMsg:
+		cmd = m.handleMouseMsg(msg)
 		m.viewport.SetContent(m.inputsView())
 	case debouncedMessage:
 		cmd = m.handleDebouncedMessage(msg)
@@ -270,12 +272,15 @@ func (m *EditModel) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 		m.logger.Info("[UI] Save changes for host id: %v", m.host.ID)
 		return m.save(msg)
 	case key.Matches(msg, m.keyMap.CopyInputValue):
+		m.logger.Debug("[UI] Copy the focused input value.")
 		m.handleCopyInputValueShortcut()
 		return nil
 	case key.Matches(msg, m.keyMap.Down) || key.Matches(msg, m.keyMap.Up):
+		m.logger.Debug("[UI] Move focus between inputs.")
 		return m.inputFocusChange(msg)
 	default:
-		// Handle all other key events
+		// Handle all other key events. Do not log the key: it is text the user types into a field.
+		m.logger.Debug("[UI] Update the focused input.")
 		cmd := m.focusedInputProcessKeyEvent(msg)
 		if m.focusedInput == inputAddress || m.focusedInput == inputTitle {
 			// This statement is required as user may want to copy title to address,
@@ -445,8 +450,51 @@ func (m *EditModel) updateViewPort(msg tea.Msg) {
 	}
 }
 
+func (m *EditModel) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
+	if msg, ok := msg.(tea.MouseClickMsg); ok {
+		if msg.Mouse().Button == tea.MouseLeft {
+			return m.focusItem(msg)
+		}
+
+		m.logger.Debug("[UI] Ignore the %s mouse button.", msg.Mouse().Button)
+	}
+
+	return nil
+}
+
+func (m *EditModel) focusItem(msg tea.MouseClickMsg) tea.Cmd {
+	index := m.itemAt(msg.Mouse().Y)
+	if index < 0 || index == m.focusedInput {
+		m.logger.Debug("[UI] Mouse click keeps the current input focused.")
+		return nil
+	}
+
+	m.focusedInput = index
+	m.logger.Debug("[UI] Mouse click moves focus to input %d.", index)
+	return m.applyFocus()
+}
+
+func (m *EditModel) itemAt(mousePositionY int) int {
+	topOffset := lipgloss.Height(m.headerView())
+	// View layout is: header + "\n" + viewport + "\n" + help
+	mousePositionInList := mousePositionY - topOffset - 1
+	if mousePositionInList < 0 || mousePositionInList >= m.viewport.Height() {
+		return -1
+	}
+
+	listItemHeight := lipgloss.Height(m.inputsView()) / len(m.inputs)
+	// There is no pager, like in other list components, so we need to calculate the offset.
+	// Its't not zero when the window is small and unable to display all input fields at once.
+	scrollOffset := m.viewport.YOffset()
+	visibleItemIndex := (mousePositionInList + scrollOffset) / listItemHeight
+	if visibleItemIndex < 0 || visibleItemIndex >= len(m.inputs) || !m.inputs[visibleItemIndex].Enabled() {
+		return -1
+	}
+
+	return visibleItemIndex
+}
+
 func (m *EditModel) inputFocusChange(msg tea.Msg) tea.Cmd {
-	var cmds []tea.Cmd
 	keyMsg, _ := msg.(tea.KeyPressMsg)
 
 	enabledInputs := lo.Filter(m.inputs, func(i input.Input, _ int) bool {
@@ -479,6 +527,12 @@ func (m *EditModel) inputFocusChange(msg tea.Msg) tea.Cmd {
 		m.logger.Debug("[UI] Reached first or last selectable input field: %d", m.focusedInput)
 		return nil
 	}
+
+	return m.applyFocus()
+}
+
+func (m *EditModel) applyFocus() tea.Cmd {
+	var cmds []tea.Cmd
 
 	// Should be extracted to "Validate" function
 	for i := range m.inputs {

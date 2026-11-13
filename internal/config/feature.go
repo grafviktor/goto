@@ -7,7 +7,7 @@ import (
 )
 
 // SupportedFeatures contains a list of application features that can be enabled or disabled.
-var SupportedFeatures = []FeatureFlag{"ssh_config", "embedded_terminal"}
+var SupportedFeatures = []FeatureFlag{"ssh_config", "embedded_terminal", "mouse"}
 
 // FeatureFlag represents application feature flag that can be enabled or disabled.
 type FeatureFlag string

@@ -73,6 +73,7 @@ type State struct {
 	IsUserDefinedSSHConfigPath bool                  `yaml:"-"`
 	Logger                     loggerInterface       `yaml:"-"`
 	LogLevel                   constant.LogLevel     `yaml:"-"`
+	MouseEnabled               bool                  `yaml:"enable_mouse"`
 	ScreenLayout               constant.ScreenLayout `yaml:"screen_layout,omitempty"`
 	SetSSHConfigPath           string                `yaml:"ssh_config_path,omitempty"`
 	Selected                   int                   `yaml:"selected_host_index"`
@@ -139,6 +140,7 @@ func (s *State) readFromFile() {
 		Group    string `yaml:"selected_group_name"`
 		// Using pointers to distinguish between null and zero values.
 		EmbeddedTerminalEnabled *bool   `yaml:"enable_embedded_terminal"`
+		MouseEnabled            *bool   `yaml:"enable_mouse"`
 		Theme                   *string `yaml:"theme"`
 		ScreenLayout            *string `yaml:"screen_layout"`
 		SSHConfigEnabled        *bool   `yaml:"enable_ssh_config"`
@@ -187,6 +189,13 @@ func (s *State) readFromFile() {
 		s.EmbeddedTerminalEnabled = *loadedState.EmbeddedTerminalEnabled
 	}
 
+	if loadedState.MouseEnabled == nil {
+		// If there is no value for mouse, then we disable it by default.
+		s.MouseEnabled = false
+	} else {
+		s.MouseEnabled = *loadedState.MouseEnabled
+	}
+
 	if loadedState.SSHConfigPath != nil {
 		var sshConfigPath string
 		sshConfigPath, err = utils.SSHConfigPath(*loadedState.SSHConfigPath)
@@ -228,6 +237,8 @@ func (s *State) applyConfig(cfg *config.Configuration) error {
 			s.SSHConfigEnabled = false
 		case config.FeatureEmbeddedTerminal:
 			s.EmbeddedTerminalEnabled = false
+		case config.FeatureMouse:
+			s.MouseEnabled = false
 		}
 	}
 
@@ -241,6 +252,8 @@ func (s *State) applyConfig(cfg *config.Configuration) error {
 			s.SSHConfigEnabled = true
 		case config.FeatureEmbeddedTerminal:
 			s.EmbeddedTerminalEnabled = true
+		case config.FeatureMouse:
+			s.MouseEnabled = true
 		}
 	}
 
@@ -305,6 +318,7 @@ func (s *State) print() {
 	fmt.Printf("App home:          %s\n", s.AppHome)
 	fmt.Printf("Log level:         %s\n", s.LogLevel)
 	fmt.Printf("Embedded terminal: %s\n", lo.Ternary(s.EmbeddedTerminalEnabled, "enabled", "disabled"))
+	fmt.Printf("Mouse:             %s\n", lo.Ternary(s.MouseEnabled, "enabled", "disabled"))
 	fmt.Printf("SSH config status: %s\n", lo.Ternary(s.SSHConfigEnabled, "enabled", "disabled"))
 	if s.SSHConfigEnabled {
 		fmt.Printf("SSH config path:   %s\n", s.SSHConfigPath)
@@ -321,6 +335,8 @@ func (s *State) PrintConfig() {
 func (s *State) LogDetails() {
 	s.Logger.Info("[CONFIG] Application home folder: %q\n", s.AppHome)
 	s.Logger.Info("[CONFIG] Application log level:   %q\n", s.LogLevel)
+	s.Logger.Info("[CONFIG] Embedded terminal:       %q\n", lo.Ternary(s.EmbeddedTerminalEnabled, "enabled", "disabled")) //nolint:golines // For tidiness
+	s.Logger.Info("[CONFIG] Mouse:                   %q\n", lo.Ternary(s.MouseEnabled, "enabled", "disabled"))
 	s.Logger.Info("[CONFIG] SSH config status:       %q\n", lo.Ternary(s.SSHConfigEnabled, "enabled", "disabled"))
 	if s.SSHConfigEnabled {
 		s.Logger.Info("[CONFIG] SSH config path:         %q\n", s.SSHConfigPath)

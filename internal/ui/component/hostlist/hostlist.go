@@ -8,10 +8,12 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/constant"
@@ -22,24 +24,47 @@ import (
 	"github.com/grafviktor/goto/internal/utils"
 )
 
-var (
-	itemNotSelectedErrMsg = "you must select an item"
-	modeCloseApp          = "closeApp"
-	modeDefault           = ""
-	modeRemoveItem        = "removeItem"
-	modeSSHCopyID         = "sshCopyID"
-	defaultListTitle      = "press 'n' to add a new host"
+const (
+	itemNotSelectedErrMsg      = "you must select an item"
+	modeCloseApp               = "closeApp"
+	modeDefault                = ""
+	modeRemoveItem             = "removeItem"
+	modeSSHCopyID              = "sshCopyID"
+	defaultListTitle           = "press 'n' to add a new host"
+	timeToWaitForSecondClick   = 500 * time.Millisecond
+	timeToWaitForSSHConfigLoad = 100 * time.Millisecond
+	sshConfigLoadRetryCount    = 5
 )
 
 type iLogger interface {
 	Debug(format string, args ...any)
 	Info(format string, args ...any)
+	Warn(format string, args ...any)
 	Error(format string, args ...any)
 }
 
 type msgToggleLayout struct{ layout constant.ScreenLayout }
 
-type ListModel struct {
+type msgSecondClickTimeOut struct{}
+
+type msgHostSSHConfigLoadWait struct {
+	hostID       int
+	attemptsLeft int
+	processType  constant.ProcessType
+}
+
+func buildHostSSHConfigLoadWaitCmd(host hostModel.Host, processType constant.ProcessType, attemptsLeft int) tea.Cmd {
+	return func() tea.Msg {
+		time.Sleep(timeToWaitForSSHConfigLoad)
+		return msgHostSSHConfigLoadWait{
+			hostID:       host.ID,
+			attemptsLeft: attemptsLeft,
+			processType:  processType,
+		}
+	}
+}
+
+type Model struct {
 	list.Model
 
 	repo                storage.HostStorage
@@ -49,6 +74,8 @@ type ListModel struct {
 	mode                string
 	showingNotification bool
 	styles              styles
+	// For handling double click
+	waitForSecondClick bool
 }
 
 // New - creates new host list model.
@@ -57,7 +84,7 @@ type ListModel struct {
 // appState - is the application state, usually we want to restore previous state when application restarts,
 // for instance focus previously selected host.
 // log - application logger.
-func New(_ context.Context, storage storage.HostStorage, appState *state.State, log iLogger) *ListModel {
+func New(_ context.Context, storage storage.HostStorage, appState *state.State, log iLogger) *Model {
 	delegate := NewHostDelegate(&appState.ScreenLayout, &appState.Group, log)
 	delegateKeys := newDelegateKeyMap()
 
@@ -77,7 +104,7 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.State, 
 	model.Paginator.InactiveDot = styles.paginatorInactiveDot
 	model.Help.Styles = styles.help
 
-	m := ListModel{
+	m := Model{
 		Model:    model,
 		keyMap:   delegateKeys,
 		repo:     storage,
@@ -102,12 +129,12 @@ func New(_ context.Context, storage storage.HostStorage, appState *state.State, 
 	return &m
 }
 
-func (m *ListModel) Init() tea.Cmd {
+func (m *Model) Init() tea.Cmd {
 	// This function is called from model.go#init() file
 	return m.loadHosts()
 }
 
-func (m *ListModel) loadHosts() tea.Cmd {
+func (m *Model) loadHosts() tea.Cmd {
 	m.logger.Debug("[UI] Load hostnames from the database")
 	hosts, err := m.repo.GetAll()
 	if err != nil {
@@ -134,16 +161,25 @@ func (m *ListModel) loadHosts() tea.Cmd {
 	return tea.Sequence(setItemsCmd, selectHostByIDCmd)
 }
 
-func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		return m, m.handleKeyboardEvent(msg)
+	case tea.MouseMsg:
+		return m, m.handleMouseMsg(msg)
+	case msgSecondClickTimeOut:
+		m.logger.Debug("[UI] Second click timeout. Stay on the focused host.")
+		m.waitForSecondClick = false
+		return m, nil
 	case tea.WindowSizeMsg:
 		// Triggers immediately after app start because we render this component by default
 		h, v := m.styles.componentMargins.GetFrameSize()
 		m.SetSize(msg.Width-h, msg.Height-v)
 		m.logger.Debug("[UI] Set host list size: %d %d", m.Width(), m.Height())
 		return m, nil
+	case msgHostSSHConfigLoadWait:
+		cmd := m.onHostSSHConfigLoadWait(msg)
+		return m, cmd
 	case message.HostSSHConfigLoadComplete:
 		m.onHostSSHConfigLoaded(msg)
 		return m, nil
@@ -172,7 +208,7 @@ func (m *ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m *ListModel) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
+func (m *Model) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 	m.showingNotification = false // Reset notification, when user presses any key.
 
 	switch {
@@ -195,29 +231,40 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 				return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
 			}
 		}
+		m.logger.Debug("[UI] The host filter handles key %q.", msg.String())
 		return m.updateChildModel(msg)
 	case key.Matches(msg, m.Model.KeyMap.ClearFilter):
 		// When user clears the host filter, child model resets the focus. Explicitly set focus on previously selected item.
 		selectedID := m.SelectedItem().(ListItemHost).ID //nolint:errcheck // SelectedItem always returns ListItemHost
+		m.logger.Debug("[UI] Clear the filter and restore focus to host id %d.", selectedID)
 		return tea.Sequence(m.updateChildModel(msg), m.selectHostByID(selectedID))
 	case m.mode != modeDefault:
 		// Handle key event when some mode is enabled. For instance "removeMode".
+		m.logger.Debug("[UI] Handle key %q in %s mode.", msg.String(), m.mode)
 		return m.handleKeyEventWhenModeEnabled(msg)
 	case key.Matches(msg, m.keyMap.selectGroup):
+		m.logger.Debug("[UI] Open the group list.")
 		return message.TeaCmd(message.ViewGroupListOpen{})
 	case key.Matches(msg, m.keyMap.connect):
+		m.logger.Debug("[UI] Connect to the focused host.")
 		return m.constructProcessCmd(constant.ProcessTypeSSHConnect)
 	case key.Matches(msg, m.keyMap.copyID):
+		m.logger.Debug("[UI] Ask to copy the SSH key to the focused host.")
 		return m.enterSSHCopyIDMode()
 	case key.Matches(msg, m.keyMap.remove):
+		m.logger.Debug("[UI] Ask to remove the focused host.")
 		return m.enterRemoveItemMode()
 	case key.Matches(msg, m.keyMap.edit):
+		m.logger.Debug("[UI] Edit the focused host.")
 		return m.editItem()
 	case key.Matches(msg, m.keyMap.append):
+		m.logger.Debug("[UI] Open the host editor for a new host.")
 		return message.TeaCmd(message.ViewHostEditOpen{}) // When create a new item, jump to edit mode.
 	case key.Matches(msg, m.keyMap.clone):
+		m.logger.Debug("[UI] Clone the focused host.")
 		return m.copyItem()
 	case key.Matches(msg, m.keyMap.toggleLayout):
+		m.logger.Debug("[UI] Toggle the host list layout.")
 		return m.onToggleLayout()
 	case msg.Key().Code == tea.KeyEsc:
 		m.logger.Debug("[UI] Receive Escape key. Ask user for confirmation to close the app.")
@@ -229,11 +276,142 @@ func (m *ListModel) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 	}
 }
 
-func (m *ListModel) View() tea.View {
+func (m *Model) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
+	if m.mode != modeDefault {
+		m.logger.Debug("[UI] Ignore the mouse event while in %s mode.", m.mode)
+		return nil
+	}
+
+	if m.FilterState() == list.Filtering {
+		m.logger.Debug("[UI] Ignore the mouse event while filtering hosts.")
+		return nil
+	}
+
+	if msg, ok := msg.(tea.MouseClickMsg); ok {
+		if msg.Mouse().Button == tea.MouseLeft {
+			return m.focusItem(msg.Mouse().Y)
+		}
+
+		m.logger.Debug("[UI] Ignore the %s mouse button.", msg.Mouse().Button)
+	}
+
+	return nil
+}
+
+func (m *Model) focusItem(atPosition int) tea.Cmd {
+	if m.paginatorRowPosition() == atPosition {
+		return m.handlePaginatorClick()
+	}
+
+	index := m.itemAt(atPosition)
+	if index < 0 {
+		m.logger.Debug("[UI] Mouse click misses the host list at row %d.", atPosition)
+		return nil
+	}
+
+	if index == m.Index() && m.waitForSecondClick {
+		m.waitForSecondClick = false
+		m.logger.Debug("[UI] Mouse double click. Connect to the focused host.")
+		return m.constructProcessCmd(constant.ProcessTypeSSHConnect)
+	}
+
+	m.Select(index)
+	m.waitForSecondClick = true
+	m.logger.Debug("[UI] Mouse click. Focus host at index %d and wait for a second click.", index)
+	return tea.Batch(m.onFocusChanged(), tea.Tick(timeToWaitForSecondClick, func(_ time.Time) tea.Msg {
+		return msgSecondClickTimeOut{}
+	}))
+}
+
+func (m *Model) paginatorRowPosition() int {
+	if m.Paginator.TotalPages <= 1 {
+		return -1
+	}
+
+	paginationStyle := m.Styles.PaginationStyle
+	// This tweak is taken from charm.land/bubbles/v2@v2.1.0/list/list.go lines 1195-1200
+	if paginationStyle.GetMarginTop() == 0 {
+		paginationStyle = paginationStyle.MarginTop(1)
+	}
+
+	paginationHeight := lipgloss.Height(paginationStyle.Render(m.Paginator.View()))
+	helpHeight := lipgloss.Height(m.Styles.HelpStyle.Render(m.Help.View(m.Model)))
+	// Take the full height plus top margin and subtract help and pagination heights
+	topSectionsHeight := m.styles.componentMargins.GetMarginTop() + m.Height() - helpHeight - paginationHeight
+	// Height of the top sections plus paginator margin is becoming your paginator index.
+	return topSectionsHeight + paginationStyle.GetMarginTop()
+}
+
+func (m *Model) handlePaginatorClick() tea.Cmd {
+	if m.Paginator.TotalPages <= 1 {
+		m.logger.Debug("[UI] Click on the paginator. There is only one page. Ignore.")
+		return nil
+	}
+
+	// Paginator must reset the second click wait flag as we're
+	// changing pages and user cannot click to the same host.
+	m.waitForSecondClick = false
+
+	if m.Paginator.OnLastPage() {
+		for !m.Paginator.OnFirstPage() {
+			m.Paginator.PrevPage()
+		}
+	} else {
+		m.Paginator.NextPage()
+
+		// When go to a next page, the list focuses an item which is located at the same
+		// index as on the current page. What will happen if current page contains
+		// 10 items and 10th item is selected and we move to the next page where only 5 items?
+		// Nothing will be focused! Here we explicitly focus the last item in the list.
+		if m.Paginator.OnLastPage() && m.SelectedItem() == nil {
+			m.Select(len(m.VisibleItems()) - 1)
+			m.logger.Debug("[UI] Select the last host on the page.")
+		}
+	}
+
+	m.logger.Debug("[UI] Click on paginator. Move to page: %d, total pages: %d.",
+		m.Paginator.Page+1, m.Paginator.TotalPages)
+	return m.onFocusChanged()
+}
+
+func (m *Model) itemAt(mousePositionY int) int {
+	topOffset := m.styles.componentMargins.GetMarginTop()
+	// There is no direct way to get height of the title, that's why we
+	// simulate what render does and calculate its height manually.
+	topOffset += lipgloss.Height(m.Styles.TitleBar.Render(m.Styles.Title.Render(m.Title)))
+	if m.ShowStatusBar() {
+		// Need to render at least one letter to get real height.
+		topOffset += lipgloss.Height(m.Styles.StatusBar.Render("x"))
+	}
+
+	// mousePositionInList is just the position relative to the list start, excluding top offset.
+	// offSet is where the first item starts.
+	mousePositionInList := mousePositionY - topOffset
+	if mousePositionInList < 0 {
+		return -1
+	}
+
+	// List item height depends on the current screen layout.
+	listItemHeight := 3
+	if m.appState.ScreenLayout == constant.ScreenLayoutCompact {
+		listItemHeight = 1
+	}
+
+	indexOnPage := mousePositionInList / listItemHeight
+	pageStart, pageEnd := m.Paginator.GetSliceBounds(len(m.VisibleItems()))
+	visibleItemIndex := pageStart + indexOnPage
+	if visibleItemIndex >= pageEnd {
+		// We're beyond the bottom of the list
+		return -1
+	}
+	return visibleItemIndex
+}
+
+func (m *Model) View() tea.View {
 	return tea.NewView(m.styles.componentMargins.Render(m.Model.View()))
 }
 
-func (m *ListModel) updateChildModel(msg tea.Msg) tea.Cmd {
+func (m *Model) updateChildModel(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	m.Model, cmd = m.Model.Update(msg)
 
@@ -244,7 +422,7 @@ func (m *ListModel) updateChildModel(msg tea.Msg) tea.Cmd {
  * Actions.
  */
 
-func (m *ListModel) removeItem() tea.Cmd {
+func (m *Model) removeItem() tea.Cmd {
 	m.logger.Debug("[UI] Remove host from the database")
 	// Potential bug when filter is enabled as selected item reads from collection duplicate!
 	// Consider taking "item" from m.Items()
@@ -331,9 +509,10 @@ func (m *ListModel) removeItem() tea.Cmd {
 	)
 }
 
-func (m *ListModel) editItem() tea.Cmd {
+func (m *Model) editItem() tea.Cmd {
 	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
+		m.logger.Debug("[UI] Cannot edit. No host is selected.")
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedErrMsg)})
 	}
 
@@ -346,7 +525,7 @@ func (m *ListModel) editItem() tea.Cmd {
 	)
 }
 
-func (m *ListModel) copyItem() tea.Cmd {
+func (m *Model) copyItem() tea.Cmd {
 	item, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
 		m.logger.Error("[UI] Cannot cast selected item to host model")
@@ -396,7 +575,7 @@ func (m *ListModel) copyItem() tea.Cmd {
 
 // onHostUpdated - not only updates a host, it also re-inserts the host into
 // a correct position of the host list, to keep it sorted.
-func (m *ListModel) onHostUpdated(msg message.HostUpdate) tea.Cmd {
+func (m *Model) onHostUpdated(msg message.HostUpdate) tea.Cmd {
 	updatedHost := ListItemHost{Host: msg.Host}
 	// Get all item titles, replacing the updated host's title
 	allItems := lo.Map(m.Items(), func(item list.Item, _ int) list.Item {
@@ -428,7 +607,7 @@ func (m *ListModel) onHostUpdated(msg message.HostUpdate) tea.Cmd {
 	)
 }
 
-func (m *ListModel) setItemAndReorder(newIndex, currentIndex int, updatedHost ListItemHost) tea.Cmd {
+func (m *Model) setItemAndReorder(newIndex, currentIndex int, updatedHost ListItemHost) tea.Cmd {
 	m.Model.RemoveItem(currentIndex)
 	cmd := m.Model.InsertItem(newIndex, updatedHost)
 
@@ -448,7 +627,7 @@ func (m *ListModel) setItemAndReorder(newIndex, currentIndex int, updatedHost Li
 	return cmd
 }
 
-func (m *ListModel) onHostCreated(msg message.HostCreate) tea.Cmd {
+func (m *Model) onHostCreated(msg message.HostCreate) tea.Cmd {
 	// ResetFilter is required here because, user can create a new Item which will be filtered out,
 	// therefore the user will not see any changes in the UI which is confusing.
 	// ResetFilter must be done before calculating index of the new item.
@@ -476,7 +655,7 @@ func (m *ListModel) onHostCreated(msg message.HostCreate) tea.Cmd {
 	)
 }
 
-func (m *ListModel) onGroupSelect(msg message.GroupSelect) tea.Cmd {
+func (m *Model) onGroupSelect(msg message.GroupSelect) tea.Cmd {
 	var cmds []tea.Cmd
 	m.logger.Debug("[UI] Update app state. Active group: %q", msg.Name)
 	m.appState.Group = msg.Name
@@ -493,7 +672,7 @@ func (m *ListModel) onGroupSelect(msg message.GroupSelect) tea.Cmd {
 	return tea.Sequence(cmds...)
 }
 
-func (m *ListModel) onFocusChanged() tea.Cmd {
+func (m *Model) onFocusChanged() tea.Cmd {
 	m.updateTitle()
 	m.updateKeyMap()
 
@@ -510,21 +689,48 @@ func (m *ListModel) onFocusChanged() tea.Cmd {
 	return nil
 }
 
-func (m *ListModel) onHostSSHConfigLoaded(msg message.HostSSHConfigLoadComplete) {
+func (m *Model) onHostSSHConfigLoadWait(msg msgHostSSHConfigLoadWait) tea.Cmd {
+	// If for some reason we switch to another host while still were waiting for ssh config load, we must ignore this message.
+	// However, it looks like a completely synthetic situation, as there is not enough time for user to focus another host.
+	if msg.hostID != m.appState.Selected {
+		m.logger.Debug("[UI] Ignore SSH config wait for host id %d. Focus stays on host id %d.",
+			msg.hostID, m.appState.Selected)
+		return nil
+	}
+
+	host, _ := m.findHost(msg.hostID)
+	if host.SSHHostConfig != nil {
+		m.logger.Debug("[UI] SSH config for host id %d is ready. Continue %q.", host.ID, msg.processType)
+		return m.constructProcessCmd(msg.processType)
+	}
+
+	if msg.attemptsLeft <= 0 {
+		errorText := fmt.Sprintf("[UI] SSH config is not set for host ID='%d', Title=%q", host.ID, host.Title)
+		m.logger.Error(errorText)
+		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(errorText)})
+	}
+
+	m.logger.Debug("[UI] SSH config for host id %d is still missing. Retry with %d attempt(s) left.",
+		host.ID, msg.attemptsLeft-1)
+	return buildHostSSHConfigLoadWaitCmd(host, msg.processType, msg.attemptsLeft-1)
+}
+
+func (m *Model) onHostSSHConfigLoaded(msg message.HostSSHConfigLoadComplete) {
 	for index, item := range m.Items() {
 		if hostListItem, ok := item.(ListItemHost); ok && hostListItem.ID == msg.HostID {
 			hostListItem.SSHHostConfig = &msg.Config
 			m.SetItem(index, hostListItem)
 			m.updateTitle()
+			m.logger.Debug("[UI] Store SSH config for host id %d, title %q.", hostListItem.ID, hostListItem.Title())
 			break
 		}
 	}
 }
 
-func (m *ListModel) onToggleLayout() tea.Cmd {
+func (m *Model) onToggleLayout() tea.Cmd {
 	m.updateChildModel(msgToggleLayout{m.appState.ScreenLayout})
 	// When switch between screen layouts, it's required to update pagination.
-	// ListModel's updatePagination method is private and cannot be called from
+	// Model's updatePagination method is private and cannot be called from
 	// here. One of the ways to trigger it is to invoke model.SetSize method.
 	m.Model.SetSize(m.Width(), m.Height())
 	// Another hack - need to invoke inner model's private updateKeyBindings method
@@ -547,40 +753,46 @@ func (m *ListModel) onToggleLayout() tea.Cmd {
  * Helper methods.
  */
 
-func (m *ListModel) constructProcessCmd(processType constant.ProcessType) tea.Cmd {
-	// Do not use m.SelectedItem() here!
-	// list.Model keeps 2 collections - m.items and m.filteredItems, which can be inconsistent
-	// as a result in some hosts taken from m.filteredItems ssh config is nil.
-	var host *hostModel.Host
-	for _, item := range m.Items() {
-		if listItemHost, ok := item.(ListItemHost); ok && listItemHost.ID == m.appState.Selected {
-			host = &listItemHost.Host
-			break
-		}
-	}
-
-	if host == nil {
-		m.logger.Error("[UI] Could not find host with ID='%d'", m.appState.Selected)
+func (m *Model) constructProcessCmd(processType constant.ProcessType) tea.Cmd {
+	host, ok := m.findHost(m.appState.Selected)
+	if !ok {
+		m.logger.Error("[UI] Could not find host with id %d", m.appState.Selected)
 		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(itemNotSelectedErrMsg)})
 	}
 
+	// If ssh config is not yet loaded, let't give it some time. It's probably an overkill,
+	// but we assume that user either moves focus and hit Enter really fast or double-clicks.
 	if host.SSHHostConfig == nil {
-		errorText := fmt.Sprintf("[UI] SSH config is not set for host ID='%d', Title='%s'", host.ID, host.Title)
-		m.logger.Error(errorText)
-		return message.TeaCmd(message.ErrorOccurred{Err: errors.New(errorText)})
+		m.logger.Warn("[UI] SSH config is not yet loaded for host id %d", m.appState.Selected)
+		return buildHostSSHConfigLoadWaitCmd(host, processType, sshConfigLoadRetryCount)
 	}
 
 	switch processType { //nolint:exhaustive // allow missing cases
 	case constant.ProcessTypeSSHConnect:
-		return message.TeaCmd(message.RunProcessSSHConnect{Host: *host})
+		m.logger.Debug("[UI] Start SSH connect for host id %d, title %q.", host.ID, host.Title)
+		return message.TeaCmd(message.RunProcessSSHConnect{Host: host})
 	case constant.ProcessTypeSSHCopyID:
-		return message.TeaCmd(message.RunProcessSSHCopyID{Host: *host})
+		m.logger.Debug("[UI] Start SSH key copy for host id %d, title %q.", host.ID, host.Title)
+		return message.TeaCmd(message.RunProcessSSHCopyID{Host: host})
 	default:
+		m.logger.Debug("[UI] Ignore unknown process type %q.", processType)
 		return nil
 	}
 }
 
-func (m *ListModel) updateTitle() {
+func (m *Model) findHost(id int) (hostModel.Host, bool) {
+	// Do not use m.SelectedItem() here!
+	// list.Model keeps 2 collections - m.items and m.filteredItems, which can be inconsistent
+	// as a result in some hosts taken from m.filteredItems ssh config is nil.
+	for _, item := range m.Items() {
+		if listItemHost, ok := item.(ListItemHost); ok && listItemHost.ID == id {
+			return listItemHost.Host, true
+		}
+	}
+	return hostModel.Host{}, false
+}
+
+func (m *Model) updateTitle() {
 	if m.showingNotification {
 		// If notification is displayed, then we should not update the title.
 		return
@@ -611,7 +823,7 @@ func (m *ListModel) updateTitle() {
 	}
 }
 
-func (m *ListModel) prefixWithGroupName(title string) string {
+func (m *Model) prefixWithGroupName(title string) string {
 	if !utils.StringEmpty(&m.appState.Group) {
 		shortGroupName := utils.StringAbbreviation(m.appState.Group)
 		title = m.Styles.Title.Render(title)
@@ -647,12 +859,12 @@ func cmdSSHConnectPreview(h hostModel.Host) string {
 	return connectCmd
 }
 
-func (m *ListModel) updateKeyMap() {
+func (m *Model) updateKeyMap() {
 	keyMapState := m.keyMap.UpdateKeyVisibility(m.SelectedItem())
 	m.logger.Debug("[UI] Edit keyboard shortcuts: %v", keyMapState)
 }
 
-func (m *ListModel) selectHostByID(id int) tea.Cmd {
+func (m *Model) selectHostByID(id int) tea.Cmd {
 	// Use VisibleItems() instead of Items() because we need to find the correct index when deleting an item
 	// while in filter mode where part of the collection is hidden. You can replicate a wrong behavior when using Items():
 	// Enter filter mode, enter remove mode and then cancel it. The focus will be lost.
@@ -683,7 +895,7 @@ func hostComparator(a, b list.Item) int {
  * Deal with actions which require confirmation from the user.
  */
 
-func (m *ListModel) enterSSHCopyIDMode() tea.Cmd {
+func (m *Model) enterSSHCopyIDMode() tea.Cmd {
 	// Check if item is selected.
 	_, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
@@ -698,7 +910,7 @@ func (m *ListModel) enterSSHCopyIDMode() tea.Cmd {
 	return nil
 }
 
-func (m *ListModel) enterRemoveItemMode() tea.Cmd {
+func (m *Model) enterRemoveItemMode() tea.Cmd {
 	// Check if item is selected.
 	_, ok := m.SelectedItem().(ListItemHost)
 	if !ok {
@@ -713,13 +925,13 @@ func (m *ListModel) enterRemoveItemMode() tea.Cmd {
 	return nil
 }
 
-func (m *ListModel) enterCloseAppMode() {
+func (m *Model) enterCloseAppMode() {
 	m.mode = modeCloseApp
 	m.logger.Debug("[UI] Enter %s mode. Ask user for confirmation.", m.mode)
 	m.updateTitle()
 }
 
-func (m *ListModel) handleKeyEventWhenModeEnabled(msg tea.KeyPressMsg) tea.Cmd {
+func (m *Model) handleKeyEventWhenModeEnabled(msg tea.KeyPressMsg) tea.Cmd {
 	if key.Matches(msg, m.keyMap.confirm) {
 		return m.confirmAction()
 	}
@@ -739,7 +951,7 @@ func (m *ListModel) handleKeyEventWhenModeEnabled(msg tea.KeyPressMsg) tea.Cmd {
 	return nil
 }
 
-func (m *ListModel) confirmAction() tea.Cmd {
+func (m *Model) confirmAction() tea.Cmd {
 	m.logger.Debug("[UI] Exit %s mode. Confirm action.", m.mode)
 
 	var cmd tea.Cmd
@@ -760,16 +972,16 @@ func (m *ListModel) confirmAction() tea.Cmd {
 	return cmd
 }
 
-func (m *ListModel) SetTitle(title string) {
+func (m *Model) SetTitle(title string) {
 	m.resetTitleStyle()
 	m.Title = title
 }
 
-func (m *ListModel) resetTitleStyle() {
+func (m *Model) resetTitleStyle() {
 	m.Styles.Title = m.styles.list.Title
 }
 
-func (m *ListModel) displayNotificationMsg(msg string) tea.Cmd {
+func (m *Model) displayNotificationMsg(msg string) tea.Cmd {
 	if utils.StringEmpty(&msg) {
 		return nil
 	}
