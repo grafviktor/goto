@@ -116,6 +116,8 @@ function check_log_no_errors() {
 }
 
 function print_app_log() {
+    test_name=$1
+
     printf "\n  ${RED_COLOR}-===== Application log =====-${NO_COLOR}\n"
     cat "${TMP_HOME}"/app.log
     printf "\n  ${RED_COLOR}-===== Application state =====-${NO_COLOR}\n"
@@ -130,6 +132,8 @@ function print_app_log() {
         printf "\n  ${RED_COLOR}-===== Application hosts diff =====-${NO_COLOR}\n"
         diff "${TMP_HOME}"/hosts.yaml "expected/${filename_without_extension}_hosts.yaml"
     fi
+
+    printf "\n  ${RED_COLOR}Failed: ${test_name}\n\n"
 }
 
 function cleanup() {
@@ -147,7 +151,7 @@ for file in *.tape; do
     check_expected "$filename_without_extension"
     if [ "$?" -ne 0 ]; then
         printf "${MSG_FAIL} %s\n" "${file}"
-        print_app_log
+        print_app_log "$filename_without_extension"
         exit 1
     fi
 
