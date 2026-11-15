@@ -3,6 +3,7 @@ package hostlist
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -719,13 +720,7 @@ func TestUpdate_HostCreated(t *testing.T) {
 
 func TestUpdate_GroupListSelectItem(t *testing.T) {
 	// Test when select group, the model must reload hosts and reset filter
-	model := New(
-		context.TODO(),
-		testutils.NewMockStorage(false),
-		&state.State{},
-		&mocklogger.Logger{},
-	)
-	model.loadHosts()
+	model := newMockModel(false)
 	// Load All items from the collection
 	require.Len(t, model.Items(), 3)
 	// Enable filter
@@ -743,13 +738,7 @@ func TestUpdate_GroupListSelectItem(t *testing.T) {
 
 func TestUpdate_msgHideNotification(t *testing.T) {
 	// Test that title resets back to normal when hiding notification
-	model := New(
-		context.TODO(),
-		testutils.NewMockStorage(false),
-		&state.State{},
-		&mocklogger.Logger{},
-	)
-	model.loadHosts()
+	model := newMockModel(false)
 	model.showingNotification = true
 	model.Title = "Mock notification message"
 
@@ -757,6 +746,13 @@ func TestUpdate_msgHideNotification(t *testing.T) {
 
 	// Ensure that notification returned back to normal when hid the notification message.
 	require.Equal(t, "ssh -i id_rsa -p 2222 -l root localhost", utils.StripStyles(model.Title))
+}
+
+func TestUpdate_msgSecondClickTimeOut(t *testing.T) {
+	model := newMockModel(false)
+	model.waitForSecondClick = true
+	model.Update(msgSecondClickTimeOut{})
+	require.False(t, model.waitForSecondClick)
 }
 
 func Test_handleKeyboardEvent_cancelWhileFiltering(t *testing.T) {
@@ -1266,6 +1262,57 @@ func Test_handlePaginatorClick(t *testing.T) {
 		require.NotNil(t, cmd)
 		require.False(t, model.waitForSecondClick)
 		require.True(t, model.Paginator.OnFirstPage()) // And ensure that we're on the first page.
+	})
+
+	t.Run("Must go to the first page when on last page and someone clicks on paginator", func(t *testing.T) {
+		// This is what we test here:
+		// When on the page before last and user clicks on paginator,
+		// We need to focus last item on the last page, if item with
+		// currently selected index is not present on the last page:
+
+		// Page before last
+		// | Page 1 * | Page 2 |
+		// | Item 0   | Item 6 |
+		// | Item 1   | Item 7 |
+		// | Item 2   |        |
+		// | Item 3   |        |
+		// | Item 4   |        |
+		// | Item 5 * |        |
+
+		// Click on paginator, now we're on the last page, but item with such index
+		// is not present on the last page, so we need to focus the last available item:
+		// | Page 1 | Page 2 * |
+		// | Item 0 | Item 6   |
+		// | Item 1 | Item 7 * |
+		// | Item 2 |          |
+		// | Item 3 |          |
+		// | Item 4 |          |
+		// | Item 5 |          |
+
+		beforeEach()
+		itemsTotal := 8
+		// Let's reset the model items, so we have more than 3 items in the list.
+		model.SetItems([]list.Item{})
+		items := model.Items()
+		for id := range itemsTotal {
+			h := host.NewHost(id, fmt.Sprintf("Mock Host %d", id), "", "localhost", "root", "id_rsa", "2222")
+			items = append(items, ListItemHost{Host: h})
+		}
+		model.SetItems(items)
+		model.SetHeight(25)
+		require.Len(t, model.Items(), itemsTotal)
+		require.True(t, model.Paginator.OnFirstPage())
+		require.Equal(t, 2, model.Paginator.TotalPages)
+		// There are 6 items on the first page: Item 0 to Item 5
+		require.Equal(t, 6, model.Paginator.PerPage)
+		// Select Item 5, which is last one on the current page.
+		model.Select(5)
+		require.Equal(t, 5, model.Index())
+		// Switch to the last page.
+		model.handlePaginatorClick()
+		require.True(t, model.Paginator.OnLastPage())
+		// Ensure that the last item on the last page is focused, which is Item 7.
+		require.Equal(t, 7, model.Index())
 	})
 }
 

@@ -883,7 +883,6 @@ func (m *Model) selectHostByID(id int) tea.Cmd {
 		m.Select(0)
 	}
 
-	// This is a side effect. Ideally, it should not be here.
 	return m.onFocusChanged()
 }
 

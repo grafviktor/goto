@@ -111,6 +111,7 @@ selected_group_name: default
 theme: dark
 screen_layout: compact
 enable_embedded_terminal: true
+enable_mouse: true
 `,
 			expected: State{
 				Selected:                999,
@@ -119,6 +120,7 @@ enable_embedded_terminal: true
 				Theme:                   "dark",
 				Group:                   "default",
 				EmbeddedTerminalEnabled: true,
+				MouseEnabled:            true,
 			},
 		},
 		{
@@ -291,6 +293,26 @@ enable_embedded_terminal: true
 				Group:                   "default",
 			},
 		},
+		{
+			name: "State file Mouse option disabled",
+			stateFileContent: `
+selected_host_index: 999
+selected_group_name: default
+theme: dark
+screen_layout: compact
+enable_embedded_terminal: true
+enable_mouse: false
+`,
+			expected: State{
+				Selected:                999,
+				SSHConfigEnabled:        true,
+				EmbeddedTerminalEnabled: true,
+				ScreenLayout:            constant.ScreenLayoutCompact,
+				Theme:                   "dark",
+				Group:                   "default",
+				MouseEnabled:            false,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -322,6 +344,7 @@ enable_embedded_terminal: true
 			require.Equal(t, tt.expected.Selected, test.Selected, "state.Selected value mismatch")
 			require.Equal(t, expectedSSHConfigPath, test.SSHConfigPath, "state.SSHConfigPath value mismatch")
 			require.Equal(t, tt.expected.ScreenLayout, test.ScreenLayout, "state.ScreenLayout value mismatch")
+			require.Equal(t, tt.expected.MouseEnabled, test.MouseEnabled, "state.MouseEnabled value mismatch")
 			require.Equal(t, expectedSetSSHConfigPath, test.SetSSHConfigPath, "state.SetSSHConfigPath value mismatch")
 			require.Equal(t, tt.expected.SSHConfigEnabled, test.SSHConfigEnabled, "state.SSHConfigEnabled value mismatch")
 			require.Equal(t, tt.expected.EmbeddedTerminalEnabled, test.EmbeddedTerminalEnabled, "state.EmbeddedTerminalEnabled value mismatch")
@@ -445,6 +468,24 @@ func Test_applyConfig(t *testing.T) {
 			testCfg:  config.Configuration{SetTheme: "no_such_theme"},
 			expected: State{},
 			wantErr:  true,
+		}, {
+			name:    "Support mouse enabled",
+			testCfg: config.Configuration{EnableFeature: "mouse"},
+			expected: State{
+				AppMode:      constant.AppModeType.StartUI,
+				LogLevel:     constant.LogLevelType.INFO,
+				MouseEnabled: true,
+			},
+			wantErr: false,
+		}, {
+			name:    "Support mouse disabled",
+			testCfg: config.Configuration{DisableFeature: "mouse"},
+			expected: State{
+				AppMode:      constant.AppModeType.StartUI,
+				LogLevel:     constant.LogLevelType.INFO,
+				MouseEnabled: false,
+			},
+			wantErr: false,
 		},
 	}
 
