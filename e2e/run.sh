@@ -158,7 +158,7 @@ for file in *.tape; do
     check_log_no_errors "$filename_without_extension"
     if [ "$?" -ne 0 ]; then
         printf "${MSG_FAIL} %s\n" "Errors found in log file"
-        print_app_log
+        print_app_log "$filename_without_extension"
         exit 1
     fi
 
