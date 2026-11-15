@@ -361,6 +361,26 @@ func TestUpdateInputPlaceHolders(t *testing.T) {
 	), model.inputs[inputIdentityFile].Placeholder)
 }
 
+func TestUpdate_CtrlJKMovesFocus(t *testing.T) {
+	// Ctrl+j and Ctrl+k move between inputs like j and k in Vim,
+	model := newMockModel()
+	require.Equal(t, inputTitle, model.focusedInput)
+	title := model.inputs[inputTitle].Value()
+	address := model.inputs[inputAddress].Value()
+
+	model.Update(tea.KeyPressMsg{Code: 'j', Mod: tea.ModCtrl})
+	require.Equal(t, inputAddress, model.focusedInput)
+
+	model.Update(tea.KeyPressMsg{Code: 'k', Mod: tea.ModCtrl})
+	require.Equal(t, inputTitle, model.focusedInput)
+
+	// Already on the first input: Ctrl+k stays put.
+	model.Update(tea.KeyPressMsg{Code: 'k', Mod: tea.ModCtrl})
+	require.Equal(t, inputTitle, model.focusedInput)
+	require.Equal(t, title, model.inputs[inputTitle].Value())
+	require.Equal(t, address, model.inputs[inputAddress].Value())
+}
+
 func TestUpdate_KeyDiscard(t *testing.T) {
 	// When press escape, should receive close form cmd
 	model := newMockModel()

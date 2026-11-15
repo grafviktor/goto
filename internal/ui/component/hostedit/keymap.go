@@ -22,12 +22,12 @@ func (k keyMap) FullHelp() [][]key.Binding {
 
 var keys = keyMap{
 	Up: key.NewBinding(
-		key.WithKeys("up", "shift+tab"),
-		key.WithHelp("↑", "up"),
+		key.WithKeys("up", "shift+tab", "ctrl+k"),
+		key.WithHelp("↑/ctrl+k", "up"),
 	),
 	Down: key.NewBinding(
-		key.WithKeys("down", "tab", "enter"),
-		key.WithHelp("↓", "down"),
+		key.WithKeys("down", "tab", "enter", "ctrl+j"),
+		key.WithHelp("↓/ctrl+j", "down"),
 	),
 	Save: key.NewBinding(
 		key.WithKeys("ctrl+s"),
