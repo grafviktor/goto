@@ -95,3 +95,14 @@ See more about groups in [this document](GROUPS.md).
 **Q: Why can't I edit hosts, which were loaded from `~/.ssh/config`?**
 
 AI says that there are over 100 supported configuration options in ssh_config. The UI which could support all these options would look rather complex. If you want to change hosts loaded from your ssh config, edit your ssh_config file directly using your favorite text editor and restart `goto`, to update the changes.
+
+## Embedded terminal (only version 1.7.0 and above) ##
+
+**Q: How do I copy text from an SSH session to the clipboard?**
+
+When the embedded terminal is enabled, SSH sessions run inside the application. To copy text, select it with your mouse and the selection is copied to the OS clipboard automatically. If you want the system's own selection behavior instead, hold the `Shift` key while selecting. Note that not all terminals support this, so it may not work in every environment.
+
+If you prefer the previous behavior, you can disable the embedded terminal, so SSH sessions open in your system terminal again:
+```bash
+gg -d embedded_terminal
+```

@@ -11,9 +11,9 @@ Equivalent: `generate-release-notes 1.3.0`.
 Result: `RELEASE_NOTES_v1.3.0.md` at the repository root. The versions, issues, and notes below are mock data.
 
 ```markdown
-Hosts can now be exported, and unsaved edits ask for confirmation before they are discarded.
-
 ## What's changed ##
+
+Hosts can now be exported, and unsaved edits ask for confirmation before they are discarded.
 
 ### Improvements ###
 

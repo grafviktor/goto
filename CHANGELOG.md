@@ -1,5 +1,23 @@
 # Changelog
 
+**[v1.7.0](https://github.com/grafviktor/goto/compare/v1.6.1...v1.7.0) - 2026-11-15**
+
+* Render SSH sessions inside the application instead of an external terminal [[details](https://github.com/grafviktor/goto/issues/152)].
+* Show the group, host, and alias in the SSH status line, and copy selected text to the clipboard [[details](https://github.com/grafviktor/goto/issues/155)].
+* Open the group list on startup when at least one group is defined, and restore the last selected group [[details](https://github.com/grafviktor/goto/issues/104)].
+* Add mouse support for selecting hosts, groups, and host editor fields; double-click a host to connect [[details](https://github.com/grafviktor/goto/issues/135)].
+* Add Ctrl+j and Ctrl+k shortcuts for moving between host editor fields [[details](https://github.com/grafviktor/goto/issues/92)].
+
+_Notes_
+
+* The embedded terminal is enabled by default, so SSH sessions now run inside the application. Text selected with the mouse is copied to the OS clipboard automatically. Hold Shift to use the system selection instead. To fallback to system terminal, run `gg -d embedded_terminal`.
+* On startup, if there is at least one group of hosts in your storage, the list of groups is shown.
+* Mouse support in the host list, group list, and host editor is experimental and limited. It is disabled by default; enable it with `gg -e mouse`.
+
+_Breaking changes_
+
+* The state file key `selected` was renamed to `selected_host_index` in `state.yaml`. After the upgrade, the previously selected host is not pre-selected on the first run. Subsequent runs work as expected.
+
 **[v1.6.1](https://github.com/grafviktor/goto/compare/v1.6.0...v1.6.1) - 2026-06-08**
 
 * Fix ssh-copy-id (`t` shortcut) command for hosts loaded from a custom ssh_config location [[details](https://github.com/grafviktor/goto/issues/149)].

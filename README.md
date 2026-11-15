@@ -100,13 +100,13 @@ Find more demos and uses cases [here](demo/README.md).
   ```bash
   gg --set-ssh-config-path https://company-repo/devops-team/ssh_config
   ```
-* `-d` - disable feature, only supported value is ssh_config;
+* `-d` - disable feature, supported values: `ssh_config`, `embedded_terminal`, `mouse`;
   ```bash
   gg -d "ssh_config"
   ```
-* `-e` - enable feature, only supported value is ssh_config;
+* `-e` - enable feature, supported values: `ssh_config`, `embedded_terminal`, `mouse`;
   ```bash
-  gg -e "ssh_config"
+  gg -e "mouse"
   ```
 * `--set-theme` - set application color theme;
   ```bash
@@ -154,8 +154,10 @@ Usually you don't need to edit this file manually, but sometimes it's much more 
 
 ## 5. Known issues and limitations ##
 
+* When the embedded terminal is enabled, you cannot copy text from more than one screen - i.e. you cannot scroll and select. This issue will be fixed in next releases.
 * Application may not start on Windows platform if your terminal is set to use legacy console. Either disable legacy console mode or run terminal session manually and then start the application from the inside. Google "how to disable legacy console on windows" for more details.
 * On Windows, copying your SSH public key to a remote host using the `t` shortcut may fail if the remote host does not already have a `~/.ssh` directory. In that case, log in to the remote host, create the directory manually, and set the correct permissions (`chmod 700 ~/.ssh`). Once the directory is in place, retry the key-copy operation.
+* Mouse support is experimental and disabled by default.
 * If your `ssh_config` uses the `Include` directive with a double asterisk, for example:
   ```
   Include .../conf.d/**/*.conf
