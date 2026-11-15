@@ -1,4 +1,5 @@
 enable_embedded_terminal: true
+enable_mouse: false
 screen_layout: description
 ssh_config_path: /tmp/delete_me_goto_ssh_config_test_file
 selected_host_index: 1

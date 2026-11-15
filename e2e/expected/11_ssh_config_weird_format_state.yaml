@@ -1,5 +1,6 @@
 enable_embedded_terminal: true
 selected_group_name: ssh_config
+enable_mouse: false
 screen_layout: description
 selected_host_index: 11
 enable_ssh_config: true

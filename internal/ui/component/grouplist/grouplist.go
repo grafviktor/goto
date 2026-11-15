@@ -6,10 +6,12 @@ import (
 	"context"
 	"slices"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/samber/lo"
 
 	"github.com/grafviktor/goto/internal/model/host"
@@ -24,7 +26,12 @@ type iLogger interface {
 	Error(format string, args ...any)
 }
 
-var noGroupSelected = "~ all ~"
+const (
+	noGroupSelected          = "~ all ~"
+	timeToWaitForSecondClick = 500 * time.Millisecond
+)
+
+type msgSecondClickTimeOut struct{}
 
 type Model struct {
 	list.Model
@@ -34,6 +41,8 @@ type Model struct {
 	logger           iLogger
 	styles           styles
 	additionalKeyMap *keyMap
+	// For handling double click
+	waitForSecondClick bool
 }
 
 // New - creates a new UI component which is used to select a host group from a list,
@@ -96,6 +105,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		cmd = m.handleKeyboardEvent(msg)
 		cmds = append(cmds, cmd)
+	case tea.MouseMsg:
+		return m, m.handleMouseMsg(msg)
+	case msgSecondClickTimeOut:
+		m.logger.Debug("[UI] Second click timeout. Stay on the focused group.")
+		m.waitForSecondClick = false
+		return m, nil
 	case message.ViewGroupListOpen:
 		return m, m.loadItems()
 	}
@@ -120,6 +135,7 @@ func (m *Model) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 		return m.handleDeselectGroup()
 	case key.Matches(msg, m.additionalKeyMap.quitApp):
 		if m.FilterState() != list.Filtering {
+			m.logger.Info("[UI] Quit key. Exit the application.")
 			return tea.Quit
 		}
 	}
@@ -140,6 +156,10 @@ func (m *Model) handleSelectGroup() tea.Cmd {
 		return nil
 	}
 
+	return m.selectGroupAndCloseView()
+}
+
+func (m *Model) selectGroupAndCloseView() tea.Cmd {
 	selected := m.SelectedItem().(ListItemHostGroup).Title() //nolint:errcheck // SelectedItem always returns ListItemHostGroup
 	selected = strings.TrimSpace(selected)
 
@@ -147,7 +167,7 @@ func (m *Model) handleSelectGroup() tea.Cmd {
 		selected = ""
 	}
 
-	m.logger.Debug("[UI] Enter key. Select group '%s' and exit from group list view.", selected)
+	m.logger.Info("[UI] Select group %q and exit from group list view.", selected)
 	return tea.Sequence(
 		message.TeaCmd(message.GroupSelect{Name: selected}),
 		message.TeaCmd(message.ViewGroupListClose{}),
@@ -168,6 +188,111 @@ func (m *Model) handleDeselectGroup() tea.Cmd {
 		message.TeaCmd(message.GroupSelect{Name: ""}),
 		message.TeaCmd(message.ViewGroupListClose{}),
 	)
+}
+
+func (m *Model) handleMouseMsg(msg tea.MouseMsg) tea.Cmd {
+	if m.FilterState() == list.Filtering {
+		m.logger.Debug("[UI] Ignore the mouse event while filtering groups.")
+		return nil
+	}
+
+	if msg, ok := msg.(tea.MouseClickMsg); ok {
+		if msg.Mouse().Button == tea.MouseLeft {
+			return m.focusItem(msg.Mouse().Y)
+		}
+
+		m.logger.Debug("[UI] Ignore the %s mouse button.", msg.Mouse().Button)
+	}
+
+	return nil
+}
+
+func (m *Model) focusItem(atPosition int) tea.Cmd {
+	if m.paginatorRowPosition() == atPosition {
+		m.handlePaginatorClick()
+		return nil
+	}
+
+	index := m.itemAt(atPosition)
+	if index < 0 {
+		m.logger.Debug("[UI] Mouse click misses the group list at row %d.", atPosition)
+		return nil
+	}
+
+	if index == m.Index() && m.waitForSecondClick {
+		m.waitForSecondClick = false
+		m.logger.Debug("[UI] Mouse double click. Select the focused group.")
+		return m.selectGroupAndCloseView()
+	}
+
+	m.Select(index)
+	m.waitForSecondClick = true
+	m.logger.Debug("[UI] Mouse click. Focus group at index %d and wait for a second click.", index)
+	return tea.Tick(timeToWaitForSecondClick, func(_ time.Time) tea.Msg {
+		return msgSecondClickTimeOut{}
+	})
+}
+
+func (m *Model) paginatorRowPosition() int {
+	if m.Paginator.TotalPages <= 1 {
+		return -1
+	}
+
+	paginationStyle := m.Styles.PaginationStyle
+	// This tweak is taken from charm.land/bubbles/v2@v2.1.0/list/list.go lines 1195-1200
+	if paginationStyle.GetMarginTop() == 0 {
+		paginationStyle = paginationStyle.MarginTop(1)
+	}
+
+	paginationHeight := lipgloss.Height(paginationStyle.Render(m.Paginator.View()))
+	helpHeight := lipgloss.Height(m.Styles.HelpStyle.Render(m.Help.View(m.Model)))
+	// Take the full height plus top margin and subtract help and pagination heights
+	topSectionsHeight := m.styles.componentMargins.GetMarginTop() + m.Height() - helpHeight - paginationHeight
+	// Height of the top sections plus paginator margin is becoming your paginator index.
+	return topSectionsHeight + paginationStyle.GetMarginTop()
+}
+
+func (m *Model) handlePaginatorClick() {
+	if m.Paginator.TotalPages <= 1 {
+		return
+	}
+
+	m.waitForSecondClick = false
+	if m.Paginator.OnLastPage() {
+		for !m.Paginator.OnFirstPage() {
+			m.Paginator.PrevPage()
+		}
+	} else {
+		m.Paginator.NextPage()
+	}
+	m.logger.Debug("[UI] Click on paginator. Move to page: %d, total pages: %d.",
+		m.Paginator.Page+1, m.Paginator.TotalPages)
+}
+
+func (m *Model) itemAt(mousePositionY int) int {
+	topOffset := m.styles.componentMargins.GetMarginTop()
+	// There is no direct way to get height of the title, that's why we
+	// simulate what render does and calculate its height manually.
+	topOffset += lipgloss.Height(m.Styles.TitleBar.Render(m.Styles.Title.Render(m.Title)))
+	if m.ShowStatusBar() {
+		// Need to render at least one letter to get real height.
+		topOffset += lipgloss.Height(m.Styles.StatusBar.Render("x"))
+	}
+
+	// mousePositionInList is the position relative to the list start, excluding top offset.
+	// offSet is where the first item starts.
+	mousePositionInList := mousePositionY - topOffset
+	if mousePositionInList < 0 {
+		return -1
+	}
+
+	pageStart, pageEnd := m.Paginator.GetSliceBounds(len(m.VisibleItems()))
+	visibleItemIndex := pageStart + mousePositionInList
+	if visibleItemIndex >= pageEnd {
+		// We're beyond the bottom of the list
+		return -1
+	}
+	return visibleItemIndex
 }
 
 func (m *Model) loadItems() tea.Cmd {
@@ -219,6 +344,7 @@ func (m *Model) selectSavedGroup() {
 	saved := strings.TrimSpace(m.appState.Group)
 	if saved == "" {
 		m.Select(0)
+		m.logger.Debug("[UI] No saved group. Focus %q.", noGroupSelected)
 		return
 	}
 
@@ -229,8 +355,10 @@ func (m *Model) selectSavedGroup() {
 
 	if !found {
 		m.Select(0)
+		m.logger.Debug("[UI] Saved group %q is absent. Focus %q.", saved, noGroupSelected)
 		return
 	}
 
 	m.Select(index)
+	m.logger.Debug("[UI] Focus saved group %q.", saved)
 }

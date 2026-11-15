@@ -20,6 +20,7 @@ const (
 	appName                 = "goto"
 	FeatureSSHConfig        = "ssh_config"
 	FeatureEmbeddedTerminal = "embedded_terminal"
+	FeatureMouse            = "mouse"
 )
 
 // Configuration structs contains user-definable parameters.

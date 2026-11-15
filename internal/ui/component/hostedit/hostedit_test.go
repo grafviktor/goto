@@ -213,7 +213,7 @@ func TestHandleCopyInputValueShortcut(t *testing.T) {
 func TestUpdate_HostSSHConfigLoaded(t *testing.T) {
 	// Test that when the model receives HostSSHConfigLoaded message,
 	// the input placeholders are updated with the values from the SSH config.
-	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	model := newMockModel()
 	require.NotEqual(t, "default: Mock Identity File", model.inputs[inputIdentityFile].Placeholder)
 	require.NotEqual(t, "default: Mock User", model.inputs[inputLogin].Placeholder)
 	require.NotEqual(t, "default: Mock Port", model.inputs[inputNetworkPort].Placeholder)
@@ -235,7 +235,7 @@ func TestUpdate_HostSSHConfigLoaded(t *testing.T) {
 func TestUpdate_HideUINotification(t *testing.T) {
 	// Test display notification message show and hide functionality
 	uiComponentName := "hostedit"
-	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	model := newMockModel()
 	cmd := message.DisplayNotification(uiComponentName, "Test notification message", model)
 	require.Equal(t, "Test notification message", model.title)
 
@@ -259,7 +259,7 @@ func TestUpdate_HideUINotification(t *testing.T) {
 func TestView(t *testing.T) {
 	// Test that by calling View() function first time, we set ready flag to true
 	// and view() returns non-empty string which will be used to build terminal user interface
-	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	model := newMockModel()
 	assert.False(t, model.ready)
 	ui := model.View()
 
@@ -269,19 +269,19 @@ func TestView(t *testing.T) {
 
 func TestHelpView(t *testing.T) {
 	// Test that help view is not empty
-	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	model := newMockModel()
 	require.NotEmpty(t, model.helpView())
 }
 
 func TestHeaderView(t *testing.T) {
 	// Test that header view is not empty
-	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	model := newMockModel()
 	require.NotEmpty(t, model.headerView())
 }
 
 func TestHandleDebounceMessage(t *testing.T) {
 	// Test that only last message is executed when wrap message in the debounce container
-	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	model := newMockModel()
 	_, returned1 := model.Update(debouncedMessage{
 		wrappedMsg:  struct{}{},
 		debounceTag: 0,
@@ -363,7 +363,7 @@ func TestUpdateInputPlaceHolders(t *testing.T) {
 
 func TestUpdate_KeyDiscard(t *testing.T) {
 	// When press escape, should receive close form cmd
-	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	model := newMockModel()
 	_, cmd := model.Update(tea.KeyPressMsg{
 		Code: tea.KeyEscape,
 	})
@@ -373,7 +373,7 @@ func TestUpdate_KeyDiscard(t *testing.T) {
 
 func TestUpdate_KeySave(t *testing.T) {
 	// When press escape, should receive close form cmd
-	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	model := newMockModel()
 	_, cmd := model.Update(tea.KeyPressMsg{
 		Code: 's',
 		Mod:  tea.ModCtrl,
@@ -430,11 +430,115 @@ func TestUpdate_KeyEventWhenHostIsReadOnly(t *testing.T) {
 }
 
 func TestDisplayNotificationMsg(t *testing.T) {
-	model := New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
+	model := newMockModel()
 	cmd := model.displayNotificationMsg("")
 	require.Nil(t, cmd)
 }
 
+func TestUpdate_handleMouseMsg(t *testing.T) {
+	var logger *mocklogger.Logger
+	var model *EditModel
+
+	beforeEach := func() {
+		logger = &mocklogger.Logger{}
+		model = New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), logger)
+	}
+
+	t.Run("Should ignore right mouse button click", func(t *testing.T) {
+		beforeEach()
+		require.Equal(t, 0, model.viewport.TotalLineCount())
+		_, _ = model.Update(tea.MouseClickMsg{Button: tea.MouseRight})
+		require.Positive(t, model.viewport.TotalLineCount())
+		require.Contains(t, logger.Logs, "[UI] Ignore the right mouse button.")
+	})
+
+	t.Run("Should handle left mouse button click", func(t *testing.T) {
+		beforeEach()
+		require.Equal(t, 0, model.viewport.TotalLineCount())
+		_, _ = model.Update(tea.MouseClickMsg{Button: tea.MouseLeft})
+		require.Positive(t, model.viewport.TotalLineCount())
+		require.Contains(t, logger.Logs, "[UI] Mouse click keeps the current input focused.")
+	})
+}
+
+func Test_focusItem(t *testing.T) {
+	model := newMockModel()
+	model.viewport.SetHeight(20)
+
+	t.Run("If mouse click is outside of any of the inputs, focus should not change", func(t *testing.T) {
+		require.Equal(t, inputTitle, model.focusedInput)
+		cmd := model.focusItem(tea.MouseClickMsg{Button: tea.MouseRight})
+		require.Equal(t, inputTitle, model.focusedInput)
+		require.Nil(t, cmd)
+	})
+
+	t.Run("If mouse click is inside an input, focus should change", func(t *testing.T) {
+		require.Equal(t, inputTitle, model.focusedInput)
+		cmd := model.focusItem(tea.MouseClickMsg{Button: tea.MouseRight, Y: 7})
+		require.Equal(t, inputAddress, model.focusedInput)
+		require.NotNil(t, cmd)
+	})
+}
+
+// func (m *EditModel) itemAt(mousePositionY int) int {
+// 	topOffset := lipgloss.Height(m.headerView())
+// 	// View layout is: header + "\n" + viewport + "\n" + help
+// 	mousePositionInList := mousePositionY - topOffset - 1
+// 	if mousePositionInList < 0 || mousePositionInList >= m.viewport.Height() {
+// 		return -1
+// 	}
+
+// 	listItemHeight := lipgloss.Height(m.inputsView()) / len(m.inputs)
+// 	// There is no pager, like in other list components, so we need to calculate the offset.
+// 	// Its't not zero when the window is small and unable to display all input fields at once.
+// 	scrollOffset := m.viewport.YOffset()
+// 	visibleItemIndex := (mousePositionInList + scrollOffset) / listItemHeight
+// 	if visibleItemIndex < 0 || visibleItemIndex >= len(m.inputs) || !m.inputs[visibleItemIndex].Enabled() {
+// 		return -1
+// 	}
+
+// 	return visibleItemIndex
+// }
+
+func Test_itemAt(t *testing.T) {
+	var logger *mocklogger.Logger
+	var model *EditModel
+
+	beforeEach := func() {
+		logger = &mocklogger.Logger{}
+		model = New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), logger)
+		model.viewport.SetHeight(10)
+	}
+
+	t.Run("If mouse click is outside of any of the inputs, should return -1", func(t *testing.T) {
+		beforeEach()
+		index := model.itemAt(0)
+		require.Equal(t, -1, index)
+
+		index = model.itemAt(15)
+		require.Equal(t, -1, index)
+	})
+
+	t.Run("If mouse click lands on a disabled input, should return -1", func(t *testing.T) {
+		beforeEach()
+		index := model.itemAt(10)
+		require.Equal(t, 2, index)
+
+		model.inputs[index].SetEnabled(false)
+
+		index = model.itemAt(10)
+		require.Equal(t, -1, index)
+	})
+}
+
+// ==============================================
+// ============== utility methods ===============
+// ==============================================
+
 func MockAppState() *state.State {
 	return &state.State{}
+}
+
+func newMockModel() *EditModel {
+	return New(context.TODO(), testutils.NewMockStorage(false), MockAppState(), &mocklogger.Logger{})
 }
