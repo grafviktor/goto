@@ -53,6 +53,13 @@ func TestUpdate(t *testing.T) {
 	require.Equal(t, noGroupSelected, listModel.SelectedItem().(ListItemHostGroup).Title())
 }
 
+func TestUpdate_msgSecondClickTimeOut(t *testing.T) {
+	model := newMockModel(false)
+	model.waitForSecondClick = true
+	model.Update(msgSecondClickTimeOut{})
+	require.False(t, model.waitForSecondClick)
+}
+
 func Test_handleKeyboardEvent(t *testing.T) {
 	t.Run("General keyboard event test", func(t *testing.T) {
 		listModel := newMockModel(false)
