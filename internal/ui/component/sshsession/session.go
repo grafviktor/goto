@@ -19,7 +19,7 @@ import (
 const (
 	statusHeight                = 2
 	messageDisplayTime          = 2 * time.Second
-	defaultNotificationAreaText = "SSH"
+	defaultNotificationAreaText = "ctrl+b hosts"
 )
 
 type clearStatusMsg struct{}
@@ -65,6 +65,10 @@ func (m *Model) Init() tea.Cmd {
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case termview.ClosedMsg:
+		// A previous session can still report that it exited after the user switches hosts.
+		if msg.ID != m.term.ID() {
+			return m, nil
+		}
 		cmd := m.handleSessionClose(msg)
 		return m, cmd
 	case tea.WindowSizeMsg:
@@ -158,4 +162,24 @@ func (m *Model) statusView() string {
 
 func (m *Model) SetStatus(status string) {
 	m.statusLineText = status
+}
+
+// Focus lets the embedded terminal receive keyboard input.
+func (m *Model) Focus() {
+	m.term = m.term.Focus()
+}
+
+// Blur stops the embedded terminal from receiving keyboard input.
+func (m *Model) Blur() {
+	m.term = m.term.Blur()
+}
+
+// Close stops the embedded terminal process.
+func (m *Model) Close() {
+	m.term.Close()
+}
+
+// Closed reports whether the embedded terminal process has stopped.
+func (m *Model) Closed() bool {
+	return m.term.Closed()
 }

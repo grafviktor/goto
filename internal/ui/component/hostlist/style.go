@@ -30,22 +30,25 @@ type styles struct {
 
 	// Margins for the whole UI component.
 	componentMargins lipgloss.Style
+	// Margins used when the list is shown beside an SSH session.
+	sessionSidebarMargins lipgloss.Style
 }
 
 func defaultStyles() styles {
 	themeSettings := theme.Get().Styles
 
 	return styles{
-		componentMargins:     lipgloss.NewStyle().Margin(1, 2, 1, 0), //nolint:mnd // magic numbers are OK for styles
-		filterInput:          themeSettings.ListExtra.FilterInput,
-		groupAbbreviation:    themeSettings.ListExtra.GroupAbbreviation,
-		groupHint:            themeSettings.ListExtra.GroupHint,
-		help:                 themeSettings.ListHelp,
-		list:                 themeSettings.List,
-		listDelegate:         themeSettings.ListDelegate,
-		listExtra:            themeSettings.ListExtra,
-		paginatorActiveDot:   themeSettings.ListExtra.PaginatorActiveDot,
-		paginatorInactiveDot: themeSettings.ListExtra.PaginatorInactiveDot,
-		prompt:               themeSettings.ListExtra.Prompt,
+		componentMargins:      lipgloss.NewStyle().Margin(1, 2, 1, 0), //nolint:mnd // magic numbers are OK for styles
+		sessionSidebarMargins: lipgloss.NewStyle().Margin(0, 1, 0, 0),
+		filterInput:           themeSettings.ListExtra.FilterInput,
+		groupAbbreviation:     themeSettings.ListExtra.GroupAbbreviation,
+		groupHint:             themeSettings.ListExtra.GroupHint,
+		help:                  themeSettings.ListHelp,
+		list:                  themeSettings.List,
+		listDelegate:          themeSettings.ListDelegate,
+		listExtra:             themeSettings.ListExtra,
+		paginatorActiveDot:    themeSettings.ListExtra.PaginatorActiveDot,
+		paginatorInactiveDot:  themeSettings.ListExtra.PaginatorInactiveDot,
+		prompt:                themeSettings.ListExtra.Prompt,
 	}
 }

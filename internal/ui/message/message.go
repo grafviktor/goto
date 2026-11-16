@@ -42,6 +42,8 @@ type (
 	ViewHostEditOpen struct{ HostID int }
 	// ViewHostEditClose triggers when users exits from edit form without saving results.
 	ViewHostEditClose struct{}
+	// SessionHostListClose closes the host list shown beside an embedded SSH session.
+	SessionHostListClose struct{}
 	// ErrorOccurred - is dispatched when an error occurs.
 	ErrorOccurred struct{ Err error }
 	// ExitWithError - indicates that something bad happened and we need to close the application.

@@ -30,6 +30,7 @@ type keyMap struct {
 	remove       key.Binding
 	toggleLayout key.Binding
 	confirm      key.Binding
+	back         key.Binding
 	keyMapState  keyMapStateEnum
 }
 
@@ -79,10 +80,26 @@ func newDelegateKeyMap() *keyMap {
 			key.WithKeys("y", "Y"),
 			key.WithHelp("y", "confirm"),
 		),
+		back: key.NewBinding(
+			key.WithKeys("esc"),
+			key.WithHelp("esc/ctrl+b", "back"),
+		),
 	}
 
+	km.back.SetEnabled(false)
 	km.keyMapState = keyMapState.EditkeysHidden
 	return &km
+}
+
+// disableActionsBesideSession hides shortcuts that would leave the running SSH session.
+func (k *keyMap) disableActionsBesideSession() {
+	k.append.SetEnabled(false)
+	k.clone.SetEnabled(false)
+	k.copyID.SetEnabled(false)
+	k.edit.SetEnabled(false)
+	k.remove.SetEnabled(false)
+	k.selectGroup.SetEnabled(false)
+	k.toggleLayout.SetEnabled(false)
 }
 
 func (k *keyMap) keysForNullHost() {
@@ -145,6 +162,7 @@ func (k *keyMap) ShortHelp() []key.Binding {
 		k.edit,
 		k.remove,
 		k.selectGroup,
+		k.back,
 	}
 
 	// Hide all disabled key shortcuts from the screen
@@ -154,7 +172,7 @@ func (k *keyMap) ShortHelp() []key.Binding {
 }
 
 func (k *keyMap) FullHelp() []key.Binding {
-	return []key.Binding{
+	bindings := []key.Binding{
 		k.connect,
 		k.append,
 		k.clone,
@@ -164,4 +182,9 @@ func (k *keyMap) FullHelp() []key.Binding {
 		k.copyID,
 		k.toggleLayout,
 	}
+	if k.back.Enabled() {
+		bindings = append(bindings, k.back)
+	}
+
+	return bindings
 }

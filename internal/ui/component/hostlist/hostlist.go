@@ -72,6 +72,7 @@ type Model struct {
 	appState            *state.State
 	logger              iLogger
 	mode                string
+	sessionSidebar      bool
 	showingNotification bool
 	styles              styles
 	// For handling double click
@@ -210,6 +211,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) handleKeyboardEvent(msg tea.KeyPressMsg) tea.Cmd {
 	m.showingNotification = false // Reset notification, when user presses any key.
+
+	if cmd, handled := m.ignoreSessionSidebarKey(msg); handled {
+		return cmd
+	}
 
 	switch {
 	case m.SettingFilter():
@@ -861,7 +866,61 @@ func cmdSSHConnectPreview(h hostModel.Host) string {
 
 func (m *Model) updateKeyMap() {
 	keyMapState := m.keyMap.UpdateKeyVisibility(m.SelectedItem())
+	m.keyMap.back.SetEnabled(false)
+	if m.sessionSidebar {
+		m.keyMap.disableActionsBesideSession()
+		m.keyMap.back.SetEnabled(true)
+	}
 	m.logger.Debug("[UI] Edit keyboard shortcuts: %v", keyMapState)
+}
+
+// SetSessionSidebar limits the list to choosing a host while an SSH session stays open.
+func (m *Model) SetSessionSidebar(on bool) {
+	if m.sessionSidebar == on {
+		return
+	}
+
+	m.sessionSidebar = on
+	if on {
+		m.mode = modeDefault
+		m.styles.componentMargins = m.styles.sessionSidebarMargins
+	} else {
+		m.styles.componentMargins = defaultStyles().componentMargins
+	}
+
+	// Drop the cached key state so shortcuts are rebuilt for the new mode.
+	m.keyMap.keyMapState = ""
+	m.updateKeyMap()
+	m.updateTitle()
+}
+
+func (m *Model) ignoreSessionSidebarKey(msg tea.KeyPressMsg) (tea.Cmd, bool) {
+	if !m.sessionSidebar {
+		return nil, false
+	}
+
+	switch {
+	case msg.Keystroke() == "ctrl+c":
+		m.logger.Debug("[UI] Ignore Ctrl+C while hosts are shown beside an SSH session.")
+		return nil, true
+	case msg.Keystroke() == "q" && !m.SettingFilter():
+		m.logger.Debug("[UI] Ignore q while hosts are shown beside an SSH session.")
+		return nil, true
+	case m.closesSessionSidebar(msg):
+		m.logger.Debug("[UI] Close the host list beside the SSH session.")
+		return message.TeaCmd(message.SessionHostListClose{}), true
+	default:
+		return nil, false
+	}
+}
+
+func (m *Model) closesSessionSidebar(msg tea.KeyPressMsg) bool {
+	if msg.Key().Code != tea.KeyEsc || m.SettingFilter() || m.mode != modeDefault {
+		return false
+	}
+
+	// Escape clears an applied filter before it closes the sidebar.
+	return m.FilterState() != list.FilterApplied
 }
 
 func (m *Model) selectHostByID(id int) tea.Cmd {

@@ -62,6 +62,7 @@ type MainModel struct {
 	viewport           viewport.Model
 	ready              bool
 	exitError          error
+	sessionSplit       bool
 }
 
 func (m *MainModel) Init() tea.Cmd {
@@ -131,6 +132,11 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logger.Debug("[UI] Quit application with error")
 		m.exitError = msg.Err
 		return m, tea.Quit
+	case message.SessionHostListClose:
+		if m.appState.CurrentView == state.ViewSSHSession && m.sessionSplit {
+			m.logger.Debug("[UI] Hide the host list beside the SSH session")
+			return m, m.setSessionSplit(false)
+		}
 	}
 
 	viewCmds := m.handleNonInputEvent(msg)
@@ -151,7 +157,11 @@ func (m *MainModel) View() tea.View {
 	case state.ViewEditItem:
 		content = m.modelHostEdit.View()
 	case state.ViewSSHSession:
-		content = m.modelSSHSession.View()
+		if m.sessionSplit {
+			content = m.sessionSplitView()
+		} else {
+			content = m.modelSSHSession.View()
+		}
 	}
 
 	// Wrap UI into the ViewPort
@@ -197,7 +207,7 @@ func (m *MainModel) handleInputEvent(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
 	case state.ViewSSHSession:
 		// Do not log msg. The key is forwarded to the session unchanged.
-		m.modelSSHSession, cmd = m.modelSSHSession.Update(msg)
+		return m.handleSessionInput(msg)
 	}
 
 	return m, cmd
@@ -206,6 +216,11 @@ func (m *MainModel) handleInputEvent(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *MainModel) handleNonInputEvent(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
+
+	_, isResize := msg.(tea.WindowSizeMsg)
+	if isResize && m.sessionSplit && m.appState.CurrentView == state.ViewSSHSession {
+		return m.layoutSessionPanes()
+	}
 
 	//exhaustive:ignore // Other views will receive the message unconditionally below.
 	switch m.appState.CurrentView {
@@ -334,6 +349,9 @@ func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.Ru
 		})
 	}
 
+	m.closeSSHSession()
+	m.clearSessionSplit()
+
 	statusText := m.formatSessionStatus(msg.Host.Group, msg.Host.SSHHostConfig.Hostname, msg.Host.Title)
 	sshSession.SetStatus(statusText)
 	m.modelSSHSession = &sshSession
@@ -407,6 +425,7 @@ func (m *MainModel) handleProcessSuccess(msg message.RunProcessSuccess) tea.Cmd 
 
 	if msg.ProcessType == constant.ProcessTypeSSHConnect {
 		m.logger.Debug("[EXEC] SSH connect process finished. Details:\n%s\n%s", msg.StdOut, msg.StdErr)
+		m.clearSessionSplit()
 		m.appState.CurrentView = state.ViewHostList
 	}
 
@@ -424,6 +443,7 @@ func (m *MainModel) handleProcessError(msg message.RunProcessErrorOccurred) {
 	// Use Debug method to log the error, as the error was
 	// already reported by run process module. Just duplicate here.
 	m.logger.Debug("[EXEC] External process error. %v", errMsg)
+	m.clearSessionSplit()
 	m.viewMessageContent = errMsg
 	m.appState.CurrentView = state.ViewMessage
 }
