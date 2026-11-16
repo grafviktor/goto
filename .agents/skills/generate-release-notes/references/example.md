@@ -41,6 +41,8 @@ goto --layout full
 ```
 
 <hr>
+
+**Full Changelog**: https://github.com/grafviktor/goto/compare/v1.2.0...v1.3.0
 ```
 
 Omit `### Improvements ###`, `### Fixes ###`, `### Technical ###`, `## Notes ##`, or `## Breaking changes ##` when that part has nothing to say.

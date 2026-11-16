@@ -69,6 +69,6 @@ After the categories, add `## Notes ##` only when the changelog section has `_No
 
 Add `## Breaking changes ##` only when the changelog section has `_Breaking changes_` bullets. Copy the facts from those bullets, then write the user instruction and a fenced shell command when the changelog names a command. Follow [references/example.md](references/example.md). Omit the section when there is nothing to undo.
 
-End the file with `<hr>`.
+End the file with `<hr>`, followed by full change log.
 
 Edit only `RELEASE_NOTES_vX.Y.Z.md`. Never commit.
