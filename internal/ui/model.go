@@ -10,6 +10,8 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 
+	// TODO: this should go to styles.go.
+
 	"github.com/grafviktor/goto/internal/constant"
 	"github.com/grafviktor/goto/internal/model/sshconfig"
 	"github.com/grafviktor/goto/internal/state"
@@ -17,6 +19,7 @@ import (
 	"github.com/grafviktor/goto/internal/ui/component/grouplist"
 	"github.com/grafviktor/goto/internal/ui/component/hostedit"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
+	"github.com/grafviktor/goto/internal/ui/component/splitview"
 	"github.com/grafviktor/goto/internal/ui/component/sshsession"
 	"github.com/grafviktor/goto/internal/ui/message"
 	"github.com/grafviktor/goto/internal/utils"
@@ -45,6 +48,7 @@ func New(
 	m := MainModel{
 		modelHostList:  hostlist.New(ctx, storage, appState, log),
 		modelGroupList: grouplist.New(ctx, storage, appState, log),
+		modelSplitView: splitview.New(),
 		appContext:     ctx,
 		hostStorage:    storage,
 		appState:       appState,
@@ -61,13 +65,13 @@ type MainModel struct {
 	modelGroupList     tea.Model
 	modelHostEdit      tea.Model
 	modelSSHSession    tea.Model
+	modelSplitView     tea.Model
 	appState           *state.State
 	viewMessageContent string
 	logger             iLogger
 	viewport           viewport.Model
 	ready              bool
 	exitError          error
-	sessionSplit       bool
 }
 
 func (m *MainModel) Init() tea.Cmd {
@@ -138,9 +142,10 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.exitError = msg.Err
 		return m, tea.Quit
 	case message.SessionHostListClose:
-		if m.appState.CurrentView == state.ViewSSHSession && m.sessionSplit {
-			m.logger.Debug("[UI] Hide the host list beside the SSH session")
-			return m, m.setSessionSplit(false)
+		if m.appState.CurrentView == state.ViewHostListAndSSHSession {
+			m.logger.Debug("[UI] Close host list and exit split view")
+			m.appState.CurrentView = state.ViewSSHSession
+			return m, nil
 		}
 	}
 
@@ -163,8 +168,8 @@ func (m *MainModel) View() tea.View {
 		content = m.modelHostEdit.View()
 	case state.ViewSSHSession:
 		content = m.modelSSHSession.View()
-	case state.ViewSplit:
-		content = m.sessionSplitView()
+	case state.ViewHostListAndSSHSession:
+		content = m.modelSplitView.View()
 	}
 
 	// Wrap UI into the ViewPort
@@ -190,8 +195,8 @@ func (m *MainModel) handleInputEvent(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			if m.appState.EmbeddedTerminalEnabled && keyMsg.Keystroke() == sessionHostListKey {
-				m.sessionSplit = !m.sessionSplit
-				return m, m.setSessionSplit(m.sessionSplit)
+				m.appState.CurrentView = state.ViewHostListAndSSHSession
+				return m, nil
 			}
 		}
 	}
@@ -215,7 +220,8 @@ func (m *MainModel) handleInputEvent(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.modelHostEdit, cmd = m.modelHostEdit.Update(msg)
 	case state.ViewSSHSession:
 		// Do not log msg. The key is forwarded to the session unchanged.
-		return m.handleSessionInput(msg)
+		m.modelSSHSession, cmd = m.modelSSHSession.Update(msg)
+		// return m.handleSessionInput(msg)
 	}
 
 	return m, cmd
@@ -225,10 +231,10 @@ func (m *MainModel) handleNonInputEvent(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
-	_, isResize := msg.(tea.WindowSizeMsg)
-	if isResize && m.sessionSplit && m.appState.CurrentView == state.ViewSSHSession {
-		return m.layoutSessionPanes()
-	}
+	// _, isResize := msg.(tea.WindowSizeMsg)
+	// if isResize && m.sessionSplit && m.appState.CurrentView == state.ViewSSHSession {
+	// 	return m.layoutSessionPanes()
+	// }
 
 	//exhaustive:ignore // Other views will receive the message unconditionally below.
 	switch m.appState.CurrentView {
@@ -357,8 +363,8 @@ func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.Ru
 		})
 	}
 
-	m.closeSSHSession()
-	m.clearSessionSplit()
+	// m.closeSSHSession()
+	// m.clearSessionSplit()
 
 	statusText := m.formatSessionStatus(msg.Host.Group, msg.Host.SSHHostConfig.Hostname, msg.Host.Title)
 	sshSession.SetStatus(statusText)
@@ -433,7 +439,7 @@ func (m *MainModel) handleProcessSuccess(msg message.RunProcessSuccess) tea.Cmd 
 
 	if msg.ProcessType == constant.ProcessTypeSSHConnect {
 		m.logger.Debug("[EXEC] SSH connect process finished. Details:\n%s\n%s", msg.StdOut, msg.StdErr)
-		m.clearSessionSplit()
+		// m.clearSessionSplit()
 		m.appState.CurrentView = state.ViewHostList
 	}
 
@@ -451,7 +457,7 @@ func (m *MainModel) handleProcessError(msg message.RunProcessErrorOccurred) {
 	// Use Debug method to log the error, as the error was
 	// already reported by run process module. Just duplicate here.
 	m.logger.Debug("[EXEC] External process error. %v", errMsg)
-	m.clearSessionSplit()
+	// m.clearSessionSplit()
 	m.viewMessageContent = errMsg
 	m.appState.CurrentView = state.ViewMessage
 }
