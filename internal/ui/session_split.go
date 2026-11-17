@@ -6,13 +6,11 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"github.com/grafviktor/goto/internal/state"
 	"github.com/grafviktor/goto/internal/ui/component/hostlist"
 	"github.com/grafviktor/goto/internal/ui/component/sshsession"
 )
 
 const (
-	sessionHostListKey       = "ctrl+b"
 	sessionHostListMinWidth  = 28
 	sessionHostListMaxWidth  = 42
 	sessionMinWidth          = 20
@@ -61,17 +59,17 @@ func sessionPaneWidths(total int) (int, int) {
 }
 
 func (m *MainModel) handleSessionInput(msg tea.Msg) (tea.Model, tea.Cmd) {
-	keyMsg, isKey := msg.(tea.KeyPressMsg)
-	if isKey && m.embeddedSessionUsesHostList() && keyMsg.Keystroke() == sessionHostListKey {
-		open := !m.sessionSplit
-		if open {
-			m.logger.Debug("[UI] Show the host list beside the SSH session")
-		} else {
-			m.logger.Debug("[UI] Hide the host list beside the SSH session")
-		}
+	// keyMsg, isKey := msg.(tea.KeyPressMsg)
+	// if isKey && m.embeddedSessionUsesHostList() && keyMsg.Keystroke() == sessionHostListKey {
+	// 	open := !m.sessionSplit
+	// 	if open {
+	// 		m.logger.Debug("[UI] Show the host list beside the SSH session")
+	// 	} else {
+	// 		m.logger.Debug("[UI] Hide the host list beside the SSH session")
+	// 	}
 
-		return m, m.setSessionSplit(open)
-	}
+	// 	return m, m.setSessionSplit(open)
+	// }
 
 	if m.sessionSplit {
 		if mouseMsg, ok := msg.(tea.MouseMsg); ok {
@@ -88,9 +86,9 @@ func (m *MainModel) handleSessionInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *MainModel) embeddedSessionUsesHostList() bool {
-	return m.appState.CurrentView == state.ViewSSHSession && m.appState.EmbeddedTerminalEnabled
-}
+// func (m *MainModel) embeddedSessionUsesHostList() bool {
+// 	return m.appState.CurrentView == state.ViewSSHSession && m.appState.EmbeddedTerminalEnabled
+// }
 
 func (m *MainModel) handleSessionSplitMouse(msg tea.MouseMsg) tea.Cmd {
 	listWidth, _ := sessionPaneWidths(m.appState.Width)

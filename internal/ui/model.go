@@ -22,6 +22,11 @@ import (
 	"github.com/grafviktor/goto/internal/utils"
 )
 
+const (
+	sessionHostListKey = "ctrl+b"
+	keySignalInterrupt = "ctrl+c"
+)
+
 type iLogger interface {
 	Debug(format string, args ...any)
 	Info(format string, args ...any)
@@ -157,11 +162,9 @@ func (m *MainModel) View() tea.View {
 	case state.ViewEditItem:
 		content = m.modelHostEdit.View()
 	case state.ViewSSHSession:
-		if m.sessionSplit {
-			content = m.sessionSplitView()
-		} else {
-			content = m.modelSSHSession.View()
-		}
+		content = m.modelSSHSession.View()
+	case state.ViewSplit:
+		content = m.sessionSplitView()
 	}
 
 	// Wrap UI into the ViewPort
@@ -181,9 +184,14 @@ func (m *MainModel) handleInputEvent(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.appState.CurrentView != state.ViewSSHSession {
 		if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 			m.logger.Debug("[UI] Keyboard event: '%v'", msg)
-			if keyMsg.String() == "ctrl+c" {
+			if keyMsg.Keystroke() == keySignalInterrupt {
 				m.logger.Debug("[UI] Receive Ctrl+C. Quit the application")
 				return m, tea.Quit
+			}
+
+			if m.appState.EmbeddedTerminalEnabled && keyMsg.Keystroke() == sessionHostListKey {
+				m.sessionSplit = !m.sessionSplit
+				return m, m.setSessionSplit(m.sessionSplit)
 			}
 		}
 	}

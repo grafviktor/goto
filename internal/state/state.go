@@ -36,6 +36,8 @@ const (
 	ViewMessage
 	// ViewSSHSession mode is active when we are in the SSH session.
 	ViewSSHSession
+	// ViewSplit mode is active when a sidebar component and SSH session are displayed side by side.
+	ViewSplit
 )
 
 // Once - this interface is used to avoid sync.Once restrictions in unit-tests.
