@@ -82,6 +82,7 @@ func (t *Theme) computeStyles() {
 		ListDelegate: t.listDelegateStyles(),
 		ListHelp:     t.listHelpStyles(),
 		EditForm:     t.editFormStyles(),
+		SplitView:    t.splitViewStyles(),
 		SSHSession:   t.sshSessionStyles(),
 	}
 }
@@ -273,11 +274,8 @@ type SplitViewStyles struct {
 	Divider lipgloss.Style
 }
 
-func (t *Theme) SplitViewStyles() SplitViewStyles {
+func (t *Theme) splitViewStyles() SplitViewStyles {
 	return SplitViewStyles{
-		Divider: lipgloss.NewStyle().
-			Foreground(t.Colors.BackgroundColorTitle.toLipgloss()).
-			Border(lipgloss.NormalBorder(), true, false, false, false).
-			BorderForeground(t.Colors.BackgroundColorTitle.toLipgloss()),
+		Divider: lipgloss.NewStyle().Foreground(t.Colors.BackgroundColorTitle.toLipgloss()),
 	}
 }

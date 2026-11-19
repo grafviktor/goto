@@ -1,6 +1,8 @@
 package splitview
 
 import (
+	"strings"
+
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/grafviktor/goto/internal/state"
@@ -91,15 +93,14 @@ func (m *Model) View() tea.View {
 }
 
 func (m *Model) sessionSplitDivider(height int) string {
-	// var divider string
-	// if height < 1 {
-	// 	divider = "│"
-	// } else {
-	// 	divider = strings.TrimRight(strings.Repeat("│\n", height), "\n")
-	// }
+	var divider string
+	if height < 1 {
+		divider = " │ "
+	} else {
+		divider = strings.TrimRight(strings.Repeat(" │ \n", height), "\n")
+	}
 
-	// return m.styles.divider.Render(divider)
-	return ""
+	return m.styles.divider.Render(divider)
 }
 
 func sessionPaneWidths(total int) (int, int) {
