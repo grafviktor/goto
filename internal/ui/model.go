@@ -377,7 +377,7 @@ func (m *MainModel) dispatchProcessSSHConnectWithEmbeddedTerminal(msg message.Ru
 	m.logger.Info("[EXEC] Run process: %q", process.String())
 	commandAndArgs := append([]string{process.Path}, process.Args[1:]...)
 
-	sshSession, err := sshsession.New(m.appState.Width, m.appState.Height, commandAndArgs...)
+	sshSession, err := sshsession.New(m.appState.Width, m.appState.Height, m.logger, commandAndArgs...)
 	if err != nil {
 		m.logger.Info("[EXEC] Cannot open the embedded terminal: %v", err)
 		return message.TeaCmd(message.RunProcessErrorOccurred{

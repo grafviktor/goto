@@ -10,16 +10,17 @@ import (
 	"github.com/stretchr/testify/require"
 
 	testutils "github.com/grafviktor/goto/internal/testutils"
+	"github.com/grafviktor/goto/internal/testutils/mocklogger"
 	"github.com/grafviktor/goto/internal/ui/message"
 )
 
 func TestNew(t *testing.T) {
-	_, err := New(80, 24, "hostname")
+	_, err := New(80, 24, &mocklogger.Logger{}, "hostname")
 	require.NoError(t, err)
 }
 
 func TestNew_ExecutableNotFoundErr(t *testing.T) {
-	_, err := New(80, 24, "no_such_binary", "test")
+	_, err := New(80, 24, &mocklogger.Logger{}, "no_such_binary", "test")
 	require.Error(t, err)
 }
 
@@ -40,7 +41,7 @@ func TestUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, _ := New(80, 24, "hostname")
+			m, _ := New(80, 24, &mocklogger.Logger{}, "hostname")
 			_, cmd := m.Update(tt.sentMessage)
 			var msgs []tea.Msg
 			testutils.CmdToMessage(cmd, &msgs)
@@ -58,7 +59,7 @@ func TestUpdate_WindowSizeMsg(t *testing.T) {
 	// Test that terminal which we're wrapping will get its size
 	// with status line height substracted. Testing both cases
 	// when create and update terminal.
-	m, _ := New(80, 24, "hostname")
+	m, _ := New(80, 24, &mocklogger.Logger{}, "hostname")
 	require.Equal(t, 80, m.term.Width())
 	require.Equal(t, 22, m.term.Height())
 
@@ -69,7 +70,7 @@ func TestUpdate_WindowSizeMsg(t *testing.T) {
 
 func TestUpdate_MouseMsg(t *testing.T) {
 	// Test that if we click on a position outside the terminal area, the mouse event is ignored.
-	m, _ := New(80, 24, "hostname")
+	m, _ := New(80, 24, &mocklogger.Logger{}, "hostname")
 	// Remember, the terminal height is lower, than the whole component height, because of the
 	// status line.
 	require.Equal(t, 22, m.term.Height())
@@ -99,7 +100,7 @@ During the battle, Rebel spies managed to steal secret plans to the Empire's
 ultimate weapon, the DEATH STAR...`
 
 	var cmd tea.Cmd
-	m, _ := New(80, 24, "hostname")
+	m, _ := New(80, 24, &mocklogger.Logger{}, "hostname")
 
 	t.Run("Update status line on text selection", func(t *testing.T) {
 		_, cmd = m.Update(termview.TextSelectedMsg{
@@ -133,7 +134,7 @@ ultimate weapon, the DEATH STAR...`
 }
 
 func TestHandleSessionClose(t *testing.T) {
-	m, _ := New(80, 24, "hostname")
+	m, _ := New(80, 24, &mocklogger.Logger{}, "hostname")
 	cmd := m.handleSessionClose(termview.ClosedMsg{})
 	require.IsType(t, message.RunProcessSuccess{}, cmd())
 

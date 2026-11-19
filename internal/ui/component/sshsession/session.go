@@ -24,6 +24,13 @@ const (
 
 type clearStatusMsg struct{}
 
+type iLogger interface {
+	Debug(format string, args ...any)
+	// TODO: get rid of unused methods in logger
+	// Info(format string, args ...any)
+	// Error(format string, args ...any)
+}
+
 type Model struct {
 	term                        termview.Model
 	command                     string
@@ -32,9 +39,10 @@ type Model struct {
 	statusLineText              string
 	defaultNotificationAreaText string
 	currentNotificationAreaText string
+	logger                      iLogger
 }
 
-func New(initialWidth, initialHeight int, commandAndArgs ...string) (Model, error) {
+func New(initialWidth, initialHeight int, log iLogger, commandAndArgs ...string) (Model, error) {
 	stdErr := &utils.ProcessBufferWriter{}
 	term, err := termview.New(
 		termview.WithCommand(commandAndArgs[0], commandAndArgs[1:]...),
@@ -53,6 +61,7 @@ func New(initialWidth, initialHeight int, commandAndArgs ...string) (Model, erro
 		styles:                      defaultStyles(),
 		defaultNotificationAreaText: defaultNotificationAreaText,
 		currentNotificationAreaText: defaultNotificationAreaText,
+		logger:                      log,
 	}
 
 	return m, nil
@@ -73,6 +82,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	case tea.WindowSizeMsg:
 		msg.Height -= lipgloss.Height(m.statusView())
+		m.logger.Debug("[UI] Set session window size: %d %d", msg.Width, msg.Height)
 		updated, cmd := m.term.Update(msg)
 		m.term = updated
 		return m, cmd
