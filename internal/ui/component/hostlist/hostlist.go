@@ -413,6 +413,10 @@ func (m *Model) itemAt(mousePositionY int) int {
 }
 
 func (m *Model) View() tea.View {
+	content := m.Model.View()
+	n := lipgloss.Width(m.Model.View())
+	m.logger.Debug("[UI] BUG: Calculated host width: %d", n)
+	m.logger.Debug("[UI] BUG: Calculated host content: %s", content)
 	return tea.NewView(m.styles.componentMargins.Render(m.Model.View()))
 }
 

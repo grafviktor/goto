@@ -95,9 +95,9 @@ func (m *Model) View() tea.View {
 func (m *Model) sessionSplitDivider(height int) string {
 	var divider string
 	if height < 1 {
-		divider = " │ "
+		divider = "│"
 	} else {
-		divider = strings.TrimRight(strings.Repeat(" │ \n", height), "\n")
+		divider = strings.TrimRight(strings.Repeat("│\n", height), "\n")
 	}
 
 	return m.styles.divider.Render(divider)
