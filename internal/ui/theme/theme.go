@@ -70,6 +70,7 @@ type AppStyles struct {
 	ListHelp     help.Styles
 	EditForm     EditForm
 	ListExtra    ListExtraStyles
+	SplitView    SplitViewStyles
 	SSHSession   SSHSessionStyles
 }
 
@@ -262,6 +263,19 @@ type SSHSessionStyles struct {
 func (t *Theme) sshSessionStyles() SSHSessionStyles {
 	return SSHSessionStyles{
 		StatusLine: lipgloss.NewStyle().
+			Foreground(t.Colors.BackgroundColorTitle.toLipgloss()).
+			Border(lipgloss.NormalBorder(), true, false, false, false).
+			BorderForeground(t.Colors.BackgroundColorTitle.toLipgloss()),
+	}
+}
+
+type SplitViewStyles struct {
+	Divider lipgloss.Style
+}
+
+func (t *Theme) SplitViewStyles() SplitViewStyles {
+	return SplitViewStyles{
+		Divider: lipgloss.NewStyle().
 			Foreground(t.Colors.BackgroundColorTitle.toLipgloss()).
 			Border(lipgloss.NormalBorder(), true, false, false, false).
 			BorderForeground(t.Colors.BackgroundColorTitle.toLipgloss()),

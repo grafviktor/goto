@@ -48,7 +48,6 @@ func New(
 	m := MainModel{
 		modelHostList:  hostlist.New(ctx, storage, appState, log),
 		modelGroupList: grouplist.New(ctx, storage, appState, log),
-		modelSplitView: splitview.New(),
 		appContext:     ctx,
 		hostStorage:    storage,
 		appState:       appState,
@@ -193,10 +192,33 @@ func (m *MainModel) handleInputEvent(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.logger.Debug("[UI] Receive Ctrl+C. Quit the application")
 				return m, tea.Quit
 			}
+		}
+	}
 
+	if m.appState.CurrentView == state.ViewHostListAndSSHSession {
+		if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
+			m.logger.Debug("[UI] Keyboard event: '%v'", msg)
+			if m.appState.EmbeddedTerminalEnabled && keyMsg.Keystroke() == sessionHostListKey {
+				m.appState.CurrentView = state.ViewSSHSession
+				var cmd tea.Cmd
+				m.modelSSHSession, cmd = m.modelSSHSession.Update(tea.WindowSizeMsg{
+					Height: m.appState.Height,
+					Width:  m.appState.Width,
+				})
+				// m.modelSplitView = splitview.New(m.appState, m.modelHostList, m.modelSSHSession)
+				// return m, m.modelSplitView.Init()
+				return m, cmd
+			}
+		}
+	}
+
+	if m.appState.CurrentView == state.ViewSSHSession {
+		if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
+			m.logger.Debug("[UI] Keyboard event: '%v'", msg)
 			if m.appState.EmbeddedTerminalEnabled && keyMsg.Keystroke() == sessionHostListKey {
 				m.appState.CurrentView = state.ViewHostListAndSSHSession
-				return m, nil
+				m.modelSplitView = splitview.New(m.appState, m.modelHostList, m.modelSSHSession)
+				return m, m.modelSplitView.Init()
 			}
 		}
 	}
@@ -231,10 +253,12 @@ func (m *MainModel) handleNonInputEvent(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
-	// _, isResize := msg.(tea.WindowSizeMsg)
-	// if isResize && m.sessionSplit && m.appState.CurrentView == state.ViewSSHSession {
-	// 	return m.layoutSessionPanes()
-	// }
+	// TODO: Should be moved out from here or refactored (maybe put to switch block)
+	_, isResize := msg.(tea.WindowSizeMsg)
+	if isResize && m.appState.CurrentView == state.ViewHostListAndSSHSession {
+		m.modelSplitView, cmd = m.modelSplitView.Update(msg)
+		return cmd
+	}
 
 	//exhaustive:ignore // Other views will receive the message unconditionally below.
 	switch m.appState.CurrentView {

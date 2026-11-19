@@ -1,7 +1,11 @@
 package splitview
 
 import (
+	"strings"
+
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/grafviktor/goto/internal/state"
 )
 
 const (
@@ -12,36 +16,35 @@ const (
 )
 
 type Model struct {
-	left  tea.Model
-	right tea.Model
+	appState *state.State
+	left     tea.Model
+	right    tea.Model
+	styles   styles
+	// height   int
 }
 
-func New(left, right tea.Model) *Model {
+func New(appState *state.State, left, right tea.Model) *Model {
 	return &Model{
-		left:  left,
-		right: right,
+		appState: appState,
+		left:     left,
+		right:    right,
+		styles:   defaultStyles(),
 	}
 }
 
 func (m *Model) Init() tea.Cmd {
-	return nil
+	return m.resizeChildComponents(m.appState.Width, m.appState.Height)
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
-	// if input event {
 	switch msg := msg.(type) {
 	case tea.KeyMsg, tea.MouseMsg:
 		m.left, cmd = m.left.Update(msg)
 		cmds = append(cmds, cmd)
 	case tea.WindowSizeMsg:
-		leftWidth, rightWidth := sessionPaneWidths(msg.Width)
-		msg.Width = leftWidth
-		m.left, cmd = m.left.Update(msg)
-		cmds = append(cmds, cmd)
-		msg.Width = rightWidth
-		m.right, cmd = m.right.Update(msg)
+		cmd = m.resizeChildComponents(msg.Width, msg.Height)
 		cmds = append(cmds, cmd)
 	default:
 		m.left, cmd = m.left.Update(msg)
@@ -53,12 +56,63 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+func (m *Model) resizeChildComponents(totalWidth, totalHeight int) tea.Cmd {
+	var cmd tea.Cmd
+	var cmds []tea.Cmd
+
+	// m.height = totalHeight
+	leftWidth, rightWidth := sessionPaneWidths(totalWidth)
+	leftModelSizeMsg := tea.WindowSizeMsg{
+		Height: totalHeight,
+		Width:  leftWidth,
+	}
+	rightModelSizeMsg := tea.WindowSizeMsg{
+		Height: totalHeight,
+		Width:  rightWidth,
+	}
+
+	m.left, cmd = m.left.Update(leftModelSizeMsg)
+	cmds = append(cmds, cmd)
+	m.right, cmd = m.right.Update(rightModelSizeMsg)
+	cmds = append(cmds, cmd)
+
+	return tea.Batch(cmds...)
+}
+
 func (m *Model) View() tea.View {
-	return tea.NewView(":-)")
+	// FIXME: divider gets it's height from appstate,
+	// but left and right components from windowSizeMsg
+	// Because of that, hights can disagree. A workaround
+	// is to create a model variable which will update
+	// its height from every resize message.
+	divider := m.sessionSplitDivider(m.appState.Height)
+	left := m.left.View().Content
+	right := m.right.View().Content
+
+	return tea.NewView(lipgloss.JoinHorizontal(lipgloss.Top, left, divider, right))
+}
+
+func (m *Model) sessionSplitDivider(height int) string {
+	var divider string
+	if height < 1 {
+		divider = "│"
+	} else {
+		divider = strings.TrimRight(strings.Repeat("│\n", height), "\n")
+	}
+
+	return m.styles.divider.Render(divider)
+}
+
+func sessionPaneWidths(total int) (int, int) {
+	// Subtract divider width
+	total = total - sessionSplitDividerWidth
+	leftWidth := total / 2
+	rightWidth := total - leftWidth
+	return leftWidth, rightWidth
 }
 
 // sessionPaneWidths splits the terminal between the host list, a one-column divider, and the session.
-func sessionPaneWidths(total int) (int, int) {
+/*func sessionPaneWidths(total int) (int, int) {
 	var listWidth, sessionWidth int
 	if total <= 0 {
 		return 0, 0
@@ -96,7 +150,7 @@ func sessionPaneWidths(total int) (int, int) {
 	}
 
 	return listWidth, sessionWidth
-}
+}*/
 
 func (m *Model) handleSessionInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// keyMsg, isKey := msg.(tea.KeyPressMsg)
