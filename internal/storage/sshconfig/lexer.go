@@ -3,6 +3,7 @@ package sshconfig
 import (
 	"bufio"
 	"errors"
+	"io/fs"
 	"net/url"
 	"os"
 	"path"
@@ -329,9 +330,7 @@ func (l *Lexer) includeLocalFileToken(localPath string, parent configSource) []c
 		localPath = filepath.Join(filepath.Dir(parent.value), localPath)
 	}
 
-	// filepath.Glob does not support recursive globbing (**), like ./conf.d/**/*.conf,
-	// currently can only use simple mask like ./conf.d/config_*.conf.
-	matches, err := filepath.Glob(localPath)
+	matches, err := expandIncludePattern(localPath)
 	if err != nil {
 		l.logger.Error("[SSHCONFIG] Cannot process Include pattern %s: %v", localPath, err)
 		return sources
@@ -367,6 +366,57 @@ func (l *Lexer) includeLocalFileToken(localPath string, parent configSource) []c
 	}
 
 	return sources
+}
+
+// expandIncludePattern resolves an Include pattern. A ** segment matches files
+// at any depth below it; other segments use filepath.Match semantics.
+func expandIncludePattern(pattern string) ([]string, error) {
+	const recursive = "**"
+	parts := strings.Split(filepath.ToSlash(pattern), "/")
+	recursiveAt := -1
+	for i, part := range parts {
+		if part == recursive {
+			recursiveAt = i
+			break
+		}
+	}
+	if recursiveAt == -1 {
+		return filepath.Glob(pattern)
+	}
+
+	prefix := filepath.Join(parts[:recursiveAt]...)
+	suffix := filepath.Join(parts[recursiveAt+1:]...)
+	if suffix == "" {
+		suffix = "*"
+	}
+	baseMatches, err := filepath.Glob(prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	var matches []string
+	for _, base := range baseMatches {
+		err := filepath.WalkDir(base, func(path string, entry fs.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if entry.IsDir() {
+				return nil
+			}
+			ok, err := filepath.Match(suffix, filepath.Base(path))
+			if err != nil {
+				return err
+			}
+			if ok {
+				matches = append(matches, path)
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return matches, nil
 }
 
 func (l *Lexer) expandTildePath(localPath string) string {
