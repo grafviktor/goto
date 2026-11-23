@@ -176,6 +176,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Triggers immediately after app start because we render this component by default
 		h, v := m.styles.componentMargins.GetFrameSize()
 		m.SetSize(msg.Width-h, msg.Height-v)
+		m.limitHelpWidth()
 		m.logger.Debug("[UI] Set host list size: %d %d", m.Width(), m.Height())
 		return m, nil
 	case msgHostSSHConfigLoadWait:
@@ -413,11 +414,24 @@ func (m *Model) itemAt(mousePositionY int) int {
 }
 
 func (m *Model) View() tea.View {
-	content := m.Model.View()
-	n := lipgloss.Width(m.Model.View())
-	m.logger.Debug("[UI] BUG: Calculated host width: %d", n)
-	m.logger.Debug("[UI] BUG: Calculated host content: %s", content)
+	// Keep the shortcut row inside the list. See limitHelpWidth.
+	m.limitHelpWidth()
 	return tea.NewView(m.styles.componentMargins.Render(m.Model.View()))
+}
+
+// limitHelpWidth stops the shortcut row from stretching the host list.
+// Without this fix, help line is longer than component width. It breaks
+// split view mode.
+func (m *Model) limitHelpWidth() {
+	width := m.Width()
+	if width < 1 {
+		return
+	}
+
+	inner := max(width-m.Styles.HelpStyle.GetHorizontalFrameSize(), 1)
+
+	m.Help.SetWidth(inner)
+	m.Styles.HelpStyle = m.Styles.HelpStyle.MaxWidth(width)
 }
 
 func (m *Model) updateChildModel(msg tea.Msg) tea.Cmd {

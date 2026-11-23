@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -617,6 +619,28 @@ func TestUpdate_TeaSizeMsg(t *testing.T) {
 
 	require.Positive(t, model.Height())
 	require.Positive(t, model.Width())
+}
+
+func TestView_RenderedWidthStaysWithinWindow(t *testing.T) {
+	model := newMockModel(false)
+	// A long title is truncated inside the list. The shortcut row is what used
+	// to spill out and pull every other row with it.
+	model.Title = strings.Repeat("ssh user@very-long-host ", 8)
+
+	for _, width := range []int{36, 48, 63, 80, 128} {
+		model.Update(tea.WindowSizeMsg{Width: width, Height: 18})
+		got := lipgloss.Width(model.View().Content)
+		require.LessOrEqual(t, got, width, "window %d", width)
+	}
+
+	model.Update(tea.WindowSizeMsg{Width: 63, Height: 18})
+	narrow := utils.StripStyles(model.View().Content)
+	require.NotContains(t, narrow, "? more")
+
+	model.Update(tea.WindowSizeMsg{Width: 160, Height: 24})
+	wide := utils.StripStyles(model.View().Content)
+	require.Contains(t, wide, "quit")
+	require.Contains(t, wide, "? more")
 }
 
 func TestUpdate_HostSSHConfigLoaded(t *testing.T) {
