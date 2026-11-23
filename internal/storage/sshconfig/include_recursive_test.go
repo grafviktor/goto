@@ -51,3 +51,22 @@ func TestLexer_IncludeRecursiveGlob(t *testing.T) {
 	}
 	require.Len(t, tokens, len(files))
 }
+
+func TestExpandIncludePatternAbsoluteUnixPath(t *testing.T) {
+	matches, err := expandIncludePattern("/home/user/.ssh/conf.d/**/*.conf")
+	require.NoError(t, err)
+	// No files exist, but the prefix must stay absolute (no CWD-relative match).
+	require.Empty(t, matches)
+}
+
+func TestExpandIncludePatternAbsolutePrefix(t *testing.T) {
+	tmpDir := t.TempDir()
+	confDir := filepath.Join(tmpDir, "conf.d")
+	require.NoError(t, os.MkdirAll(filepath.Join(confDir, "nested"), 0o755))
+	expected := filepath.Join(confDir, "nested", "host.conf")
+	require.NoError(t, os.WriteFile(expected, []byte("Host abs-host\n"), 0o644))
+
+	matches, err := expandIncludePattern(filepath.ToSlash(confDir) + "/**/*.conf")
+	require.NoError(t, err)
+	require.Equal(t, []string{expected}, matches)
+}

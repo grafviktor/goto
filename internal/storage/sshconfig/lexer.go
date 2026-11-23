@@ -372,7 +372,8 @@ func (l *Lexer) includeLocalFileToken(localPath string, parent configSource) []c
 // at any depth below it; other segments use filepath.Match semantics.
 func expandIncludePattern(pattern string) ([]string, error) {
 	const recursive = "**"
-	parts := strings.Split(filepath.ToSlash(pattern), "/")
+	slashPattern := filepath.ToSlash(pattern)
+	parts := strings.Split(slashPattern, "/")
 	recursiveAt := -1
 	for i, part := range parts {
 		if part == recursive {
@@ -384,8 +385,9 @@ func expandIncludePattern(pattern string) ([]string, error) {
 		return filepath.Glob(pattern)
 	}
 
-	prefix := filepath.Join(parts[:recursiveAt]...)
-	suffix := filepath.Join(parts[recursiveAt+1:]...)
+	// Join keeps the empty first element of an absolute path, preserving "/".
+	prefix := strings.Join(parts[:recursiveAt], "/")
+	suffix := strings.Join(parts[recursiveAt+1:], "/")
 	if suffix == "" {
 		suffix = "*"
 	}
