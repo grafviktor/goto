@@ -229,10 +229,9 @@ func SSHConfigDefaultFilePath() (string, error) {
 func splitArguments(cmd string) []string {
 	args := make([]string, 0)
 	inQuotes := false
-	commandLength := len(cmd)
 
 	var arg string
-	for charIndex, ch := range cmd {
+	for _, ch := range cmd {
 		isQuoteCharacter := ch == '"' || ch == '\''
 		isSpaceCharacter := ch == ' '
 
@@ -246,10 +245,9 @@ func splitArguments(cmd string) []string {
 			arg += string(ch)
 		}
 
-		isLastCharacter := charIndex == commandLength-1
-		if isLastCharacter {
-			args = append(args, arg)
-		}
+	}
+	if arg != "" {
+		args = append(args, arg)
 	}
 
 	return args
