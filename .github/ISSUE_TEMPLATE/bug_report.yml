@@ -34,8 +34,9 @@ body:
     id: expected
     attributes:
       label: Expected behaviour
-      validations:
-        required: true
+      description: What did you expect to happen?
+    validations:
+      required: true
 
   - type: textarea
     id: environment
