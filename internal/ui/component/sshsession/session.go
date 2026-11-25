@@ -127,9 +127,14 @@ func (m *Model) handleSessionClose(msg termview.ClosedMsg) tea.Cmd {
 		errorMessage = strings.TrimSpace(string(readableErrOutput.Output))
 	}
 
-	// If there was no error message from the process, check if we can extract it from msg.
-	if utils.StringEmpty(&errorMessage) {
+	// On Windows msg.ProcessError is nil, so it won't work. Consider displaying the terminal.
+	if utils.StringEmpty(&errorMessage) && msg.ProcessError != nil {
 		errorMessage = msg.ProcessError.Error()
+	}
+
+	// Use exit code as error message if nothing else is available.
+	if utils.StringEmpty(&errorMessage) {
+		errorMessage = fmt.Sprintf("Process %q exited with code %d", m.command, msg.ProcessExitCode)
 	}
 
 	return message.TeaCmd(message.RunProcessErrorOccurred{

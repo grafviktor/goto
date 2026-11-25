@@ -133,12 +133,40 @@ ultimate weapon, the DEATH STAR...`
 }
 
 func TestHandleSessionClose(t *testing.T) {
-	m, _ := New(80, 24, "hostname")
-	cmd := m.handleSessionClose(termview.ClosedMsg{})
-	require.IsType(t, message.RunProcessSuccess{}, cmd())
+	tests := []struct {
+		name           string
+		closedMsg      termview.ClosedMsg
+		expectedType   tea.Msg
+		expectedStdErr string
+	}{
+		{
+			name:         "Process finished successfully",
+			closedMsg:    termview.ClosedMsg{},
+			expectedType: message.RunProcessSuccess{},
+		},
+		{
+			name:           "Process finished with error",
+			closedMsg:      termview.ClosedMsg{ProcessError: errors.New("mock error"), ProcessExitCode: 1},
+			expectedType:   message.RunProcessErrorOccurred{},
+			expectedStdErr: "mock error",
+		},
+		{
+			name:           "Process finished with error, but error message was nil (Windows behaviour)",
+			closedMsg:      termview.ClosedMsg{ProcessError: nil, ProcessExitCode: 1},
+			expectedType:   message.RunProcessErrorOccurred{},
+			expectedStdErr: "Process \"hostname\" exited with code 1",
+		},
+	}
 
-	cmd = m.handleSessionClose(termview.ClosedMsg{ProcessError: errors.New("mock error"), ProcessExitCode: 1})
-	errorDetails := cmd()
-	require.IsType(t, message.RunProcessErrorOccurred{}, errorDetails)
-	require.Equal(t, "mock error", errorDetails.(message.RunProcessErrorOccurred).StdErr)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m, _ := New(80, 24, "hostname")
+			result := m.handleSessionClose(tt.closedMsg)()
+			require.IsType(t, tt.expectedType, result)
+
+			if errMsg, ok := result.(message.RunProcessErrorOccurred); ok {
+				require.Equal(t, tt.expectedStdErr, errMsg.StdErr)
+			}
+		})
+	}
 }
