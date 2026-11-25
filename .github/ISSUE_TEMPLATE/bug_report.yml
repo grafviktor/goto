@@ -1,4 +1,3 @@
-
 name: Bug Report
 description: Report unexpected behaviour or a problem.
 title: "[BUG] "
@@ -44,12 +43,12 @@ body:
       label: Environment
       description: OS, architecture, goto version, installation method.
       placeholder: |
-        OS: macOS / Linux
+        OS: macOS / Linux / Windows
         Architecture: amd64 / arm64
         Version:
         Installation: Homebrew / binary / source
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: logs

@@ -1,4 +1,3 @@
-
 name: Feature Request
 description: Suggest a new feature or improvement.
 title: "[FEATURE] "
@@ -29,14 +28,6 @@ body:
         It would be useful if...
     validations:
       required: true
-
-  - type: textarea
-    id: alternatives
-    attributes:
-      label: Alternatives considered
-      description: Have you considered any alternative solutions?
-    validations:
-      required: false
 
   - type: textarea
     id: additional
