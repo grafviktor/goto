@@ -97,3 +97,26 @@ func TestYAMLFile_Type(t *testing.T) {
 	st := newYAMLStorage(context.TODO(), t.TempDir(), &testLogger{})
 	require.Equal(t, constant.HostStorageType.YAMLFile, st.Type())
 }
+
+func TestYAMLFile_GetAllDirectoryAtDataPathReturnsError(t *testing.T) {
+	tmpDir := t.TempDir()
+	st := newYAMLStorage(context.TODO(), tmpDir, &testLogger{})
+	require.NoError(t, os.Mkdir(st.fsDataPath, 0o700))
+
+	hosts, err := st.GetAll()
+	require.Error(t, err)
+	require.Nil(t, hosts)
+}
+
+func TestYAMLFile_SaveWriteFailureReturnsError(t *testing.T) {
+	tmpDir := t.TempDir()
+	st := newYAMLStorage(context.TODO(), tmpDir, &testLogger{})
+	// A directory at the data path makes WriteFile fail; Save must report
+	// that error instead of crashing the application.
+	require.NoError(t, os.Mkdir(st.fsDataPath, 0o700))
+
+	require.NotPanics(t, func() {
+		_, err := st.Save(model.Host{Title: "host", Address: "host.com"})
+		require.Error(t, err)
+	})
+}

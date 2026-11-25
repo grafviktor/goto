@@ -63,12 +63,7 @@ func (s *yamlFile) flushToDisk() error {
 		return err
 	}
 
-	err = os.WriteFile(s.fsDataPath, result, 0o600)
-	if err != nil {
-		panic(err)
-	}
-
-	return nil
+	return os.WriteFile(s.fsDataPath, result, 0o600)
 }
 
 func (s *yamlFile) Save(host model.Host) (model.Host, error) {
@@ -106,8 +101,7 @@ func (s *yamlFile) GetAll() ([]model.Host, error) {
 	s.logger.Debug("[STORAGE] Read hosts from file: %q\n", s.fsDataPath)
 	fileData, err := os.ReadFile(s.fsDataPath)
 	if err != nil {
-		var pathErr *os.PathError
-		if errors.As(err, &pathErr) {
+		if errors.Is(err, os.ErrNotExist) {
 			s.logger.Info("[STORAGE] Path not found: %s. Assuming it's not created yet", s.fsDataPath)
 
 			return make([]model.Host, 0), nil
