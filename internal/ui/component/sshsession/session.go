@@ -134,7 +134,7 @@ func (m *Model) handleSessionClose(msg termview.ClosedMsg) tea.Cmd {
 
 	// Use exit code as error message if nothing else is available.
 	if utils.StringEmpty(&errorMessage) {
-		errorMessage = fmt.Sprintf("%s exited with code %d", m.command, msg.ProcessExitCode)
+		errorMessage = fmt.Sprintf("Process %q exited with code %d", m.command, msg.ProcessExitCode)
 	}
 
 	return message.TeaCmd(message.RunProcessErrorOccurred{
