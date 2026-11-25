@@ -116,3 +116,9 @@ func Test_FindMatchedIndexes(t *testing.T) {
 		})
 	}
 }
+
+func TestFindMatchedIndexesUnicode(t *testing.T) {
+	// The consumer indexes []rune(title), so positions must be rune offsets,
+	// not byte offsets. "ив" starts at rune 2 in "привет", not byte 4.
+	require.Equal(t, []int{2, 3}, findMatchedIndexes("привет", "ив"))
+}

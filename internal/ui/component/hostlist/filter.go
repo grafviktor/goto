@@ -2,6 +2,7 @@ package hostlist
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"charm.land/bubbles/v2/list"
 	"github.com/samber/lo"
@@ -51,7 +52,10 @@ func findMatchedIndexes(str, substr string) []int {
 		return []int{}
 	}
 
-	return lo.RepeatBy(len(substr), func(index int) int {
-		return index + substrStartIdx
+	// The caller indexes []rune(str), so both the start and the length
+	// must be rune counts rather than byte offsets.
+	startRune := utf8.RuneCountInString(str[:substrStartIdx])
+	return lo.RepeatBy(utf8.RuneCountInString(substr), func(index int) int {
+		return index + startRune
 	})
 }
