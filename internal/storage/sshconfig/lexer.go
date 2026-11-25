@@ -371,6 +371,7 @@ func (l *Lexer) includeLocalFileToken(localPath string, parent configSource) []c
 // expandIncludePattern resolves an Include pattern. A ** segment matches files
 // at any depth below it; other segments use filepath.Match semantics.
 func expandIncludePattern(pattern string) ([]string, error) {
+	// Check if filepath contains double asterisk
 	const recursive = "**"
 	slashPattern := filepath.ToSlash(pattern)
 	parts := strings.Split(slashPattern, "/")
@@ -381,16 +382,21 @@ func expandIncludePattern(pattern string) ([]string, error) {
 			break
 		}
 	}
+	// If double asterisk not found, rely on the inner filepath.Glob function to resolve the path
 	if recursiveAt == -1 {
 		return filepath.Glob(pattern)
 	}
 
-	// Join keeps the empty first element of an absolute path, preserving "/".
+	// parts: "home, user, .ssh, **, *_config"
+	// prefix: "/home/user/.ssh"
+	// suffix: "*_config"
 	prefix := strings.Join(parts[:recursiveAt], "/")
 	suffix := strings.Join(parts[recursiveAt+1:], "/")
 	if suffix == "" {
 		suffix = "*"
 	}
+	// return all paths that match prefix, in that case it will be just
+	// an array with a single element: ["/home/user/.ssh"]
 	baseMatches, err := filepath.Glob(prefix)
 	if err != nil {
 		return nil, err
@@ -398,26 +404,44 @@ func expandIncludePattern(pattern string) ([]string, error) {
 
 	var matches []string
 	for _, base := range baseMatches {
-		err := filepath.WalkDir(base, func(path string, entry fs.DirEntry, walkErr error) error {
-			if walkErr != nil {
-				return walkErr
-			}
-			if entry.IsDir() {
-				return nil
-			}
-			ok, err := filepath.Match(suffix, filepath.Base(path))
-			if err != nil {
-				return err
-			}
-			if ok {
-				matches = append(matches, path)
-			}
-			return nil
-		})
-		if err != nil {
-			return nil, err
+		// Walk through every subpath of the base matches array and check whether this subpath matches the mask.
+		baseFiles, walkErr := collectMatchingFiles(base, suffix)
+		if walkErr != nil {
+			return nil, walkErr
 		}
+		matches = append(matches, baseFiles...)
 	}
+	// return the array of the matching files
+	return matches, nil
+}
+
+// collectMatchingFiles recursively walks the base directory and returns all files
+// whose names match the suffix pattern (filepath.Match semantics).
+func collectMatchingFiles(base, suffix string) ([]string, error) {
+	var matches []string
+	walkDirErr := filepath.WalkDir(base, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		// Examples of what this match is doing:
+		// Does "*_config" match "/home/user/.ssh/id_rsa.pub" ?
+		// Does "*_config" match "/home/user/.ssh/includes/production_config" ?
+		ok, matchErr := filepath.Match(suffix, filepath.Base(path))
+		if matchErr != nil {
+			return matchErr
+		}
+		if ok {
+			matches = append(matches, path)
+		}
+		return nil
+	})
+	if walkDirErr != nil {
+		return nil, walkDirErr
+	}
+
 	return matches, nil
 }
 
