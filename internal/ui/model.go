@@ -92,7 +92,7 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg, tea.MouseMsg:
 		return m.handleInputEvent(msg)
 	case tea.WindowSizeMsg:
-		m.logger.Debug("[UI] Set terminal window size: %d %d", msg.Width, msg.Height)
+		m.logger.Debug("[UI] Set root component size: %d %d", msg.Width, msg.Height)
 		m.appState.Width = msg.Width
 		m.appState.Height = msg.Height
 		m.updateViewPort(msg.Width, msg.Height)
@@ -205,8 +205,6 @@ func (m *MainModel) handleInputEvent(msg tea.Msg) (tea.Model, tea.Cmd) {
 					Height: m.appState.Height,
 					Width:  m.appState.Width,
 				})
-				// m.modelSplitView = splitview.New(m.appState, m.modelHostList, m.modelSSHSession)
-				// return m, m.modelSplitView.Init()
 				return m, cmd
 			}
 		}

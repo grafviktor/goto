@@ -15,11 +15,18 @@ const (
 	sessionSplitDividerWidth = 1
 )
 
+type iLogger interface {
+	Debug(format string, args ...any)
+	Info(format string, args ...any)
+	Error(format string, args ...any)
+}
+
 type Model struct {
 	appState *state.State
 	left     tea.Model
 	right    tea.Model
 	styles   styles
+	logger   iLogger
 	// height   int
 }
 
@@ -29,6 +36,7 @@ func New(appState *state.State, left, right tea.Model) *Model {
 		left:     left,
 		right:    right,
 		styles:   defaultStyles(),
+		logger:   appState.Logger,
 	}
 }
 
@@ -44,6 +52,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.left, cmd = m.left.Update(msg)
 		cmds = append(cmds, cmd)
 	case tea.WindowSizeMsg:
+		m.logger.Debug("[UI] Set splitview size: %d %d", msg.Width, msg.Height)
 		cmd = m.resizeChildComponents(msg.Width, msg.Height)
 		cmds = append(cmds, cmd)
 	default:
@@ -105,7 +114,7 @@ func (m *Model) sessionSplitDivider(height int) string {
 
 func sessionPaneWidths(total int) (int, int) {
 	// Subtract divider width
-	total = total - sessionSplitDividerWidth
+	// total = total - sessionSplitDividerWidth
 	leftWidth := total / 2
 	rightWidth := total - leftWidth
 	return leftWidth, rightWidth
