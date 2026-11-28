@@ -1,5 +1,12 @@
 # Changelog
 
+**[v1.7.1](https://github.com/grafviktor/goto/compare/v1.7.0...v1.7.1) - 2026-11-28**
+
+* Fix a crash on Windows when the embedded terminal is enabled and the host name cannot be resolved [[details](https://github.com/grafviktor/goto/issues/171)].
+* Fix `Include` directives with recursive `**` globs matching only one directory level deep [[details](https://github.com/grafviktor/goto/issues/148)].
+* Fix filter highlighting underlining the wrong number of symbols for hosts with non-ASCII titles [[details](https://github.com/grafviktor/goto/issues/167)].
+* Fix Homebrew warnings about deprecated `postflight` usage in the generated cask [[details](https://github.com/grafviktor/goto/issues/157)].
+
 **[v1.7.0](https://github.com/grafviktor/goto/compare/v1.6.1...v1.7.0) - 2026-11-15**
 
 * Render SSH sessions inside the application instead of an external terminal [[details](https://github.com/grafviktor/goto/issues/152)].
