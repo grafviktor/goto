@@ -1,6 +1,7 @@
 version: 2
 
 # FAKE RUN:
+# You need at least goreleaser >= 2.20.2
 # GORELEASER_CURRENT_TAG=v1.6.0 goreleaser release --clean --skip=publish,validate
 #
 # NORMAL RUN:
@@ -125,9 +126,9 @@ homebrew_casks:
     # Unsigned binary: clear quarantine so `gg` runs after `brew install --cask`.
     hooks:
       post:
-        install: |
-          if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/gg"]
+        install_steps: |
+          on_macos do
+            run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}/gg"]
           end
 
 # Nix is not yet supported. This task commits an additional folder with a single nix file
