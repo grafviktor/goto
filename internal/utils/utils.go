@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 	"unicode"
@@ -120,6 +121,28 @@ func AppDir(appName, userDefinedPath string) (string, error) {
 	}
 
 	return path.Join(userConfigDir, appName), nil
+}
+
+// LogDir returns the directory used for the application log file.
+// On Linux logs belong in the XDG state directory rather than alongside config.
+func LogDir(appName, appPath string) (string, error) {
+	if runtime.GOOS != "linux" {
+		return appPath, nil
+	}
+
+	stateDir := os.Getenv("XDG_STATE_HOME")
+	if stateDir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		stateDir = path.Join(home, ".local", "state")
+	}
+	logDir := path.Join(stateDir, appName)
+	if err := os.MkdirAll(logDir, 0o700); err != nil {
+		return "", err
+	}
+	return logDir, nil
 }
 
 // IsSupportedURL checks if the given path is a URL starting with http, https, or ftp.

@@ -41,7 +41,12 @@ func main() {
 	}
 
 	// Create application logger
-	lgr, err := logger.Initialize(cfg.AppHome, cfg.LogLevel)
+	logDir, err := utils.LogDir(cfg.AppName, cfg.AppHome)
+	if err != nil {
+		fmt.Printf("[MAIN] Error: %v\n", err)
+		os.Exit(1)
+	}
+	lgr, err := logger.Initialize(logDir, cfg.LogLevel)
 	if err != nil {
 		fmt.Printf("[MAIN] Error: %v\n", err)
 		os.Exit(1)
